@@ -1258,11 +1258,20 @@ async function decryptBackup(raw,password){
 }
 
 function download(content,name,type){
- if(window.AndroidBridge&&typeof AndroidBridge.saveTextFile==='function'){
-   try{AndroidBridge.saveTextFile(name,type||'text/plain',String(content));toast('Arquivo salvo em Downloads.');return}catch(e){}
+ if(window.AndroidBridge && typeof AndroidBridge.saveTextFile === 'function'){
+   try{
+     AndroidBridge.saveTextFile(name,type || 'text/plain',String(content));
+     toast('Arquivo salvo em Downloads.');
+     return;
+   }catch(e){}
  }
- let b=new Blob([content],{type}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)
-}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
+ let b = new Blob([content],{type});
+ let a = document.createElement('a');
+ a.href = URL.createObjectURL(b);
+ a.download = name;
+ a.click();
+ setTimeout(()=>URL.revokeObjectURL(a.href),500);
+}
 async function init(){await load();renderSelects();initForms();initOther();$('txDate').value=new Date().toISOString().slice(0,10);$('recStart').value=state.mesAtual;if($('cardImportMonth'))$('cardImportMonth').value='2026-09';if($('invoiceMonth'))$('invoiceMonth').value='2026-09';renderAll();runtimeSanityCheck();setTimeout(showOnboarding,250)}
 document.addEventListener('DOMContentLoaded',init);
 </script>
