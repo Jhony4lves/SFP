@@ -1169,6 +1169,235 @@ function monthCalc(m=state.mesAtual){
  let exp=Math.round((expTx+cardExp+debtExp)*100)/100,result=Math.round((inc-exp)*100)/100;
  return {tx,inst,debts,inc,exp,result}
 }
+
+/* SFP_FINANCIAL_ENGINE_V2 */
+
+/*
+  Três visões oficiais do SFP:
+
+  CAIXA
+  Dinheiro que realmente entrou/saiu das contas.
+
+  COMPETÊNCIA
+  Receita/gasto pertencente economicamente ao período.
+
+  COMPROMISSOS
+  Obrigações ainda abertas ou previstas.
+*/
+
+function sfpRound(v){
+  return Math.round((Number(v)||0)*100)/100;
+}
+
+function cashView(m=state.mesAtual){
+  const items=[];
+
+  state.transactions
+    .filter(t=>ym(t.date)===m && t.status==='paid' && t.balanceImpact!==false)
+    .forEach(t=>{
+      items.push({
+        id:`tx:${t.id}`,
+        source:'transaction',
+        sourceLabel:'Lançamento',
+        kind:t.kind,
+        desc:t.desc,
+        category:t.category||'Outros',
+        date:t.date,
+        amount:sfpRound(t.amount),
+        accountId:t.accountId,
+        direction:t.kind==='income'?1:-1
+      });
+    });
+
+  state.transfers
+    .filter(t=>ym(t.date)===m && t.balanceImpact!==false)
+    .forEach(t=>{
+      items.push({
+        id:`transfer:${t.id}`,
+        source:'transfer',
+        sourceLabel:'Transferência',
+        kind:'transfer',
+        desc:t.desc||'Transferência',
+        category:'Transferência',
+        date:t.date,
+        amount:sfpRound(t.amount),
+        fromId:t.fromId,
+        toId:t.toId,
+        direction:0
+      });
+    });
+
+  state.invoices.forEach(inv=>{
+    (inv.payments||[])
+      .filter(p=>p.balanceImpact!==false && ym(p.date)===m)
+      .forEach((p,i)=>{
+        items.push({
+          id:`invoice-payment:${inv.id}:${i}`,
+          source:'invoicePayment',
+          sourceLabel:'Pagamento de fatura',
+          kind:'expense',
+          desc:`Pagamento fatura ${card(inv.cardId)?.name||'Cartão'} — ${monthName(inv.month)}`,
+          category:'Cartão',
+          date:p.date,
+          amount:sfpRound(p.amount),
+          accountId:inv.accountId||card(inv.cardId)?.payAccountId,
+          cardId:inv.cardId,
+          invoiceMonth:inv.month,
+          direction:-1
+        });
+      });
+  });
+
+  const income=sfpRound(
+    items.filter(x=>x.direction===1).reduce((s,x)=>s+x.amount,0)
+  );
+
+  const expense=sfpRound(
+    items.filter(x=>x.direction===-1).reduce((s,x)=>s+x.amount,0)
+  );
+
+  return {
+    month:m,
+    items,
+    income,
+    expense,
+    net:sfpRound(income-expense)
+  };
+}
+
+function accrualView(m=state.mesAtual){
+  const items=[];
+
+  /*
+    Receitas/despesas comuns:
+    - entram na competência do mês da data.
+    - recorrências virtuais representam ocorrências ainda não materializadas.
+  */
+  [...txInMonth(m),...recurringOccurrences(m)].forEach(t=>{
+    if(t.kind!=='income' && t.kind!=='expense')return;
+
+    items.push({
+      id:t.virtual?`recurring:${t.recurringId}:${m}`:`tx:${t.id}`,
+      source:t.virtual?'recurring':'transaction',
+      sourceLabel:t.virtual?'Recorrência':'Lançamento',
+      kind:t.kind,
+      desc:t.desc,
+      category:t.category||'Outros',
+      date:t.date,
+      amount:sfpRound(t.amount),
+      accountId:t.accountId,
+      status:t.status
+    });
+  });
+
+  /*
+    Cartão:
+    cada parcela entra uma única vez na competência.
+    Pagamento de fatura NÃO entra aqui para evitar gasto duplicado.
+  */
+  installments(m).forEach(i=>{
+    items.push({
+      id:`installment:${i.purchase.id}:${i.n}`,
+      source:'installment',
+      sourceLabel:'Cartão',
+      kind:'expense',
+      desc:i.purchase.desc,
+      category:i.purchase.category||'Outros',
+      date:`${m}-01`,
+      amount:sfpRound(i.amount),
+      cardId:i.purchase.cardId,
+      installment:i.n,
+      installments:i.total,
+      purchaseId:i.purchase.id,
+      status:'accrued'
+    });
+  });
+
+  /*
+    Dívidas:
+    parcela pertencente ao mês entra como despesa de competência.
+  */
+  debtDueForMonth(m).forEach(d=>{
+    items.push({
+      id:`debt:${d.debt.id}:${d.n}`,
+      source:'debt',
+      sourceLabel:'Dívida',
+      kind:'expense',
+      desc:d.debt.name,
+      category:'Dívida',
+      date:d.date,
+      amount:sfpRound(d.amount),
+      debtId:d.debt.id,
+      installment:d.n,
+      installments:d.total,
+      status:d.status
+    });
+  });
+
+  const income=sfpRound(
+    items.filter(x=>x.kind==='income').reduce((s,x)=>s+x.amount,0)
+  );
+
+  const expense=sfpRound(
+    items.filter(x=>x.kind==='expense').reduce((s,x)=>s+x.amount,0)
+  );
+
+  return {
+    month:m,
+    items,
+    income,
+    expense,
+    result:sfpRound(income-expense)
+  };
+}
+
+function commitmentView(m=state.mesAtual){
+  const items=[];
+
+  /*
+    Contas, receitas/despesas previstas e recorrências ainda abertas.
+  */
+  dueEvents(m).forEach(e=>{
+    if(e.type!=='expense' || e.status==='paid')return;
+
+    items.push({
+      id:`due:${e.source}:${e.date}:${e.desc}`,
+      source:e.source,
+      sourceLabel:{
+        tx:'Lançamento',
+        recurring:'Recorrência',
+        invoice:'Fatura',
+        payroll:'Folha'
+      }[e.source]||'Compromisso',
+      kind:'expense',
+      desc:e.desc,
+      date:e.date,
+      amount:sfpRound(e.amount),
+      accountId:e.accountId,
+      cardId:e.cardId,
+      debtId:e.debtId,
+      status:e.status
+    });
+  });
+
+  const total=sfpRound(items.reduce((s,x)=>s+x.amount,0));
+
+  return {
+    month:m,
+    items,
+    total
+  };
+}
+
+function financialViews(m=state.mesAtual){
+  return {
+    cash:cashView(m),
+    accrual:accrualView(m),
+    commitments:commitmentView(m)
+  };
+}
+
+
 function categoriesSpent(m=state.mesAtual){
  let map={};[...txInMonth(m),...recurringOccurrences(m)].filter(t=>t.kind==='expense').forEach(t=>map[t.category]=(map[t.category]||0)+t.amount);
  installments(m).forEach(i=>map[i.purchase.category]=(map[i.purchase.category]||0)+i.amount);
@@ -1766,6 +1995,51 @@ renderReports=function(){
   sfpReportsInteractiveCharts();
 };
 
+
+
+/* SFP_ENGINE_DIAGNOSTIC_V2 */
+
+function sfpEngineDiagnostic(m=state.mesAtual){
+  const old=monthCalc(m);
+  const views=financialViews(m);
+
+  return {
+    month:m,
+
+    old:{
+      income:old.inc,
+      expense:old.exp,
+      result:old.result
+    },
+
+    cash:{
+      income:views.cash.income,
+      expense:views.cash.expense,
+      result:views.cash.net,
+      items:views.cash.items.length
+    },
+
+    accrual:{
+      income:views.accrual.income,
+      expense:views.accrual.expense,
+      result:views.accrual.result,
+      items:views.accrual.items.length
+    },
+
+    commitments:{
+      total:views.commitments.total,
+      items:views.commitments.items.length
+    },
+
+    differences:{
+      oldVsAccrualIncome:sfpRound(old.inc-views.accrual.income),
+      oldVsAccrualExpense:sfpRound(old.exp-views.accrual.expense),
+      oldVsAccrualResult:sfpRound(old.result-views.accrual.result)
+    }
+  };
+}
+
+window.sfpEngineDiagnostic=sfpEngineDiagnostic;
 
 function renderAll(){renderSelects();renderTop();renderToday();renderDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderDataCenter();renderConfig();renderFavorites();applyPrivacy();formatMoneyInputs()}
 function setPage(id){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id===id));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));let titles={hoje:['Hoje','O que importa agora'],dashboard:['Visão Geral','Seu mês em números'],lancamentos:['Lançamentos','Registre com o mínimo de atrito'],extratos:['Extratos','Importe e concilie'],contas:['Contas','Onde seu dinheiro está'],cartoes:['Cartões','Faturas, limites e parcelas'],recorrencias:['Recorrências','Regras mensais sem duplicação'],orcamento:['Orçamento','Limites flexíveis'],dividas:['Dívidas','Saldo e amortização'],metas:['Metas','Objetivos e reservas'],patrimonio:['Patrimônio','Ativos menos dívidas'],calendario:['Calendário','Seu fluxo por dia'],relatorios:['Relatórios','Fechamentos e comparação'],simuladores:['Simuladores','Teste cenários'],dados:['Central de Dados','Saúde, backup e integridade da base'],auditoria:['Auditoria','Integridade e manutenção dos dados'],config:['Configurações','Preferências e segurança']};$('pageTitle').textContent=titles[id][0];$('pageSub').textContent=titles[id][1];window.scrollTo({top:0,behavior:'smooth'})}
