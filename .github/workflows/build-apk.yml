@@ -27,7 +27,7 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
 
   build-release:
-    if: ${{ false }}
+    if: ${{ secrets.SFP_KEYSTORE_BASE64 != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
