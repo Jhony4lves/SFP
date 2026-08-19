@@ -676,6 +676,214 @@ window.SFP_NATIVE = !!window.AndroidBridge;
 }
 </style>
 
+
+<style id="sfp-dashboard-v2-style">
+/* SFP_DASHBOARD_V2 */
+
+.sfp-v2-hero{
+  padding:20px;
+  background:
+    radial-gradient(circle at 90% 0,rgba(76,194,255,.14),transparent 42%),
+    linear-gradient(145deg,#102a45,#0a1a2c);
+}
+
+.sfp-v2-hero-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:18px;
+}
+
+.sfp-v2-hero small,
+.sfp-v2-hero span{
+  display:block;
+  color:var(--muted);
+}
+
+.sfp-v2-hero strong{
+  display:block;
+  font-size:34px;
+  line-height:1.05;
+  margin:7px 0;
+}
+
+.sfp-v2-hero-side{
+  text-align:right;
+}
+
+.sfp-v2-hero-side b{
+  display:block;
+  font-size:18px;
+  margin-top:5px;
+}
+
+.sfp-v2-kpis{
+  grid-template-columns:repeat(3,1fr);
+}
+
+.sfp-view-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:9px;
+}
+
+.sfp-view-card{
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:#081625;
+  color:var(--text);
+  text-align:left;
+  padding:13px;
+}
+
+.sfp-view-card:active{
+  transform:scale(.99);
+}
+
+.sfp-view-card small,
+.sfp-view-card span{
+  display:block;
+}
+
+.sfp-view-card small{
+  color:var(--blue);
+  font-size:9px;
+  letter-spacing:.08em;
+  font-weight:800;
+}
+
+.sfp-view-card strong{
+  display:block;
+  font-size:19px;
+  margin:7px 0 5px;
+}
+
+.sfp-view-card span{
+  color:var(--muted);
+  font-size:9px;
+  line-height:1.4;
+}
+
+.sfp-v2-categories{
+  display:grid;
+  gap:7px;
+}
+
+.sfp-v2-cat{
+  display:grid;
+  grid-template-columns:minmax(95px,1fr) minmax(90px,1.7fr) auto;
+  align-items:center;
+  gap:9px;
+  width:100%;
+  border:0;
+  background:transparent;
+  color:var(--text);
+  text-align:left;
+  padding:7px 0;
+}
+
+.sfp-v2-cat-name b,
+.sfp-v2-cat-name small{
+  display:block;
+}
+
+.sfp-v2-cat-name small{
+  color:var(--muted);
+  font-size:8px;
+  margin-top:2px;
+}
+
+.sfp-v2-cat-track{
+  height:9px;
+  border-radius:999px;
+  overflow:hidden;
+  background:#071320;
+  border:1px solid #1d3148;
+}
+
+.sfp-v2-cat-fill{
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,var(--blue),var(--cyan));
+  border-radius:999px;
+}
+
+.sfp-v2-cat>strong{
+  font-size:11px;
+  white-space:nowrap;
+}
+
+.sfp-v2-detail-list{
+  display:grid;
+  gap:7px;
+}
+
+.sfp-v2-detail-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  border:1px solid var(--line);
+  background:#081625;
+  border-radius:10px;
+  padding:10px;
+}
+
+.sfp-v2-detail-item b,
+.sfp-v2-detail-item small{
+  display:block;
+}
+
+.sfp-v2-detail-item small{
+  color:var(--muted);
+  margin-top:3px;
+  font-size:9px;
+}
+
+.sfp-v2-detail-item strong{
+  white-space:nowrap;
+}
+
+@media(max-width:650px){
+  .sfp-v2-hero-top{
+    display:block;
+  }
+
+  .sfp-v2-hero strong{
+    font-size:30px;
+  }
+
+  .sfp-v2-hero-side{
+    text-align:left;
+    margin-top:17px;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+  }
+
+  .sfp-v2-kpis{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .sfp-view-grid{
+    grid-template-columns:1fr;
+  }
+
+  .sfp-view-card{
+    min-height:0!important;
+  }
+
+  .sfp-v2-cat{
+    grid-template-columns:minmax(80px,1fr) minmax(70px,1.2fr) auto;
+  }
+}
+
+@media(max-width:380px){
+  .sfp-v2-kpis{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+
 </head>
 <body>
 <div class="shell">
@@ -732,27 +940,144 @@ window.SFP_NATIVE = !!window.AndroidBridge;
       </div>
     </section>
 
+
     <section class="tab" id="dashboard">
-      <div class="metric-grid">
-        <div class="metric"><span>Receitas do mês</span><strong id="dashIncome">R$ 0,00</strong><small id="dashIncomeSub"></small></div>
-        <div class="metric"><span>Despesas do mês</span><strong id="dashExpense">R$ 0,00</strong><small id="dashExpenseSub"></small></div>
-        <div class="metric"><span>Resultado do mês</span><strong id="dashResult">R$ 0,00</strong><small>Receitas menos despesas do período</small></div>
-        <div class="metric"><span>Saldo em contas</span><strong id="dashAccountBalance">R$ 0,00</strong><small>Dinheiro disponível nas contas</small></div>
-        <div class="metric"><span>Livre após compromissos</span><strong id="dashFree">R$ 0,00</strong><small>Saldo em contas menos obrigações abertas</small></div>
-        <div class="metric"><span>Comprometimento</span><strong id="dashCommit">0%</strong><small>Da renda comprometida</small></div>
-        <div class="metric"><span>Patrimônio líquido</span><strong id="dashNetWorth">R$ 0,00</strong><small>Ativos menos dívidas</small></div>
+      <!-- SFP_DASHBOARD_V2 -->
+
+      <article class="panel sfp-v2-hero">
+        <div class="sfp-v2-hero-top">
+          <div>
+            <small>Patrimônio líquido</small>
+            <strong id="dashNetWorth">R$ 0,00</strong>
+            <span id="dashHeroSub">Ativos menos dívidas</span>
+          </div>
+          <div class="sfp-v2-hero-side">
+            <small>Saldo em contas</small>
+            <b id="dashAccountBalance">R$ 0,00</b>
+          </div>
+        </div>
+      </article>
+
+      <div class="metric-grid sfp-v2-kpis">
+        <div class="metric">
+          <span>Receitas do período</span>
+          <strong id="dashIncome">R$ 0,00</strong>
+          <small id="dashIncomeSub">Competência</small>
+        </div>
+
+        <div class="metric">
+          <span>Gastos do período</span>
+          <strong id="dashExpense">R$ 0,00</strong>
+          <small id="dashExpenseSub">Competência</small>
+        </div>
+
+        <div class="metric">
+          <span>Resultado do período</span>
+          <strong id="dashResult">R$ 0,00</strong>
+          <small>Receitas menos gastos</small>
+        </div>
+
+        <div class="metric">
+          <span>Compromissos abertos</span>
+          <strong id="dashCommitTotal">R$ 0,00</strong>
+          <small id="dashCommitSub">Ainda precisam ser pagos</small>
+        </div>
+
+        <div class="metric">
+          <span>Livre após próxima entrada</span>
+          <strong id="dashFree">R$ 0,00</strong>
+          <small>Saldo menos compromissos próximos</small>
+        </div>
+
+        <div class="metric">
+          <span>Comprometimento</span>
+          <strong id="dashCommit">0%</strong>
+          <small>Compromissos ÷ renda do período</small>
+        </div>
       </div>
+
+      <article class="panel">
+        <div class="head">
+          <div>
+            <h2>Três visões do seu dinheiro</h2>
+            <p>Gasto, pagamento e obrigação não são a mesma coisa</p>
+          </div>
+          <span class="badge">Motor V2</span>
+        </div>
+
+        <div class="sfp-view-grid">
+          <button type="button" class="sfp-view-card" data-view-info="cash">
+            <small>CAIXA REAL</small>
+            <strong id="dashCashNet">R$ 0,00</strong>
+            <span id="dashCashSummary">Entrou R$ 0,00 · Saiu R$ 0,00</span>
+          </button>
+
+          <button type="button" class="sfp-view-card" data-view-info="accrual">
+            <small>COMPETÊNCIA</small>
+            <strong id="dashAccrualNet">R$ 0,00</strong>
+            <span id="dashAccrualSummary">Receitas menos gastos do período</span>
+          </button>
+
+          <button type="button" class="sfp-view-card" data-view-info="commitments">
+            <small>COMPROMISSOS</small>
+            <strong id="dashCommitView">R$ 0,00</strong>
+            <span id="dashCommitViewSub">Nada aberto</span>
+          </button>
+        </div>
+
+        <div id="dashViewExplanation" class="note">
+          Caixa mostra dinheiro que realmente entrou ou saiu das suas contas.
+        </div>
+      </article>
+
       <div class="grid2">
-        <article class="panel"><div class="head"><div><h2>Fluxo de caixa — 6 meses</h2><p>Receitas, despesas e saldo projetado</p></div></div><div id="cashflowBars" class="spark"></div></article>
-        <article class="panel"><div class="head"><div><h2>Distribuição</h2><p>Necessidades, desejos e poupança real</p></div></div><div id="donut" class="donut"></div><div id="donutLegend" class="legend"></div></article>
+        <article class="panel">
+          <div class="head">
+            <div>
+              <h2>Fluxo real de caixa</h2>
+              <p>Dinheiro efetivamente recebido e pago</p>
+            </div>
+          </div>
+
+          <div id="cashflowBars"></div>
+        </article>
+
+        <article class="panel">
+          <div class="head">
+            <div>
+              <h2>Gastos por categoria</h2>
+              <p>Competência do mês — toque para descobrir a origem</p>
+            </div>
+          </div>
+
+          <div id="donutLegend" class="sfp-v2-categories"></div>
+        </article>
       </div>
+
       <div class="grid2">
-        <article class="panel"><div class="head"><div><h2>Quinzenas</h2><p>Recebimento x compromissos</p></div></div><div id="fortnights" class="flow"></div></article>
-        <article class="panel"><div class="head"><div><h2>Próximos vencimentos</h2><p>O que ainda precisa de atenção</p></div></div><div id="dueList" class="list"></div></article>
+        <article class="panel">
+          <div class="head">
+            <div>
+              <h2>Quinzenas</h2>
+              <p>Recebimentos e compromissos</p>
+            </div>
+          </div>
+          <div id="fortnights" class="flow"></div>
+        </article>
+
+        <article class="panel">
+          <div class="head">
+            <div>
+              <h2>Próximos compromissos</h2>
+              <p>O que ainda exige dinheiro</p>
+            </div>
+          </div>
+          <div id="dueList" class="list"></div>
+        </article>
       </div>
     </section>
 
-    <section class="tab" id="lancamentos">
+<section class="tab" id="lancamentos">
       <div class="grid2">
         <article class="panel">
           <div class="head"><div><h2>Novo lançamento</h2><p>Escolha o que aconteceu; eu escondo o resto</p></div></div>
@@ -819,7 +1144,7 @@ window.SFP_NATIVE = !!window.AndroidBridge;
         <div class="flow"><div><small>Reconhecidos</small><strong id="stmtCount">0</strong></div><div><small>Entradas</small><strong class="positive" id="stmtIn">R$ 0,00</strong></div><div><small>Saídas</small><strong class="negative" id="stmtOut">R$ 0,00</strong></div></div>
         <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Ação</th><th>Categoria</th><th>Transferir p/</th><th>Aprender?</th><th>Conciliação</th></tr></thead><tbody id="stmtRows"></tbody></table></div>
       </article>
-    
+
       <div class="grid2">
         <article class="panel"><div class="head"><div><h2>Centro de conciliação</h2><p>Diferenças e itens que ainda precisam de atenção</p></div></div><div id="reconcileCenter" class="reconcile-center"></div></article>
         <article class="panel"><div class="head"><div><h2>Modelos de CSV</h2><p>Mapeamentos salvos por banco</p></div></div><div id="csvTemplates" class="list"></div></article>
@@ -852,7 +1177,7 @@ window.SFP_NATIVE = !!window.AndroidBridge;
   <div><small>Restante</small><strong class="warning" id="invoiceRemainingView">R$ 0,00</strong></div>
   <div><small>Status</small><strong id="invoiceStatusView">Aberta</strong></div>
 </div><div class="tablewrap desktop-table-mobile"><table><thead><tr><th>Compra</th><th>Parcela</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="invoiceTable"></tbody></table></div><div id="invoiceMobile" class="mobile-card-list"></div></article>
-    
+
       <article class="panel"><div class="head"><div><h2>Importar fatura de cartão</h2><p>CSV simples: data, descrição/título e valor</p></div><span class="badge">evita duplicatas</span></div>
 <div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv"/></label></div>
 <div class="note">Valores positivos viram compras da fatura. Pagamentos negativos são vinculados à fatura anterior, sem reduzir a fatura aberta. Compras parceladas já existentes são detectadas pelo texto "Parcela X/Y".</div></article>
@@ -899,8 +1224,8 @@ window.SFP_NATIVE = !!window.AndroidBridge;
       <div class="grid2"><article class="panel"><div class="head"><div><h2>Amortização de dívida</h2><p>Compare cenários sem alterar dados</p></div></div><label>Saldo<input id="simDebtBalance" type="number"/></label><label>Juros a.m. %<input id="simDebtRate" type="number" step="0.01"/></label><label>Parcela atual<input id="simDebtPayment" type="number"/></label><label>Extra mensal<input id="simDebtExtra" type="number" value="0"/></label><button class="btn wide" id="simDebtBtn">Calcular</button><div id="simDebtRes" class="note hidden"></div></article><article class="panel"><div class="head"><div><h2>Conquista de meta</h2><p>Prazo com rendimento estimado</p></div></div><label>Objetivo<input id="simGoalTarget" type="number"/></label><label>Valor inicial<input id="simGoalInitial" type="number" value="0"/></label><label>Aporte mensal<input id="simGoalMonthly" type="number"/></label><label>Rendimento a.m. %<input id="simGoalRate" type="number" step="0.01" value="0.8"/></label><button class="btn wide" id="simGoalBtn">Calcular</button><div id="simGoalRes" class="note hidden"></div></article></div>
     </section>
 
-    
-    
+
+
     <section class="tab" id="dados">
       <div id="migrationNotice" class="note update-note hidden"></div><div class="note update-note">Carga inicial: 18/08/2026. Histórico antigo descartado; foram mantidos apenas saldos atuais, recorrências vigentes, dívida aberta e parcelamentos ainda ativos.</div>
       <div class="data-health">
@@ -1527,16 +1852,133 @@ function renderToday(){
  $('todayCards').innerHTML=state.cards.slice(0,3).map(c=>cardHtml(c,true)).join('')
 }
 function renderDashboard(){
- let c=monthCalc(),accountBal=allAccountBalance(),freeBal=Math.round((accountBal-commitmentUntilNextIncome())*100)/100;$('dashIncome').textContent=brl(c.inc);$('dashExpense').textContent=brl(c.exp);$('dashResult').textContent=brl(c.result);$('dashResult').className=c.result>=0?'positive':'negative';$('dashAccountBalance').textContent=brl(accountBal);$('dashFree').textContent=brl(freeBal);$('dashFree').className=freeBal>=0?'positive':'negative';$('dashCommit').textContent=c.inc?`${(c.exp/c.inc*100).toFixed(1)}%`:'0%';$('dashNetWorth').textContent=brl(netWorth());$('dashIncomeSub').textContent=`${c.tx.filter(t=>t.kind==='income').length} entradas`;$('dashExpenseSub').textContent=`${c.tx.filter(t=>t.kind==='expense').length+c.inst.length} compromissos`;
- let months=Array.from({length:6},(_,i)=>monthAdd(state.mesAtual,i-2)),vals=months.map(m=>monthCalc(m).result),mx=Math.max(1,...vals.map(Math.abs));$('cashflowBars').innerHTML=months.map((m,i)=>`<div class="barwrap"><div class="bar ${vals[i]<0?'neg':''}" style="height:${Math.max(4,Math.abs(vals[i])/mx*130)}px"></div><small>${m.slice(5)}</small></div>`).join('');
- let map=categoriesSpent(),needs=0,wants=0,save=actualSavings();Object.entries(map).forEach(([k,v])=>isNeed(k)?needs+=v:isWant(k)?wants+=v:needs+=v);let total=Math.max(needs+wants+save,1),a=needs/total*360,b=(needs+wants)/total*360;$('donut').style.background=`conic-gradient(var(--yellow) 0 ${a}deg,var(--green) ${a}deg ${b}deg,var(--blue) ${b}deg 360deg)`;$('donutLegend').innerHTML=[['Necessidades',needs],['Desejos',wants],['Poupança real',save]].map(x=>`<div class="legendrow"><span>${x[0]}</span><b>${brl(x[1])}</b></div>`).join('');
- let d1=state.settings.day1,d2=state.settings.day2,events=dueEvents(),r1=events.filter(e=>e.type==='income'&&+e.date.slice(8,10)<d2).reduce((s,e)=>s+e.amount,0),e1=events.filter(e=>e.type==='expense'&&+e.date.slice(8,10)<d2).reduce((s,e)=>s+e.amount,0),r2=events.filter(e=>e.type==='income'&&+e.date.slice(8,10)>=d2).reduce((s,e)=>s+e.amount,0),e2=events.filter(e=>e.type==='expense'&&+e.date.slice(8,10)>=d2).reduce((s,e)=>s+e.amount,0);$('fortnights').innerHTML=`<div><small>Até dia ${d2-1}</small><strong>${brl(r1-e1)}</strong><span>${brl(r1)} recebidos • ${brl(e1)} compromissos</span></div><div><small>Dia ${d2} em diante</small><strong>${brl(r2-e2)}</strong><span>${brl(r2)} recebidos • ${brl(e2)} compromissos</span></div><div><small>Total projetado</small><strong>${brl(c.result)}</strong><span>Resultado do mês</span></div>`;
- $('dueList').innerHTML=events.filter(e=>e.type==='expense'&&e.status!=='paid').slice(0,7).map(e=>`<div class="item"><div><b>${e.desc}</b><small>${dateObj(e.date).toLocaleDateString('pt-BR')} • ${e.status==='planned'?'Previsto':e.source==='invoice'?'Fatura':'Real'}</small></div><strong>${brl(e.amount)}</strong></div>`).join('')||'<div class="item"><span>Nenhum vencimento aberto.</span></div>'
+  const views=financialViews(state.mesAtual);
+  const cash=views.cash;
+  const accrual=views.accrual;
+  const commitments=views.commitments;
+
+  const accountBal=allAccountBalance();
+  const freeBal=sfpRound(accountBal-commitmentUntilNextIncome());
+  const worth=netWorth();
+
+  $('dashNetWorth').textContent=brl(worth);
+  $('dashNetWorth').className=worth>=0?'positive':'negative';
+
+  $('dashAccountBalance').textContent=brl(accountBal);
+
+  $('dashIncome').textContent=brl(accrual.income);
+  $('dashIncomeSub').textContent=`${accrual.items.filter(x=>x.kind==='income').length} entradas no período`;
+
+  $('dashExpense').textContent=brl(accrual.expense);
+  $('dashExpenseSub').textContent=`${accrual.items.filter(x=>x.kind==='expense').length} gastos no período`;
+
+  $('dashResult').textContent=brl(accrual.result);
+  $('dashResult').className=accrual.result>=0?'positive':'negative';
+
+  $('dashCommitTotal').textContent=brl(commitments.total);
+  $('dashCommitSub').textContent=commitments.items.length
+    ?`${commitments.items.length} obrigações abertas`
+    :'Nenhuma obrigação aberta';
+
+  $('dashFree').textContent=brl(freeBal);
+  $('dashFree').className=freeBal>=0?'positive':'negative';
+
+  const commitPct=accrual.income
+    ?commitments.total/accrual.income*100
+    :0;
+
+  $('dashCommit').textContent=`${commitPct.toFixed(1).replace('.',',')}%`;
+  $('dashCommit').className=commitPct>100?'negative':commitPct>70?'warning':'';
+
+  $('dashCashNet').textContent=brl(cash.net);
+  $('dashCashNet').className=cash.net>=0?'positive':'negative';
+  $('dashCashSummary').textContent=`Entrou ${brl(cash.income)} · Saiu ${brl(cash.expense)}`;
+
+  $('dashAccrualNet').textContent=brl(accrual.result);
+  $('dashAccrualNet').className=accrual.result>=0?'positive':'negative';
+  $('dashAccrualSummary').textContent=`Receitas ${brl(accrual.income)} · Gastos ${brl(accrual.expense)}`;
+
+  $('dashCommitView').textContent=brl(commitments.total);
+  $('dashCommitViewSub').textContent=commitments.items.length
+    ?`${commitments.items.length} itens ainda exigem pagamento`
+    :'Nenhum compromisso aberto';
+
+  const range=typeof sfpChartRange!=='undefined'?sfpChartRange:6;
+
+  const months=Array.from(
+    {length:range},
+    (_,i)=>monthAdd(state.mesAtual,i-(range-1))
+  );
+
+  const cashRows=months.map(m=>{
+    const v=cashView(m);
+
+    return {
+      label:monthName(m),
+      shortLabel:monthName(m).split(' ')[0].slice(0,3),
+      income:v.income,
+      expense:v.expense
+    };
+  });
+
+  sfpLineChart($('cashflowBars'),cashRows,{
+    title:'Fluxo real de caixa'
+  });
+
+  sfpRenderCategoryBreakdownV2(state.mesAtual);
+
+  let d1=state.settings.day1;
+  let d2=state.settings.day2;
+  let events=dueEvents();
+
+  let r1=events.filter(e=>+e.date.slice(8,10)<d2);
+  let r2=events.filter(e=>+e.date.slice(8,10)>=d2);
+
+  const fortnightBox=(title,arr)=>{
+    const received=arr
+      .filter(e=>e.type==='income'&&e.status==='paid')
+      .reduce((s,e)=>s+e.amount,0);
+
+    const committed=arr
+      .filter(e=>e.type==='expense'&&e.status!=='paid')
+      .reduce((s,e)=>s+e.amount,0);
+
+    return `
+      <div>
+        <small>${title}</small>
+        <strong>${brl(received-committed)}</strong>
+        <span>${brl(received)} recebidos · ${brl(committed)} compromissos</span>
+      </div>
+    `;
+  };
+
+  $('fortnights').innerHTML=
+    fortnightBox(`Até dia ${Math.max(1,d2-1)}`,r1)+
+    fortnightBox(`Dia ${d2} em diante`,r2)+
+    `<div>
+       <small>Total aberto no mês</small>
+       <strong class="${commitments.total>0?'warning':''}">${brl(commitments.total)}</strong>
+       <span>${commitments.items.length} compromissos</span>
+     </div>`;
+
+  const open=commitments.items
+    .slice()
+    .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+
+  $('dueList').innerHTML=open.length
+    ?open.slice(0,8).map(e=>`
+       <div class="item">
+         <div>
+           <b>${sfpEsc(e.desc)}</b>
+           <small>${dateObj(e.date).toLocaleDateString('pt-BR')} · ${sfpEsc(e.sourceLabel||'Compromisso')}</small>
+         </div>
+         <strong class="warning">${brl(e.amount)}</strong>
+       </div>
+     `).join('')
+    :'<div class="empty-state"><b>Nenhum compromisso aberto</b>Não há obrigações pendentes neste período.</div>';
+
+  sfpBindDashboardV2();
 }
-
-function kindLabel(k){return({income:'Receita',expense:'Despesa',transfer:'Transferência'}[k]||k)}
-function statusLabel(s){return({paid:'Pago',pending:'Pendente',planned:'Previsto',open:'Aberta',closed:'Fechada',partial:'Parcial'}[s]||s)}
-
 function renderTx(){
  let q=$('txSearch').value.toLowerCase(),f=$('txFilter').value,arr=txInMonth().filter(t=>(f==='all'||t.kind===f||(f==='expense'&&t.kind==='expense'))&&(!q||`${t.desc} ${t.category} ${(t.tags||[]).join(' ')}`.toLowerCase().includes(q)));let transfers=state.transfers.filter(t=>ym(t.date)===state.mesAtual).map(t=>({id:t.id,kind:'transfer',desc:t.desc||'Transferência',date:t.date,amount:t.amount,accountId:t.fromId,status:'paid'}));if(f==='all'||f==='transfer')arr=[...arr,...transfers];arr.sort((a,b)=>b.date.localeCompare(a.date));
  $('txTable').innerHTML=arr.map(t=>`<tr><td data-label="Data">${dateObj(t.date).toLocaleDateString('pt-BR')}</td><td data-label="Descrição"><b>${t.desc}</b>${originChip(t)}<br><small>${t.category||''}</small></td><td data-label="Tipo">${kindLabel(t.kind)}</td><td data-label="Conta">${account(t.accountId)?.name||'—'}</td><td data-label="Valor" class="${t.kind==='income'?'positive':t.kind==='transfer'?'blue':'negative'}">${t.kind==='income'?'+ ':t.kind==='expense'?'- ':''}${brl(t.amount)}</td><td data-label="Status">${t.kind==='transfer'?'—':`<button class="status ${t.status==='paid'?'ok':t.status==='pending'?'wait':''}" onclick="toggleTx(${t.id})">${statusLabel(t.status)}</button>`}</td><td data-label="Ações"><button class="btn2 tiny" onclick="editTx(${t.id})">Editar</button> <button class="danger tiny" onclick="trashTx(${t.id})">Excluir</button></td></tr>`).join('')||'<tr><td colspan="7"><div class="empty-state"><b>Nenhuma movimentação neste mês</b>Adicione seu primeiro lançamento para começar a montar o fluxo financeiro.<br><button class="btn tiny" data-go="lancamentos">Adicionar lançamento</button></div></td></tr>'
@@ -1926,34 +2368,8 @@ function sfpCategoryChart(el){
   });
 }
 function sfpDashboardInteractiveCharts(){
-  const cash=$('cashflowBars');
-
-  if(cash){
-    const months=Array.from(
-      {length:sfpChartRange},
-      (_,i)=>monthAdd(state.mesAtual,i-(sfpChartRange-1))
-    );
-
-    const rows=months.map(m=>{
-      const c=monthCalc(m);
-      return {
-        label:monthName(m),
-        shortLabel:monthName(m).split(' ')[0].slice(0,3),
-        income:c.inc||0,
-        expense:c.exp||0
-      };
-    });
-
-    sfpLineChart(cash,rows,{
-      title:'Receitas e despesas ao longo dos meses'
-    });
-  }
-
-  const legend=$('donutLegend');
-
-  if(legend){
-    sfpCategoryChart(legend);
-  }
+  /* Dashboard V2 já renderiza seus próprios gráficos. */
+  return;
 }
 
 function sfpReportsInteractiveCharts(){
@@ -2040,6 +2456,142 @@ function sfpEngineDiagnostic(m=state.mesAtual){
 }
 
 window.sfpEngineDiagnostic=sfpEngineDiagnostic;
+
+
+/* ===== SFP DASHBOARD V2 HELPERS ===== */
+
+function sfpDashboardCategoryRows(m=state.mesAtual){
+  const view=accrualView(m);
+  const map={};
+
+  view.items
+    .filter(x=>x.kind==='expense')
+    .forEach(x=>{
+      const cat=x.category||'Outros';
+      if(!map[cat])map[cat]={amount:0,items:[]};
+      map[cat].amount=sfpRound(map[cat].amount+x.amount);
+      map[cat].items.push(x);
+    });
+
+  return Object.entries(map)
+    .map(([category,v])=>({
+      category,
+      amount:v.amount,
+      items:v.items
+    }))
+    .sort((a,b)=>b.amount-a.amount);
+}
+
+function sfpRenderCategoryBreakdownV2(m=state.mesAtual){
+  const el=$('donutLegend');
+  if(!el)return;
+
+  const rows=sfpDashboardCategoryRows(m);
+
+  if(!rows.length){
+    el.innerHTML='<div class="empty-state"><b>Nenhum gasto no período</b>Quando houver despesas, a composição aparecerá aqui.</div>';
+    return;
+  }
+
+  const total=rows.reduce((s,r)=>s+r.amount,0)||1;
+  const max=Math.max(...rows.map(r=>r.amount),1);
+
+  el.innerHTML=rows.map(r=>{
+    const pct=r.amount/total*100;
+
+    return `
+      <button type="button"
+              class="sfp-v2-cat"
+              data-v2-category="${sfpEsc(r.category)}">
+
+        <span class="sfp-v2-cat-name">
+          <b>${sfpEsc(r.category)}</b>
+          <small>${r.items.length} ${r.items.length===1?'item':'itens'} · ${pct.toFixed(1).replace('.',',')}%</small>
+        </span>
+
+        <span class="sfp-v2-cat-track">
+          <span class="sfp-v2-cat-fill"
+                style="width:${Math.max(2,r.amount/max*100)}%">
+          </span>
+        </span>
+
+        <strong>${brl(r.amount)}</strong>
+      </button>
+    `;
+  }).join('');
+
+  el.querySelectorAll('[data-v2-category]').forEach(btn=>{
+    btn.onclick=()=>sfpOpenCategoryV2(btn.dataset.v2Category,m);
+  });
+}
+
+function sfpOpenCategoryV2(cat,m=state.mesAtual){
+  const row=sfpDashboardCategoryRows(m).find(x=>x.category===cat);
+  if(!row)return;
+
+  const root=$('modalRoot');
+  if(!root)return;
+
+  root.className='modalback';
+
+  root.innerHTML=`
+    <div class="modal">
+      <div class="head">
+        <div>
+          <h2>${sfpEsc(cat)}</h2>
+          <p>${monthName(m)} · ${row.items.length} ${row.items.length===1?'item':'itens'} · ${brl(row.amount)}</p>
+        </div>
+        <button class="btn2" id="closeV2Category">Fechar</button>
+      </div>
+
+      <div class="sfp-v2-detail-list">
+        ${row.items.map(i=>{
+          let extra=i.sourceLabel||'Movimentação';
+
+          if(i.source==='installment'){
+            extra+=` · ${card(i.cardId)?.name||'Cartão'} · parcela ${i.installment}/${i.installments}`;
+          }
+
+          return `
+            <div class="sfp-v2-detail-item">
+              <div>
+                <b>${sfpEsc(i.desc)}</b>
+                <small>${sfpEsc(extra)}</small>
+              </div>
+              <strong>${brl(i.amount)}</strong>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="note">
+        Este total usa competência: representa os gastos pertencentes a ${monthName(m)}, não necessariamente o dinheiro que saiu da conta nesse mesmo mês.
+      </div>
+    </div>
+  `;
+
+  $('closeV2Category').onclick=()=>root.className='hidden';
+}
+
+function sfpDashboardViewHelp(type){
+  const el=$('dashViewExplanation');
+  if(!el)return;
+
+  const msgs={
+    cash:'Caixa mostra o dinheiro que realmente entrou ou saiu das suas contas. Pagamentos de fatura aparecem aqui como saída de caixa.',
+    accrual:'Competência mostra receitas e gastos pertencentes ao período. Parcelas do cartão aparecem no mês correspondente, mas o pagamento da fatura não é contado novamente.',
+    commitments:'Compromissos mostra valores ainda abertos ou previstos, como contas, faturas e obrigações que ainda exigirão dinheiro.'
+  };
+
+  el.textContent=msgs[type]||msgs.cash;
+}
+
+function sfpBindDashboardV2(){
+  document.querySelectorAll('[data-view-info]').forEach(b=>{
+    b.onclick=()=>sfpDashboardViewHelp(b.dataset.viewInfo);
+  });
+}
+
 
 function renderAll(){renderSelects();renderTop();renderToday();renderDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderDataCenter();renderConfig();renderFavorites();applyPrivacy();formatMoneyInputs()}
 function setPage(id){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id===id));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));let titles={hoje:['Hoje','O que importa agora'],dashboard:['Visão Geral','Seu mês em números'],lancamentos:['Lançamentos','Registre com o mínimo de atrito'],extratos:['Extratos','Importe e concilie'],contas:['Contas','Onde seu dinheiro está'],cartoes:['Cartões','Faturas, limites e parcelas'],recorrencias:['Recorrências','Regras mensais sem duplicação'],orcamento:['Orçamento','Limites flexíveis'],dividas:['Dívidas','Saldo e amortização'],metas:['Metas','Objetivos e reservas'],patrimonio:['Patrimônio','Ativos menos dívidas'],calendario:['Calendário','Seu fluxo por dia'],relatorios:['Relatórios','Fechamentos e comparação'],simuladores:['Simuladores','Teste cenários'],dados:['Central de Dados','Saúde, backup e integridade da base'],auditoria:['Auditoria','Integridade e manutenção dos dados'],config:['Configurações','Preferências e segurança']};$('pageTitle').textContent=titles[id][0];$('pageSub').textContent=titles[id][1];window.scrollTo({top:0,behavior:'smooth'})}
