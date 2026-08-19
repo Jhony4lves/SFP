@@ -1790,6 +1790,8 @@ const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL
 const uid=()=>Date.now()+Math.floor(Math.random()*100000);
 const ym=d=>String(d||'').slice(0,7);
 const dateObj=d=>new Date(d+'T12:00:00');
+function statusLabel(status){return({paid:'Pago',pending:'Pendente',planned:'Previsto',open:'Aberta',closed:'Fechada',partial:'Parcial',cancelled:'Cancelada',accrued:'Competência'}[status]||status||'—')}
+function kindLabel(kind){return({income:'Receita',expense:'Despesa',transfer:'Transferência',card:'Cartão',bill:'Conta'}[kind]||kind||'—')}
 function monthAdd(k,n){let[y,m]=k.split('-').map(Number),d=new Date(y,m-1+n,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
 function monthName(k){let[y,m]=k.split('-').map(Number);return new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase())}
 function clampDay(y,m,d){return Math.min(d,new Date(y,m,0).getDate())}
@@ -1834,15 +1836,46 @@ function autoBackup(){
     localStorage.setItem('sfp_auto_backups',JSON.stringify(arr));
   }catch{}
 }
-async function openDB(){return new Promise((res,rej)=>{let r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
-async function dbGet(){try{db=await openDB();return await new Promise((res,rej)=>{let r=db.transaction(STORE).objectStore(STORE).get(DB_KEY);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}catch{return null}}
-async function dbSet(v){try{if(!db)db=await openDB();await new Promise((res,rej)=>{let r=db.transaction(STORE,'readwrite').objectStore(STORE).put(v,DB_KEY);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}catch{localStorage.setItem('sfp_final_fallback',JSON.stringify(v))}}
+const FALLBACK_KEY='sfp_final_fallback';
+function validPersistedState(v){
+ if(!v||typeof v!=='object'||Array.isArray(v))return false;
+ const arrays=['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'];
+ if(arrays.some(key=>key in v&&!Array.isArray(v[key])))return false;
+ if('settings'in v&&(!v.settings||typeof v.settings!=='object'||Array.isArray(v.settings)))return false;
+ if('schemaVersion'in v&&!Number.isFinite(Number(v.schemaVersion)))return false;
+ return arrays.some(key=>Array.isArray(v[key]))||!!v.settings;
+}
+function safeLocalSet(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}
+function fallbackGet(){
+ let raw;
+ try{raw=localStorage.getItem(FALLBACK_KEY)}catch(error){return{status:'unavailable',error}}
+ if(raw==null)return{status:'empty'};
+ try{let value=JSON.parse(raw);return validPersistedState(value)?{status:'ok',value}:{status:'corrupt'}}catch(error){return{status:'corrupt',error}}
+}
+async function openDB(){return new Promise((res,rej)=>{if(!globalThis.indexedDB)return rej(Error('IndexedDB indisponível'));let r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error||Error('Falha ao abrir IndexedDB'));r.onblocked=()=>rej(Error('IndexedDB bloqueada'))})}
+async function dbGet(){
+ try{db=await openDB();let value=await new Promise((res,rej)=>{let r=db.transaction(STORE).objectStore(STORE).get(DB_KEY);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error||Error('Falha ao ler IndexedDB'))});if(value==null)return{status:'empty'};return validPersistedState(value)?{status:'ok',value}:{status:'corrupt'}}
+ catch(error){db=null;return{status:'unavailable',error}}
+}
+async function dbSet(v){
+ if(!validPersistedState(v))throw Error('Estado inválido recusado pela persistência.');
+ try{if(!db)db=await openDB();await new Promise((res,rej)=>{let r=db.transaction(STORE,'readwrite').objectStore(STORE).put(v,DB_KEY);r.onsuccess=()=>res();r.onerror=()=>rej(r.error||Error('Falha ao gravar IndexedDB'))});return{status:'indexeddb'}}
+ catch(error){db=null;try{localStorage.setItem(FALLBACK_KEY,JSON.stringify(v));return{status:'fallback',error}}catch(fallbackError){throw Error(`Falha ao persistir na IndexedDB (${error.message||error}) e no fallback (${fallbackError.message||fallbackError}).`)}}
+}
 async function load(){
- let key='sfp_jhony_stable_seed_202',v=await dbGet();
- if(!localStorage.getItem(key)){
-   state=clone(seed);normalize();await dbSet(state);localStorage.setItem(key,'1');
-   localStorage.setItem('sfp_last_migration_notice','SFP 2.0 iniciado em uma base nova. Data-base: 18/08/2026. Nenhum cálculo das versões anteriores foi reaproveitado.');
- }else{state=v||clone(seed);normalize();await dbSet(state)}
+ let key='sfp_jhony_stable_seed_202',primary=await dbGet(),fallback=fallbackGet();
+ // Ordem formal: IndexedDB válida > fallback válido > seed. O seed só é
+ // permitido quando ambas as fontes foram lidas com sucesso e estão vazias.
+ if(primary.status==='ok')state=migrateSchema(primary.value);
+ else if(fallback.status==='ok')state=migrateSchema(fallback.value);
+ else if(primary.status==='empty'&&fallback.status==='empty')state=clone(seed);
+ else throw Error(`Persistência indisponível ou corrompida (IndexedDB: ${primary.status}; fallback: ${fallback.status}). Nenhum dado foi substituído.`);
+ normalize();
+ if(primary.status==='ok'||primary.status==='empty'){
+   await dbSet(state);
+ }
+ if(primary.status==='empty'&&fallback.status==='empty')safeLocalSet('sfp_last_migration_notice','SFP 2.0 iniciado em uma base nova. Data-base: 18/08/2026. Nenhum cálculo das versões anteriores foi reaproveitado.');
+ safeLocalSet(key,'1');
  lastSavedState=clone(state)
 }
 function migrateOld(old){let n=clone(seed);n.transactions=[];n.cards=[];n.accounts=clone(seed.accounts); if(old.cartoes)n.cards=old.cartoes.map(c=>({id:c.id||uid(),name:c.nome||'Cartão',limit:+(c.limiteTotal||0),closeDay:+(c.diaFechamento||1),dueDay:+(c.diaVencimento||10),payAccountId:1})); let add=(arr,kind)=>{(arr||[]).forEach(x=>n.transactions.push({id:x.id||uid(),kind,desc:x.desc||'Migrado',amount:+(x.valor||0),date:`${x.mes||'2026-08'}-${String(x.vencimento||1).padStart(2,'0')}`,category:x.categoria||'Outros',accountId:1,status:x.pago?'paid':'pending',dueDay:+(x.vencimento||1),tags:['migrado'],note:'',createdAt:Date.now()}))};add(old.receitas,'income');add(old.despesasFixas,'expense');add(old.despesasVariaveis,'expense');return n}
@@ -1869,8 +1902,10 @@ function purchaseInstallment(p,m){
  let idx=0,cur=p.firstMonth;
  while(cur!==m&&idx<p.installments){cur=monthAdd(cur,1);idx++}
  if(cur!==m||idx>=p.installments||p.status==='cancelled')return null;
- let base=Math.round((p.total/p.installments)*100)/100,refund=(p.refunds||[]).filter(r=>r.month===m).reduce((s,r)=>s+r.amount,0);
- return {purchase:p,n:idx+1,total:p.installments,amount:Math.max(0,Math.round((base-refund)*100)/100),baseAmount:base,refund,month:m,card:card(p.cardId)}
+ // Centavos indivisíveis vão, deterministicamente, para as primeiras parcelas.
+ let count=Math.max(1,Math.trunc(p.installments)),totalCents=Math.round(Number(p.total||0)*100),baseCents=Math.floor(totalCents/count),remainder=totalCents-baseCents*count;
+ let installmentCents=baseCents+(idx<remainder?1:0),refundCents=(p.refunds||[]).filter(r=>r.month===m).reduce((s,r)=>s+Math.round(Number(r.amount||0)*100),0);
+ return {purchase:p,n:idx+1,total:count,amount:Math.max(0,installmentCents-refundCents)/100,baseAmount:installmentCents/100,refund:refundCents/100,month:m,card:card(p.cardId)}
 }
 function installments(m=state.mesAtual){return state.purchases.map(p=>purchaseInstallment(p,m)).filter(Boolean)}
 function invoiceAdjustments(cardId,m){return state.invoiceAdjustments.filter(a=>a.cardId==cardId&&a.month===m)}
@@ -2277,6 +2312,8 @@ function renderSelects(){
 function renderTop(){$('monthLabel').textContent=monthName(state.mesAtual);$('sideFree').textContent=brl(allAccountBalance()-commitmentUntilNextIncome());$('sideHint').textContent=monthCalc().committed?'Após compromissos abertos':'Sem compromissos abertos'}
 
 function runtimeSanityCheck(){
+ const isInitialDataset=state.baseDate===seed.baseDate&&state.settings?.name===seed.settings.name&&[1,2,3].every(id=>account(id)?.name===seed.accounts.find(a=>a.id===id)?.name);
+ if(!isInitialDataset)return[];
  const problems=[];
  const nub=accountBalance(1),itau=accountBalance(2),meli=accountBalance(3);
  if(!Number.isFinite(nub)||!Number.isFinite(itau)||!Number.isFinite(meli))problems.push('saldo de conta não numérico');
@@ -4488,8 +4525,12 @@ function tag(block,n){let m=block.match(new RegExp('<'+n+'>([^<\\r\\n]+)','i'));
 function parseOFX(txt){let blocks=txt.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/gi)||txt.split(/<STMTTRN>/i).slice(1);return blocks.map(b=>({date:parseDate(tag(b,'DTPOSTED')),desc:tag(b,'MEMO')||tag(b,'NAME')||'Movimentação',amount:parseMoney(tag(b,'TRNAMT')),fitid:tag(b,'FITID')})).filter(x=>x.date&&x.amount)}
 function ruleFor(desc){let d=desc.toLowerCase();return state.classificationRules.find(r=>d.includes(r.pattern.toLowerCase()))}
 function guess(desc,amount){let r=ruleFor(desc);if(r)return r;if(/uber|99|taxi|onibus|metr[oô]|combust/.test(desc.toLowerCase()))return{action:'expense',category:'Transporte'};if(/mercado|supermerc|ifood|restaur|padaria/.test(desc.toLowerCase()))return{action:'expense',category:'Alimentação'};if(/salario|salário|folha/.test(desc.toLowerCase()))return{action:'income',category:'Trabalho'};if(/pix|transfer|ted/.test(desc.toLowerCase()))return{action:'ignore',category:'Outros'};return{action:amount>0?'income':'expense',category:amount>0?'Trabalho':'Outros'}}
-function existingStmtKeys(){return new Set(state.transactions.filter(t=>t.statementKey).map(t=>t.statementKey))}
+function existingStmtKeys(){let keys=state.transactions.filter(t=>t.statementKey).map(t=>t.statementKey);state.invoices.forEach(i=>(i.payments||[]).forEach(p=>{if(p.statementKey)keys.push(p.statementKey)}));return new Set(keys)}
 function reconcileCandidate(r,accountId){
+ if(r.amount<0&&/(?:pag(?:amento)?\s*(?:de\s*)?)?(?:fatura|cart[aã]o)|credit\s*card/i.test(r.desc||'')){
+   let matches=[];for(const inv of state.invoices)(inv.payments||[]).forEach((p,paymentIndex)=>{if(!p.statementKey&&(inv.accountId||card(inv.cardId)?.payAccountId)==accountId&&Math.abs(Math.round(p.amount*100)-Math.round(Math.abs(r.amount)*100))===0&&p.date&&Math.abs(dateObj(p.date)-dateObj(r.date))<=3*86400000)matches.push({id:`invoice:${inv.id}:${paymentIndex}`,invoicePayment:true})});
+   if(matches.length===1)return matches[0];
+ }
  let tx=state.transactions.find(t=>!t.statementKey&&t.accountId==accountId&&Math.abs(t.amount-Math.abs(r.amount))<0.01&&Math.abs(dateObj(t.date)-dateObj(r.date))<=3*86400000);if(tx)return tx;
  let month=ym(r.date),vr=recurringOccurrences(month).find(v=>v.accountId==accountId&&Math.abs(v.amount-Math.abs(r.amount))<0.01&&Math.abs(dateObj(v.date)-dateObj(r.date))<=3*86400000);
  return vr?{id:`rec:${vr.recurringId}`,virtualRecurring:true,recurringId:vr.recurringId}:null
@@ -4505,6 +4546,7 @@ function renderStatementDraft(){
 async function importStatement(){
  let accepted=statementDraft.filter(r=>!r.duplicate&&r.action!=='ignore'),acc=account(+$('stmtAccount').value);for(let r of accepted){
  if(r.action==='reconcile'&&r.candidateId){
+   if(String(r.candidateId).startsWith('invoice:')){let[,invoiceId,paymentIndex]=String(r.candidateId).split(':'),inv=state.invoices.find(x=>x.id==invoiceId),payment=inv?.payments?.[+paymentIndex];if(payment){payment.statementKey=r.key;payment.statementDesc=r.desc;continue}}
    if(String(r.candidateId).startsWith('rec:')){let rid=+String(r.candidateId).split(':')[1],rule=state.recurring.find(x=>x.id===rid);if(rule){state.transactions.push({id:uid(),recurringId:rid,kind:rule.type,desc:rule.desc,amount:rule.amount,date:r.date,category:rule.category,accountId:r.accountId,status:'paid',dueDay:+r.date.slice(8,10),tags:['recorrente','extrato'],note:'Conciliado com recorrência.',statementKey:r.key,balanceImpact:r.date>state.baseDate,createdAt:Date.now()});continue}}
    let t=state.transactions.find(x=>x.id===r.candidateId);if(t){t.status='paid';t.statementKey=r.key;t.statementDesc=r.desc;continue}
  }
@@ -4648,7 +4690,7 @@ function download(content,name,type){
  a.click();
  setTimeout(()=>URL.revokeObjectURL(a.href),500);
 }
-async function init(){await load();renderSelects();initForms();initOther();$('txDate').value=new Date().toISOString().slice(0,10);$('recStart').value=state.mesAtual;if($('cardImportMonth'))$('cardImportMonth').value='2026-09';if($('invoiceMonth'))$('invoiceMonth').value='2026-09';renderAll();runtimeSanityCheck();setTimeout(showOnboarding,250)}
+async function init(){await load();renderSelects();initForms();initOther();$('txDate').value=new Date().toISOString().slice(0,10);$('recStart').value=state.mesAtual;let defaultInvoiceMonth=currentInvoiceMonth(state.cards[0]||{closeDay:31});if($('cardImportMonth'))$('cardImportMonth').value=defaultInvoiceMonth;if($('invoiceMonth'))$('invoiceMonth').value=defaultInvoiceMonth;renderAll();runtimeSanityCheck();setTimeout(showOnboarding,250)}
 document.addEventListener('DOMContentLoaded',init);
 </script>
 </body>
