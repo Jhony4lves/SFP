@@ -884,6 +884,373 @@ window.SFP_NATIVE = !!window.AndroidBridge;
 }
 </style>
 
+
+<style id="sfp-cards-v2-style">
+/* SFP_CARDS_V2 */
+
+.credit.sfp-card-v2{
+  overflow:hidden;
+  position:relative;
+  background:
+    radial-gradient(circle at 100% 0,rgba(76,194,255,.14),transparent 35%),
+    linear-gradient(145deg,#102a45,#0a1a2c);
+}
+
+.sfp-card-v2-head{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:flex-start;
+}
+
+.sfp-card-v2-title small{
+  display:block;
+  color:var(--muted);
+  margin-top:4px;
+}
+
+.sfp-card-v2-limit{
+  text-align:right;
+}
+
+.sfp-card-v2-limit small{
+  display:block;
+  color:var(--muted);
+}
+
+.sfp-card-v2-limit strong{
+  display:block;
+  margin-top:4px;
+  font-size:17px;
+}
+
+.sfp-card-v2-main{
+  display:grid;
+  grid-template-columns:1.4fr 1fr;
+  gap:12px;
+  margin-top:16px;
+}
+
+.sfp-card-v2-primary{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px;
+  background:#081625;
+}
+
+.sfp-card-v2-primary small{
+  color:var(--muted);
+  display:block;
+}
+
+.sfp-card-v2-primary strong{
+  display:block;
+  font-size:25px;
+  margin:5px 0;
+}
+
+.sfp-card-v2-primary span{
+  color:var(--muted);
+  font-size:10px;
+}
+
+.sfp-card-v2-side{
+  display:grid;
+  gap:8px;
+}
+
+.sfp-card-v2-stat{
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px;
+  background:#081625;
+}
+
+.sfp-card-v2-stat small{
+  color:var(--muted);
+  display:block;
+  font-size:9px;
+}
+
+.sfp-card-v2-stat strong{
+  display:block;
+  margin-top:4px;
+  font-size:14px;
+}
+
+.sfp-card-v2-progress{
+  margin-top:14px;
+}
+
+.sfp-card-v2-progress-top{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:6px;
+  font-size:10px;
+  color:var(--muted);
+}
+
+.sfp-card-months{
+  display:flex;
+  gap:7px;
+  overflow-x:auto;
+  padding:12px 0 3px;
+  scrollbar-width:none;
+}
+
+.sfp-card-months::-webkit-scrollbar{
+  display:none;
+}
+
+.sfp-card-month{
+  min-width:105px;
+  border:1px solid var(--line);
+  background:#081625;
+  color:var(--text);
+  border-radius:12px;
+  padding:10px;
+  text-align:left;
+  flex:0 0 auto;
+}
+
+.sfp-card-month.active{
+  border-color:var(--blue);
+  box-shadow:0 0 0 1px var(--blue) inset;
+}
+
+.sfp-card-month small{
+  display:block;
+  color:var(--muted);
+  font-size:9px;
+}
+
+.sfp-card-month strong{
+  display:block;
+  margin-top:4px;
+  font-size:13px;
+}
+
+.sfp-card-v2-footer{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-top:10px;
+}
+
+.sfp-card-v2-footer small{
+  color:var(--muted);
+}
+
+@media(max-width:560px){
+  .sfp-card-v2-main{
+    grid-template-columns:1fr;
+  }
+
+  .sfp-card-v2-side{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .sfp-card-v2-head{
+    display:block;
+  }
+
+  .sfp-card-v2-limit{
+    text-align:left;
+    margin-top:10px;
+  }
+}
+</style>
+
+
+<style id="sfp-invoice-v2-style">
+/* SFP_INVOICE_V2 */
+
+.sfp-invoice-v2{
+  margin:16px 0;
+  display:grid;
+  gap:12px;
+}
+
+.sfp-invoice-v2-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+}
+
+.sfp-invoice-v2-head small{
+  display:block;
+  color:var(--muted);
+}
+
+.sfp-invoice-v2-head strong{
+  display:block;
+  font-size:25px;
+  margin-top:4px;
+}
+
+.sfp-invoice-status-box{
+  text-align:right;
+}
+
+.sfp-invoice-status-box b{
+  display:block;
+  margin-top:4px;
+}
+
+.sfp-invoice-progress-info{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:10px;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+
+.sfp-invoice-composition{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+
+.sfp-invoice-piece{
+  border:1px solid var(--line);
+  background:#081625;
+  border-radius:12px;
+  padding:11px;
+}
+
+.sfp-invoice-piece small{
+  display:block;
+  color:var(--muted);
+  font-size:9px;
+}
+
+.sfp-invoice-piece strong{
+  display:block;
+  margin-top:5px;
+  font-size:14px;
+}
+
+.sfp-invoice-piece span{
+  display:block;
+  margin-top:3px;
+  color:var(--muted);
+  font-size:8px;
+}
+
+.sfp-invoice-explain{
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:11px;
+  background:rgba(76,194,255,.04);
+  font-size:10px;
+  line-height:1.5;
+  color:var(--muted);
+}
+
+.sfp-invoice-list{
+  display:grid;
+  gap:8px;
+}
+
+.sfp-invoice-item{
+  width:100%;
+  border:1px solid var(--line);
+  background:#081625;
+  color:var(--text);
+  border-radius:12px;
+  padding:11px;
+  text-align:left;
+}
+
+.sfp-invoice-item-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.sfp-invoice-item-top b,
+.sfp-invoice-item-top small{
+  display:block;
+}
+
+.sfp-invoice-item-top small{
+  margin-top:3px;
+  color:var(--muted);
+  font-size:9px;
+}
+
+.sfp-invoice-item-top strong{
+  white-space:nowrap;
+}
+
+.sfp-invoice-item-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:8px;
+}
+
+.sfp-invoice-chip{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:3px 7px;
+  color:var(--muted);
+  font-size:8px;
+}
+
+.sfp-invoice-chip.blue{
+  border-color:rgba(76,194,255,.45);
+  color:var(--blue);
+}
+
+.sfp-invoice-chip.warning{
+  border-color:rgba(255,190,70,.45);
+}
+
+.sfp-invoice-bank-diff{
+  border:1px dashed rgba(255,190,70,.45);
+  background:rgba(255,190,70,.05);
+  border-radius:12px;
+  padding:11px;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.sfp-invoice-bank-diff small{
+  color:var(--muted);
+  display:block;
+}
+
+@media(max-width:620px){
+  .sfp-invoice-composition{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .sfp-invoice-v2-head{
+    display:block;
+  }
+
+  .sfp-invoice-status-box{
+    text-align:left;
+    margin-top:10px;
+  }
+}
+
+@media(max-width:360px){
+  .sfp-invoice-composition{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+
 </head>
 <body>
 <div class="shell">
@@ -1990,22 +2357,758 @@ function renderCreditFacilities(){
 }
 
 function renderAccounts(){$('accountsGrid').innerHTML=state.accounts.map(a=>`<div class="tile"><div class="tiletop"><div><b>${a.name}</b><small>${a.type}</small></div><strong>${brl(accountBalance(a.id))}</strong></div>${a.reconciled?`<small>Saldo conciliado: ${brl(a.reconciled.balance)} em ${a.reconciled.date}</small>`:''}<div class="tileactions"><button class="btn2 tiny" onclick="editAccount(${a.id})">Editar</button><button class="btn2 tiny" onclick="reconcileAccount(${a.id})">Conciliar saldo</button><button class="danger tiny" onclick="removeAccount(${a.id})">Excluir</button></div></div>`).join('')}
-function cardHtml(c,mini=false){
- let m=currentInvoiceMonth(c),inv=invoiceTotal(c.id,m),rem=invoiceRemaining(c.id,m),used=cardOutstanding(c.id),free=Math.max(0,Math.round((c.limit-used)*100)/100),pct=c.limit?used/c.limit*100:0;
- return `<div class="credit"><h3>${c.name}</h3><small class="origin-chip origin-card">Fatura aberta • ${monthName(m)}</small><div class="cardstats"><div><small>Fatura</small><strong>${brl(inv)}</strong></div><div><small>Em aberto</small><strong>${brl(rem)}</strong></div><div><small>Total comprometido</small><strong>${brl(used)}</strong></div><div><small>Limite total</small><strong>${brl(c.limit)}</strong></div><div><small>Limite livre</small><strong>${brl(free)}</strong></div><div><small>Melhor compra</small><strong>Dia ${Math.min(31,c.closeDay+1)}</strong></div></div><div class="progress ${pct>80?'red':''}" style="margin-top:10px"><div style="width:${Math.min(pct,100)}%"></div></div>${mini?'':`<div class="tileactions"><button class="btn2 tiny" onclick="editCard(${c.id})">Editar</button><button class="danger tiny" onclick="removeCard(${c.id})">Excluir</button></div>`}</div>`
+
+/* SFP_CARDS_V2 */
+
+function sfpCardFutureMonths(c,count=6){
+  const start=currentInvoiceMonth(c);
+
+  return Array.from({length:count},(_,i)=>{
+    const month=monthAdd(start,i);
+    const total=invoiceTotal(c.id,month);
+
+    const inst=installments(month)
+      .filter(x=>x.card?.id==c.id);
+
+    return {
+      month,
+      total,
+      items:inst.length
+    };
+  });
 }
+
+function sfpCardFutureCommitment(c){
+  return sfpRound(
+    sfpCardFutureMonths(c,24)
+      .reduce((s,x)=>s+x.total,0)
+  );
+}
+
+function sfpCardRemainingInstallments(c){
+  let count=0;
+
+  state.purchases
+    .filter(p=>p.cardId==c.id && p.status!=='cancelled')
+    .forEach(p=>{
+      const current=currentInvoiceMonth(c);
+      let m=p.firstMonth;
+
+      for(let i=0;i<p.installments;i++,m=monthAdd(m,1)){
+        if(m>=current){
+          const ins=purchaseInstallment(p,m);
+          if(ins && ins.amount>0)count++;
+        }
+      }
+    });
+
+  return count;
+}
+
+
+function cardHtml(c,mini=false){
+  const m=currentInvoiceMonth(c);
+
+  const current=invoiceTotal(c.id,m);
+  const remaining=invoiceRemaining(c.id,m);
+
+  const nextMonth=monthAdd(m,1);
+  const nextInvoice=invoiceTotal(c.id,nextMonth);
+
+  const used=cardOutstanding(c.id);
+  const free=Math.max(0,sfpRound(c.limit-used));
+
+  const pct=c.limit
+    ?Math.min(100,used/c.limit*100)
+    :0;
+
+  const future=sfpCardFutureCommitment(c);
+  const remainingInstallments=sfpCardRemainingInstallments(c);
+
+  const months=sfpCardFutureMonths(c,6);
+
+  return `
+    <div class="credit sfp-card-v2">
+
+      <div class="sfp-card-v2-head">
+        <div class="sfp-card-v2-title">
+          <h3>${sfpEsc(c.name)}</h3>
+          <small>
+            Fecha dia ${c.closeDay} · vence dia ${c.dueDay}
+          </small>
+        </div>
+
+        <div class="sfp-card-v2-limit">
+          <small>Limite total</small>
+          <strong>${brl(c.limit)}</strong>
+        </div>
+      </div>
+
+      <div class="sfp-card-v2-main">
+
+        <div class="sfp-card-v2-primary">
+          <small>Fatura atual · ${monthName(m)}</small>
+          <strong>${brl(current)}</strong>
+          <span>
+            ${remaining>0
+              ?`${brl(remaining)} ainda em aberto`
+              :'Fatura quitada'}
+          </span>
+        </div>
+
+        <div class="sfp-card-v2-side">
+
+          <div class="sfp-card-v2-stat">
+            <small>Próxima fatura</small>
+            <strong>${brl(nextInvoice)}</strong>
+          </div>
+
+          <div class="sfp-card-v2-stat">
+            <small>Limite disponível</small>
+            <strong>${brl(free)}</strong>
+          </div>
+
+          <div class="sfp-card-v2-stat">
+            <small>Total comprometido</small>
+            <strong>${brl(used)}</strong>
+          </div>
+
+          <div class="sfp-card-v2-stat">
+            <small>Parcelas futuras</small>
+            <strong>${remainingInstallments}</strong>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="sfp-card-v2-progress">
+
+        <div class="sfp-card-v2-progress-top">
+          <span>${pct.toFixed(1).replace('.',',')}% do limite comprometido</span>
+          <span>${brl(future)} em faturas futuras</span>
+        </div>
+
+        <div class="progress ${pct>80?'red':''}">
+          <div style="width:${pct}%"></div>
+        </div>
+
+      </div>
+
+      ${mini?'':`
+        <div class="sfp-card-months">
+
+          ${months.map(x=>`
+            <button
+              type="button"
+              class="sfp-card-month ${x.month===m?'active':''}"
+              data-card-month="${x.month}"
+              data-card-id="${c.id}">
+
+              <small>
+                ${monthName(x.month).split(' ')[0].slice(0,3)}
+              </small>
+
+              <strong>${brl(x.total)}</strong>
+
+              <small>
+                ${x.items} ${x.items===1?'item':'itens'}
+              </small>
+
+            </button>
+          `).join('')}
+
+        </div>
+
+        <div class="sfp-card-v2-footer">
+
+          <small>
+            Melhor dia de compra: dia ${Math.min(31,c.closeDay+1)}
+          </small>
+
+          <div class="tileactions">
+            <button class="btn2 tiny"
+                    onclick="editCard(${c.id})">
+              Editar
+            </button>
+
+            <button class="danger tiny"
+                    onclick="removeCard(${c.id})">
+              Excluir
+            </button>
+          </div>
+
+        </div>
+      `}
+
+    </div>
+  `;
+}
+
+/* SFP_INVOICE_V2 */
+
+function sfpInvoiceAnalysis(cardId,m){
+  const arr=installments(m).filter(i=>i.card?.id==cardId);
+  const adj=invoiceAdjustments(cardId,m);
+  const st=invoiceStatus(cardId,m);
+
+  const total=invoiceTotal(cardId,m);
+  const calculated=invoiceCalculated(cardId,m);
+
+  const paid=sfpRound(st.paidAmount||0);
+  const remaining=Math.max(0,sfpRound(total-paid));
+
+  const oneTime=sfpRound(
+    arr.filter(i=>i.total===1)
+       .reduce((s,i)=>s+i.amount,0)
+  );
+
+  const installmentValue=sfpRound(
+    arr.filter(i=>i.total>1)
+       .reduce((s,i)=>s+i.amount,0)
+  );
+
+  const adjustments=sfpRound(
+    adj.reduce((s,a)=>s+a.amount,0)
+  );
+
+  const refunds=sfpRound(
+    arr.reduce((s,i)=>s+(i.refund||0),0)
+  );
+
+  const officialDifference=
+    st.officialTotal!=null
+      ?sfpRound(st.officialTotal-calculated)
+      :0;
+
+  return {
+    cardId,
+    month:m,
+    arr,
+    adj,
+    st,
+    total,
+    calculated,
+    paid,
+    remaining,
+    oneTime,
+    installmentValue,
+    adjustments,
+    refunds,
+    officialDifference
+  };
+}
+
+function sfpPurchaseFutureFromInstallment(i,m){
+  const p=i.purchase;
+  let month=monthAdd(m,1);
+  let count=0;
+  let amount=0;
+
+  for(let n=i.n+1;n<=i.total;n++,month=monthAdd(month,1)){
+    const future=purchaseInstallment(p,month);
+
+    if(future){
+      count++;
+      amount+=future.amount;
+    }
+  }
+
+  return {
+    count,
+    amount:sfpRound(amount)
+  };
+}
+
+function sfpEnsureInvoiceV2(){
+  let root=$('invoiceV2Breakdown');
+
+  if(root)return root;
+
+  root=document.createElement('div');
+  root.id='invoiceV2Breakdown';
+
+  const table=$('invoiceTable');
+  const wrap=table?.closest('.tablewrap');
+
+  if(wrap?.parentNode){
+    wrap.parentNode.insertBefore(root,wrap);
+    return root;
+  }
+
+  const mobile=$('invoiceMobile');
+
+  if(mobile?.parentNode){
+    mobile.parentNode.insertBefore(root,mobile);
+    return root;
+  }
+
+  return null;
+}
+
+function sfpOpenInvoicePurchaseV2(purchaseId,m){
+  const p=state.purchases.find(x=>x.id==purchaseId);
+  if(!p)return;
+
+  const i=purchaseInstallment(p,m);
+  if(!i)return;
+
+  const future=sfpPurchaseFutureFromInstallment(i,m);
+  const c=card(p.cardId);
+
+  const root=$('modalRoot');
+  if(!root)return;
+
+  root.className='modalback';
+
+  root.innerHTML=`
+    <div class="modal">
+
+      <div class="head">
+        <div>
+          <h2>${sfpEsc(p.desc)}</h2>
+          <p>${sfpEsc(c?.name||'Cartão')} · ${monthName(m)}</p>
+        </div>
+
+        <button class="btn2" id="closeInvoicePurchaseV2">
+          Fechar
+        </button>
+      </div>
+
+      <div class="metric-grid">
+
+        <div class="metric">
+          <span>Parcela atual</span>
+          <strong>${brl(i.amount)}</strong>
+          <small>${i.n}/${i.total}</small>
+        </div>
+
+        <div class="metric">
+          <span>Compra original</span>
+          <strong>${brl(p.total)}</strong>
+          <small>${p.installments} ${p.installments===1?'parcela':'parcelas'}</small>
+        </div>
+
+        <div class="metric">
+          <span>Restante futuro</span>
+          <strong>${brl(future.amount)}</strong>
+          <small>${future.count} ${future.count===1?'parcela':'parcelas'} após esta</small>
+        </div>
+
+        <div class="metric">
+          <span>Categoria</span>
+          <strong style="font-size:15px">${sfpEsc(p.category||'Outros')}</strong>
+          <small>${sfpEsc(c?.name||'Cartão')}</small>
+        </div>
+
+      </div>
+
+      <div class="note">
+        Compra feita em ${dateObj(p.purchaseDate).toLocaleDateString('pt-BR')}.
+        Esta parcela pertence à competência de ${monthName(m)}.
+        O pagamento da fatura é registrado separadamente como saída de caixa.
+      </div>
+
+      ${i.refund?`
+        <div class="note">
+          Estorno aplicado nesta parcela:
+          <b>${brl(i.refund)}</b>.
+        </div>
+      `:''}
+
+    </div>
+  `;
+
+  $('closeInvoicePurchaseV2').onclick=()=>{
+    root.className='hidden';
+  };
+}
+
+function sfpRenderInvoiceV2(cardId,m){
+  const root=sfpEnsureInvoiceV2();
+  if(!root)return;
+
+  const a=sfpInvoiceAnalysis(cardId,m);
+  const c=card(cardId);
+
+  const pct=a.total
+    ?Math.min(100,a.paid/a.total*100)
+    :0;
+
+  root.className='sfp-invoice-v2';
+
+  root.innerHTML=`
+
+    <div class="sfp-invoice-v2-head">
+
+      <div>
+        <small>Fatura de ${sfpEsc(c?.name||'Cartão')}</small>
+        <strong>${brl(a.total)}</strong>
+        <small>${monthName(m)}</small>
+      </div>
+
+      <div class="sfp-invoice-status-box">
+        <small>Status</small>
+        <b>${statusLabel(invoiceDisplayStatus(cardId,m))}</b>
+      </div>
+
+    </div>
+
+    <div>
+
+      <div class="sfp-invoice-progress-info">
+        <span>Pago: ${brl(a.paid)}</span>
+        <span>Restante: ${brl(a.remaining)}</span>
+      </div>
+
+      <div class="progress">
+        <div style="width:${pct}%"></div>
+      </div>
+
+    </div>
+
+    <div class="sfp-invoice-composition">
+
+      <div class="sfp-invoice-piece">
+        <small>Compras à vista</small>
+        <strong>${brl(a.oneTime)}</strong>
+        <span>${a.arr.filter(i=>i.total===1).length} itens</span>
+      </div>
+
+      <div class="sfp-invoice-piece">
+        <small>Parcelas</small>
+        <strong>${brl(a.installmentValue)}</strong>
+        <span>${a.arr.filter(i=>i.total>1).length} parcelas nesta fatura</span>
+      </div>
+
+      <div class="sfp-invoice-piece">
+        <small>Ajustes</small>
+        <strong>${brl(a.adjustments)}</strong>
+        <span>Créditos e ajustes cadastrados</span>
+      </div>
+
+      <div class="sfp-invoice-piece">
+        <small>Estornos</small>
+        <strong>${brl(a.refunds)}</strong>
+        <span>Já descontados dos itens</span>
+      </div>
+
+    </div>
+
+    ${Math.abs(a.officialDifference)>.009?`
+      <div class="sfp-invoice-bank-diff">
+        <div>
+          <b>Ajuste do total oficial</b>
+          <small>
+            O total informado pelo banco difere da soma das compras cadastradas.
+          </small>
+        </div>
+
+        <strong>${brl(a.officialDifference)}</strong>
+      </div>
+    `:''}
+
+    <div class="sfp-invoice-explain">
+      <b>Como ler esta fatura:</b>
+      compras e parcelas representam seus gastos por competência.
+      Quando você paga a fatura, o pagamento aparece no Caixa como saída da conta,
+      mas não vira uma nova despesa.
+    </div>
+
+    <div class="sfp-invoice-list">
+
+      ${a.arr.map(i=>{
+        const future=sfpPurchaseFutureFromInstallment(i,m);
+        const oldPurchase=ym(i.purchase.purchaseDate)<m;
+
+        return `
+          <button type="button"
+                  class="sfp-invoice-item"
+                  data-invoice-purchase="${i.purchase.id}"
+                  data-invoice-month="${m}">
+
+            <div class="sfp-invoice-item-top">
+
+              <div>
+                <b>${sfpEsc(i.purchase.desc)}</b>
+
+                <small>
+                  ${sfpEsc(i.purchase.category||'Outros')}
+                  · ${dateObj(i.purchase.purchaseDate).toLocaleDateString('pt-BR')}
+                </small>
+              </div>
+
+              <strong>${brl(i.amount)}</strong>
+
+            </div>
+
+            <div class="sfp-invoice-item-meta">
+
+              ${i.total>1
+                ?`<span class="sfp-invoice-chip blue">
+                    Parcela ${i.n}/${i.total}
+                  </span>`
+                :`<span class="sfp-invoice-chip">
+                    Compra à vista
+                  </span>`
+              }
+
+              ${oldPurchase && i.total>1
+                ?`<span class="sfp-invoice-chip">
+                    Parcelamento anterior
+                  </span>`
+                :''
+              }
+
+              ${future.count
+                ?`<span class="sfp-invoice-chip">
+                    Restam ${future.count} · ${brl(future.amount)}
+                  </span>`
+                :''
+              }
+
+              ${i.refund
+                ?`<span class="sfp-invoice-chip warning">
+                    Estorno ${brl(i.refund)}
+                  </span>`
+                :''
+              }
+
+            </div>
+
+          </button>
+        `;
+      }).join('')}
+
+    </div>
+
+  `;
+
+  root.querySelectorAll('[data-invoice-purchase]').forEach(btn=>{
+    btn.onclick=()=>{
+      sfpOpenInvoicePurchaseV2(
+        +btn.dataset.invoicePurchase,
+        btn.dataset.invoiceMonth
+      );
+    };
+  });
+}
+
+
 function renderCards(){
- $('cardsGrid').innerHTML=state.cards.map(c=>cardHtml(c)).join('');
- let cid=+$('invoiceCard').value||state.cards[0]?.id;if(!cid)return;$('invoiceCard').value=cid;
- let c=card(cid),m=$('invoiceMonth')?.value||state.ui.invoiceMonthByCard?.[cid]||currentInvoiceMonth(c);if($('invoiceMonth'))$('invoiceMonth').value=m;state.ui.invoiceMonthByCard[cid]=m;
- let arr=installments(m).filter(i=>i.card?.id==cid),adj=invoiceAdjustments(cid,m),st=invoiceStatus(cid,m),disp=invoiceDisplayStatus(cid,m),total=invoiceTotal(cid,m),calc=invoiceCalculated(cid,m),paid=st.paidAmount||0,remaining=Math.max(0,total-paid);
- $('invoiceTotalView').textContent=brl(total);$('invoicePaidView').textContent=brl(paid);$('invoiceRemainingView').textContent=brl(remaining);$('invoiceStatusView').textContent=statusLabel(disp);
- let rows=arr.map(i=>`<tr><td>${i.purchase.desc}${i.refund?` <span class="refund-badge">estorno ${brl(i.refund)}</span>`:''}</td><td>${i.n}/${i.total}</td><td>${brl(i.amount)}</td><td>${statusLabel(disp)}</td><td><button class="btn2 tiny" onclick="refundPurchase(${i.purchase.id})">Estorno</button> <button class="danger tiny" onclick="cancelPurchase(${i.purchase.id})">Cancelar</button></td></tr>`);
- rows.push(...adj.map(a=>`<tr><td>${a.desc}</td><td>Crédito</td><td class="positive">${brl(a.amount)}</td><td>${statusLabel(disp)}</td><td>—</td></tr>`));
- if(st.officialTotal!=null&&Math.abs(calc-st.officialTotal)>.009)rows.push(`<tr><td><b>Ajuste do total oficial</b></td><td>Banco</td><td>${brl(st.officialTotal-calc)}</td><td><span class="warning">Diferença preservada</span></td><td>—</td></tr>`);
- $('invoiceTable').innerHTML=rows.join('')||'<tr><td colspan="5">Nenhuma movimentação nesta fatura.</td></tr>';
- if($('invoiceMobile'))$('invoiceMobile').innerHTML=arr.length?arr.map(i=>`<div class="mobile-record"><div class="mobile-record-head"><div><b>${i.purchase.desc}</b><small>Parcela ${i.n}/${i.total} • ${statusLabel(disp)}</small></div><strong>${brl(i.amount)}</strong></div></div>`).join(''):'<div class="mobile-record">Nenhuma compra nesta fatura.</div>';
- if($('cardHistorySelect')){let keep=+$('cardHistorySelect').value||cid;$('cardHistorySelect').innerHTML=state.cards.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');$('cardHistorySelect').value=keep;renderCardHistory()}
+
+  $('cardsGrid').innerHTML=
+    state.cards.map(c=>cardHtml(c)).join('');
+
+  let cid=+$('invoiceCard').value||state.cards[0]?.id;
+
+  if(!cid)return;
+
+  $('invoiceCard').value=cid;
+
+  let c=card(cid);
+
+  let m=
+    $('invoiceMonth')?.value||
+    state.ui.invoiceMonthByCard?.[cid]||
+    currentInvoiceMonth(c);
+
+  if($('invoiceMonth'))
+    $('invoiceMonth').value=m;
+
+  state.ui.invoiceMonthByCard[cid]=m;
+
+  const a=sfpInvoiceAnalysis(cid,m);
+
+  const arr=a.arr;
+  const adj=a.adj;
+  const st=a.st;
+  const disp=invoiceDisplayStatus(cid,m);
+  const total=a.total;
+  const calc=a.calculated;
+  const paid=a.paid;
+  const remaining=a.remaining;
+
+  $('invoiceTotalView').textContent=brl(total);
+  $('invoicePaidView').textContent=brl(paid);
+  $('invoiceRemainingView').textContent=brl(remaining);
+  $('invoiceStatusView').textContent=statusLabel(disp);
+
+  /* Fatura explicável V2 */
+  sfpRenderInvoiceV2(cid,m);
+
+  let rows=arr.map(i=>`
+    <tr>
+      <td>
+        ${sfpEsc(i.purchase.desc)}
+        ${i.refund
+          ?` <span class="refund-badge">
+               estorno ${brl(i.refund)}
+             </span>`
+          :''
+        }
+      </td>
+
+      <td>${i.n}/${i.total}</td>
+
+      <td>${brl(i.amount)}</td>
+
+      <td>${statusLabel(disp)}</td>
+
+      <td>
+        <button class="btn2 tiny"
+                onclick="refundPurchase(${i.purchase.id})">
+          Estorno
+        </button>
+
+        <button class="danger tiny"
+                onclick="cancelPurchase(${i.purchase.id})">
+          Cancelar
+        </button>
+      </td>
+    </tr>
+  `);
+
+  rows.push(
+    ...adj.map(a=>`
+      <tr>
+        <td>${sfpEsc(a.desc)}</td>
+        <td>Ajuste</td>
+        <td class="${a.amount>=0?'positive':'negative'}">
+          ${brl(a.amount)}
+        </td>
+        <td>${statusLabel(disp)}</td>
+        <td>—</td>
+      </tr>
+    `)
+  );
+
+  if(
+    st.officialTotal!=null &&
+    Math.abs(calc-st.officialTotal)>.009
+  ){
+    rows.push(`
+      <tr>
+        <td>
+          <b>Ajuste do total oficial</b>
+        </td>
+
+        <td>Banco</td>
+
+        <td>${brl(st.officialTotal-calc)}</td>
+
+        <td>
+          <span class="warning">
+            Diferença preservada
+          </span>
+        </td>
+
+        <td>—</td>
+      </tr>
+    `);
+  }
+
+  $('invoiceTable').innerHTML=
+    rows.join('')||
+    '<tr><td colspan="5">Nenhuma movimentação nesta fatura.</td></tr>';
+
+  if($('invoiceMobile')){
+    $('invoiceMobile').innerHTML=
+      arr.length
+        ?arr.map(i=>{
+          const future=sfpPurchaseFutureFromInstallment(i,m);
+
+          return `
+            <button type="button"
+                    class="mobile-record"
+                    data-invoice-purchase="${i.purchase.id}"
+                    data-invoice-month="${m}">
+
+              <div class="mobile-record-head">
+
+                <div>
+                  <b>${sfpEsc(i.purchase.desc)}</b>
+
+                  <small>
+                    ${i.total>1
+                      ?`Parcela ${i.n}/${i.total}`
+                      :'À vista'
+                    }
+                    · ${statusLabel(disp)}
+                  </small>
+
+                  ${future.count
+                    ?`<small>
+                       Futuro: ${future.count} parcelas · ${brl(future.amount)}
+                      </small>`
+                    :''
+                  }
+                </div>
+
+                <strong>${brl(i.amount)}</strong>
+
+              </div>
+
+            </button>
+          `;
+        }).join('')
+        :'<div class="mobile-record">Nenhuma compra nesta fatura.</div>';
+  }
+
+  document.querySelectorAll(
+    '#invoiceMobile [data-invoice-purchase]'
+  ).forEach(btn=>{
+    btn.onclick=()=>{
+      sfpOpenInvoicePurchaseV2(
+        +btn.dataset.invoicePurchase,
+        btn.dataset.invoiceMonth
+      );
+    };
+  });
+
+  if($('cardHistorySelect')){
+    let keep=+$('cardHistorySelect').value||cid;
+
+    $('cardHistorySelect').innerHTML=
+      state.cards
+        .map(x=>`
+          <option value="${x.id}">
+            ${sfpEsc(x.name)}
+          </option>
+        `)
+        .join('');
+
+    $('cardHistorySelect').value=keep;
+
+    renderCardHistory();
+  }
+
+  /* Timeline dos Cartões V2 */
+  document.querySelectorAll('[data-card-month]').forEach(btn=>{
+    btn.onclick=()=>{
+
+      const cardId=+btn.dataset.cardId;
+      const month=btn.dataset.cardMonth;
+
+      state.ui.invoiceMonthByCard[cardId]=month;
+
+      if($('invoiceCard'))
+        $('invoiceCard').value=cardId;
+
+      if($('invoiceMonth'))
+        $('invoiceMonth').value=month;
+
+      renderCards();
+
+      const target=$('invoiceV2Breakdown')||$('invoiceTotalView');
+
+      if(target)
+        target.scrollIntoView({
+          behavior:'smooth',
+          block:'start'
+        });
+    };
+  });
+
 }
 function renderRecurring(){$('recList').innerHTML=state.recurring.map(r=>`<div class="item"><div><b>${r.desc}</b><small>${r.type} • ${brl(r.amount)} • dia ${r.day} • ${r.active?'ativa':'pausada'}</small></div><div class="actions"><button class="btn2 tiny" onclick="toggleRec(${r.id})">${r.active?'Pausar':'Ativar'}</button><button class="btn2 tiny" onclick="postRec(${r.id})">Registrar mês</button><button class="btn2 tiny" onclick="skipRec(${r.id})">Pular ${monthName(state.mesAtual)}</button><button class="danger tiny" onclick="removeRec(${r.id})">Excluir</button></div></div>`).join('')}
 function renderBudget(){
