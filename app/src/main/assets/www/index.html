@@ -1252,6 +1252,90 @@ window.SFP_NATIVE = !!window.AndroidBridge;
 }
 </style>
 
+
+<style id="sfp-dashboard-drilldown-v1-style">
+/* SFP_DASHBOARD_DRILLDOWN_V1 */
+/* SFP_DASHBOARD_DRILLDOWN_CARD_LINK_V1 */
+/* SFP_CASHFLOW_DRILLDOWN_V1 */
+
+.sfp-drill-card{
+  cursor:pointer;
+  position:relative;
+  transition:
+    transform .12s ease,
+    border-color .12s ease,
+    background .12s ease;
+}
+
+.sfp-drill-card:active{
+  transform:scale(.985);
+}
+
+.sfp-drill-card::after{
+  content:'›';
+  position:absolute;
+  top:10px;
+  right:12px;
+  color:var(--muted);
+  font-size:18px;
+  opacity:.65;
+}
+
+.sfp-drill-card:focus-visible{
+  outline:2px solid var(--blue);
+  outline-offset:2px;
+}
+
+.sfp-drill-list{
+  display:grid;
+  gap:8px;
+  margin-top:12px;
+}
+
+.sfp-drill-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  padding:11px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#081625;
+}
+
+.sfp-drill-row b,
+.sfp-drill-row small{
+  display:block;
+}
+
+.sfp-drill-row small{
+  color:var(--muted);
+  margin-top:3px;
+  font-size:9px;
+}
+
+.sfp-drill-row strong{
+  white-space:nowrap;
+}
+
+.sfp-drill-summary{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:12px 0;
+}
+
+.sfp-drill-summary .metric{
+  min-height:0;
+}
+
+@media(max-width:420px){
+  .sfp-drill-summary{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+
 </head>
 <body>
 <div class="shell">
@@ -2219,6 +2303,549 @@ function renderToday(){
  $('todayAccounts').innerHTML=state.accounts.slice(0,4).map(a=>`<div class="tile"><div class="tiletop"><b>${a.name}</b><strong>${brl(accountBalance(a.id))}</strong></div><small>${a.type} • saldo-base ${new Date(a.balanceDate+'T12:00').toLocaleDateString('pt-BR')}</small></div>`).join('');
  $('todayCards').innerHTML=state.cards.slice(0,3).map(c=>cardHtml(c,true)).join('')
 }
+
+/* SFP_DASHBOARD_DRILLDOWN_V1 */
+
+function sfpDrillSourceText(i){
+  if(i.source==='installment'){
+    return `${card(i.cardId)?.name||'Cartão'} · Parcela ${i.installment}/${i.installments}`;
+  }
+
+  if(i.source==='recurring')
+    return 'Recorrência';
+
+  if(i.source==='debt')
+    return `Dívida · Parcela ${i.installment}/${i.installments}`;
+
+  if(i.source==='transaction')
+    return account(i.accountId)?.name||'Lançamento';
+
+  return i.sourceLabel||'Movimentação';
+}
+
+function sfpOpenFinancialDrilldown(type,m=state.mesAtual){
+  const root=$('modalRoot');
+  if(!root)return;
+
+  const accrual=accrualView(m);
+  const commitments=commitmentView(m);
+
+  let title='';
+  let subtitle='';
+  let body='';
+
+  if(type==='income'){
+    const items=accrual.items.filter(x=>x.kind==='income');
+
+    title='Receitas do período';
+    subtitle=`${monthName(m)} · ${brl(accrual.income)}`;
+
+    body=items.length
+      ?`<div class="sfp-drill-list">
+          ${items.map(i=>`
+            <div class="sfp-drill-row">
+              <div>
+                <b>${sfpEsc(i.desc)}</b>
+                <small>${sfpEsc(sfpDrillSourceText(i))}</small>
+              </div>
+              <strong class="positive">${brl(i.amount)}</strong>
+            </div>
+          `).join('')}
+        </div>`
+      :'<div class="empty-state"><b>Nenhuma receita</b>Não há receitas pertencentes a este período.</div>';
+  }
+
+  if(type==='expense'){
+    const items=accrual.items.filter(x=>x.kind==='expense');
+
+    title='Gastos do período';
+    subtitle=`${monthName(m)} · ${brl(accrual.expense)}`;
+
+    body=items.length
+      ?`<div class="sfp-drill-list">
+          ${items.map(i=>`
+            <div class="sfp-drill-row">
+              <div>
+                <b>${sfpEsc(i.desc)}</b>
+                <small>${sfpEsc(i.category||'Outros')} · ${sfpEsc(sfpDrillSourceText(i))}</small>
+              </div>
+              <div style="text-align:right">
+                <strong class="negative">${brl(i.amount)}</strong>
+
+                ${i.source==='installment'
+                  ?`<button
+                      type="button"
+                      class="btn2 tiny"
+                      style="margin-top:6px"
+                      data-drill-card="${i.cardId}"
+                      data-drill-month="${m}">
+                      Ver fatura
+                    </button>`
+                  :''
+                }
+              </div>
+            </div>
+          `).join('')}
+        </div>`
+      :'<div class="empty-state"><b>Nenhum gasto</b>Não há gastos pertencentes a este período.</div>';
+  }
+
+  if(type==='result'){
+    title='Resultado do período';
+    subtitle=monthName(m);
+
+    body=`
+      <div class="sfp-drill-summary">
+
+        <div class="metric">
+          <span>Receitas</span>
+          <strong class="positive">${brl(accrual.income)}</strong>
+          <small>${accrual.items.filter(x=>x.kind==='income').length} itens</small>
+        </div>
+
+        <div class="metric">
+          <span>Gastos</span>
+          <strong class="negative">${brl(accrual.expense)}</strong>
+          <small>${accrual.items.filter(x=>x.kind==='expense').length} itens</small>
+        </div>
+
+      </div>
+
+      <div class="note">
+        <b>Resultado: ${brl(accrual.result)}</b><br>
+        Este valor usa competência: receitas menos gastos pertencentes ao período.
+      </div>
+
+      <div class="tileactions">
+        <button class="btn2" id="sfpDrillSeeIncome">
+          Ver receitas
+        </button>
+
+        <button class="btn2" id="sfpDrillSeeExpense">
+          Ver gastos
+        </button>
+      </div>
+    `;
+  }
+
+  if(type==='commitments'){
+    title='Compromissos abertos';
+    subtitle=`${monthName(m)} · ${brl(commitments.total)}`;
+
+    body=commitments.items.length
+      ?`<div class="sfp-drill-list">
+          ${commitments.items
+            .slice()
+            .sort((a,b)=>String(a.date).localeCompare(String(b.date)))
+            .map(i=>`
+              <div class="sfp-drill-row">
+                <div>
+                  <b>${sfpEsc(i.desc)}</b>
+                  <small>
+                    ${dateObj(i.date).toLocaleDateString('pt-BR')}
+                    · ${sfpEsc(i.sourceLabel||'Compromisso')}
+                  </small>
+                </div>
+                <strong class="warning">${brl(i.amount)}</strong>
+              </div>
+            `).join('')}
+        </div>`
+      :'<div class="empty-state"><b>Nenhum compromisso aberto</b>Não há obrigações pendentes neste período.</div>';
+  }
+
+  if(type==='free'){
+    const balance=allAccountBalance();
+    const untilNext=commitmentUntilNextIncome();
+    const free=sfpRound(balance-untilNext);
+    const next=nextIncomeEvent();
+
+    title='Livre após próxima entrada';
+    subtitle='Como este valor é calculado';
+
+    body=`
+      <div class="sfp-drill-summary">
+
+        <div class="metric">
+          <span>Saldo em contas</span>
+          <strong>${brl(balance)}</strong>
+          <small>Disponível agora</small>
+        </div>
+
+        <div class="metric">
+          <span>Compromissos até próxima entrada</span>
+          <strong class="${untilNext>0?'negative':''}">
+            ${brl(untilNext)}
+          </strong>
+          <small>
+            ${next
+              ?`Próxima entrada: ${dateObj(next.date).toLocaleDateString('pt-BR')}`
+              :'Nenhuma próxima entrada encontrada'}
+          </small>
+        </div>
+
+      </div>
+
+      <div class="note">
+        <b>Livre projetado: ${brl(free)}</b><br>
+        Saldo atual menos obrigações que vencem antes da próxima entrada prevista.
+      </div>
+    `;
+  }
+
+  root.className='modalback';
+
+  root.innerHTML=`
+    <div class="modal">
+
+      <div class="head">
+        <div>
+          <h2>${sfpEsc(title)}</h2>
+          <p>${sfpEsc(subtitle)}</p>
+        </div>
+
+        <button class="btn2" id="closeSfpDrill">
+          Fechar
+        </button>
+      </div>
+
+      ${body}
+
+    </div>
+  `;
+
+  $('closeSfpDrill').onclick=()=>{
+    root.className='hidden';
+  };
+
+  root.querySelectorAll('[data-drill-card]').forEach(btn=>{
+    btn.onclick=()=>{
+      const cardId=+btn.dataset.drillCard;
+      const month=btn.dataset.drillMonth;
+
+      root.className='hidden';
+
+      state.ui.invoiceMonthByCard[cardId]=month;
+
+      if($('invoiceCard')){
+        $('invoiceCard').value=cardId;
+      }
+
+      if($('invoiceMonth')){
+        $('invoiceMonth').value=month;
+      }
+
+      setPage('cartoes');
+
+      /*
+        setPage() apenas troca a tela.
+        renderCards() é necessário para carregar
+        o cartão e a competência escolhidos.
+      */
+      renderCards();
+
+      setTimeout(()=>{
+        const target=
+          $('invoiceV2Breakdown')||
+          $('invoiceTotalView');
+
+        if(target){
+          target.scrollIntoView({
+            behavior:'smooth',
+            block:'start'
+          });
+        }
+      },100);
+    };
+  });
+
+  if($('sfpDrillSeeIncome')){
+    $('sfpDrillSeeIncome').onclick=()=>{
+      sfpOpenFinancialDrilldown('income',m);
+    };
+  }
+
+  if($('sfpDrillSeeExpense')){
+    $('sfpDrillSeeExpense').onclick=()=>{
+      sfpOpenFinancialDrilldown('expense',m);
+    };
+  }
+}
+
+function sfpMakeDashboardDrillCard(id,action){
+  const el=$(id);
+  const card=el?.closest('.metric');
+
+  if(!card)return;
+
+  card.classList.add('sfp-drill-card');
+  card.setAttribute('role','button');
+  card.setAttribute('tabindex','0');
+
+  card.onclick=action;
+
+  card.onkeydown=e=>{
+    if(e.key==='Enter'||e.key===' '){
+      e.preventDefault();
+      action();
+    }
+  };
+}
+
+
+/* SFP_CASHFLOW_DRILLDOWN_V1 */
+
+function sfpOpenCashFlowDrilldown(m=state.mesAtual){
+  const root=$('modalRoot');
+  if(!root)return;
+
+  const cash=cashView(m);
+
+  const movementItems=cash.items
+    .filter(i=>i.direction!==0)
+    .slice()
+    .sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+
+  const transfers=cash.items
+    .filter(i=>i.direction===0)
+    .slice()
+    .sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+
+  const sourceText=i=>{
+    if(i.source==='invoicePayment'){
+      const c=card(i.cardId);
+      return `Pagamento de fatura · ${c?.name||'Cartão'}`;
+    }
+
+    if(i.source==='transaction'){
+      return account(i.accountId)?.name||'Conta';
+    }
+
+    if(i.source==='transfer'){
+      const from=account(i.fromId)?.name||'Origem';
+      const to=account(i.toId)?.name||'Destino';
+      return `${from} → ${to}`;
+    }
+
+    return i.sourceLabel||'Movimentação';
+  };
+
+  const rows=movementItems.map(i=>`
+    <div class="sfp-drill-row">
+
+      <div style="flex:1">
+        <b>${sfpEsc(i.desc)}</b>
+
+        <small>
+          ${dateObj(i.date).toLocaleDateString('pt-BR')}
+          · ${sfpEsc(sourceText(i))}
+        </small>
+
+        ${i.source==='invoicePayment'
+          ?`<small>
+              A fatura pertence a ${monthName(i.invoiceMonth)}.
+              Aqui aparece somente o pagamento que saiu da conta.
+            </small>`
+          :''
+        }
+      </div>
+
+      <div style="text-align:right">
+
+        <strong class="${i.direction===1?'positive':'negative'}">
+          ${i.direction===1?'+ ':'- '}${brl(i.amount)}
+        </strong>
+
+        ${i.source==='invoicePayment'
+          ?`<button
+              type="button"
+              class="btn2 tiny"
+              style="margin-top:6px"
+              data-cash-card="${i.cardId}"
+              data-cash-invoice-month="${i.invoiceMonth}">
+              Ver fatura
+            </button>`
+          :''
+        }
+
+      </div>
+
+    </div>
+  `).join('');
+
+  const transferRows=transfers.map(i=>`
+    <div class="sfp-drill-row">
+
+      <div style="flex:1">
+        <b>${sfpEsc(i.desc)}</b>
+
+        <small>
+          ${dateObj(i.date).toLocaleDateString('pt-BR')}
+          · ${sfpEsc(sourceText(i))}
+        </small>
+      </div>
+
+      <strong>${brl(i.amount)}</strong>
+
+    </div>
+  `).join('');
+
+  root.className='modalback';
+
+  root.innerHTML=`
+    <div class="modal">
+
+      <div class="head">
+        <div>
+          <h2>Fluxo de caixa</h2>
+          <p>${monthName(m)} · movimentações efetivas nas contas</p>
+        </div>
+
+        <button class="btn2" id="closeCashFlowDrill">
+          Fechar
+        </button>
+      </div>
+
+      <div class="sfp-drill-summary">
+
+        <div class="metric">
+          <span>Entradas</span>
+          <strong class="positive">${brl(cash.income)}</strong>
+          <small>
+            ${movementItems.filter(i=>i.direction===1).length}
+            ${movementItems.filter(i=>i.direction===1).length===1?'entrada':'entradas'}
+          </small>
+        </div>
+
+        <div class="metric">
+          <span>Saídas</span>
+          <strong class="negative">${brl(cash.expense)}</strong>
+          <small>
+            ${movementItems.filter(i=>i.direction===-1).length}
+            ${movementItems.filter(i=>i.direction===-1).length===1?'saída':'saídas'}
+          </small>
+        </div>
+
+      </div>
+
+      <div class="note">
+        <b>Fluxo líquido: ${brl(cash.net)}</b><br>
+        Este número representa apenas o que realmente entrou ou saiu
+        das suas contas em ${monthName(m)}.
+        Ele não é o mesmo que seu saldo atual.
+      </div>
+
+      <div class="sfp-drill-list">
+        ${rows || `
+          <div class="empty-state">
+            <b>Nenhuma movimentação de caixa</b>
+            Não houve entradas ou saídas com impacto de saldo neste período.
+          </div>
+        `}
+      </div>
+
+      ${transfers.length?`
+        <div style="margin-top:16px">
+          <div class="head">
+            <div>
+              <h3>Transferências internas</h3>
+              <p>Movem dinheiro entre suas contas, sem gerar receita ou gasto.</p>
+            </div>
+          </div>
+
+          <div class="sfp-drill-list">
+            ${transferRows}
+          </div>
+        </div>
+      `:''}
+
+    </div>
+  `;
+
+  $('closeCashFlowDrill').onclick=()=>{
+    root.className='hidden';
+  };
+
+  root.querySelectorAll('[data-cash-card]').forEach(btn=>{
+    btn.onclick=()=>{
+      const cardId=+btn.dataset.cashCard;
+      const month=btn.dataset.cashInvoiceMonth;
+
+      root.className='hidden';
+
+      state.ui.invoiceMonthByCard[cardId]=month;
+
+      if($('invoiceCard')){
+        $('invoiceCard').value=cardId;
+      }
+
+      if($('invoiceMonth')){
+        $('invoiceMonth').value=month;
+      }
+
+      setPage('cartoes');
+      renderCards();
+
+      setTimeout(()=>{
+        const target=
+          $('invoiceV2Breakdown')||
+          $('invoiceTotalView');
+
+        if(target){
+          target.scrollIntoView({
+            behavior:'smooth',
+            block:'start'
+          });
+        }
+      },100);
+    };
+  });
+}
+
+
+function sfpBindDashboardMetricDrilldowns(){
+
+  sfpMakeDashboardDrillCard(
+    'dashAccountBalance',
+    ()=>setPage('contas')
+  );
+
+  sfpMakeDashboardDrillCard(
+    'dashNetWorth',
+    ()=>setPage('patrimonio')
+  );
+
+  sfpMakeDashboardDrillCard(
+    'dashIncome',
+    ()=>sfpOpenFinancialDrilldown('income')
+  );
+
+  sfpMakeDashboardDrillCard(
+    'dashExpense',
+    ()=>sfpOpenFinancialDrilldown('expense')
+  );
+
+  sfpMakeDashboardDrillCard(
+    'dashResult',
+    ()=>sfpOpenFinancialDrilldown('result')
+  );
+
+  sfpMakeDashboardDrillCard(
+    'dashCommitTotal',
+    ()=>sfpOpenFinancialDrilldown('commitments')
+  );
+
+  sfpMakeDashboardDrillCard(
+    'dashFree',
+    ()=>sfpOpenFinancialDrilldown('free')
+  );
+
+  sfpMakeDashboardDrillCard(
+    'dashCashNet',
+    ()=>sfpOpenCashFlowDrilldown()
+  );
+}
+
+
 function renderDashboard(){
   const views=financialViews(state.mesAtual);
   const cash=views.cash;
@@ -2346,6 +2973,7 @@ function renderDashboard(){
     :'<div class="empty-state"><b>Nenhum compromisso aberto</b>Não há obrigações pendentes neste período.</div>';
 
   sfpBindDashboardV2();
+  sfpBindDashboardMetricDrilldowns();
 }
 function renderTx(){
  let q=$('txSearch').value.toLowerCase(),f=$('txFilter').value,arr=txInMonth().filter(t=>(f==='all'||t.kind===f||(f==='expense'&&t.kind==='expense'))&&(!q||`${t.desc} ${t.category} ${(t.tags||[]).join(' ')}`.toLowerCase().includes(q)));let transfers=state.transfers.filter(t=>ym(t.date)===state.mesAtual).map(t=>({id:t.id,kind:'transfer',desc:t.desc||'Transferência',date:t.date,amount:t.amount,accountId:t.fromId,status:'paid'}));if(f==='all'||f==='transfer')arr=[...arr,...transfers];arr.sort((a,b)=>b.date.localeCompare(a.date));
