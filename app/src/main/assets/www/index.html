@@ -679,6 +679,7 @@ window.SFP_NATIVE = !!window.AndroidBridge;
 
 <style id="sfp-dashboard-v2-style">
 /* SFP_DASHBOARD_V2 */
+/* SFP_UX_FINANCIAL_CLARITY_V1 */
 
 .sfp-v2-hero{
   padding:20px;
@@ -1374,7 +1375,7 @@ window.SFP_NATIVE = !!window.AndroidBridge;
 
         <div class="sfp-view-grid">
           <button type="button" class="sfp-view-card" data-view-info="cash">
-            <small>CAIXA REAL</small>
+            <small>FLUXO DE CAIXA</small>
             <strong id="dashCashNet">R$ 0,00</strong>
             <span id="dashCashSummary">Entrou R$ 0,00 · Saiu R$ 0,00</span>
           </button>
@@ -2259,7 +2260,7 @@ function renderDashboard(){
 
   $('dashCashNet').textContent=brl(cash.net);
   $('dashCashNet').className=cash.net>=0?'positive':'negative';
-  $('dashCashSummary').textContent=`Entrou ${brl(cash.income)} · Saiu ${brl(cash.expense)}`;
+  $('dashCashSummary').textContent=`Entradas ${brl(cash.income)} · Saídas ${brl(cash.expense)}`;
 
   $('dashAccrualNet').textContent=brl(accrual.result);
   $('dashAccrualNet').className=accrual.result>=0?'positive':'negative';
@@ -3642,46 +3643,133 @@ function sfpOpenCategoryV2(cat,m=state.mesAtual){
       <div class="head">
         <div>
           <h2>${sfpEsc(cat)}</h2>
-          <p>${monthName(m)} · ${row.items.length} ${row.items.length===1?'item':'itens'} · ${brl(row.amount)}</p>
+          <p>
+            ${monthName(m)}
+            · ${row.items.length} ${row.items.length===1?'item':'itens'}
+            · ${brl(row.amount)}
+          </p>
         </div>
-        <button class="btn2" id="closeV2Category">Fechar</button>
+
+        <button class="btn2" id="closeV2Category">
+          Fechar
+        </button>
       </div>
 
       <div class="sfp-v2-detail-list">
+
         ${row.items.map(i=>{
+
           let extra=i.sourceLabel||'Movimentação';
+          let action='';
 
           if(i.source==='installment'){
-            extra+=` · ${card(i.cardId)?.name||'Cartão'} · parcela ${i.installment}/${i.installments}`;
+            const c=card(i.cardId);
+
+            extra=
+              `${c?.name||'Cartão'} · `+
+              `Parcela ${i.installment}/${i.installments}`;
+
+            action=`
+              <button
+                class="btn2 tiny"
+                data-open-card="${i.cardId}"
+                data-open-card-month="${m}">
+                Ver fatura
+              </button>
+            `;
+          }
+
+          if(i.source==='recurring'){
+            extra='Recorrência';
+          }
+
+          if(i.source==='debt'){
+            extra=
+              `Dívida · Parcela ${i.installment}/${i.installments}`;
           }
 
           return `
             <div class="sfp-v2-detail-item">
-              <div>
+
+              <div style="flex:1">
                 <b>${sfpEsc(i.desc)}</b>
-                <small>${sfpEsc(extra)}</small>
+
+                <small>
+                  ${sfpEsc(extra)}
+                </small>
+
+                ${i.source==='installment'
+                  ?`<small>
+                      Compra pertencente à competência de ${monthName(m)}
+                    </small>`
+                  :''
+                }
               </div>
-              <strong>${brl(i.amount)}</strong>
+
+              <div style="text-align:right">
+                <strong>${brl(i.amount)}</strong>
+                ${action}
+              </div>
+
             </div>
           `;
         }).join('')}
+
       </div>
 
       <div class="note">
-        Este total usa competência: representa os gastos pertencentes a ${monthName(m)}, não necessariamente o dinheiro que saiu da conta nesse mesmo mês.
+        <b>Total da categoria: ${brl(row.amount)}</b><br>
+        Este valor usa competência financeira.
+        Parcelas entram no mês ao qual pertencem,
+        mesmo que a compra original tenha acontecido antes.
       </div>
     </div>
   `;
 
-  $('closeV2Category').onclick=()=>root.className='hidden';
-}
+  $('closeV2Category').onclick=()=>{
+    root.className='hidden';
+  };
 
+  root.querySelectorAll('[data-open-card]').forEach(btn=>{
+    btn.onclick=()=>{
+
+      const cardId=+btn.dataset.openCard;
+      const month=btn.dataset.openCardMonth;
+
+      root.className='hidden';
+
+      state.ui.invoiceMonthByCard[cardId]=month;
+
+      if($('invoiceCard'))
+        $('invoiceCard').value=cardId;
+
+      if($('invoiceMonth'))
+        $('invoiceMonth').value=month;
+
+      setPage('cartoes');
+      renderCards();
+
+      setTimeout(()=>{
+        const target=
+          $('invoiceV2Breakdown')||
+          $('invoiceTotalView');
+
+        if(target){
+          target.scrollIntoView({
+            behavior:'smooth',
+            block:'start'
+          });
+        }
+      },80);
+    };
+  });
+}
 function sfpDashboardViewHelp(type){
   const el=$('dashViewExplanation');
   if(!el)return;
 
   const msgs={
-    cash:'Caixa mostra o dinheiro que realmente entrou ou saiu das suas contas. Pagamentos de fatura aparecem aqui como saída de caixa.',
+    cash:'Fluxo de caixa mostra o dinheiro que realmente entrou ou saiu das suas contas durante o período. Pagamentos de fatura aparecem aqui como saída de caixa.',
     accrual:'Competência mostra receitas e gastos pertencentes ao período. Parcelas do cartão aparecem no mês correspondente, mas o pagamento da fatura não é contado novamente.',
     commitments:'Compromissos mostra valores ainda abertos ou previstos, como contas, faturas e obrigações que ainda exigirão dinheiro.'
   };
