@@ -617,6 +617,65 @@ window.SFP_NATIVE = !!window.AndroidBridge;
 }
 </style>
 
+
+<style id="sfp-category-details-v3">
+.sfp-cat-name{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:2px !important;
+}
+
+.sfp-cat-name small{
+  font-size:10px !important;
+  opacity:.6 !important;
+}
+
+.sfp-cat-detail{
+  margin:2px 0 12px !important;
+  padding:10px 12px !important;
+  border-radius:12px !important;
+  background:rgba(0,0,0,.12) !important;
+}
+
+.sfp-cat-item{
+  display:flex !important;
+  justify-content:space-between !important;
+  align-items:flex-start !important;
+  gap:12px !important;
+  padding:8px 0 !important;
+  border-bottom:1px solid rgba(255,255,255,.06) !important;
+}
+
+.sfp-cat-item:last-of-type{
+  border-bottom:0 !important;
+}
+
+.sfp-cat-item div{
+  min-width:0 !important;
+}
+
+.sfp-cat-item b{
+  display:block !important;
+  font-size:12px !important;
+}
+
+.sfp-cat-item small{
+  display:block !important;
+  margin-top:2px !important;
+  font-size:10px !important;
+  opacity:.6 !important;
+}
+
+.sfp-cat-item strong{
+  font-size:12px !important;
+  white-space:nowrap !important;
+}
+
+.sfp-open-cat{
+  margin-top:10px !important;
+}
+</style>
+
 </head>
 <body>
 <div class="shell">
@@ -1512,6 +1571,36 @@ function sfpLineChart(el, rows, opts={}){
   });
 }
 
+function sfpCategoryItems(cat,m=state.mesAtual){
+  let out=[];
+
+  [...txInMonth(m),...recurringOccurrences(m)]
+    .filter(t=>t.kind==='expense' && (t.category||'Outros')===cat)
+    .forEach(t=>out.push({
+      desc:t.desc,
+      amount:t.amount,
+      source:t.virtual?'Recorrência':'Lançamento'
+    }));
+
+  installments(m)
+    .filter(i=>(i.purchase.category||'Outros')===cat)
+    .forEach(i=>out.push({
+      desc:i.purchase.desc,
+      amount:i.amount,
+      source:'Cartão'
+    }));
+
+  if(cat==='Dívida'){
+    debtDueForMonth(m).forEach(d=>out.push({
+      desc:d.debt.name,
+      amount:d.amount,
+      source:'Dívida'
+    }));
+  }
+
+  return out.sort((a,b)=>b.amount-a.amount);
+}
+
 function sfpCategoryChart(el){
   if(!el) return;
 
@@ -1525,25 +1614,77 @@ function sfpCategoryChart(el){
     return;
   }
 
+  const total=rows.reduce((s,[,v])=>s+v,0);
   const max=Math.max(...rows.map(x=>x[1]),1);
 
   el.innerHTML=`
     <div class="sfp-category-chart">
-      ${rows.map(([cat,val])=>`
-        <button type="button" class="sfp-cat-row" data-cat="${sfpEsc(cat)}">
-          <span class="sfp-cat-name">${sfpEsc(cat)}</span>
-          <span class="sfp-cat-track">
-            <span class="sfp-cat-fill" style="width:${Math.max(2,val/max*100)}%"></span>
-          </span>
-          <strong>${brl(val)}</strong>
-        </button>
-      `).join('')}
+      ${rows.map(([cat,val])=>{
+        const pct=total?val/total*100:0;
+        const items=sfpCategoryItems(cat);
+
+        return `
+          <button type="button"
+                  class="sfp-cat-row"
+                  data-cat="${sfpEsc(cat)}">
+
+            <span class="sfp-cat-name">
+              ${sfpEsc(cat)}
+              <small>${items.length} ${items.length===1?'item':'itens'} · ${pct.toFixed(1).replace('.',',')}%</small>
+            </span>
+
+            <span class="sfp-cat-track">
+              <span class="sfp-cat-fill"
+                    style="width:${Math.max(2,val/max*100)}%">
+              </span>
+            </span>
+
+            <strong>${brl(val)}</strong>
+          </button>
+
+          <div class="sfp-cat-detail hidden" data-cat-detail="${sfpEsc(cat)}">
+            ${items.map(i=>`
+              <div class="sfp-cat-item">
+                <div>
+                  <b>${sfpEsc(i.desc)}</b>
+                  <small>${sfpEsc(i.source)}</small>
+                </div>
+                <strong>${brl(i.amount)}</strong>
+              </div>
+            `).join('')}
+
+            <button type="button"
+                    class="btn2 tiny sfp-open-cat"
+                    data-open-cat="${sfpEsc(cat)}">
+              Ver lançamentos
+            </button>
+          </div>
+        `;
+      }).join('')}
     </div>
-    <small class="sfp-chart-help">Toque em uma categoria para abrir os lançamentos correspondentes.</small>`;
+
+    <small class="sfp-chart-help">
+      Toque em uma categoria para ver o que compõe o valor.
+    </small>`;
 
   el.querySelectorAll('[data-cat]').forEach(b=>{
     b.addEventListener('click',()=>{
       const cat=b.dataset.cat;
+      const detail=el.querySelector(`[data-cat-detail="${CSS.escape(cat)}"]`);
+
+      el.querySelectorAll('.sfp-cat-detail').forEach(d=>{
+        if(d!==detail)d.classList.add('hidden');
+      });
+
+      detail?.classList.toggle('hidden');
+    });
+  });
+
+  el.querySelectorAll('[data-open-cat]').forEach(b=>{
+    b.addEventListener('click',e=>{
+      e.stopPropagation();
+
+      const cat=b.dataset.openCat;
       setPage('lancamentos');
 
       if($('txSearch')){
@@ -1555,7 +1696,6 @@ function sfpCategoryChart(el){
     });
   });
 }
-
 function sfpDashboardInteractiveCharts(){
   const cash=$('cashflowBars');
 
