@@ -1,0 +1,14 @@
+{
+  "name": "sfp-qa-lab",
+  "private": true,
+  "scripts": {
+    "test": "npm run test:static && npm run test:financial",
+    "test:static": "node qa/static-check.mjs",
+    "test:financial": "playwright test qa/financial.spec.js",
+    "test:e2e": "playwright test qa/ui.spec.js",
+    "test:qa": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1"
+  }
+}
