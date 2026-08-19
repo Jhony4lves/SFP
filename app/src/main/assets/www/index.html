@@ -295,6 +295,122 @@ img,canvas,svg{max-width:100%}
 <script>
 window.SFP_NATIVE = !!window.AndroidBridge;
 </script>
+
+<style id="sfp-interactive-chart-style">
+.sfp-chart-controls{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  margin:0 0 10px;
+}
+.sfp-chart-active{
+  border-color:#4dbdf5 !important;
+  color:#4dbdf5 !important;
+}
+.sfp-chart-legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 14px;
+  margin:4px 0 8px;
+  font-size:.86rem;
+}
+.sfp-chart-legend button{
+  background:none;
+  border:0;
+  padding:3px 0;
+  color:inherit;
+}
+.sfp-chart-legend button.muted{
+  opacity:.35;
+}
+.sfp-chart-box{
+  position:relative;
+  width:100%;
+  min-height:230px;
+}
+.sfp-chart-box svg{
+  display:block;
+  width:100%;
+  height:auto;
+  overflow:visible;
+}
+.sfp-chart-zero{
+  stroke:rgba(160,190,220,.22);
+  stroke-width:1;
+}
+.sfp-chart-x{
+  fill:#93a6ba;
+  font-size:13px;
+}
+.sfp-series-income,
+.sfp-series-expense,
+.sfp-series-result{
+  fill:none;
+  stroke-width:4;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.sfp-series-income{stroke:#54c7ff}
+.sfp-series-expense{stroke:#ff6f86}
+.sfp-series-result{stroke:#c79cff}
+.sfp-chart-point{
+  fill:#0c2236;
+  stroke:#54c7ff;
+  stroke-width:3;
+  cursor:pointer;
+}
+.sfp-chart-tip{
+  position:absolute;
+  left:12px;
+  right:12px;
+  bottom:42px;
+  padding:10px 12px;
+  border:1px solid rgba(100,180,240,.3);
+  border-radius:12px;
+  background:#071827;
+  text-align:center;
+}
+.sfp-category-chart{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.sfp-cat-row{
+  width:100%;
+  display:grid;
+  grid-template-columns:minmax(90px,1fr) minmax(100px,2fr) auto;
+  gap:10px;
+  align-items:center;
+  background:none;
+  border:0;
+  color:inherit;
+  text-align:left;
+  padding:5px 0;
+}
+.sfp-cat-name{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.sfp-cat-track{
+  height:10px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(120,170,210,.14);
+}
+.sfp-cat-fill{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:#4dbdf5;
+}
+.sfp-chart-help{
+  display:block;
+  margin-top:10px;
+  opacity:.65;
+}
+</style>
+
 </head>
 <body>
 <div class="shell">
@@ -1038,6 +1154,273 @@ function renderDataCenter(){
 }
 
 function renderConfig(){$('cfgName').value=state.settings.name;$('cfgDay1').value=state.settings.day1;$('cfgDay2').value=state.settings.day2}
+
+/* SFP_INTERACTIVE_CHARTS_V1 */
+
+let sfpChartRange = 6;
+let sfpChartIncomeVisible = true;
+let sfpChartExpenseVisible = true;
+
+function sfpEsc(v){
+  return String(v ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+  })[c]);
+}
+
+function sfpChartEmpty(el,msg){
+  if(!el) return;
+  el.innerHTML = `<div class="empty-state"><b>Sem dados suficientes</b>${sfpEsc(msg)}</div>`;
+}
+
+function sfpChartControls(active){
+  return `
+    <div class="sfp-chart-controls">
+      ${[3,6,12].map(n =>
+        `<button type="button" class="btn2 tiny ${active===n?'sfp-chart-active':''}" data-chart-range="${n}">${n}M</button>`
+      ).join('')}
+    </div>`;
+}
+
+function sfpMoneyShort(v){
+  const a=Math.abs(v);
+  if(a>=1000) return 'R$ '+(v/1000).toFixed(a>=10000?0:1).replace('.',',')+' mil';
+  return brl(v);
+}
+
+function sfpLineChart(el, rows, opts={}){
+  if(!el) return;
+  if(!rows.length){
+    sfpChartEmpty(el,'Ainda não há histórico para montar este gráfico.');
+    return;
+  }
+
+  const W=680,H=255,L=42,R=18,T=22,B=43;
+  const vals=[];
+
+  rows.forEach(r=>{
+    if(opts.income !== false && sfpChartIncomeVisible) vals.push(r.income||0);
+    if(opts.expense !== false && sfpChartExpenseVisible) vals.push(r.expense||0);
+    if(opts.result) vals.push(r.result||0);
+  });
+
+  let min=Math.min(0,...vals);
+  let max=Math.max(1,...vals);
+  if(max===min) max=min+1;
+
+  const x=i=>L+(rows.length===1?0:(i/(rows.length-1))*(W-L-R));
+  const y=v=>T+(max-v)/(max-min)*(H-T-B);
+
+  const pathFor=key=>{
+    const pts=rows.map((r,i)=>`${x(i)},${y(r[key]||0)}`);
+    return pts.length ? 'M '+pts.join(' L ') : '';
+  };
+
+  const dots=(key,label)=>rows.map((r,i)=>`
+    <circle
+      class="sfp-chart-point"
+      cx="${x(i)}"
+      cy="${y(r[key]||0)}"
+      r="7"
+      data-chart-label="${sfpEsc(r.label)}"
+      data-chart-series="${sfpEsc(label)}"
+      data-chart-value="${r[key]||0}">
+    </circle>`).join('');
+
+  let series='';
+
+  if(opts.income !== false && sfpChartIncomeVisible){
+    series += `
+      <path class="sfp-series-income" d="${pathFor('income')}"></path>
+      ${dots('income','Receitas')}`;
+  }
+
+  if(opts.expense !== false && sfpChartExpenseVisible){
+    series += `
+      <path class="sfp-series-expense" d="${pathFor('expense')}"></path>
+      ${dots('expense','Despesas')}`;
+  }
+
+  if(opts.result){
+    series += `
+      <path class="sfp-series-result" d="${pathFor('result')}"></path>
+      ${dots('result','Resultado')}`;
+  }
+
+  const zeroY=y(0);
+
+  el.innerHTML=`
+    ${opts.controls===false?'':sfpChartControls(sfpChartRange)}
+    <div class="sfp-chart-legend">
+      ${opts.income===false?'':`
+        <button type="button" data-toggle-series="income" class="${sfpChartIncomeVisible?'':'muted'}">
+          ● Receitas
+        </button>`}
+      ${opts.expense===false?'':`
+        <button type="button" data-toggle-series="expense" class="${sfpChartExpenseVisible?'':'muted'}">
+          ● Despesas
+        </button>`}
+      ${opts.result?'<span>● Resultado</span>':''}
+    </div>
+
+    <div class="sfp-chart-box">
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${sfpEsc(opts.title||'Gráfico financeiro')}">
+        <line class="sfp-chart-zero" x1="${L}" y1="${zeroY}" x2="${W-R}" y2="${zeroY}"></line>
+
+        ${rows.map((r,i)=>`
+          <text class="sfp-chart-x" x="${x(i)}" y="${H-13}" text-anchor="middle">
+            ${sfpEsc(r.shortLabel||r.label)}
+          </text>
+        `).join('')}
+
+        ${series}
+      </svg>
+
+      <div class="sfp-chart-tip hidden" aria-live="polite"></div>
+    </div>`;
+
+  el.querySelectorAll('.sfp-chart-point').forEach(pt=>{
+    pt.addEventListener('click',()=>{
+      const tip=el.querySelector('.sfp-chart-tip');
+      tip.innerHTML=
+        `<b>${sfpEsc(pt.dataset.chartSeries)}</b> · ${sfpEsc(pt.dataset.chartLabel)}<br>`+
+        `<strong>${brl(+pt.dataset.chartValue)}</strong>`;
+      tip.classList.remove('hidden');
+    });
+  });
+
+  el.querySelectorAll('[data-chart-range]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      sfpChartRange=+b.dataset.chartRange;
+      renderDashboard();
+      renderReports();
+    });
+  });
+
+  el.querySelectorAll('[data-toggle-series]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      if(b.dataset.toggleSeries==='income') sfpChartIncomeVisible=!sfpChartIncomeVisible;
+      if(b.dataset.toggleSeries==='expense') sfpChartExpenseVisible=!sfpChartExpenseVisible;
+      renderDashboard();
+      renderReports();
+    });
+  });
+}
+
+function sfpCategoryChart(el){
+  if(!el) return;
+
+  const map=categoriesSpent();
+  const rows=Object.entries(map)
+    .filter(([,v])=>v>0)
+    .sort((a,b)=>b[1]-a[1]);
+
+  if(!rows.length){
+    sfpChartEmpty(el,'Registre despesas para ver a distribuição por categoria.');
+    return;
+  }
+
+  const max=Math.max(...rows.map(x=>x[1]),1);
+
+  el.innerHTML=`
+    <div class="sfp-category-chart">
+      ${rows.map(([cat,val])=>`
+        <button type="button" class="sfp-cat-row" data-cat="${sfpEsc(cat)}">
+          <span class="sfp-cat-name">${sfpEsc(cat)}</span>
+          <span class="sfp-cat-track">
+            <span class="sfp-cat-fill" style="width:${Math.max(2,val/max*100)}%"></span>
+          </span>
+          <strong>${brl(val)}</strong>
+        </button>
+      `).join('')}
+    </div>
+    <small class="sfp-chart-help">Toque em uma categoria para abrir os lançamentos correspondentes.</small>`;
+
+  el.querySelectorAll('[data-cat]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const cat=b.dataset.cat;
+      setPage('lancamentos');
+
+      if($('txSearch')){
+        $('txSearch').value=cat;
+        renderTx();
+      }
+
+      toast(`Mostrando lançamentos de ${cat}`);
+    });
+  });
+}
+
+function sfpDashboardInteractiveCharts(){
+  const cash=$('cashflowBars');
+
+  if(cash){
+    const months=Array.from(
+      {length:sfpChartRange},
+      (_,i)=>monthAdd(state.mesAtual,i-(sfpChartRange-1))
+    );
+
+    const rows=months.map(m=>{
+      const c=monthCalc(m);
+      return {
+        label:monthName(m),
+        shortLabel:monthName(m).split(' ')[0].slice(0,3),
+        income:c.inc||0,
+        expense:c.exp||0
+      };
+    });
+
+    sfpLineChart(cash,rows,{
+      title:'Receitas e despesas ao longo dos meses'
+    });
+  }
+
+  const legend=$('donutLegend');
+
+  if(legend){
+    sfpCategoryChart(legend);
+  }
+}
+
+function sfpReportsInteractiveCharts(){
+  const yearly=$('yearBars');
+
+  if(!yearly) return;
+
+  const months=Array.from(
+    {length:sfpChartRange},
+    (_,i)=>monthAdd(state.mesAtual,i-(sfpChartRange-1))
+  );
+
+  const rows=months.map(m=>{
+    const c=monthCalc(m);
+    return {
+      label:monthName(m),
+      shortLabel:monthName(m).split(' ')[0].slice(0,3),
+      income:c.inc||0,
+      expense:c.exp||0,
+      result:c.result||0
+    };
+  });
+
+  sfpLineChart(yearly,rows,{
+    title:'Histórico financeiro',
+    result:true
+  });
+}
+
+const sfpOriginalRenderDashboard=renderDashboard;
+renderDashboard=function(){
+  sfpOriginalRenderDashboard();
+  sfpDashboardInteractiveCharts();
+};
+
+const sfpOriginalRenderReports=renderReports;
+renderReports=function(){
+  sfpOriginalRenderReports();
+  sfpReportsInteractiveCharts();
+};
+
+
 function renderAll(){renderSelects();renderTop();renderToday();renderDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderDataCenter();renderConfig();renderFavorites();applyPrivacy();formatMoneyInputs()}
 function setPage(id){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id===id));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));let titles={hoje:['Hoje','O que importa agora'],dashboard:['Visão Geral','Seu mês em números'],lancamentos:['Lançamentos','Registre com o mínimo de atrito'],extratos:['Extratos','Importe e concilie'],contas:['Contas','Onde seu dinheiro está'],cartoes:['Cartões','Faturas, limites e parcelas'],recorrencias:['Recorrências','Regras mensais sem duplicação'],orcamento:['Orçamento','Limites flexíveis'],dividas:['Dívidas','Saldo e amortização'],metas:['Metas','Objetivos e reservas'],patrimonio:['Patrimônio','Ativos menos dívidas'],calendario:['Calendário','Seu fluxo por dia'],relatorios:['Relatórios','Fechamentos e comparação'],simuladores:['Simuladores','Teste cenários'],dados:['Central de Dados','Saúde, backup e integridade da base'],auditoria:['Auditoria','Integridade e manutenção dos dados'],config:['Configurações','Preferências e segurança']};$('pageTitle').textContent=titles[id][0];$('pageSub').textContent=titles[id][1];window.scrollTo({top:0,behavior:'smooth'})}
 function setKind(k){currentKind=k;document.querySelectorAll('.quicktype').forEach(b=>b.classList.toggle('active',b.dataset.kind===k));$('normalFields').classList.toggle('hidden',k==='transfer');$('transferFields').classList.toggle('hidden',k!=='transfer');$('billFields').classList.toggle('hidden',k!=='bill');$('cardFields').classList.toggle('hidden',k!=='card');$('incomeFields').classList.toggle('hidden',k!=='income');$('txSubmit').textContent={expense:'Registrar gasto',bill:'Adicionar conta',card:'Adicionar compra',income:'Adicionar receita',transfer:'Transferir'}[k]}
