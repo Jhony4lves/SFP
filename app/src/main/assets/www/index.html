@@ -411,6 +411,212 @@ window.SFP_NATIVE = !!window.AndroidBridge;
 }
 </style>
 
+
+<style id="sfp-chart-mobile-fix-v2">
+/* SFP_CHART_MOBILE_FIX_V2 */
+
+/* Remove o comportamento dos gráficos antigos */
+#cashflowBars,
+#yearBars{
+  display:block !important;
+  width:100% !important;
+  height:auto !important;
+  min-height:0 !important;
+  align-items:initial !important;
+  justify-content:initial !important;
+  gap:0 !important;
+  padding:0 !important;
+  overflow:visible !important;
+}
+
+/* Controles 3M / 6M / 12M */
+#cashflowBars .sfp-chart-controls,
+#yearBars .sfp-chart-controls{
+  display:flex !important;
+  width:100% !important;
+  justify-content:flex-start !important;
+  align-items:center !important;
+  gap:8px !important;
+  margin:8px 0 12px !important;
+}
+
+.sfp-chart-controls button{
+  width:auto !important;
+  min-width:52px !important;
+  min-height:38px !important;
+  height:38px !important;
+  padding:0 13px !important;
+  margin:0 !important;
+  font-size:13px !important;
+  line-height:1 !important;
+  flex:0 0 auto !important;
+  border-radius:12px !important;
+}
+
+/* Legenda */
+.sfp-chart-legend{
+  display:flex !important;
+  width:100% !important;
+  flex-direction:row !important;
+  flex-wrap:wrap !important;
+  justify-content:flex-start !important;
+  align-items:center !important;
+  gap:8px 18px !important;
+  margin:0 0 10px !important;
+  padding:0 !important;
+}
+
+.sfp-chart-legend button,
+.sfp-chart-legend span{
+  display:inline-flex !important;
+  width:auto !important;
+  height:auto !important;
+  min-height:0 !important;
+  align-items:center !important;
+  gap:5px !important;
+  padding:3px 0 !important;
+  margin:0 !important;
+  border:0 !important;
+  background:transparent !important;
+  font-size:12px !important;
+  line-height:1.25 !important;
+  white-space:nowrap !important;
+}
+
+/* Área principal */
+.sfp-chart-box{
+  position:relative !important;
+  display:block !important;
+  width:100% !important;
+  height:auto !important;
+  min-height:190px !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:visible !important;
+}
+
+.sfp-chart-box svg{
+  display:block !important;
+  position:static !important;
+  width:100% !important;
+  height:auto !important;
+  min-height:190px !important;
+  max-height:270px !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+
+/* Linhas */
+.sfp-series-income,
+.sfp-series-expense,
+.sfp-series-result{
+  stroke-width:3 !important;
+}
+
+.sfp-chart-point{
+  r:6px;
+  stroke-width:3 !important;
+}
+
+/* Meses no eixo X */
+.sfp-chart-x{
+  font-size:11px !important;
+}
+
+/* Tooltip ao tocar num ponto */
+.sfp-chart-tip{
+  position:relative !important;
+  left:auto !important;
+  right:auto !important;
+  bottom:auto !important;
+  width:100% !important;
+  box-sizing:border-box !important;
+  margin:10px 0 0 !important;
+  padding:10px 12px !important;
+  border-radius:12px !important;
+  font-size:13px !important;
+}
+
+/* Distribuição antiga: mantém, mas civilizada */
+#donut{
+  width:180px !important;
+  height:180px !important;
+  min-width:180px !important;
+  min-height:180px !important;
+  max-width:180px !important;
+  max-height:180px !important;
+  margin:16px auto !important;
+  border-radius:50% !important;
+  flex:none !important;
+}
+
+/* Nossa lista interativa abaixo do donut */
+#donutLegend{
+  display:block !important;
+  width:100% !important;
+  margin-top:10px !important;
+}
+
+.sfp-category-chart{
+  width:100% !important;
+}
+
+.sfp-cat-row{
+  display:grid !important;
+  width:100% !important;
+  grid-template-columns:minmax(85px,1fr) minmax(90px,1.6fr) auto !important;
+  gap:9px !important;
+  align-items:center !important;
+  min-height:42px !important;
+  padding:5px 0 !important;
+  font-size:12px !important;
+}
+
+.sfp-cat-row strong{
+  font-size:12px !important;
+  white-space:nowrap !important;
+}
+
+.sfp-cat-track{
+  width:100% !important;
+  height:8px !important;
+}
+
+.sfp-chart-help{
+  font-size:11px !important;
+  line-height:1.4 !important;
+}
+
+/* Dá espaço para a navegação fixa inferior */
+#dashboard,
+#relatorios{
+  padding-bottom:90px !important;
+}
+
+/* Ajuste extra para celular estreito */
+@media (max-width:520px){
+  .sfp-chart-box{
+    min-height:175px !important;
+  }
+
+  .sfp-chart-box svg{
+    min-height:175px !important;
+    max-height:220px !important;
+  }
+
+  #donut{
+    width:155px !important;
+    height:155px !important;
+    min-width:155px !important;
+    min-height:155px !important;
+  }
+
+  .sfp-cat-row{
+    grid-template-columns:minmax(75px,1fr) minmax(75px,1.25fr) auto !important;
+  }
+}
+</style>
+
 </head>
 <body>
 <div class="shell">
