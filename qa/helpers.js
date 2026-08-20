@@ -28,9 +28,15 @@ async function expectBootComplete(page, expect, name) {
 }
 
 async function writeIndexedDB(page, value) {
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
   await page.evaluate(async ({ DB_NAME, STORE, DB_KEY, value }) => {
     if (typeof db !== 'undefined' && db) { db.close(); db = null; }
-    await new Promise(resolve => { const request = indexedDB.deleteDatabase(DB_NAME); request.onsuccess = request.onerror = request.onblocked = () => resolve(); });
+    await new Promise((resolve, reject) => {
+      const request = indexedDB.deleteDatabase(DB_NAME);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error || Error('Falha ao excluir IndexedDB de teste'));
+      request.onblocked = () => reject(Error('IndexedDB de teste bloqueada por uma conexão aberta'));
+    });
     const database = await new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, 1);
       request.onupgradeneeded = () => request.result.createObjectStore(STORE);

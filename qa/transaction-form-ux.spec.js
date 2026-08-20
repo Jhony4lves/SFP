@@ -1,12 +1,13 @@
 const { test, expect } = require('@playwright/test');
-const { fixture, writeIndexedDB } = require('./helpers');
+const { fixture, writeIndexedDB, expectBootComplete } = require('./helpers');
 
 async function boot(page, value = fixture('UX-03')) {
   await page.goto('/index.html');
+  await expectBootComplete(page, expect, 'Fixture QA');
   await writeIndexedDB(page, value);
   await page.evaluate(value => localStorage.setItem('sfp_final_fallback', JSON.stringify(value)), value);
   await page.reload();
-  await expect.poll(() => page.evaluate(() => state?.settings?.name)).toBe(value.settings.name);
+  await page.waitForFunction(name => typeof state !== 'undefined' && state?.settings?.name === name && typeof lastSavedState !== 'undefined' && lastSavedState, value.settings.name);
   await page.evaluate(() => setPage('lancamentos'));
 }
 
