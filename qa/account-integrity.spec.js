@@ -31,6 +31,7 @@ test('editar somente o nome preserva integralmente conta rica após reload', asy
   await page.locator('#accountName').fill('Conta renomeada');
   await page.locator('#accountForm button').click();
   await expect.poll(() => page.evaluate(() => state.accounts[0].name)).toBe('Conta renomeada');
+  await expect.poll(() => page.evaluate(async () => (await dbGet()).value.accounts[0].name)).toBe('Conta renomeada');
   await page.reload();
   await expectBootComplete(page, expect, 'Conta rica QA');
 

@@ -50,6 +50,7 @@ test('editar somente o nome preserva integralmente contrato payroll e cronograma
   await page.locator('#debtName').fill('Consignado renomeado');
   await page.locator('#debtForm button').click();
   await expect.poll(() => page.evaluate(() => state.debts[0].name)).toBe('Consignado renomeado');
+  await expect.poll(() => page.evaluate(async () => (await dbGet()).value.debts[0].name)).toBe('Consignado renomeado');
   await page.reload();
   await expectBootComplete(page, expect, 'Dívida seed QA');
 
@@ -83,6 +84,7 @@ test('nova dívida criada pelo DOM alimenta patrimônio, competência e compromi
   await page.locator('#debtForm button').click();
   await expect.poll(() => page.evaluate(() => state.debts.length)).toBe(1);
   const createdId = await page.evaluate(() => state.debts[0].id);
+  await expect.poll(() => page.evaluate(async id => (await dbGet()).value.debts.some(debt => debt.id === id), createdId)).toBe(true);
 
   await page.reload();
   await expectBootComplete(page, expect, 'Nova dívida QA');
