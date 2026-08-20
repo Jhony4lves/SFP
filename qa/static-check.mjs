@@ -21,6 +21,25 @@ for (const marker of ['<<<<<<<', '>>>>>>>']) {
 }
 if (!source.includes("DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main'")) problems.push('contrato de persistência IndexedDB foi alterado');
 
+// UX-02 protects the shared contract rather than individual cosmetic values.
+for (const contract of [
+  'id="sfp-design-system-foundation"',
+  '--color-surface:',
+  '--color-text-secondary:',
+  '--color-accent:',
+  '--color-success:',
+  '--color-warning:',
+  '--color-error:',
+  '--control-height:',
+  '.form-section{',
+  '.field-group{',
+  '.section-actions{',
+  ':focus-visible',
+  '@media(prefers-reduced-motion:reduce)',
+]) {
+  if (!source.includes(contract)) problems.push(`contrato visual UX-02 ausente: ${contract}`);
+}
+
 if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);
