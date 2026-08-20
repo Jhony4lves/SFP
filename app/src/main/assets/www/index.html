@@ -1451,6 +1451,29 @@ button:active:not(:disabled){transform:translateY(1px)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important}}
 </style>
 
+<style id="sfp-transaction-form-v3">
+/* UX-03: reusable transactional form composition. */
+.transaction-form{display:grid;gap:var(--space-3);padding-bottom:var(--space-4)}
+.transaction-form-intro{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3)}
+.transaction-mode{display:inline-flex;align-items:center;min-height:28px;padding:4px 10px;border:1px solid var(--color-border);border-radius:var(--radius-pill);background:var(--color-surface-raised);color:var(--color-text-secondary);font-size:.7rem;font-weight:750}
+.transaction-type{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--space-2)}
+.transaction-type .quicktype{min-height:58px;margin:0;padding:8px 4px;border:1px solid var(--color-border);background:var(--color-background);color:var(--color-text-secondary);font-size:.68rem;font-weight:700}
+.transaction-type .quicktype b{font-size:1.1rem;line-height:1}
+.transaction-type .quicktype.active{border-color:var(--color-accent);background:rgba(76,194,255,.12);color:var(--color-text);box-shadow:inset 0 0 0 1px var(--color-accent)}
+.transaction-type .quicktype.active::after{content:'Selecionado';display:block;margin-top:3px;color:var(--color-accent);font-size:.55rem}
+.money-field{display:block;padding:var(--space-3);border:1px solid rgba(76,194,255,.5);border-radius:var(--radius-md);background:rgba(76,194,255,.07)}
+.money-field input{min-height:58px!important;font-size:1.5rem!important;font-weight:800;font-variant-numeric:tabular-nums;border-color:var(--color-accent)!important}
+.conditional-fields{display:grid;gap:var(--space-3)}
+.transaction-details{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-subtle);overflow:hidden}
+.transaction-details summary{min-height:var(--control-height);display:flex;align-items:center;padding:10px var(--space-4);cursor:pointer;color:var(--color-text);font-size:.8rem;font-weight:750;list-style:none}
+.transaction-details summary::-webkit-details-marker{display:none}.transaction-details summary::after{content:'＋';margin-left:auto;color:var(--color-accent);font-size:1rem}.transaction-details[open] summary::after{content:'−'}
+.transaction-details__body{display:grid;gap:var(--space-3);padding:0 var(--space-4) var(--space-4);border-top:1px solid var(--color-border)}
+.transaction-actions{padding-top:var(--space-2);border-top:1px solid var(--color-border)}
+.transaction-actions .btn{min-width:min(100%,220px)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:650px){.transaction-panel{margin-inline:-2px}.transaction-type{grid-template-columns:repeat(3,1fr)}.transaction-type .quicktype{font-size:.72rem}.transaction-actions{display:grid}.transaction-actions button{width:100%}.transaction-form{padding-bottom:20vh}}
+</style>
+
 </head>
 <body>
 <div class="shell">
@@ -1646,47 +1669,60 @@ button:active:not(:disabled){transform:translateY(1px)}
 
 <section class="tab" id="lancamentos">
       <div class="grid2">
-        <article class="panel">
-          <div class="head"><div><h2>Novo lançamento</h2><p>Escolha o que aconteceu; eu escondo o resto</p></div></div>
+        <article class="panel transaction-panel">
+          <div class="head transaction-form-intro"><div><h2 id="txFormTitle">Novo lançamento</h2><p id="txFormSubtitle">Registre o que aconteceu com seu dinheiro.</p></div><span class="transaction-mode" id="txModeBadge">Criando</span></div>
           <div class="quick-favorites" id="quickFavorites"></div>
-          <div class="quicktypes">
-            <button class="quicktype active" data-kind="expense"><b>🛍️</b>Gasto</button>
-            <button class="quicktype" data-kind="bill"><b>🧾</b>Conta</button>
-            <button class="quicktype" data-kind="card"><b>💳</b>Cartão</button>
-            <button class="quicktype" data-kind="income"><b>💰</b>Receita</button>
-            <button class="quicktype" data-kind="transfer"><b>↔️</b>Transferir</button>
+          <div class="quicktypes transaction-type" role="group" aria-label="Tipo de lançamento">
+            <button class="quicktype active" data-kind="expense" aria-pressed="true"><b>🛍️</b>Gasto</button>
+            <button class="quicktype" data-kind="bill" aria-pressed="false"><b>🧾</b>Conta</button>
+            <button class="quicktype" data-kind="card" aria-pressed="false"><b>💳</b>Cartão</button>
+            <button class="quicktype" data-kind="income" aria-pressed="false"><b>💰</b>Receita</button>
+            <button class="quicktype" data-kind="transfer" aria-pressed="false"><b>↔️</b>Transferir</button>
           </div>
-          <form id="txForm">
+          <form id="txForm" class="transaction-form">
             <input id="txEditId" type="hidden"/>
-            <label>Descrição<input id="txDesc" required placeholder="Ex.: Mercado, salário, faculdade"/></label>
-            <div class="two">
-              <label>Valor<input id="txAmount" type="number" step="0.01" min="0.01" required/></label>
-              <label>Data<input id="txDate" type="date" required/></label>
-            </div>
-            <div id="normalFields">
-              <div class="two">
-                <label>Categoria<select id="txCategory"></select></label>
-                <label>Conta<select id="txAccount"></select></label>
+            <section class="form-section" aria-labelledby="txEssentialTitle">
+              <div class="form-section__header"><div><h3 class="form-section__title" id="txEssentialTitle">Essencial</h3><p class="form-section__description">O que você está registrando e quanto.</p></div></div>
+              <div class="field-group">
+                <label>Descrição<input id="txDesc" required autocomplete="off" placeholder="Ex.: Mercado, salário, faculdade"/></label>
+                <label class="money-field">Valor<input id="txAmount" type="number" inputmode="decimal" step="0.01" min="0.01" required aria-describedby="txAmountHelp"/><small class="field-help" id="txAmountHelp">Use reais e centavos, por exemplo 49,90.</small></label>
               </div>
-              <div id="billFields" class="hidden two">
-                <label>Vencimento<input id="txDueDay" type="number" min="1" max="31" value="10"/></label>
+            </section>
+            <section class="form-section" aria-labelledby="txWhenTitle">
+              <div class="form-section__header"><div><h3 class="form-section__title" id="txWhenTitle">Quando</h3><p class="form-section__description">A data usada por este lançamento.</p></div></div>
+              <label>Data<input id="txDate" type="date" required/></label>
+              <div id="billFields" class="hidden field-group field-group--two conditional-fields">
+                <label>Vencimento<input id="txDueDay" type="number" inputmode="numeric" min="1" max="31" value="10"/><small class="field-help">Dia previsto para pagar esta conta.</small></label>
                 <label>Status<select id="txStatus"><option value="pending">Pendente</option><option value="paid">Pago</option><option value="planned">Previsto</option></select></label>
               </div>
-              <div id="cardFields" class="hidden">
-                <div class="two"><label>Cartão<select id="txCard"></select></label><label>Parcelas<input id="txInstallments" type="number" min="1" max="72" value="1"/></label></div>
-                <label>Primeira fatura<select id="txFirstBill"><option value="auto">Automática pelo fechamento</option><option value="current">Mês da compra</option><option value="next">Próximo mês</option></select></label>
+            </section>
+            <section class="form-section" aria-labelledby="txSourceTitle">
+              <div class="form-section__header"><div><h3 class="form-section__title" id="txSourceTitle">Origem / destino</h3><p class="form-section__description">De onde o dinheiro entra, sai ou é transferido.</p></div></div>
+              <div id="normalFields" class="conditional-fields">
+                <label>Conta<select id="txAccount"></select><small class="field-help">Conta vinculada à movimentação.</small></label>
+                <div id="cardFields" class="hidden conditional-fields">
+                  <div class="field-group field-group--two"><label>Cartão<select id="txCard"></select></label><label>Parcelas<input id="txInstallments" type="number" inputmode="numeric" min="1" max="72" value="1"/></label></div>
+                  <label>Primeira fatura<select id="txFirstBill"><option value="auto">Automática pelo fechamento</option><option value="current">Mês da compra</option><option value="next">Próximo mês</option></select></label>
+                </div>
               </div>
-              <div id="incomeFields" class="hidden two"><label>Recebido?<select id="txIncomeStatus"><option value="paid">Sim</option><option value="pending">Ainda não</option></select></label><label>Recorrente?<select id="txIncomeRecurring"><option value="no">Não</option><option value="yes">Sim, mensal</option></select></label></div>
-            </div>
-            <div id="transferFields" class="hidden">
-              <div class="two"><label>Conta de origem<select id="txFrom"></select></label><label>Conta de destino<select id="txTo"></select></label></div>
-            </div>
-            <details><summary style="font-size:10px;color:var(--muted);cursor:pointer">Mais opções</summary>
-              <label style="margin-top:9px">Observação<textarea id="txNote"></textarea></label>
+              <div id="transferFields" class="hidden conditional-fields">
+                <div class="field-group field-group--two"><label>Conta de origem<select id="txFrom"></select></label><label>Conta de destino<select id="txTo"></select></label></div>
+              </div>
+            </section>
+            <section class="form-section" id="txClassificationSection" aria-labelledby="txClassTitle">
+              <div class="form-section__header"><div><h3 class="form-section__title" id="txClassTitle">Classificação</h3><p class="form-section__description">Ajuda a entender para onde vai seu dinheiro.</p></div></div>
+              <label>Categoria<select id="txCategory"></select></label>
+            </section>
+            <section class="form-section hidden" id="txStatusSection" aria-labelledby="txStatusTitle">
+              <div class="form-section__header"><div><h3 class="form-section__title" id="txStatusTitle">Status</h3><p class="form-section__description">Informe se o valor já entrou na conta.</p></div></div>
+              <div id="incomeFields" class="hidden field-group field-group--two"><label>Recebido?<select id="txIncomeStatus"><option value="paid">Sim</option><option value="pending">Ainda não</option></select><small class="field-help">Recebimentos pendentes permanecem separados do saldo realizado.</small></label><label>Recorrente?<select id="txIncomeRecurring"><option value="no">Não</option><option value="yes">Sim, mensal</option></select></label></div>
+            </section>
+            <details class="transaction-details" id="txMoreDetails"><summary>Mais detalhes <span class="sr-only">opcionais</span></summary><div class="transaction-details__body">
+              <label>Observação<textarea id="txNote" placeholder="Informações úteis sobre este lançamento"></textarea></label>
               <label>Tags<input id="txTags" placeholder="Ex.: trabalho, viagem, reembolsável"/></label>
               <label class="check"><input id="txRecurring" type="checkbox"/> Criar regra recorrente mensal a partir deste lançamento</label>
-            </details>
-            <div class="actions"><button class="btn" type="submit" id="txSubmit">Registrar gasto</button><button class="btn2" type="button" id="txCancelEdit">Cancelar edição</button></div>
+            </div></details>
+            <div class="section-actions transaction-actions"><button class="btn" type="submit" id="txSubmit">Registrar gasto</button><button class="btn2 hidden" type="button" id="txCancelEdit">Cancelar edição</button></div>
           </form>
         </article>
         <article class="panel">
@@ -4649,13 +4685,14 @@ function handleAndroidBack(){
 }
 window.handleAndroidBack=handleAndroidBack;
 window.sfpNavigation={getStack:()=>[...pageStack],reset:(page=activePage())=>{pageStack=PAGE_TITLES[page]?[page]:['hoje']}};
-function setKind(k){currentKind=k;document.querySelectorAll('.quicktype').forEach(b=>b.classList.toggle('active',b.dataset.kind===k));$('normalFields').classList.toggle('hidden',k==='transfer');$('transferFields').classList.toggle('hidden',k!=='transfer');$('billFields').classList.toggle('hidden',k!=='bill');$('cardFields').classList.toggle('hidden',k!=='card');$('incomeFields').classList.toggle('hidden',k!=='income');$('txSubmit').textContent={expense:'Registrar gasto',bill:'Adicionar conta',card:'Adicionar compra',income:'Adicionar receita',transfer:'Transferir'}[k]}
+function setTxFormMode(editing=false){$('txFormTitle').textContent=editing?'Editar lançamento':'Novo lançamento';$('txFormSubtitle').textContent=editing?'Revise os dados antes de salvar as alterações.':'Registre o que aconteceu com seu dinheiro.';$('txModeBadge').textContent=editing?'Editando':'Criando';$('txCancelEdit').classList.toggle('hidden',!editing)}
+function setKind(k){currentKind=k;document.querySelectorAll('.quicktype').forEach(b=>{let active=b.dataset.kind===k;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});$('normalFields').classList.toggle('hidden',k==='transfer');$('transferFields').classList.toggle('hidden',k!=='transfer');$('billFields').classList.toggle('hidden',k!=='bill');$('cardFields').classList.toggle('hidden',k!=='card');$('incomeFields').classList.toggle('hidden',k!=='income');$('txClassificationSection').classList.toggle('hidden',k==='transfer');$('txStatusSection').classList.toggle('hidden',k!=='income');$('txSubmit').textContent={expense:'Registrar gasto',bill:'Adicionar conta',card:'Adicionar compra',income:'Adicionar receita',transfer:'Transferir'}[k]}
 
 function moveToTrash(type,item){state.trash.push({type,item:clone(item),deletedAt:new Date().toISOString()})}
 
 window.toggleTx=async id=>{let t=state.transactions.find(x=>x.id===id);if(t){snapshotUndo('Alterar status');let paid=t.status!=='paid';t.status=paid?'paid':'pending';t.balanceImpact=paid&&t.date>state.baseDate;await dbSet(state);lastSavedState=clone(state);renderAll()}}
 window.trashTx=async id=>{let i=state.transactions.findIndex(x=>x.id===id);if(i>=0){snapshotUndo('Excluir lançamento');state.trash.push({type:'transaction',item:state.transactions[i],deletedAt:new Date().toISOString()});state.transactions.splice(i,1);await dbSet(state);renderAll();toast('Movido para a lixeira')}}
-window.editTx=id=>{let t=state.transactions.find(x=>x.id===id);if(!t)return;setPage('lancamentos');setKind(t.kind==='income'?'income':t.kind==='expense'?'expense':'expense');$('txEditId').value=t.id;$('txDesc').value=t.desc;$('txAmount').value=t.amount;$('txDate').value=t.date;$('txCategory').value=t.category||'Outros';$('txAccount').value=t.accountId||'';$('txNote').value=t.note||'';$('txTags').value=(t.tags||[]).join(', ')}
+window.editTx=id=>{let t=state.transactions.find(x=>x.id===id);if(!t)return;setPage('lancamentos');setKind(t.kind==='income'?'income':t.kind==='expense'?'expense':'expense');$('txEditId').value=t.id;$('txDesc').value=t.desc;$('txAmount').value=t.amount;$('txDate').value=t.date;$('txCategory').value=t.category||'Outros';$('txAccount').value=t.accountId||'';$('txIncomeStatus').value=t.status==='pending'?'pending':'paid';$('txNote').value=t.note||'';$('txTags').value=(t.tags||[]).join(', ');$('txMoreDetails').open=!!(t.note||(t.tags||[]).length);setTxFormMode(true);$('txFormTitle').scrollIntoView({block:'start'})}
 window.editAccount=id=>{let a=account(id);$('accountId').value=a.id;$('accountName').value=a.name;$('accountType').value=a.type;$('accountInitial').value=a.initial;setPage('contas')}
 const reconciliationInFlight=new Set();
 window.reconcileAccount=async(id,button=null)=>{if(reconciliationInFlight.has(id))return;reconciliationInFlight.add(id);if(button){button.disabled=true;button.textContent='Conciliando…'}let before=clone(state),persisted=false;try{let a=account(id),current=accountBalance(id),raw=prompt(`Saldo informado pelo banco para ${a.name}:\nSaldo calculado: ${brl(current)}`);if(raw==null)return;let v=parseFloat(raw.replace(',','.'));if(!Number.isFinite(v))return toast('Informe um saldo válido.');let diff=v-current;a.reconciled={balance:v,date:localCivilDate(),difference:diff};if(Math.abs(diff)>.009&&confirm(`Existe uma diferença de ${brl(diff)}.\n\nDeseja criar um lançamento de ajuste para fazer o saldo do sistema bater com o banco?`)){state.transactions.push({id:uid(),kind:diff>0?'income':'expense',desc:'Ajuste de conciliação',amount:Math.abs(diff),date:localCivilDate(),category:'Ajuste',accountId:id,status:'paid',dueDay:new Date().getDate(),tags:['conciliação'],note:'Criado automaticamente durante conciliação de saldo.',balanceImpact:true,createdAt:Date.now()});a.reconciled.difference=0}if(lastSavedState){autoBackup();snapshotUndo('Conciliar saldo',lastSavedState)}normalize();await dbSet(state);persisted=true;lastSavedState=clone(state);renderAll();let message=Math.abs(diff)<.01?'Saldo conciliado com sucesso.':'Conciliação registrada com sucesso.';toast(message);showFeedback(message)}catch(error){if(!persisted){state=before;lastSavedState=clone(state)}try{renderAll()}catch{}toast(persisted?'Conciliação salva, mas a tela não pôde ser atualizada.':'Não foi possível salvar a conciliação. Tente novamente.');console.error('Falha ao conciliar saldo:',error)}finally{reconciliationInFlight.delete(id);if(button?.isConnected){button.disabled=false;button.textContent='Conciliar saldo'}}}
@@ -4705,12 +4742,12 @@ window.removeGoal=async id=>{let g=state.goals.find(x=>x.id===id);if(g)moveToTra
 window.editAsset=id=>{let a=state.assets.find(x=>x.id===id);if(!a)return;$('assetId').value=a.id;$('assetName').value=a.name;$('assetValue').value=a.value;setPage('patrimonio')}
 window.removeAsset=async id=>{let a=state.assets.find(x=>x.id===id);if(a)moveToTrash('asset',a);state.assets=state.assets.filter(a=>a.id!==id);await save('Excluir ativo')}
 window.removeRule=async i=>{state.classificationRules.splice(i,1);await save('Excluir regra')}
-function resetTxForm(){$('txForm').reset();$('txEditId').value='';$('txDate').value=localCivilDate();setKind('expense')}
+function resetTxForm(){$('txForm').reset();$('txEditId').value='';$('txDate').value=localCivilDate();$('txMoreDetails').open=false;setKind('expense');setTxFormMode(false)}
 function initForms(){
  $('txForm').onsubmit=async e=>{e.preventDefault();let id=+$('txEditId').value,amount=+$('txAmount').value,date=$('txDate').value,desc=$('txDesc').value.trim(),note=$('txNote').value,tags=$('txTags').value.split(',').map(x=>x.trim()).filter(Boolean);
  if(currentKind==='transfer'){let from=+$('txFrom').value,to=+$('txTo').value;if(from===to)return toast('Origem e destino precisam ser diferentes.');let err=validateMoneyAction({amount,accountId:from,allowNegative:true,label:'transferência'});if(err)return toast(err);if(accountBalance(from)<amount&&!confirm(`A transferência deixará ${account(from)?.name||'a conta'} com saldo negativo. Continuar?`))return;state.transfers.push({id:uid(),desc,amount,date,fromId:from,toId:to,tags,note,balanceImpact:true});await save('Nova transferência')}
  else if(currentKind==='card'){let cd=card($('txCard').value),first=ym(date),day=+date.slice(8,10),mode=$('txFirstBill').value;if(mode==='auto'&&cd&&day>cd.closeDay)first=monthAdd(first,1);if(mode==='next')first=monthAdd(first,1);state.purchases.push({id:uid(),cardId:+$('txCard').value,desc,total:amount,installments:+$('txInstallments').value||1,purchaseDate:date,firstMonth:first,category:$('txCategory').value,status:'active',note,tags});await save('Nova compra no cartão')}
- else{let kind=currentKind==='income'?'income':'expense',status=currentKind==='income'?$('txIncomeStatus').value:(currentKind==='expense'?'paid':$('txStatus').value),dueDay=currentKind==='bill'?+$('txDueDay').value:+date.slice(8,10),obj={id:id||uid(),kind,desc,amount,date,category:$('txCategory').value,accountId:+$('txAccount').value,status,dueDay,note,tags,balanceImpact:status==='paid',createdAt:Date.now()};if(id)state.transactions=state.transactions.map(t=>t.id===id?obj:t);else state.transactions.push(obj);if($('txRecurring').checked||(currentKind==='income'&&$('txIncomeRecurring').value==='yes'))state.recurring.push({id:uid(),desc,type:kind,amount,day:dueDay,category:obj.category,accountId:obj.accountId,start:ym(date),end:'',active:true,skips:[]});await save(id?'Editar lançamento':'Novo lançamento')}
+ else{let kind=currentKind==='income'?'income':'expense',status=currentKind==='income'?$('txIncomeStatus').value:(currentKind==='expense'?'paid':$('txStatus').value),dueDay=currentKind==='bill'?+$('txDueDay').value:+date.slice(8,10),old=id?state.transactions.find(t=>t.id===id):null,obj={...(old||{}),id:id||uid(),kind,desc,amount,date,category:$('txCategory').value,accountId:+$('txAccount').value,status,dueDay,note,tags,balanceImpact:status==='paid',createdAt:old?.createdAt||Date.now()};if(id)state.transactions=state.transactions.map(t=>t.id===id?obj:t);else state.transactions.push(obj);if($('txRecurring').checked||(currentKind==='income'&&$('txIncomeRecurring').value==='yes'))state.recurring.push({id:uid(),desc,type:kind,amount,day:dueDay,category:obj.category,accountId:obj.accountId,start:ym(date),end:'',active:true,skips:[]});await save(id?'Editar lançamento':'Novo lançamento')}
  let effect=currentKind==='income'?`Receita de ${brl(amount)} registrada.`:currentKind==='transfer'?`Transferência de ${brl(amount)} registrada.`:currentKind==='card'?`Compra de ${brl(amount)} adicionada ao cartão.`:`Saída de ${brl(amount)} registrada.`;resetTxForm();setPage('hoje',{mode:'replace'});showFeedback(`${effect}<br><b>Livre projetado agora: ${brl(allAccountBalance()-commitmentUntilNextIncome())}</b>`)};
  $('accountForm').onsubmit=async e=>{e.preventDefault();let id=+$('accountId').value,old=id?account(id):null,patch={id:id||uid(),name:$('accountName').value,type:$('accountType').value,initial:+$('accountInitial').value},obj=old?{...old,...patch}:{...patch,reconciled:null};if(id)state.accounts=state.accounts.map(a=>a.id===id?obj:a);else state.accounts.push(obj);e.target.reset();$('accountId').value='';await save('Salvar conta')};
  $('cardForm').onsubmit=async e=>{e.preventDefault();let id=+$('cardId').value,old=id?card(id):null,obj={id:id||uid(),name:$('cardName').value,limit:+$('cardLimit').value,closeDay:+$('cardClose').value,dueDay:+$('cardDue').value,payAccountId:+$('cardPayAccount').value,history:old?.history||[]};if(old&&old.limit!==obj.limit)obj.history.push({id:uid(),at:new Date().toISOString(),type:'limit',text:`Limite alterado de ${brl(old.limit)} para ${brl(obj.limit)}`,amount:obj.limit});if(id)state.cards=state.cards.map(c=>c.id===id?obj:c);else state.cards.push(obj);e.target.reset();$('cardId').value='';await save('Salvar cartão')};
