@@ -1,0 +1,208 @@
+diff --git a/app/src/main/assets/www/index.html b/app/src/main/assets/www/index.html
+index 6eb588b..dfd2153 100644
+--- a/app/src/main/assets/www/index.html
++++ b/app/src/main/assets/www/index.html
+@@ -1921,10 +1921,17 @@ function recurringOccurrences(m=state.mesAtual){
+ function purchaseInstallment(p,m){
+  let idx=0,cur=p.firstMonth;
+  while(cur!==m&&idx<p.installments){cur=monthAdd(cur,1);idx++}
+- if(cur!==m||idx>=p.installments||p.status==='cancelled')return null;
++ if(cur!==m||idx>=p.installments||(p.status==='cancelled'&&(!p.cancelledFromMonth||m>=p.cancelledFromMonth)))return null;
+  // Centavos indivisíveis vão, deterministicamente, para as primeiras parcelas.
+  let count=Math.max(1,Math.trunc(p.installments)),totalCents=Math.round(Number(p.total||0)*100),baseCents=Math.floor(totalCents/count),remainder=totalCents-baseCents*count;
+- let installmentCents=baseCents+(idx<remainder?1:0),refundCents=(p.refunds||[]).filter(r=>r.month===m).reduce((s,r)=>s+Math.round(Number(r.amount||0)*100),0);
++ let installmentCents=baseCents+(idx<remainder?1:0),refundCents=0,refundPool=0;
++ // Estornos são eventos prospectivos: consomem a parcela do mês do evento e,
++ // se necessário, as seguintes, sem alterar parcelas de meses anteriores.
++ for(let n=0,month=p.firstMonth;n<=idx;n++,month=monthAdd(month,1)){
++   (p.refunds||[]).filter(r=>r.month===month).forEach(r=>refundPool+=Math.max(0,Math.round(Number(r.amount||0)*100)));
++   let cents=baseCents+(n<remainder?1:0),used=Math.min(cents,refundPool);refundPool-=used;
++   if(n===idx)refundCents=used;
++ }
+  return {purchase:p,n:idx+1,total:count,amount:Math.max(0,installmentCents-refundCents)/100,baseAmount:installmentCents/100,refund:refundCents/100,month:m,card:card(p.cardId)}
+ }
+ function installments(m=state.mesAtual){return state.purchases.map(p=>purchaseInstallment(p,m)).filter(Boolean)}
+@@ -1957,13 +1964,15 @@ function addCardHistory(cardId,type,text,amount=null){let c=card(cardId);if(!c)r
+ function cardOutstanding(cardId,ref=new Date()){
+  let c=card(cardId);if(!c)return 0;
+  let cur=currentInvoiceMonth(c,ref),sum=0;
+- state.purchases.filter(p=>p.cardId==cardId&&p.status!=='cancelled').forEach(p=>{
++ let invoicedMonths=new Set;
++ state.invoices.filter(i=>i.cardId==cardId).forEach(i=>{sum+=invoiceRemaining(cardId,i.month);invoicedMonths.add(i.month)});
++ state.purchases.filter(p=>p.cardId==cardId).forEach(p=>{
+    let m=p.firstMonth;
+    for(let i=0;i<p.installments;i++,m=monthAdd(m,1)){
+-     if(m>=cur){let ins=purchaseInstallment(p,m);if(ins)sum+=ins.amount}
++     if(m>=cur&&!invoicedMonths.has(m)){let ins=purchaseInstallment(p,m);if(ins)sum+=ins.amount}
+    }
+  });
+- state.invoiceAdjustments.filter(a=>a.cardId==cardId&&a.month>=cur).forEach(a=>sum+=a.amount);
++ state.invoiceAdjustments.filter(a=>a.cardId==cardId&&a.month>=cur&&!invoicedMonths.has(a.month)).forEach(a=>sum+=a.amount);
+  return Math.max(0,Math.round(sum*100)/100)
+ }
+ function accountBalance(id){
+@@ -4495,9 +4504,11 @@ window.removeCard=async id=>{if(state.purchases.some(p=>p.cardId==id&&p.status!=
+ 
+ window.refundPurchase=async id=>{
+  let p=state.purchases.find(x=>x.id===id);if(!p)return;
+- let max=p.total/(p.installments||1),v=parseFloat(prompt(`Valor do estorno/reembolso para "${p.desc}" nesta fatura:`,max.toFixed(2))?.replace(',','.'));
+- if(!(v>0))return;p.refunds??=[];p.refunds.push({id:uid(),month:state.mesAtual,amount:Math.min(v,max),date:new Date().toISOString().slice(0,10)});
+- addCardHistory(p.cardId,'refund',`Estorno em ${p.desc}`,Math.min(v,max));await save('Registrar estorno')
++ let refunded=(p.refunds||[]).reduce((s,r)=>s+Math.max(0,Number(r.amount)||0),0),max=Math.max(0,Math.round((Number(p.total||0)-refunded)*100)/100);
++ if(max<=0)return toast('Essa compra já foi integralmente estornada.');
++ let v=parseFloat(prompt(`Valor do estorno/reembolso para "${p.desc}" (elegível ${brl(max)}):`,max.toFixed(2))?.replace(',','.'));
++ if(!(v>0))return;v=Math.min(v,max);p.refunds??=[];p.refunds.push({id:uid(),month:state.mesAtual,amount:v,date:new Date().toISOString().slice(0,10)});
++ addCardHistory(p.cardId,'refund',`Estorno em ${p.desc}`,v);await save('Registrar estorno')
+ }
+ function renderCardHistory(){
+  if(!$('cardHistory'))return;let cid=+$('cardHistorySelect').value,c=card(cid),items=[...(c?.history||[])];
+@@ -4506,7 +4517,7 @@ function renderCardHistory(){
+  $('cardHistory').innerHTML=items.length?items.slice(0,30).map(h=>`<div class="history-line"><div><b>${h.text}</b><small>${new Date(h.at).toLocaleDateString('pt-BR')}</small></div><strong>${h.amount!=null?brl(h.amount):''}</strong></div>`).join(''):'<div class="item"><span>Nenhum histórico ainda.</span></div>'
+ }
+ 
+-window.cancelPurchase=async id=>{let p=state.purchases.find(x=>x.id===id);if(p&&confirm('Cancelar compra e parcelas futuras?')){p.status='cancelled';await save('Cancelar compra')}}
++window.cancelPurchase=async id=>{let p=state.purchases.find(x=>x.id===id);if(p&&confirm('Cancelar compra e parcelas futuras?')){p.status='cancelled';p.cancelledFromMonth=state.mesAtual;addCardHistory(p.cardId,'cancel',`Compra cancelada: ${p.desc}`);await save('Cancelar compra')}}
+ window.postRec=async id=>{let r=state.recurring.find(x=>x.id===id);if(!r)return;let[y,m]=state.mesAtual.split('-').map(Number),day=clampDay(y,m,r.day);if(state.transactions.some(t=>t.recurringId===r.id&&ym(t.date)===state.mesAtual))return toast('Essa ocorrência já foi registrada.');state.transactions.push({id:uid(),recurringId:r.id,kind:r.type,desc:r.desc,amount:r.amount,date:`${state.mesAtual}-${String(day).padStart(2,'0')}`,category:r.category,accountId:r.accountId,status:'paid',dueDay:day,tags:['recorrente'],note:'',balanceImpact:true,createdAt:Date.now()});await save('Registrar recorrência');toast('Ocorrência do mês registrada')}
+ window.toggleRec=async id=>{let r=state.recurring.find(x=>x.id===id);r.active=!r.active;await save('Alterar recorrência')}
+ window.skipRec=async id=>{let r=state.recurring.find(x=>x.id===id);r.skips??=[];if(!r.skips.includes(state.mesAtual))r.skips.push(state.mesAtual);await save('Pular recorrência')}
+@@ -4597,7 +4608,7 @@ function initOther(){
+  if($('dcExportAll'))$('dcExportAll').onclick=()=>download(JSON.stringify(state,null,2),`sfp-completo-${new Date().toISOString().slice(0,10)}.json`,'application/json');
+  $('prevMonth').onclick=async()=>{state.mesAtual=monthAdd(state.mesAtual,-1);await dbSet(state);renderAll()};$('nextMonth').onclick=async()=>{state.mesAtual=monthAdd(state.mesAtual,1);await dbSet(state);renderAll()};
+  $('txSearch').oninput=renderTx;$('txFilter').onchange=renderTx;$('txCancelEdit').onclick=resetTxForm;$('invoiceCard').onchange=()=>{let cid=+$('invoiceCard').value,m=state.ui.invoiceMonthByCard?.[cid]||currentInvoiceMonth(card(cid));if($('invoiceMonth'))$('invoiceMonth').value=m;renderCards()};if($('invoiceMonth'))$('invoiceMonth').onchange=()=>{let cid=+$('invoiceCard').value;state.ui.invoiceMonthByCard[cid]=$('invoiceMonth').value;renderCards()};if($('cardImportFile'))$('cardImportFile').onchange=e=>importCardCsv(e.target.files[0]);if($('cardHistorySelect'))$('cardHistorySelect').onchange=renderCardHistory;
+- $('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoiceMonth')?.value||currentInvoiceMonth(card(cid)),total=invoiceTotal(cid,m);if(total<=0)return toast('Essa fatura está vazia.');let inv=ensureInvoice(cid,m);if(inv.closedAt)return toast('A fatura já está fechada.');inv.closedAt=new Date().toISOString();inv.status='closed';addCardHistory(cid,'close',`Fatura ${monthName(m)} fechada`,total);await save('Fechar fatura')};
++$('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoiceMonth')?.value||currentInvoiceMonth(card(cid)),total=invoiceTotal(cid,m);if(total<=0)return toast('Essa fatura está vazia.');let inv=ensureInvoice(cid,m);if(inv.closedAt)return toast('A fatura já está fechada.');inv.officialTotal=total;inv.closedAt=new Date().toISOString();inv.status='closed';addCardHistory(cid,'close',`Fatura ${monthName(m)} fechada`,total);await save('Fechar fatura')};
+  $('payInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoiceMonth')?.value||currentInvoiceMonth(card(cid)),total=invoiceRemaining(cid,m),cd=card(cid);if(total<=0)return toast('Essa fatura não tem saldo aberto.');let v=parseFloat(prompt(`Valor pago da fatura ${cd.name} (aberto ${brl(total)}):`,total.toFixed(2))?.replace(',','.'));if(!(v>0))return;if(v>total&&!confirm(`O valor informado (${brl(v)}) é maior que o restante da fatura (${brl(total)}). Registrar apenas ${brl(total)}?`))return;v=Math.min(v,total);let inv=state.invoices.find(i=>i.cardId==cid&&i.month===m);if(!inv){inv={id:uid(),cardId:cid,month:m,status:'open',paidAmount:0,accountId:cd.payAccountId,payments:[]};state.invoices.push(inv)}inv.paidAmount=Math.min(invoiceTotal(cid,m),inv.paidAmount+v);inv.status=inv.paidAmount>=invoiceTotal(cid,m)-.01?'paid':'partial';inv.payments.push({date:new Date().toISOString().slice(0,10),amount:v,balanceImpact:true,targetMonth:m});addCardHistory(cid,'payment',`Pagamento da fatura ${monthName(m)}`,v);await save('Pagar fatura')};
+  $('budgetPreset').onchange=()=>{let p=$('budgetPreset').value,vals=p==='503020'?[50,30,20]:p==='601020'?[60,20,20]:null;if(vals){$('budgetNeeds').value=vals[0];$('budgetWants').value=vals[1];$('budgetSave').value=vals[2]}};
+  $('saveBudget').onclick=async()=>{let a=+$('budgetNeeds').value,b=+$('budgetWants').value,c=+$('budgetSave').value;if($('budgetPreset').value!=='none'&&Math.round(a+b+c)!==100)return toast('Os percentuais precisam somar 100%.');Object.assign(state.settings,{budgetPreset:$('budgetPreset').value,needs:a,wants:b,save:c});await save('Salvar orçamento')};
+diff --git a/qa/card-integrity.spec.js b/qa/card-integrity.spec.js
+new file mode 100644
+index 0000000..597c42e
+--- /dev/null
++++ b/qa/card-integrity.spec.js
+@@ -0,0 +1,126 @@
++const { test, expect } = require('@playwright/test');
++const { fixture, monitor, expectBootComplete } = require('./helpers');
++
++async function boot(page, value) {
++  const errors = monitor(page);
++  await page.goto('/index.html');
++  await expectBootComplete(page, expect, 'Fixture QA');
++  await page.evaluate(async value => {
++    state = value;
++    normalize();
++    await dbSet(state);
++    lastSavedState = clone(state);
++    renderAll();
++  }, value);
++  return errors;
++}
++
++async function persisted(page, predicate) {
++  await expect.poll(() => page.evaluate(async predicate => {
++    const saved = await dbGet();
++    return saved.status === 'ok' && Function('s', `return (${predicate})(s)`)(saved.value);
++  }, String(predicate))).toBe(true);
++}
++
++function cardFixture() {
++  const value = fixture('Fixture QA');
++  value.mesAtual = '2026-01';
++  value.purchases = [{ id: 10, cardId: 1, desc: 'Notebook', total: 300, installments: 3, firstMonth: '2026-01', purchaseDate: '2026-01-02', category: 'Outros', status: 'active', refunds: [], metadata: { future: true } }];
++  return value;
++}
++
++test('CARD-01/02 fatura fechada conserva snapshot e estorno reduz apenas obrigação prospectiva', async ({ page }) => {
++  const value = cardFixture();
++  const errors = await boot(page, value);
++  await page.evaluate(() => {
++    const inv = ensureInvoice(1, '2026-01');
++    inv.officialTotal = invoiceCalculated(1, '2026-01');
++    inv.closedAt = new Date().toISOString(); inv.status = 'closed';
++    state.mesAtual = '2026-02';
++  });
++  page.once('dialog', dialog => dialog.accept('50'));
++  await page.evaluate(() => refundPurchase(10));
++  const result = await page.evaluate(() => ({ historical: invoiceTotal(1, '2026-01'), feb: invoiceTotal(1, '2026-02'), outstanding: cardOutstanding(1, new Date(2026, 0, 15)), refunds: state.purchases[0].refunds }));
++  expect(result.historical).toBe(100);
++  expect(result.feb).toBe(50);
++  expect(result.outstanding).toBe(250); // R$ 100 fechados e não pagos + R$ 150 prospectivos
++  expect(result.refunds).toHaveLength(1);
++  expect(errors).toEqual([]);
++});
++
++test('CARD-03 múltiplos estornos são limitados ao elegível e nunca criam fatura negativa', async ({ page }) => {
++  const errors = await boot(page, cardFixture());
++  for (const amount of ['180', '180']) {
++    page.once('dialog', dialog => dialog.accept(amount));
++    await page.evaluate(() => refundPurchase(10));
++  }
++  const result = await page.evaluate(() => ({ refunds: state.purchases[0].refunds.map(r => r.amount), totals: ['2026-01', '2026-02', '2026-03'].map(m => invoiceTotal(1, m)), limit: card(1).limit - cardOutstanding(1, new Date(2025, 11, 15)) }));
++  expect(result.refunds).toEqual([180, 120]);
++  expect(result.totals).toEqual([0, 0, 0]);
++  expect(result.limit).toBe(2000);
++  expect(errors).toEqual([]);
++});
++
++test('CARD-04/05 pagamentos parcial e integral liquidam uma vez, sem competência duplicada, e persistem', async ({ page }) => {
++  const value = cardFixture();
++  value.invoices = [{ id: 20, cardId: 1, month: '2026-01', officialTotal: 100, paidAmount: 0, accountId: 1, payments: [], status: 'closed', closedAt: '2026-01-10T12:00:00Z' }];
++  const errors = await boot(page, value);
++  for (const amount of ['40', '60']) {
++    page.once('dialog', dialog => dialog.accept(amount));
++    await page.evaluate(async () => { document.querySelector('#invoiceCard').value = '1'; document.querySelector('#invoiceMonth').value = '2026-01'; await document.querySelector('#payInvoice').onclick(); });
++  }
++  await persisted(page, s => s.invoices[0].paidAmount === 100 && s.invoices[0].payments.length === 2);
++  const before = await page.evaluate(() => ({ remaining: invoiceRemaining(1, '2026-01'), cash: cashView(new Date().toISOString().slice(0, 7)).expense, accrual: accrualView('2026-01').expense, payments: state.invoices[0].payments.length }));
++  expect(before).toEqual({ remaining: 0, cash: 100, accrual: 100, payments: 2 });
++  await page.reload(); await expectBootComplete(page, expect, 'Fixture QA');
++  expect(await page.evaluate(() => ({ paid: state.invoices[0].paidAmount, remaining: invoiceRemaining(1, '2026-01'), payments: state.invoices[0].payments.length }))).toEqual({ paid: 100, remaining: 0, payments: 2 });
++  expect(errors).toEqual([]);
++});
++
++test('CARD-06 cancelamento preserva parcelas históricas e metadados e elimina somente futuras', async ({ page }) => {
++  const value = cardFixture();
++  value.invoices = [
++    { id: 20, cardId: 1, month: '2026-01', officialTotal: 100, paidAmount: 100, payments: [{ date: '2026-01-17', amount: 100, balanceImpact: true }], status: 'paid', closedAt: '2026-01-10' },
++    { id: 21, cardId: 1, month: '2026-02', officialTotal: 100, paidAmount: 0, payments: [], status: 'closed', closedAt: '2026-02-10' }
++  ];
++  value.mesAtual = '2026-03';
++  const errors = await boot(page, value);
++  page.once('dialog', dialog => dialog.accept());
++  await page.evaluate(() => cancelPurchase(10));
++  await persisted(page, s => s.purchases[0].status === 'cancelled' && s.purchases[0].cancelledFromMonth === '2026-03');
++  const result = await page.evaluate(() => ({ jan: invoiceTotal(1, '2026-01'), feb: invoiceTotal(1, '2026-02'), mar: invoiceTotal(1, '2026-03'), metadata: state.purchases[0].metadata }));
++  expect(result).toEqual({ jan: 100, feb: 100, mar: 0, metadata: { future: true } });
++  expect(errors).toEqual([]);
++});
++
++test('CARD-07/08 sequência completa mantém limite, registros e histórico após reload', async ({ page }) => {
++  const value = cardFixture();
++  value.invoices = [{ id: 20, cardId: 1, month: '2026-01', officialTotal: 100, paidAmount: 40, accountId: 1, payments: [{ date: '2026-01-17', amount: 40, balanceImpact: true }], status: 'partial', closedAt: '2026-01-10' }];
++  value.mesAtual = '2026-02';
++  const errors = await boot(page, value);
++  page.once('dialog', dialog => dialog.accept('50'));
++  await page.evaluate(() => refundPurchase(10));
++  await page.evaluate(async () => { const i = state.invoices[0]; i.paidAmount = 100; i.status = 'paid'; i.payments.push({ date: '2026-02-01', amount: 60, balanceImpact: true }); addCardHistory(1, 'payment', 'Pagamento restante', 60); await save('Pagamento restante'); });
++  await persisted(page, s => s.purchases[0].refunds.length === 1 && s.invoices[0].payments.length === 2 && s.cards[0].history.length === 2);
++  const inspect = () => page.evaluate(() => ({ outstanding: cardOutstanding(1, new Date(2026, 0, 15)), available: card(1).limit - cardOutstanding(1, new Date(2026, 0, 15)), purchase: state.purchases.length, invoices: state.invoices.length, refunds: state.purchases[0].refunds.length, payments: state.invoices[0].payments.length, history: state.cards[0].history.length }));
++  const before = await inspect();
++  expect(before).toEqual({ outstanding: 150, available: 1850, purchase: 1, invoices: 1, refunds: 1, payments: 2, history: 2 });
++  await page.reload(); await expectBootComplete(page, expect, 'Fixture QA');
++  expect(await inspect()).toEqual(before);
++  expect(errors).toEqual([]);
++});
++
++test('CARD-09/10 pagamento conciliado permanece caixa, não competência nem segunda despesa', async ({ page }) => {
++  const value = cardFixture();
++  value.invoices = [{ id: 20, cardId: 1, month: '2026-01', officialTotal: 100, paidAmount: 100, accountId: 1, payments: [{ date: '2026-02-10', amount: 100, balanceImpact: true }], status: 'paid', closedAt: '2026-01-10' }];
++  value.mesAtual = '2026-02';
++  const errors = await boot(page, value);
++  const result = await page.evaluate(async () => {
++    document.querySelector('#stmtAccount').value = '1';
++    prepareStatement([{ date: '2026-02-10', desc: 'PAGAMENTO FATURA CARTAO', amount: -100, fitid: 'card-10' }], 'fatura.csv');
++    await importStatement();
++    return { transactions: state.transactions.length, statementKey: state.invoices[0].payments[0].statementKey, cash: cashView('2026-02').expense, accrual: accrualView('2026-02').expense, commitments: commitmentView('2026-02').total };
++  });
++  expect(result).toEqual({ transactions: 0, statementKey: '1|fit:card-10', cash: 100, accrual: 100, commitments: 100 });
++  expect(errors).toEqual([]);
++});
