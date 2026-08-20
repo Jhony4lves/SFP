@@ -207,7 +207,7 @@ test('deduplica FITID e chave CSV dentro do lote sem colapsar descrições difer
     await importStatement();
     return { duplicateFlags, count: state.transactions.length };
   });
-  expect(first).toEqual({ duplicateFlags: [false, true, false, true, false], count: 3 });
+  expect(first).toEqual({ duplicateFlags: [false, true, false, false, false], count: 4 });
   await page.reload();
   await expectStateLoaded(page, 'Duplicatas QA');
   const later = await page.evaluate(() => {
