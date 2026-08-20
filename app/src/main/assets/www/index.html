@@ -2053,7 +2053,7 @@ function cashView(m=state.mesAtual){
   const items=[];
 
   state.transactions
-    .filter(t=>ym(t.date)===m && t.status==='paid' && t.balanceImpact!==false)
+    .filter(t=>ym(t.date)===m && t.status==='paid' && t.balanceImpact===true)
     .forEach(t=>{
       items.push({
         id:`tx:${t.id}`,
@@ -2089,7 +2089,7 @@ function cashView(m=state.mesAtual){
 
   state.invoices.forEach(inv=>{
     (inv.payments||[])
-      .filter(p=>p.balanceImpact!==false && ym(p.date)===m)
+      .filter(p=>p.balanceImpact===true && ym(p.date)===m)
       .forEach((p,i)=>{
         items.push({
           id:`invoice-payment:${inv.id}:${i}`,
@@ -4536,7 +4536,7 @@ function renderCardHistory(){
 }
 
 window.cancelPurchase=async id=>{let p=state.purchases.find(x=>x.id===id);if(p&&confirm('Cancelar compra e parcelas futuras?')){p.status='cancelled';p.cancelledFromMonth=state.mesAtual;addCardHistory(p.cardId,'cancel',`Compra cancelada: ${p.desc}`);await save('Cancelar compra')}}
-window.postRec=async id=>{let r=state.recurring.find(x=>x.id===id);if(!r)return;let[y,m]=state.mesAtual.split('-').map(Number),day=clampDay(y,m,r.day);if(state.transactions.some(t=>t.recurringId===r.id&&ym(t.date)===state.mesAtual))return toast('Essa ocorrência já foi registrada.');state.transactions.push({id:uid(),recurringId:r.id,kind:r.type,desc:r.desc,amount:r.amount,date:`${state.mesAtual}-${String(day).padStart(2,'0')}`,category:r.category,accountId:r.accountId,status:'paid',dueDay:day,tags:['recorrente'],note:'',balanceImpact:true,createdAt:Date.now()});await save('Registrar recorrência');toast('Ocorrência do mês registrada')}
+window.postRec=async id=>{let r=state.recurring.find(x=>x.id===id),month=state.mesAtual;if(!r)return;if(!r.active||r.start>month||(r.end&&r.end<month)||(r.skips||[]).includes(month))return toast('Essa recorrência não está prevista neste mês.');let[y,m]=month.split('-').map(Number),day=clampDay(y,m,r.day),date=`${month}-${String(day).padStart(2,'0')}`;if(state.transactions.some(t=>t.recurringId===r.id&&ym(t.date)===month))return toast('Essa ocorrência já foi registrada.');state.transactions.push({id:uid(),recurringId:r.id,kind:r.type,desc:r.desc,amount:r.amount,date,category:r.category,accountId:r.accountId,status:'paid',dueDay:day,tags:['recorrente'],note:'',balanceImpact:date>state.baseDate,createdAt:Date.now()});await save('Registrar recorrência');toast('Ocorrência do mês registrada')}
 window.toggleRec=async id=>{let r=state.recurring.find(x=>x.id===id);r.active=!r.active;await save('Alterar recorrência')}
 window.skipRec=async id=>{let r=state.recurring.find(x=>x.id===id);r.skips??=[];if(!r.skips.includes(state.mesAtual))r.skips.push(state.mesAtual);await save('Pular recorrência')}
 window.editRec=id=>{let r=state.recurring.find(x=>x.id===id);if(!r)return;$('recId').value=r.id;$('recDesc').value=r.desc;$('recType').value=r.type;$('recAmount').value=r.amount;$('recDay').value=r.day;$('recCategory').value=r.category;$('recAccount').value=r.accountId;$('recStart').value=r.start;$('recEnd').value=r.end||'';setPage('recorrencias')}
@@ -4574,7 +4574,7 @@ function initForms(){
  $('recForm').onsubmit=async e=>{e.preventDefault();let id=+$('recId').value,obj={id:id||uid(),desc:$('recDesc').value,type:$('recType').value,amount:+$('recAmount').value,day:+$('recDay').value,category:$('recCategory').value,accountId:+$('recAccount').value,start:$('recStart').value,end:$('recEnd').value,active:id?state.recurring.find(r=>r.id===id)?.active!==false:true,skips:id?(state.recurring.find(r=>r.id===id)?.skips||[]):[]};if(id)state.recurring=state.recurring.map(r=>r.id===id?obj:r);else state.recurring.push(obj);e.target.reset();$('recId').value='';await save(id?'Editar recorrência':'Nova recorrência')};
  $('catBudgetForm').onsubmit=async e=>{e.preventDefault();state.categoryBudgets[$('catBudgetCategory').value]=+$('catBudgetAmount').value;await save('Orçamento de categoria')};
  $('debtForm').onsubmit=async e=>{e.preventDefault();let id=+$('debtId').value,old=id?state.debts.find(d=>d.id===id):null,firstDue=$('debtFirstDue').value,installments=Math.max(1,Math.trunc(+$('debtInstallments').value));let patch={id:id||uid(),name:$('debtName').value,balance:+$('debtBalance').value,rate:+$('debtRate').value,payment:+$('debtPayment').value,firstDue,installments};if(!old||Object.hasOwn(old,'dueDay'))patch.dueDay=+$('debtDay').value;if(!old||Object.hasOwn(old,'accountId'))patch.accountId=+$('debtAccount').value;let obj=old?{...old,...patch}:{...patch,paidInstallments:0,paymentMethod:'bank',history:[]};if(id)state.debts=state.debts.map(d=>d.id===id?obj:d);else state.debts.push(obj);e.target.reset();$('debtId').value='';await save(id?'Editar dívida':'Nova dívida')};
- $('goalForm').onsubmit=async e=>{e.preventDefault();state.goals.push({id:uid(),name:$('goalName').value,target:+$('goalTarget').value,accountId:+$('goalAccount').value,plan:+$('goalPlan').value,targetDate:$('goalDate').value,initialAllocated:0,history:[]});e.target.reset();await save('Nova meta')};
+ $('goalForm').onsubmit=async e=>{e.preventDefault();let id=+$('goalId').value,old=id?state.goals.find(g=>g.id===id):null,obj={id:id||uid(),name:$('goalName').value,target:+$('goalTarget').value,accountId:+$('goalAccount').value,plan:+$('goalPlan').value,targetDate:$('goalDate').value,initialAllocated:old?.initialAllocated||0,history:old?.history||[]};if(id)state.goals=state.goals.map(g=>g.id===id?obj:g);else state.goals.push(obj);e.target.reset();$('goalId').value='';await save(id?'Editar meta':'Nova meta')};
  $('assetForm').onsubmit=async e=>{e.preventDefault();let id=+$('assetId').value,obj={id:id||uid(),name:$('assetName').value,value:+$('assetValue').value};if(id)state.assets=state.assets.map(a=>a.id===id?obj:a);else state.assets.push(obj);e.target.reset();$('assetId').value='';await save(id?'Editar ativo':'Novo ativo')};
  $('configForm').onsubmit=async e=>{e.preventDefault();state.settings.name=$('cfgName').value;state.settings.day1=+$('cfgDay1').value;state.settings.day2=+$('cfgDay2').value;await save('Configurações')};
 }
