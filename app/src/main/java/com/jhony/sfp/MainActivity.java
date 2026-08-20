@@ -18,6 +18,7 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private ValueCallback<Uri[]> fileChooserCallback;
     private static final int FILE_CHOOSER_REQUEST = 7001;
+    private boolean backRequestPending;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,10 +95,13 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
+        if (webView == null || backRequestPending) return;
+        backRequestPending = true;
+        webView.evaluateJavascript(
+                "typeof window.handleAndroidBack === 'function' && window.handleAndroidBack()",
+                result -> {
+                    backRequestPending = false;
+                    if (!"true".equals(result)) MainActivity.super.onBackPressed();
+                });
     }
 }
