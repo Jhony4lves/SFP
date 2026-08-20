@@ -1845,6 +1845,21 @@ function validPersistedState(v){
  if('schemaVersion'in v&&!Number.isFinite(Number(v.schemaVersion)))return false;
  return arrays.some(key=>Array.isArray(v[key]))||!!v.settings;
 }
+function persistenceRevision(v){let n=Number(v?.persistenceMeta?.revision);return Number.isFinite(n)&&n>0?n:null}
+function stampPersistence(v){let current=persistenceRevision(v)||0;v.persistenceMeta={revision:Math.max(Date.now(),current+1),savedAt:new Date().toISOString()};return v}
+function samePersistedState(a,b){try{return JSON.stringify(a)===JSON.stringify(b)}catch{return false}}
+function newestPersistedState(primary,fallback){
+ if(primary.status!=='ok')return fallback.status==='ok'?{source:'fallback',value:fallback.value}:null;
+ if(fallback.status!=='ok')return{source:'indexeddb',value:primary.value};
+ let pr=persistenceRevision(primary.value),fr=persistenceRevision(fallback.value);
+ if(pr!=null||fr!=null){
+   if(pr==null)return{source:'fallback',value:fallback.value};
+   if(fr==null)return{source:'indexeddb',value:primary.value};
+   return fr>pr?{source:'fallback',value:fallback.value}:{source:'indexeddb',value:primary.value};
+ }
+ if(samePersistedState(primary.value,fallback.value))return{source:'indexeddb',value:primary.value};
+ throw Error('IndexedDB e fallback legados contêm estados diferentes sem revisão; nenhum deles foi sobrescrito.');
+}
 function safeLocalSet(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}
 function fallbackGet(){
  let raw;
@@ -1857,22 +1872,26 @@ async function dbGet(){
  try{db=await openDB();let value=await new Promise((res,rej)=>{let r=db.transaction(STORE).objectStore(STORE).get(DB_KEY);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error||Error('Falha ao ler IndexedDB'))});if(value==null)return{status:'empty'};return validPersistedState(value)?{status:'ok',value}:{status:'corrupt'}}
  catch(error){db=null;return{status:'unavailable',error}}
 }
-async function dbSet(v){
+async function dbSet(v,{preserveRevision=false}={}){
  if(!validPersistedState(v))throw Error('Estado inválido recusado pela persistência.');
+ if(!preserveRevision)stampPersistence(v);
  try{if(!db)db=await openDB();await new Promise((res,rej)=>{let r=db.transaction(STORE,'readwrite').objectStore(STORE).put(v,DB_KEY);r.onsuccess=()=>res();r.onerror=()=>rej(r.error||Error('Falha ao gravar IndexedDB'))});return{status:'indexeddb'}}
  catch(error){db=null;try{localStorage.setItem(FALLBACK_KEY,JSON.stringify(v));return{status:'fallback',error}}catch(fallbackError){throw Error(`Falha ao persistir na IndexedDB (${error.message||error}) e no fallback (${fallbackError.message||fallbackError}).`)}}
 }
 async function load(){
  let key='sfp_jhony_stable_seed_202',primary=await dbGet(),fallback=fallbackGet();
- // Ordem formal: IndexedDB válida > fallback válido > seed. O seed só é
- // permitido quando ambas as fontes foram lidas com sucesso e estão vazias.
- if(primary.status==='ok')state=migrateSchema(primary.value);
- else if(fallback.status==='ok')state=migrateSchema(fallback.value);
+ // Estados revisionados são comparados pela revisão gravada em cada fonte.
+ // Estados legados iguais continuam legíveis; se divergirem, não há informação
+ // suficiente para escolher com segurança e nenhuma fonte é sobrescrita.
+ let selected=newestPersistedState(primary,fallback);
+ if(selected)state=migrateSchema(selected.value);
  else if(primary.status==='empty'&&fallback.status==='empty')state=clone(seed);
  else throw Error(`Persistência indisponível ou corrompida (IndexedDB: ${primary.status}; fallback: ${fallback.status}). Nenhum dado foi substituído.`);
  normalize();
- if(primary.status==='ok'||primary.status==='empty'){
-   await dbSet(state);
+ if(selected?.source==='fallback'&&(primary.status==='ok'||primary.status==='empty')){
+   await dbSet(state,{preserveRevision:true});
+ }else if(selected?.source==='indexeddb'||(primary.status==='empty'&&fallback.status==='empty')){
+   await dbSet(state,{preserveRevision:!!selected});
  }
  if(primary.status==='empty'&&fallback.status==='empty')safeLocalSet('sfp_last_migration_notice','SFP 2.0 iniciado em uma base nova. Data-base: 18/08/2026. Nenhum cálculo das versões anteriores foi reaproveitado.');
  safeLocalSet(key,'1');
@@ -4462,7 +4481,7 @@ function setKind(k){currentKind=k;document.querySelectorAll('.quicktype').forEac
 
 function moveToTrash(type,item){state.trash.push({type,item:clone(item),deletedAt:new Date().toISOString()})}
 
-window.toggleTx=async id=>{let t=state.transactions.find(x=>x.id===id);if(t){snapshotUndo('Alterar status');t.status=t.status==='paid'?'pending':'paid';await dbSet(state);lastSavedState=clone(state);renderAll()}}
+window.toggleTx=async id=>{let t=state.transactions.find(x=>x.id===id);if(t){snapshotUndo('Alterar status');let paid=t.status!=='paid';t.status=paid?'paid':'pending';t.balanceImpact=paid&&t.date>state.baseDate;await dbSet(state);lastSavedState=clone(state);renderAll()}}
 window.trashTx=async id=>{let i=state.transactions.findIndex(x=>x.id===id);if(i>=0){snapshotUndo('Excluir lançamento');state.trash.push({type:'transaction',item:state.transactions[i],deletedAt:new Date().toISOString()});state.transactions.splice(i,1);await dbSet(state);renderAll();toast('Movido para a lixeira')}}
 window.editTx=id=>{let t=state.transactions.find(x=>x.id===id);if(!t)return;setPage('lancamentos');setKind(t.kind==='income'?'income':t.kind==='expense'?'expense':'expense');$('txEditId').value=t.id;$('txDesc').value=t.desc;$('txAmount').value=t.amount;$('txDate').value=t.date;$('txCategory').value=t.category||'Outros';$('txAccount').value=t.accountId||'';$('txNote').value=t.note||'';$('txTags').value=(t.tags||[]).join(', ')}
 window.editAccount=id=>{let a=account(id);$('accountId').value=a.id;$('accountName').value=a.name;$('accountType').value=a.type;$('accountInitial').value=a.initial;setPage('contas')}
@@ -4544,7 +4563,7 @@ function reconcileCandidate(r,accountId){
  return vr?{id:`rec:${vr.recurringId}`,virtualRecurring:true,recurringId:vr.recurringId}:null
 }
 function prepareStatement(rows,file){
- let accountId=+$('stmtAccount').value,ex=existingStmtKeys();statementDraft=rows.map((r,i)=>{let key=r.fitid?`${accountId}|fit:${r.fitid}`:`${accountId}|${r.date}|${r.amount.toFixed(2)}|${r.desc.toLowerCase().slice(0,80)}`,g=guess(r.desc,r.amount),cand=reconcileCandidate(r,accountId);return{...r,index:i,key,accountId,duplicate:ex.has(key),action:ex.has(key)?'ignore':cand?'reconcile':g.action,category:g.category,candidateId:cand?.id||null,transferAccountId:null,learn:false,file}});renderStatementDraft()
+ let accountId=+$('stmtAccount').value,ex=existingStmtKeys(),seen=new Set(ex);statementDraft=rows.map((r,i)=>{let key=r.fitid?`${accountId}|fit:${r.fitid}`:`${accountId}|${r.date}|${r.amount.toFixed(2)}|${r.desc.toLowerCase().slice(0,80)}`,duplicate=seen.has(key),g=guess(r.desc,r.amount),cand=duplicate?null:reconcileCandidate(r,accountId);seen.add(key);return{...r,index:i,key,accountId,duplicate,action:duplicate?'ignore':cand?'reconcile':g.action,category:g.category,candidateId:cand?.id||null,transferAccountId:null,learn:false,file}});renderStatementDraft()
 }
 function renderStatementDraft(){
  $('stmtReview').classList.remove('hidden');$('stmtCount').textContent=statementDraft.length;$('stmtIn').textContent=brl(statementDraft.filter(x=>x.amount>0).reduce((s,x)=>s+x.amount,0));$('stmtOut').textContent=brl(Math.abs(statementDraft.filter(x=>x.amount<0).reduce((s,x)=>s+x.amount,0)));
@@ -4556,7 +4575,7 @@ async function importStatement(){
  if(r.action==='reconcile'&&r.candidateId){
    if(String(r.candidateId).startsWith('invoice:')){let[,invoiceId,paymentIndex]=String(r.candidateId).split(':'),inv=state.invoices.find(x=>x.id==invoiceId),payment=inv?.payments?.[+paymentIndex];if(payment){payment.statementKey=r.key;payment.statementDesc=r.desc;continue}}
    if(String(r.candidateId).startsWith('rec:')){let rid=+String(r.candidateId).split(':')[1],rule=state.recurring.find(x=>x.id===rid);if(rule){state.transactions.push({id:uid(),recurringId:rid,kind:rule.type,desc:rule.desc,amount:rule.amount,date:r.date,category:rule.category,accountId:r.accountId,status:'paid',dueDay:+r.date.slice(8,10),tags:['recorrente','extrato'],note:'Conciliado com recorrência.',statementKey:r.key,balanceImpact:r.date>state.baseDate,createdAt:Date.now()});continue}}
-   let t=state.transactions.find(x=>x.id===r.candidateId);if(t){t.status='paid';t.statementKey=r.key;t.statementDesc=r.desc;continue}
+   let t=state.transactions.find(x=>x.id===r.candidateId);if(t){t.status='paid';t.balanceImpact=t.date>state.baseDate;t.statementKey=r.key;t.statementDesc=r.desc;continue}
  }
  if(r.action==='transfer'){if(!r.transferAccountId)continue;state.transfers.push({id:uid(),desc:r.desc,amount:Math.abs(r.amount),date:r.date,fromId:r.amount<0?r.accountId:r.transferAccountId,toId:r.amount<0?r.transferAccountId:r.accountId,tags:['extrato','transferência'],statementKey:r.key});continue}
  state.transactions.push({id:uid(),kind:r.action==='income'?'income':'expense',desc:r.desc,amount:Math.abs(r.amount),date:r.date,category:r.category,accountId:r.accountId,status:'paid',dueDay:+r.date.slice(8,10),tags:['extrato'],note:'',statementKey:r.key,balanceImpact:r.date>state.baseDate,createdAt:Date.now()});
