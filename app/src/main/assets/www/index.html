@@ -1907,8 +1907,23 @@ function snapshotUndo(label,source=null){
  state.undo.push({id:uid(),label,at:new Date().toISOString(),state:base});state.undo=state.undo.slice(-10)
 }
 async function save(label){
- if(label&&lastSavedState){autoBackup();snapshotUndo(label,lastSavedState)}
- normalize();await dbSet(state);lastSavedState=clone(state);renderAll()
+ let before=clone(lastSavedState||state);
+ try{
+  if(label&&lastSavedState){autoBackup();snapshotUndo(label,lastSavedState)}
+  normalize();await dbSet(state);lastSavedState=clone(state);renderAll()
+ }catch(error){state=before;lastSavedState=clone(before);throw error}
+}
+async function restoreState(candidate){
+ if(!validPersistedState(candidate))throw Error('Backup inválido.');
+ let before=clone(state),previousSaved=clone(lastSavedState||state),restored=clone(candidate);
+ try{state=restored;normalize();await dbSet(state);lastSavedState=clone(state);renderAll()}
+ catch(error){state=before;lastSavedState=previousSaved;throw error}
+}
+async function undoLast(){
+ let before=clone(state),u=state.undo?.[state.undo.length-1];if(!u)return null;
+ let restored=clone(u.state),remaining=clone(state.undo.slice(0,-1));restored.undo=remaining;
+ try{await restoreState(restored);return u}
+ catch(error){state=before;lastSavedState=clone(before);throw error}
 }
 function account(id){return state.accounts.find(a=>a.id==id)} function card(id){return state.cards.find(c=>c.id==id)}
 function txInMonth(m=state.mesAtual){return state.transactions.filter(t=>ym(t.date)===m)}
@@ -4632,11 +4647,11 @@ $('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoice
  $('simGoalBtn').onclick=()=>{let target=+$('simGoalTarget').value,v=+$('simGoalInitial').value,m=+$('simGoalMonthly').value,r=+$('simGoalRate').value/100,n=0,paid=0;if(!target||!m)return toast('Preencha objetivo e aporte');while(v<target&&n<999){v=(v+m)*(1+r);paid+=m;n++}$('simGoalRes').classList.remove('hidden');$('simGoalRes').innerHTML=`Tempo estimado: <b>${n}</b> meses.<br>Aportes: <b>${brl(paid)}</b>.<br>Rendimentos estimados: <b>${brl(Math.max(0,v-paid-(+$('simGoalInitial').value||0)))}</b>.`};
  $('exportBackup').onclick=()=>download(JSON.stringify(state,null,2),`sfp-backup-${localCivilDate()}.json`,'application/json');
  $('exportEncrypted').onclick=async()=>{let pass=$('backupPassword').value;if(pass.length<6)return toast('Use uma senha com pelo menos 6 caracteres.');try{let raw=await encryptBackup(pass);download(raw,`sfp-backup-${localCivilDate()}.sfp`,'application/octet-stream');toast('Backup criptografado criado.')}catch(e){toast(e.message)}};
- $('importEncrypted').onchange=e=>{let f=e.target.files[0];if(!f)return;let pass=prompt('Senha do backup criptografado:');if(!pass)return;let rd=new FileReader();rd.onload=async()=>{try{state=await decryptBackup(rd.result,pass);normalize();await dbSet(state);lastSavedState=clone(state);renderAll();toast('Backup criptografado restaurado.')}catch{toast('Senha incorreta ou arquivo inválido.')}};rd.readAsText(f)};
+ $('importEncrypted').onchange=e=>{let f=e.target.files[0];if(!f)return;let pass=prompt('Senha do backup criptografado:');if(!pass)return;let rd=new FileReader();rd.onload=async()=>{try{await restoreState(await decryptBackup(rd.result,pass));toast('Backup criptografado restaurado.')}catch{toast('Senha incorreta ou arquivo inválido.')}};rd.readAsText(f)};
 
  $('exportCSV').onclick=()=>{let rows=[['Data','Tipo','Descrição','Categoria','Conta','Valor','Status'],...txInMonth().map(t=>[t.date,t.kind,t.desc,t.category,account(t.accountId)?.name||'',t.amount,t.status])];download('\ufeff'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n'),`sfp-${state.mesAtual}.csv`,'text/csv')};
- $('importBackup').onchange=e=>{let f=e.target.files[0];if(!f)return;let rd=new FileReader();rd.onload=async()=>{try{state=JSON.parse(rd.result);normalize();await dbSet(state);renderAll();toast('Backup restaurado')}catch{toast('Backup inválido')}};rd.readAsText(f)};
- if($('runAudit'))$('runAudit').onclick=renderAudit;if($('repairOrphans'))$('repairOrphans').onclick=repairOrphans;if($('removeExactDuplicates'))$('removeExactDuplicates').onclick=removeExactDuplicates;if($('exportDiagnostic'))$('exportDiagnostic').onclick=()=>download(JSON.stringify({generatedAt:new Date().toISOString(),version:VERSION,schemaVersion:state.schemaVersion,audit:auditData(),counts:{accounts:state.accounts.length,transactions:state.transactions.length,cards:state.cards.length,purchases:state.purchases.length,debts:state.debts.length,goals:state.goals.length}},null,2),'sfp-diagnostico.json','application/json');$('autoBackupBtn').onclick=showAutoBackups;$('undoBtn').onclick=async()=>{let u=state.undo.pop();if(!u)return toast('Nada para desfazer.');let currentUndo=state.undo;state=u.state;state.undo=currentUndo;normalize();await dbSet(state);lastSavedState=clone(state);renderAll();toast(`Desfeito: ${u.label}`)};
+ $('importBackup').onchange=e=>{let f=e.target.files[0];if(!f)return;let rd=new FileReader();rd.onload=async()=>{try{await restoreState(JSON.parse(rd.result));toast('Backup restaurado')}catch{toast('Backup inválido')}};rd.readAsText(f)};
+ if($('runAudit'))$('runAudit').onclick=renderAudit;if($('repairOrphans'))$('repairOrphans').onclick=repairOrphans;if($('removeExactDuplicates'))$('removeExactDuplicates').onclick=removeExactDuplicates;if($('exportDiagnostic'))$('exportDiagnostic').onclick=()=>download(JSON.stringify({generatedAt:new Date().toISOString(),version:VERSION,schemaVersion:state.schemaVersion,audit:auditData(),counts:{accounts:state.accounts.length,transactions:state.transactions.length,cards:state.cards.length,purchases:state.purchases.length,debts:state.debts.length,goals:state.goals.length}},null,2),'sfp-diagnostico.json','application/json');$('autoBackupBtn').onclick=showAutoBackups;$('undoBtn').onclick=async()=>{try{let u=await undoLast();toast(u?`Desfeito: ${u.label}`:'Nada para desfazer.')}catch{toast('Não foi possível persistir o desfazer.')}};
  $('trashBtn').onclick=()=>showTrash();
  $('resetBtn').onclick=async()=>{if(confirm('Apagar todos os dados e voltar à base inicial?')){state=clone(seed);await dbSet(state);renderAll();toast('Sistema restaurado')}};
  $('globalSearch').oninput=renderGlobalSearch;$('globalSearch').onfocus=renderGlobalSearch;document.addEventListener('click',e=>{if(!e.target.closest('.searchbox'))$('globalResults').classList.add('hidden')});
@@ -4686,7 +4701,7 @@ function renderGlobalSearch(){let q=$('globalSearch').value.trim().toLowerCase()
 
 function showAutoBackups(){
  let arr=[];try{arr=JSON.parse(localStorage.getItem('sfp_auto_backups')||'[]')}catch{}
- let root=$('modalRoot');root.className='modalback';root.innerHTML=`<div class="modal"><div class="head"><div><h2>Backups automáticos</h2><p>Últimas versões locais antes de alterações</p></div><button class="btn2" id="closeAB">Fechar</button></div><div class="list">${arr.length?arr.slice().reverse().map((b,i)=>`<div class="item"><div><b>${new Date(b.at).toLocaleString('pt-BR')}</b><small>Snapshot automático</small></div><button class="btn2 tiny" data-ab="${arr.length-1-i}">Restaurar</button></div>`).join(''):'<div class="item"><span>Nenhum backup automático ainda.</span></div>'}</div></div>`;$('closeAB').onclick=()=>root.className='hidden';document.querySelectorAll('[data-ab]').forEach(b=>b.onclick=async()=>{if(!confirm('Restaurar este backup? O estado atual será substituído.'))return;state=clone(arr[+b.dataset.ab].state);normalize();await dbSet(state);lastSavedState=clone(state);renderAll();root.className='hidden';toast('Backup automático restaurado')})
+ let root=$('modalRoot');root.className='modalback';root.innerHTML=`<div class="modal"><div class="head"><div><h2>Backups automáticos</h2><p>Últimas versões locais antes de alterações</p></div><button class="btn2" id="closeAB">Fechar</button></div><div class="list">${arr.length?arr.slice().reverse().map((b,i)=>`<div class="item"><div><b>${new Date(b.at).toLocaleString('pt-BR')}</b><small>Snapshot automático</small></div><button class="btn2 tiny" data-ab="${arr.length-1-i}">Restaurar</button></div>`).join(''):'<div class="item"><span>Nenhum backup automático ainda.</span></div>'}</div></div>`;$('closeAB').onclick=()=>root.className='hidden';document.querySelectorAll('[data-ab]').forEach(b=>b.onclick=async()=>{if(!confirm('Restaurar este backup? O estado atual será substituído.'))return;try{await restoreState(arr[+b.dataset.ab].state);root.className='hidden';toast('Backup automático restaurado')}catch{toast('Não foi possível restaurar o backup automático.')}})
 }
 
 
@@ -4714,7 +4729,7 @@ function showMoreMenu(){
  $('closeMore').onclick=()=>root.className='hidden';document.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>{root.className='hidden';setPage(b.dataset.more)})
 }
 
-function showTrash(){let root=$('modalRoot');root.className='modalback';root.innerHTML=`<div class="modal"><div class="head"><div><h2>Lixeira</h2><p>Itens excluídos recentemente</p></div><button class="btn2" id="closeModal">Fechar</button></div><div class="list">${state.trash.length?state.trash.slice().reverse().map((x,i)=>`<div class="item"><div><b>${x.item.desc||x.item.name||({transaction:'Lançamento',account:'Conta',card:'Cartão',recurring:'Recorrência',debt:'Dívida',goal:'Meta',asset:'Ativo'}[x.type]||x.type)}</b><small>${x.deletedAt}</small></div><button class="btn2 tiny" data-restore="${state.trash.length-1-i}">Restaurar</button></div>`).join(''):'<div class="item"><span>Lixeira vazia.</span></div>'}</div></div>`;$('closeModal').onclick=()=>root.className='hidden';document.querySelectorAll('[data-restore]').forEach(b=>b.onclick=async()=>{let i=+b.dataset.restore,x=state.trash.splice(i,1)[0];let map={transaction:'transactions',account:'accounts',card:'cards',recurring:'recurring',debt:'debts',goal:'goals',asset:'assets'};let col=map[x.type];if(col)state[col].push(x.item);await save('Restaurar da lixeira');showTrash()})}
+function showTrash(){let root=$('modalRoot');root.className='modalback';root.innerHTML=`<div class="modal"><div class="head"><div><h2>Lixeira</h2><p>Itens excluídos recentemente</p></div><button class="btn2" id="closeModal">Fechar</button></div><div class="list">${state.trash.length?state.trash.slice().reverse().map((x,i)=>`<div class="item"><div><b>${x.item.desc||x.item.name||({transaction:'Lançamento',account:'Conta',card:'Cartão',recurring:'Recorrência',debt:'Dívida',goal:'Meta',asset:'Ativo'}[x.type]||x.type)}</b><small>${x.deletedAt}</small></div><button class="btn2 tiny" data-restore="${state.trash.length-1-i}">Restaurar</button></div>`).join(''):'<div class="item"><span>Lixeira vazia.</span></div>'}</div></div>`;$('closeModal').onclick=()=>root.className='hidden';document.querySelectorAll('[data-restore]').forEach(b=>b.onclick=async()=>{let i=+b.dataset.restore,x=state.trash[i];let map={transaction:'transactions',account:'accounts',card:'cards',recurring:'recurring',debt:'debts',goal:'goals',asset:'assets'},col=map[x.type];if(!col)return;if(state[col].some(item=>item.id==x.item.id))return toast('Já existe um item com este identificador.');state.trash.splice(i,1);state[col].push(clone(x.item));try{await save('Restaurar da lixeira');showTrash()}catch{toast('Não foi possível restaurar o item.')}})}
 
 function bytesToB64(bytes){let s='';bytes.forEach(b=>s+=String.fromCharCode(b));return btoa(s)}
 function b64ToBytes(s){let b=atob(s),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
@@ -4729,8 +4744,9 @@ async function encryptBackup(password){
 }
 async function decryptBackup(raw,password){
  let obj=JSON.parse(raw);if(obj.format!=='SFP-ENC-1')throw Error('Arquivo criptografado inválido.');
+ if(obj.kdf!=='PBKDF2-SHA256'||obj.iterations!==250000||typeof obj.salt!=='string'||typeof obj.iv!=='string'||typeof obj.data!=='string')throw Error('Arquivo criptografado inválido.');
  let salt=b64ToBytes(obj.salt),iv=b64ToBytes(obj.iv),data=b64ToBytes(obj.data),key=await deriveKey(password,salt,['decrypt']),plain=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,data);
- return JSON.parse(new TextDecoder().decode(plain))
+ let restored=JSON.parse(new TextDecoder().decode(plain));if(!validPersistedState(restored))throw Error('Conteúdo do backup inválido.');return restored
 }
 
 function download(content,name,type){
