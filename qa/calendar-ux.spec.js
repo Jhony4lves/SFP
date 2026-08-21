@@ -184,6 +184,9 @@ test('navegação no detalhe diário abre a entidade correspondente e novo lanç
   await expect(page.locator('#modalRoot h2', { hasText: 'Nubank' })).toBeVisible();
   await expect(page.locator('#modalRoot').getByText('Fecha dia 10 · vence dia 20')).toBeVisible();
 
+  // Fecha o detalhe do cartão antes de retornar ao calendário
+  await page.locator('#closeDetail').click();
+
   // 3. Volta ao calendário, abre dia 28 e clica em "+ Novo lançamento nesta data"
   await page.evaluate(() => setPage('calendario'));
   await dayButton(page, 28).click();
