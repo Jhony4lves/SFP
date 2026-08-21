@@ -41,8 +41,8 @@ test('MGMT-03/04/09/10: fatura, compra, estados e bindings permanecem', async ({
 
 test('MGMT-06/08: ações distintas de dívida e meta continuam disponíveis', async ({ page }) => {
   const value=fixture('UX-04'); value.debts.push({id:2,name:'Banco',balance:1000,payment:100,rate:0,firstDue:'2026-01-10',installments:10,paidInstallments:0,accountId:1,history:[]}); value.goals.push({id:3,name:'Reserva',target:1000,accountId:1,plan:100,initialAllocated:0,history:[]}); await boot(page,value);
-  await page.evaluate(()=>setPage('dividas')); await expect(page.getByRole('button',{name:'Pagar parcela'})).toBeVisible(); await expect(page.getByRole('button',{name:'Amortizar saldo'})).toBeVisible();
-  await page.evaluate(()=>setPage('metas')); await expect(page.getByRole('button',{name:'Fazer aporte'})).toBeVisible(); await expect(page.getByRole('button',{name:'Editar plano'})).toBeVisible();
+  await page.evaluate(()=>{setPage('dividas');openDebtDetail(2)}); await expect(page.getByRole('button',{name:'Pagar parcela'})).toBeVisible(); await expect(page.getByRole('button',{name:'Amortizar'})).toBeVisible();
+  await page.evaluate(()=>{closeProgressive();setPage('metas');openGoalDetail(3)}); await expect(page.getByRole('button',{name:'Fazer aporte'})).toBeVisible(); await expect(page.getByRole('button',{name:'Editar plano'})).toBeVisible();
 });
 
 test('MGMT-11/12: mobile usa cards e Back preserva navegação', async ({ page }) => {
