@@ -32,7 +32,8 @@ test('UXFORM-02/05: cria despesa e retorna pelo fluxo replace sem quebrar Back',
   await fillEssential(page, { kind: 'expense', description: 'Mercado UX', amount: '49.90' });
   await page.locator('#txSubmit').click();
   expect(await page.evaluate(() => state.transactions.at(-1))).toMatchObject({ kind: 'expense', amount: 49.9, status: 'paid' });
-  expect(await page.evaluate(() => sfpNavigation.getStack())).toEqual(['hoje']);
+  await expect.poll(() => page.evaluate(() => sfpNavigation.getStack())).toEqual(['hoje']);
+  await expect(page.locator('#hoje')).toHaveClass(/active/);
   expect(await page.evaluate(() => handleAndroidBack())).toBe(true); // fecha primeiro o feedback transitório
   expect(await page.evaluate(() => handleAndroidBack())).toBe(false);
 });
