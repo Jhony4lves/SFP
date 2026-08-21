@@ -73,6 +73,8 @@ test('nova dívida criada pelo DOM alimenta patrimônio, competência e compromi
   const errors = monitor(page);
 
   await page.locator('.nav button[data-page="dividas"]').click();
+  await page.getByRole('button', { name: 'Adicionar dívida' }).click();
+  await expect(page.locator('#modalRoot .management-form-panel')).toBeVisible();
   await page.locator('#debtName').fill('Financiamento UI');
   await page.locator('#debtBalance').fill('1200');
   await page.locator('#debtRate').fill('2');
