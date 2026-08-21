@@ -79,6 +79,7 @@ test('nova dívida criada pelo DOM alimenta patrimônio, competência e compromi
   await page.locator('#debtPayment').fill('100');
   await page.locator('#debtFirstDue').fill('2026-12-31');
   await page.locator('#debtInstallments').fill('4');
+  await page.locator('#debtMoreDetails summary').click();
   await page.locator('#debtDay').fill('31');
   await page.locator('#debtAccount').selectOption('1');
   await page.locator('#debtForm button').click();
