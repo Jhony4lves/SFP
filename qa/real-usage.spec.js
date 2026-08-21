@@ -12,10 +12,11 @@ async function loadUsageFixture(page, name = 'Uso real QA') {
 test('múltiplos reenvios rápidos criam um único ajuste e mostram sucesso', async ({ page }) => {
   const errors = await loadUsageFixture(page);
   await page.locator('.nav button[data-page="contas"]').click();
+  await page.evaluate(() => openAccountDetail(1));
   page.on('dialog', async dialog => dialog.accept(dialog.type() === 'prompt' ? '1100' : undefined));
 
   await page.evaluate(async () => {
-    const button = document.querySelector('#accountsGrid button[onclick*="reconcileAccount"]');
+    const button = document.querySelector('#modalRoot button[onclick*="reconcileAccount"]');
     const original = dbSet;
     window.__releaseReconcile = null;
     dbSet = async value => {
@@ -25,9 +26,9 @@ test('múltiplos reenvios rápidos criam um único ajuste e mostram sucesso', as
     window.__reconcilePromise = reconcileAccount(1, button);
   });
 
-  await expect(page.locator('#accountsGrid button[onclick*="reconcileAccount"]')).toBeDisabled();
-  await expect(page.locator('#accountsGrid button[onclick*="reconcileAccount"]')).toHaveText('Conciliando…');
-  await page.evaluate(() => reconcileAccount(1, document.querySelector('#accountsGrid button[onclick*="reconcileAccount"]')));
+  await expect(page.locator('#modalRoot button[onclick*="reconcileAccount"]')).toBeDisabled();
+  await expect(page.locator('#modalRoot button[onclick*="reconcileAccount"]')).toHaveText('Conciliando…');
+  await page.evaluate(() => reconcileAccount(1, document.querySelector('#modalRoot button[onclick*="reconcileAccount"]')));
   await page.evaluate(() => window.__releaseReconcile());
   await page.evaluate(() => window.__reconcilePromise);
 
@@ -46,6 +47,7 @@ test('múltiplos reenvios rápidos criam um único ajuste e mostram sucesso', as
 test('falha de persistência desfaz tentativa, reativa ação e informa erro', async ({ page }) => {
   await loadUsageFixture(page);
   await page.locator('.nav button[data-page="contas"]').click();
+  await page.evaluate(() => openAccountDetail(1));
   const consoleErrors = [];
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('dialog', async dialog => dialog.accept(dialog.type() === 'prompt' ? '1100' : undefined));
@@ -53,12 +55,12 @@ test('falha de persistência desfaz tentativa, reativa ação e informa erro', a
   await page.evaluate(async () => {
     const original = dbSet;
     dbSet = async () => { throw Error('falha simulada'); };
-    await reconcileAccount(1, document.querySelector('#accountsGrid button[onclick*="reconcileAccount"]'));
+    await reconcileAccount(1, document.querySelector('#modalRoot button[onclick*="reconcileAccount"]'));
     dbSet = original;
   });
 
   expect(await page.evaluate(() => state.transactions.filter(t => t.desc === 'Ajuste de conciliação').length)).toBe(0);
-  await expect(page.locator('#accountsGrid button[onclick*="reconcileAccount"]')).toBeEnabled();
+  await expect(page.locator('#modalRoot button[onclick*="reconcileAccount"]')).toBeEnabled();
   await expect(page.locator('#toast')).toContainText('Não foi possível salvar a conciliação.');
   expect(consoleErrors.some(message => message.includes('Falha ao conciliar saldo'))).toBe(true);
 });
