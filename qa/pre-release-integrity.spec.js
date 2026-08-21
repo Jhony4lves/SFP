@@ -78,8 +78,9 @@ test('REL-02 sequência longa mantém invariantes depois de cada operação', as
 test('REL-03 save, pagamento, undo e reload não dependem de memória transitória', async ({ page }) => {
   await boot(page, realLifeFixture());
   await page.evaluate(async () => { state.invoices[0].paidAmount += 13.34; state.invoices[0].payments.push({ date: '2026-04-17', amount: 13.34, balanceImpact: true }); await save('pagamento'); });
-  await page.reload(); expect(await page.evaluate(() => [invoiceRemaining(1, '2026-01'), accountBalance(1)])).toEqual([0, 2818.32]);
+  await page.reload(); await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState); expect(await page.evaluate(() => [invoiceRemaining(1, '2026-01'), accountBalance(1)])).toEqual([0, 2818.32]);
   await page.evaluate(() => undoLast()); await page.reload();
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
   expect(await page.evaluate(() => [state.invoices[0].paidAmount, state.undo.length])).toEqual([20, 0]);
 });
 
@@ -88,6 +89,7 @@ test('REL-04 backup complexo faz round-trip financeiramente equivalente', async 
   const before = await page.evaluate(() => JSON.stringify(state));
   await page.evaluate(async raw => { state = clone(seed); await save('destruir'); await restoreState(JSON.parse(raw)); }, before);
   await page.reload();
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
   expect(await page.evaluate(() => { const x = clone(state); delete x.persistenceMeta; return x; })).toEqual((() => { const x = JSON.parse(before); delete x.persistenceMeta; return x; })());
 });
 
@@ -95,7 +97,7 @@ test('REL-05 dois fechamentos permanecem imutáveis após meses futuros e reload
   const v = realLifeFixture(); v.snapshots.push({ id: 102, month: '2026-02', income: 3000, expense: 138.33, marker: 'imutável' }); v.closedMonths.push('2026-02');
   await boot(page, v); const old = await page.evaluate(() => JSON.stringify(state.snapshots));
   await page.evaluate(async () => { state.transactions.push({ id: 300, kind: 'expense', desc: 'Futura', amount: 999, date: '2026-06-01', accountId: 1, status: 'paid', balanceImpact: true }); await save('mês futuro'); });
-  await page.reload(); expect(await page.evaluate(() => JSON.stringify(state.snapshots))).toBe(old);
+  await page.reload(); await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState); expect(await page.evaluate(() => JSON.stringify(state.snapshots))).toBe(old);
 });
 
 test('REL-06 centavos, parcelamento, estorno e pagamentos não criam centavos', async ({ page }) => {

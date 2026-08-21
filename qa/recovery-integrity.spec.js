@@ -6,7 +6,7 @@ async function boot(page, value) {
   await page.evaluate(() => localStorage.clear());
   await writeIndexedDB(page, value);
   await page.reload();
-  await expect.poll(() => page.evaluate(() => state?.settings?.name)).toBe(value.settings.name);
+  await page.waitForFunction(name => state?.settings?.name === name && typeof lastSavedState !== 'undefined' && lastSavedState, value.settings.name);
 }
 
 test('REC-01/02 backup JSON preserva finanças e campos desconhecidos após reload', async ({ page }) => {
@@ -18,6 +18,7 @@ test('REC-01/02 backup JSON preserva finanças e campos desconhecidos após relo
   const backup = await page.evaluate(() => JSON.stringify(state));
   await page.evaluate(async raw => { state = clone(seed); await restoreState(JSON.parse(raw)); }, backup);
   await page.reload();
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && state.transactions?.length);
   expect(await page.evaluate(() => ({ amount: state.transactions[0].amount, txExtra: state.transactions[0].futureTxField, accountExtra: state.accounts[0].futureAccountField, rootExtra: state.futureRoot }))).toEqual({ amount: 123.45, txExtra: 'ok', accountExtra: { cents: 12345 }, rootExtra: { opaque: ['preservar'] } });
 });
 
@@ -50,6 +51,7 @@ test('REC-06, UNDO-01/02/03 e TRASH-01/02 preservam snapshots independentes', as
   await page.evaluate(() => undoLast());
   expect(await page.evaluate(() => state.transactions.map(t => t.id))).toEqual([10]);
   await page.reload();
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
   expect(await page.evaluate(() => ({ ids: state.transactions.map(t => t.id), trash: state.trash.length }))).toEqual({ ids: [10], trash: 0 });
 });
 
