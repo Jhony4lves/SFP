@@ -5,7 +5,13 @@ test('MONTH-01/02/03/04 fechamento é histórico e só muda por substituição e
   const value = fixture('Fechamento'); value.transactions = [{ id: 1, kind: 'income', desc: 'Salário', amount: 500, date: '2026-01-05', accountId: 1, status: 'paid', balanceImpact: true }];
   value.assets = [{ id: 2, name: 'Bem', value: 300 }]; value.debts = [{ id: 3, name: 'Dívida', balance: 100, history: [] }];
   await page.goto('/'); await page.evaluate(() => localStorage.clear()); await writeIndexedDB(page, value); await page.reload();
-  await page.evaluate(() => document.querySelector('#closeMonth').click());
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
+  await page.evaluate(() => setPage('relatorios'));
+  const closeMonth = page.locator('#relatorios #closeMonth');
+  await expect(closeMonth).toHaveCount(1);
+  await expect(closeMonth).toBeVisible();
+  await expect(closeMonth).toBeEnabled();
+  await closeMonth.click();
   await expect.poll(() => page.evaluate(async () => {
     const persisted = (await dbGet()).value;
     return { state: state.snapshots[0]?.income, persisted: persisted.snapshots[0]?.income, saved: lastSavedState.snapshots[0]?.income };
@@ -15,8 +21,10 @@ test('MONTH-01/02/03/04 fechamento é histórico e só muda por substituição e
   await page.evaluate(async () => { state.transactions[0].amount = 900; state.assets[0].value = 700; await save('alterar depois'); });
   expect(await page.evaluate(() => state.snapshots[0])).toEqual(original);
   await page.reload(); await expect.poll(() => page.evaluate(() => state?.snapshots[0])).toEqual(original);
-  await page.evaluate(() => { window.confirm = () => true; });
-  await page.evaluate(() => document.querySelector('#closeMonth').click());
+  await page.waitForFunction(() => typeof lastSavedState !== 'undefined' && lastSavedState);
+  await page.evaluate(() => { window.confirm = () => true; setPage('relatorios'); });
+  await expect(closeMonth).toBeVisible();
+  await closeMonth.click();
   await expect.poll(() => page.evaluate(async () => {
     const persisted = (await dbGet()).value;
     const fields = snapshot => snapshot && ({ income: snapshot.income, assets: snapshot.assets, debts: snapshot.debts, netWorth: snapshot.netWorth });
