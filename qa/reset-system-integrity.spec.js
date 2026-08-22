@@ -97,7 +97,7 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
       await dialog.accept();
     });
 
-    await page.locator('.nav button[data-page="dados"]').click();
+    await page.evaluate(() => setPage('dados'));
     await page.locator('#resetBtn').click();
     await expect(page.locator('#toast')).toHaveText('Sistema restaurado');
 
@@ -164,7 +164,7 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
     page.once('dialog', async dialog => {
       await dialog.accept();
     });
-    await page.locator('.nav button[data-page="dados"]').click();
+    await page.evaluate(() => setPage('dados'));
     await page.locator('#resetBtn').click();
     await expect(page.locator('#toast')).toHaveText('Sistema restaurado');
 
@@ -211,7 +211,7 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
       page.once('dialog', async dialog => {
         await dialog.accept();
       });
-      await page.locator('.nav button[data-page="dados"]').click();
+      await page.evaluate(() => setPage('dados'));
       await page.locator('#resetBtn').click();
       await expect(page.locator('#toast')).toHaveText('Sistema restaurado');
     }
@@ -236,7 +236,7 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
       await dialog.dismiss();
     });
 
-    await page.locator('.nav button[data-page="dados"]').click();
+    await page.evaluate(() => setPage('dados'));
     await page.locator('#resetBtn').click();
 
     // Estado em memória inalterado
@@ -267,7 +267,7 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
       await dialog.accept();
     });
 
-    await page.locator('.nav button[data-page="dados"]').click();
+    await page.evaluate(() => setPage('dados'));
     await page.locator('#resetBtn').click();
 
     // 20. Toast de erro (NÃO sucesso)
@@ -290,7 +290,7 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
     page.once('dialog', async dialog => {
       await dialog.accept();
     });
-    await page.locator('.nav button[data-page="dados"]').click();
+    await page.evaluate(() => setPage('dados'));
     await page.locator('#resetBtn').click();
     await expect(page.locator('#toast')).toHaveText('Sistema restaurado');
 
