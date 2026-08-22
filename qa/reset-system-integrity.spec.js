@@ -207,6 +207,18 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
     await setupAndBoot(page, custom);
     const errors = monitor(page);
 
+    await page.addLocatorHandler(
+      page.locator('#modalRoot.modalback'),
+      async () => {
+        const skipBtn = page.locator('#skipOnboard');
+        if (await skipBtn.isVisible()) {
+          await skipBtn.click();
+        } else {
+          await page.evaluate(() => closeProgressive());
+        }
+      }
+    );
+
     for (let i = 0; i < 3; i++) {
       page.once('dialog', async dialog => {
         await dialog.accept();
