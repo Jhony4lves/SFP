@@ -211,6 +211,10 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
       page.once('dialog', async dialog => {
         await dialog.accept();
       });
+      const skipBtn = page.locator('#skipOnboard');
+      if (await skipBtn.isVisible()) {
+        await skipBtn.click();
+      }
       await page.evaluate(() => setPage('config'));
       await page.locator('#resetBtn').click();
       await expect(page.locator('#toast')).toHaveText('Sistema restaurado');
