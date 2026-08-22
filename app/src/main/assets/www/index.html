@@ -2088,6 +2088,41 @@ async function undoLast(){
  try{await restoreState(restored);return u}
  catch(error){state=before;lastSavedState=clone(before);throw error}
 }
+function createCleanInitialState(){
+ return {
+  version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:localCivilMonth(),baseDate:localCivilDate(),
+  settings:{name:'SFP',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:false},
+  accounts:[],cards:[],transactions:[],transfers:[],purchases:[],invoiceAdjustments:[],invoices:[],recurring:[],debts:[],goals:[],assets:[],statements:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],creditFacilities:[],ui:{invoiceMonthByCard:{}}
+ };
+}
+async function resetSystem({confirmDialog=true}={}){
+ if(confirmDialog&&!confirm('Apagar todos os dados e voltar à base inicial?'))return false;
+ let before=clone(state),previousSaved=clone(lastSavedState||state);
+ try{
+  state=createCleanInitialState();
+  normalize();
+  await dbSet(state);
+  try{localStorage.removeItem('sfp_auto_backups')}catch{}
+  safeLocalSet(FALLBACK_KEY,JSON.stringify(state));
+  lastSavedState=clone(state);
+ }catch(error){
+  state=before;
+  lastSavedState=previousSaved;
+  try{renderAll()}catch{}
+  toast('Não foi possível zerar o sistema. Nenhuma alteração foi aplicada.');
+  console.error('Falha ao zerar sistema:',error);
+  return false;
+ }
+ try{
+  renderAll();
+  toast('Sistema restaurado');
+  return true;
+ }catch(uiError){
+  console.error('Falha visual após reset:',uiError);
+  toast('Sistema restaurado, mas houve uma falha visual.');
+  return true;
+ }
+}
 function account(id){return state.accounts.find(a=>a.id==id)} function card(id){return state.cards.find(c=>c.id==id)}
 function txInMonth(m=state.mesAtual){return state.transactions.filter(t=>ym(t.date)===m)}
 function recurringOccurrences(m=state.mesAtual){
@@ -2139,6 +2174,7 @@ function invoiceDisplayStatus(cardId,m){
 }
 function currentInvoiceMonth(c,ref=new Date()){
  let k=`${ref.getFullYear()}-${String(ref.getMonth()+1).padStart(2,'0')}`;
+ if(!c||c.closeDay==null)return k;
  return ref.getDate()>c.closeDay?monthAdd(k,1):k
 }
 function addCardHistory(cardId,type,text,amount=null){let c=card(cardId);if(!c)return;c.history??=[];c.history.push({id:uid(),at:new Date().toISOString(),type,text,amount})}
@@ -3785,7 +3821,17 @@ function renderCards(){
 
   let cid=+$('invoiceCard').value||state.cards[0]?.id;
 
-  if(!cid)return;
+  if(!cid||!card(cid)){
+    if($('invoiceTotalView'))$('invoiceTotalView').textContent=brl(0);
+    if($('invoicePaidView'))$('invoicePaidView').textContent=brl(0);
+    if($('invoiceRemainingView'))$('invoiceRemainingView').textContent=brl(0);
+    if($('invoiceStatusView'))$('invoiceStatusView').textContent='—';
+    if($('invoiceTable'))$('invoiceTable').innerHTML='<tr><td colspan="5"><div class="empty-state">Nenhum cartão cadastrado.</div></td></tr>';
+    if($('invoiceMobile'))$('invoiceMobile').innerHTML='<div class="empty-state"><b>Nenhum cartão cadastrado</b>Adicione um cartão para acompanhar faturas.</div>';
+    const root=sfpEnsureInvoiceV2();
+    if(root){root.className='sfp-invoice-v2';root.innerHTML='<div class="empty-state"><b>Nenhum cartão cadastrado</b>Adicione um cartão para ver o detalhamento da fatura.</div>'}
+    return;
+  }
 
   $('invoiceCard').value=cid;
 
@@ -4925,7 +4971,7 @@ $('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoice
  $('importBackup').onchange=e=>{let f=e.target.files[0];if(!f)return;let rd=new FileReader();rd.onload=async()=>{try{await restoreState(JSON.parse(rd.result));toast('Backup restaurado')}catch{toast('Backup inválido')}};rd.readAsText(f)};
  if($('runAudit'))$('runAudit').onclick=renderAudit;if($('repairOrphans'))$('repairOrphans').onclick=repairOrphans;if($('removeExactDuplicates'))$('removeExactDuplicates').onclick=removeExactDuplicates;if($('exportDiagnostic'))$('exportDiagnostic').onclick=()=>download(JSON.stringify({generatedAt:new Date().toISOString(),version:VERSION,schemaVersion:state.schemaVersion,audit:auditData(),counts:{accounts:state.accounts.length,transactions:state.transactions.length,cards:state.cards.length,purchases:state.purchases.length,debts:state.debts.length,goals:state.goals.length}},null,2),'sfp-diagnostico.json','application/json');$('autoBackupBtn').onclick=showAutoBackups;$('undoBtn').onclick=async()=>{try{let u=await undoLast();toast(u?`Desfeito: ${u.label}`:'Nada para desfazer.')}catch{toast('Não foi possível persistir o desfazer.')}};
  $('trashBtn').onclick=()=>showTrash();
- $('resetBtn').onclick=async()=>{if(confirm('Apagar todos os dados e voltar à base inicial?')){state=clone(seed);await dbSet(state);renderAll();toast('Sistema restaurado')}};
+ $('resetBtn').onclick=()=>resetSystem();
  $('globalSearch').oninput=renderGlobalSearch;$('globalSearch').onfocus=renderGlobalSearch;document.addEventListener('click',e=>{if(!e.target.closest('.searchbox'))$('globalResults').classList.add('hidden')});
  $('stmtFile').onchange=e=>readStmtFile(e.target.files[0]);$('stmtCancel').onclick=()=>{$('stmtReview').classList.add('hidden');statementDraft=[]};$('stmtImport').onclick=importStatement;let drop=$('stmtDrop');drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag')};drop.ondragleave=()=>drop.classList.remove('drag');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag');readStmtFile(e.dataTransfer.files[0])}
 }
