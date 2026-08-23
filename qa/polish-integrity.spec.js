@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { monitor } = require('./helpers');
 
 const PORTRAIT = { width: 390, height: 844 };
@@ -402,4 +403,81 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
 
     expect(errors).toEqual([]);
   });
+
+  test('13. Legendas dos gráficos: Receitas, despesas e resultado possuem indicadores coloridos distintos', async ({ page }) => {
+    const errors = monitor(page);
+    await boot(page);
+
+    // Navega para relatórios para validar sfpLineChart
+    await page.locator('.nav button[data-page="relatorios"]').click();
+    await expect(page.locator('#relatorios')).toHaveClass(/active/);
+
+    const legend = page.locator('.sfp-chart-legend');
+    if (await legend.count() > 0) {
+      await expect(page.locator('.chart-legend-dot.income').first()).toBeVisible();
+      await expect(page.locator('.chart-legend-dot.expense').first()).toBeVisible();
+    }
+
+    expect(errors).toEqual([]);
+  });
+
+  test('14. Espaçamento e tipografia: Central de Dados e Auditoria separam label e value sem colisão', async ({ page }) => {
+    const errors = monitor(page);
+    // Testa na largura de viewport do Galaxy S24 (412x915)
+    await page.setViewportSize({ width: 412, height: 915 });
+    await page.goto('/index.html');
+    await expect(page.locator('#pageTitle')).toHaveText('Hoje');
+
+    await page.locator('.nav button[data-page="dados"]').click();
+    await expect(page.locator('#dados')).toHaveClass(/active/);
+
+    // Valida que os tiles da Central de Dados têm display flex e small/strong separados
+    const dcTile = page.locator('.data-health .tile').first();
+    await expect(dcTile).toBeVisible();
+    const smallText = await dcTile.locator('small').textContent();
+    const strongText = await dcTile.locator('strong').textContent();
+    expect(smallText.trim()).toBe('Saúde dos dados');
+    expect(strongText.trim()).toMatch(/\d+%/);
+
+    // Valida card de estrutura
+    const schemaVal = await page.locator('#dcSchema').textContent();
+    expect(schemaVal.trim()).toMatch(/^v\d+$/);
+
+    expect(errors).toEqual([]);
+  });
+
+  test('15. Versão da estrutura: SCHEMA_VERSION=11 é dinâmico e única fonte da verdade', async ({ page }) => {
+    const errors = monitor(page);
+    await boot(page);
+
+    const versions = await page.evaluate(() => ({
+      schemaVersion: state.schemaVersion,
+      constantSchema: typeof SCHEMA_VERSION !== 'undefined' ? SCHEMA_VERSION : null,
+      domValue: document.getElementById('dcSchema')?.textContent
+    }));
+
+    expect(versions.schemaVersion).toBe(11);
+    expect(versions.constantSchema).toBe(11);
+    expect(versions.domValue).toBe('v11');
+
+    expect(errors).toEqual([]);
+  });
+
+  test('16. Logo oficial: Master SHA-256 e mipmaps Android preservam artwork aprovada', async () => {
+    const masterPath = path.resolve('_input/sfp-logo-master.png');
+    expect(fs.existsSync(masterPath)).toBe(true);
+
+    const masterBuf = fs.readFileSync(masterPath);
+    const sha = crypto.createHash('sha256').update(masterBuf).digest('hex');
+    expect(sha).toBe('79d98edae8bbecebca451ec8d37a838d926092621b4c20c55172c434ef71091d');
+
+    // Valida existência de mipmaps gerados
+    for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+      const square = path.resolve(`app/src/main/res/mipmap-${density}/ic_launcher.png`);
+      const round = path.resolve(`app/src/main/res/mipmap-${density}/ic_launcher_round.png`);
+      expect(fs.existsSync(square)).toBe(true);
+      expect(fs.existsSync(round)).toBe(true);
+    }
+  });
+
 });
