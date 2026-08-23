@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#07111e"/>
-<title>SFP 2.0.2 — Financeiro Pessoal</title>
+<title>Smart Financial Planner</title>
 <style>
 :root{
   --bg:#06101d;--bg2:#0a1727;--panel:#0d1b2d;--panel2:#11233a;--line:#243a56;
@@ -15,8 +15,8 @@
 button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
 .shell{min-height:100vh;display:grid;grid-template-columns:235px minmax(0,1fr)}
 .sidebar{height:100vh;position:sticky;top:0;padding:18px 13px;background:rgba(5,14,25,.96);border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:20}
-.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 18px}.brandmark{width:39px;height:39px;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:grid;place-items:center;color:#04141d;font-weight:900}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:10px;margin-top:2px}
-.nav{display:flex;flex-direction:column;gap:4px;overflow:auto;padding-right:2px}.nav button{border:0;background:transparent;color:var(--muted);border-radius:10px;padding:10px 11px;text-align:left;display:flex;gap:9px;align-items:center;font-size:13px}.nav button:hover{background:#0d1b2c;color:var(--text)}.nav button.active{background:linear-gradient(90deg,rgba(76,194,255,.18),rgba(76,194,255,.03));color:var(--blue);box-shadow:inset 3px 0 0 var(--blue)}
+.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 18px}.brandmark{width:39px;height:39px;border-radius:12px;background:linear-gradient(135deg,#2ed1a2,#4cc2ff);display:grid;place-items:center;color:#04141d;font-weight:900;box-shadow:0 2px 10px rgba(46,209,162,.25)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:10px;margin-top:2px}
+.nav{display:flex;flex-direction:column;gap:4px;overflow-y:auto;padding-right:2px}.nav button{border:0;background:transparent;color:var(--muted);border-radius:10px;padding:10px 11px;text-align:left;display:flex;gap:9px;align-items:center;font-size:13px}.nav button:hover{background:#0d1b2c;color:var(--text)}.nav button.active{background:linear-gradient(90deg,rgba(76,194,255,.18),rgba(76,194,255,.03));color:var(--blue);box-shadow:inset 3px 0 0 var(--blue)}
 .sidefoot{margin-top:auto;border:1px solid var(--line);background:#091726;border-radius:13px;padding:12px}.sidefoot small,.sidefoot span{display:block;color:var(--muted);font-size:10px}.sidefoot strong{display:block;margin:5px 0;font-size:18px}
 main{min-width:0;padding:22px 26px 55px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:20px}.top h1{font-size:26px;margin:0}.top p{margin:4px 0 0;color:var(--muted);font-size:12px}.actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 .btn,.btn2,.danger,.ghost{border-radius:9px;padding:9px 11px;border:1px solid var(--line)}.btn{background:var(--blue);color:#04131c;border-color:transparent;font-weight:800}.btn2,.ghost{background:#0b192a;color:var(--text)}.danger{background:rgba(255,109,126,.09);border-color:rgba(255,109,126,.32);color:#ff97a3}.ghost{padding:8px 10px}.wide{width:100%}
@@ -40,11 +40,21 @@ label{display:block;color:var(--muted);font-size:10px;margin-bottom:10px}input,s
 .calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;width:100%}.calhead{color:var(--muted);font-size:11px;font-weight:700;text-align:center;padding:4px 0;text-transform:uppercase;letter-spacing:.02em}.day{min-height:76px;border:1px solid var(--line);background:#071523;border-radius:8px;padding:6px 5px;display:flex;flex-direction:column;justify-content:flex-start;gap:3px;min-width:0;overflow:hidden;box-sizing:border-box;cursor:pointer;text-align:left;color:var(--text)}.day.off{opacity:.25;pointer-events:none}.daynum{font-size:12px;font-weight:750;color:var(--text);line-height:1}.daytop{display:flex;justify-content:space-between;align-items:center;width:100%;min-width:0}.cal-indicators{display:inline-flex;align-items:center;gap:3px}.cal-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0}.cal-dot.realized{background:var(--green)}.cal-dot.projected{background:var(--yellow);box-shadow:0 0 0 1px rgba(243,186,83,.45)}.cal-flow{display:block;font-size:10px;font-weight:650;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.cal-flow.inc{color:var(--green)}.cal-flow.exp{color:var(--red)}.cal-count{display:block;font-size:10px;color:var(--muted);font-weight:600;line-height:1.1;margin-top:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.event{font-size:10px;margin-top:4px;padding:3px 4px;border-radius:5px;background:rgba(76,194,255,.1);color:#bfeaff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.event.exp{background:rgba(255,109,126,.1);color:#ffb5be}.event.inc{background:rgba(46,209,148,.1);color:#a8f2d4}
 .searchbox{position:relative}.searchresults{position:absolute;z-index:50;top:40px;right:0;width:min(520px,92vw);max-height:420px;overflow:auto;background:#081625;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:8px}.searchresults .item{cursor:pointer}
 .modalback{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:80;display:grid;place-items:center;padding:15px}.modal{width:min(640px,96vw);max-height:90vh;overflow:auto;background:#0d1b2d;border:1px solid var(--line);border-radius:15px;padding:16px;box-shadow:var(--shadow)}
-.toast{position:fixed;right:18px;bottom:18px;background:#12253c;border:1px solid var(--line);padding:10px 13px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none;z-index:100}.toast.show{opacity:1;transform:none}
+.toast{position:fixed;right:18px;bottom:18px;background:#0e2035;border:1px solid var(--line);padding:10px 14px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none;z-index:100;font-size:12px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow)}
+.toast.show{opacity:1;transform:none}
+.toast-success{border-color:rgba(46,209,148,.4);box-shadow:0 4px 20px rgba(46,209,148,.15)}
+.toast-error{border-color:rgba(255,109,126,.4);box-shadow:0 4px 20px rgba(255,109,126,.15)}
+.toast-warning{border-color:rgba(243,186,83,.4);box-shadow:0 4px 20px rgba(243,186,83,.15)}
+.toast-indicator{width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0}
+.toast-success .toast-indicator{background:var(--green)}
+.toast-error .toast-indicator{background:var(--red)}
+.toast-warning .toast-indicator{background:var(--yellow)}
 .mobilefab{display:none}
+#moreNavBtn{display:none!important}
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.shell{grid-template-columns:74px 1fr}.sidebar{padding:15px 8px}.brand div:not(.brandmark),.nav button span,.sidefoot{display:none}.brand{justify-content:center}.nav button{justify-content:center;font-size:16px}.grid2,.grid3{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:650px){.shell{display:block}.sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;border-right:0;border-top:1px solid var(--line);padding:6px;background:#06101d;z-index:70}.brand,.sidefoot{display:none}.nav{display:grid;grid-template-columns:repeat(6,1fr);gap:1px}.nav button:nth-child(n+7){display:none}.nav button{padding:8px 2px;font-size:14px}.nav button.active{box-shadow:inset 0 -3px 0 var(--blue)}main{padding:14px 10px 82px}.top{flex-direction:column}.top .actions{width:100%}.top .actions .btn{flex:1}.metric-grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}.flow{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}.quicktypes{grid-template-columns:repeat(5,1fr)}.quicktype{padding:8px 3px;font-size:8px}.quicktype b{font-size:15px}.calendar{gap:2px}.calhead{font-size:10px;padding:2px 0}.day{min-height:58px;padding:4px 3px;gap:2px}.daynum{font-size:11px}.cal-dot{width:6px;height:6px}.cal-flow{font-size:10px}.cal-count{font-size:10px}.mobilefab{display:grid;position:fixed;right:16px;bottom:68px;width:50px;height:50px;border-radius:50%;background:var(--blue);color:#04131c;border:0;place-items:center;font-size:24px;font-weight:900;z-index:65;box-shadow:var(--shadow)}}
+@media(max-width:650px) and (orientation:portrait){.shell{display:block}.sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;border-right:0;border-top:1px solid var(--line);padding:6px;background:#06101d;z-index:70}.brand,.sidefoot{display:none}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;overflow:visible;padding-right:0}.sidebar .nav button{display:none!important}.sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="dashboard"],.sidebar .nav button[data-page="lancamentos"],.sidebar .nav button[data-page="contas"],.sidebar .nav #moreNavBtn{display:flex!important;padding:8px 2px;font-size:14px;justify-content:center}.sidebar .nav button.active{box-shadow:inset 0 -3px 0 var(--blue)}#moreNavBtn{color:var(--muted)}#moreNavBtn.active{color:var(--blue)}main{padding:14px 10px 82px}.top{flex-direction:column}.top .actions{width:100%}.top .actions .btn{flex:1}.metric-grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}.flow{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}.quicktypes{grid-template-columns:repeat(5,1fr)}.quicktype{padding:8px 3px;font-size:8px}.quicktype b{font-size:15px}.calendar{gap:2px}.calhead{font-size:10px;padding:2px 0}.day{min-height:58px;padding:4px 3px;gap:2px}.daynum{font-size:11px}.cal-dot{width:6px;height:6px}.cal-flow{font-size:10px}.cal-count{font-size:10px}.mobilefab{display:grid;position:fixed;right:16px;bottom:68px;width:50px;height:50px;border-radius:50%;background:var(--blue);color:#04131c;border:0;place-items:center;font-size:24px;font-weight:900;z-index:65;box-shadow:var(--shadow)}}
+@media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:sticky;top:0;left:0;height:100vh;display:flex;flex-direction:column;z-index:20}.nav{display:flex;flex-direction:column;gap:4px;overflow-y:auto;max-height:calc(100vh - 70px)}.mobilefab{bottom:16px;right:16px}}
 
 /* ===== SFP 1.0.1 — MOBILE LAYOUT FIX ===== */
 html,body{width:100%;max-width:100%;overflow-x:hidden}
@@ -195,16 +205,18 @@ img,canvas,svg{max-width:100%}
 
 
 /* ===== SFP 1.0.2 — MOBILE NAV / UX ===== */
-@media(max-width:650px){
+@media(max-width:650px) and (orientation:portrait){
   .sidebar .nav button{display:none!important}
   .sidebar .nav button[data-page="hoje"],
   .sidebar .nav button[data-page="dashboard"],
   .sidebar .nav button[data-page="lancamentos"],
   .sidebar .nav button[data-page="contas"],
   .sidebar .nav #moreNavBtn{display:flex!important}
-  .sidebar .nav{grid-template-columns:repeat(6,1fr)}
+  .sidebar .nav{grid-template-columns:repeat(5,1fr)}
   #moreNavBtn{color:var(--muted)}
   #moreNavBtn.active{color:var(--blue)}
+}
+@media(max-width:650px){
   .invoice-summary{grid-template-columns:repeat(2,1fr)!important}
   .mobile-stack-table thead{display:none}
   .mobile-stack-table,.mobile-stack-table tbody,.mobile-stack-table tr,.mobile-stack-table td{display:block;width:100%;min-width:0}
@@ -1490,7 +1502,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 <body>
 <div class="shell">
   <aside class="sidebar">
-    <div class="brand"><div class="brandmark">S</div><div><strong>SFP 2.0.2</strong><small>Financeiro local-first</small></div></div>
+    <div class="brand"><div class="brandmark">S</div><div><strong>Smart Financial Planner</strong><small>Planejamento local-first</small></div></div>
     <div class="nav">
       <button class="active" data-page="hoje">⌂ <span>Hoje</span></button>
       <button data-page="dashboard">▦ <span>Dashboard</span></button>
@@ -1873,7 +1885,7 @@ button:active:not(:disabled){transform:translateY(1px)}
       </div>
       <div class="grid2" style="margin-top:12px">
         <article class="panel"><div class="head"><div><h2>Integridade dos dados</h2><p>Verificações automáticas da base</p></div><button class="btn2 tiny" id="runAudit">Executar novamente</button></div><div id="auditIssues" class="list"></div></article>
-        <article class="panel"><div class="head"><div><h2>Ferramentas de manutenção</h2><p>Correções seguras e diagnósticos</p></div></div><div class="list"><button class="btn2 wide" id="repairOrphans">Corrigir referências órfãs seguras</button><button class="btn2 wide" id="removeExactDuplicates">Remover duplicatas exatas</button><button class="btn2 wide" id="exportDiagnostic">Exportar diagnóstico</button></div><div class="note">O SFP nunca corrige valores financeiros automaticamente sem uma regra segura. Ajustes que podem alterar dinheiro continuam exigindo confirmação.</div></article>
+        <article class="panel"><div class="head"><div><h2>Ferramentas de manutenção</h2><p>Correções seguras e diagnósticos</p></div></div><div class="list"><button class="btn2 wide" id="repairOrphans">Corrigir referências órfãs seguras</button><button class="btn2 wide" id="removeExactDuplicates">Remover duplicatas exatas</button><button class="btn2 wide" id="exportDiagnostic">Exportar diagnóstico</button></div><div class="note">O Smart Financial Planner nunca corrige valores financeiros automaticamente sem uma regra segura. Ajustes que podem alterar dinheiro continuam exigindo confirmação.</div></article>
       </div>
     </section>
 
@@ -1962,7 +1974,8 @@ function monthAdd(k,n){let[y,m]=k.split('-').map(Number),d=new Date(y,m-1+n,1);r
 function monthName(k){let[y,m]=k.split('-').map(Number);return new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase())}
 function clampDay(y,m,d){return Math.min(d,new Date(y,m,0).getDate())}
 function accountBalanceDateLabel(value){if(!value)return'data-base não informada';let date=new Date(value+'T12:00');return Number.isNaN(date.getTime())?'data-base inválida':`saldo-base ${date.toLocaleDateString('pt-BR')}`}
-function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2100)}
+let toastTimer=null;
+function toast(msg,type='info'){let el=$('toast');if(!el)return;el.className=`toast toast-${type} show`;el.innerHTML=`<span class="toast-indicator"></span><span>${sfpEsc(msg)}</span>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2200)}
 let lastSavedState=null;
 function migrateSchema(s){
   s.schemaVersion??=1;
@@ -2493,7 +2506,7 @@ function commitmentUntilNextIncome(ref=new Date(),days=120){
 function healthAlerts(){
  let m=localCivilMonth(),c=monthCalc(m),arr=[];
  state.cards.forEach(cd=>{let used=cardOutstanding(cd.id);if(cd.limit&&used/cd.limit>.8)arr.push({c:'yellow',t:`${cd.name}: mais de 80% do limite está comprometido.`})});
- if(goalReserve()>0&&goalReserve()<Math.max(c.exp*3,1))arr.push({c:'yellow',t:'Sua reserva ainda está abaixo de 3 meses das despesas atuais.'});
+if(goalReserve()>0&&goalReserve()<Math.max(c.exp*3,1))arr.push({c:'yellow',t:'Sua reserva ainda está abaixo de 3 meses das despesas atuais.'});
  if(!arr.length)arr.push({c:'green',t:'Nenhum alerta importante com os dados atuais.'});return arr
 }
 function goalReserve(){return state.accounts.filter(a=>/Reserva|Investimento/.test(a.type)).reduce((s,a)=>s+Math.max(0,accountBalance(a.id)),0)}
@@ -2505,9 +2518,68 @@ function smartText(m=state.mesAtual){
 }
 
 let feedbackTimer=null;
-function showFeedback(msg){
- let el=$('feedbackCard');if(!el)return;el.innerHTML=msg;el.classList.add('show');clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>el.classList.remove('show'),3200)
+function showFeedback(msg,{title='Smart Financial Planner',type='info',notify=false}={}){
+ let el=$('feedbackCard');if(!el)return;
+ const icons={info:'ℹ',success:'✓',warning:'⚠',error:'✕'};
+ el.className=`feedback-card feedback-${type} show`;
+ el.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><span class="badge ${type==='success'?'positive':type==='error'?'negative':type==='warning'?'warning':'blue'}" style="font-size:11px">${icons[type]||'✓'}</span><div><strong style="display:block;font-size:11px;color:var(--text)">${sfpEsc(title)}</strong><span style="font-size:10px;color:var(--muted)">${sfpEsc(msg)}</span></div></div>`;
+ clearTimeout(feedbackTimer);
+ feedbackTimer=setTimeout(()=>el.classList.remove('show'),3500);
+ if(notify&&window.AndroidBridge&&typeof window.AndroidBridge.showNotification==='function'){
+   try{window.AndroidBridge.showNotification(title,msg)}catch(e){console.warn('Android notification bridge:',e)}
+ }
 }
+window.showFeedback=showFeedback;
+window.sfpFeedback=(opts)=>typeof opts==='string'?showFeedback(opts):showFeedback(opts.message,opts);
+
+function sfpConfirm({title='Confirmação',message='Deseja prosseguir com esta ação?',confirmText='Confirmar',cancelText='Cancelar',danger=false}={}){
+ return new Promise(resolve=>{
+   let root=$('modalRoot');
+   if(!root){resolve(window.confirm?window.confirm(message):true);return}
+   root.className='modalback';
+   root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><div class="head"><div><h2 id="dialogTitle">${sfpEsc(title)}</h2><p>${danger?'Ação de atenção / exclusão':'Confirme para continuar'}</p></div><button class="btn2" id="dialogCloseBtn" aria-label="Fechar">✕</button></div><div class="dialog-body" style="padding:14px 0;font-size:13px;line-height:1.5;color:var(--text)">${sfpEsc(message).replace(/\n/g,'<br/>')}</div><div class="section-actions" style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px"><button class="btn2" id="dialogCancelBtn">${sfpEsc(cancelText)}</button><button class="${danger?'danger':'btn'}" id="dialogConfirmBtn">${sfpEsc(confirmText)}</button></div></div>`;
+   const finish=result=>{root.className='hidden';root.innerHTML='';window.removeEventListener('keydown',keyHandler);resolve(result)};
+   const keyHandler=e=>{if(e.key==='Escape')finish(false);else if(e.key==='Enter')finish(true)};
+   window.addEventListener('keydown',keyHandler);
+   $('dialogCloseBtn').onclick=()=>finish(false);
+   $('dialogCancelBtn').onclick=()=>finish(false);
+   $('dialogConfirmBtn').onclick=()=>finish(true);
+   $('dialogConfirmBtn').focus();
+ });
+}
+window.sfpConfirm=sfpConfirm;
+
+function sfpAlert({title='Aviso',message='',buttonText='Entendido',type='info'}={}){
+ return new Promise(resolve=>{
+   let root=$('modalRoot');
+   if(!root){if(window.alert)window.alert(message);resolve();return}
+   root.className='modalback';
+   const typeLabels={info:'Informação',success:'Sucesso',warning:'Atenção',error:'Erro'};
+   root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true"><div class="head"><div><h2>${sfpEsc(title)}</h2><p>${typeLabels[type]||'Aviso do sistema'}</p></div><button class="btn2" id="dialogCloseBtn" aria-label="Fechar">✕</button></div><div class="dialog-body" style="padding:14px 0;font-size:13px;line-height:1.5;color:var(--text)">${sfpEsc(message).replace(/\n/g,'<br/>')}</div><div class="section-actions" style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn" id="dialogOkBtn">${sfpEsc(buttonText)}</button></div></div>`;
+   const finish=()=>{root.className='hidden';root.innerHTML='';resolve()};
+   $('dialogCloseBtn').onclick=finish;
+   $('dialogOkBtn').onclick=finish;
+   $('dialogOkBtn').focus();
+ });
+}
+window.sfpAlert=sfpAlert;
+
+function sfpPrompt({title='Entrada',message='',defaultValue='',placeholder='',confirmText='Confirmar',cancelText='Cancelar'}={}){
+ return new Promise(resolve=>{
+   let root=$('modalRoot');
+   if(!root){resolve(window.prompt?window.prompt(message,defaultValue):defaultValue);return}
+   root.className='modalback';
+   root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true"><div class="head"><div><h2>${sfpEsc(title)}</h2><p>Preencha para continuar</p></div><button class="btn2" id="dialogCloseBtn" aria-label="Fechar">✕</button></div><div class="dialog-body" style="padding:10px 0;font-size:13px;line-height:1.5;color:var(--text)">${message?`<p style="margin:0 0 8px">${sfpEsc(message).replace(/\n/g,'<br/>')}</p>`:''}<input id="dialogPromptInput" value="${sfpEsc(String(defaultValue))}" placeholder="${sfpEsc(placeholder)}" style="width:100%"/></div><div class="section-actions" style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px"><button class="btn2" id="dialogCancelBtn">${sfpEsc(cancelText)}</button><button class="btn" id="dialogConfirmBtn">${sfpEsc(confirmText)}</button></div></div>`;
+   const input=$('dialogPromptInput');input.focus();input.select();
+   const finish=val=>{root.className='hidden';root.innerHTML='';window.removeEventListener('keydown',keyHandler);resolve(val)};
+   const keyHandler=e=>{if(e.key==='Escape')finish(null);else if(e.key==='Enter')finish(input.value)};
+   window.addEventListener('keydown',keyHandler);
+   $('dialogCloseBtn').onclick=()=>finish(null);
+   $('dialogCancelBtn').onclick=()=>finish(null);
+   $('dialogConfirmBtn').onclick=()=>finish(input.value);
+ });
+}
+window.sfpPrompt=sfpPrompt;
 function originOf(t){
  if(t.statementKey)return['Extrato','statement'];
  if(t.recurringId)return['Recorrente','recurring'];
@@ -4808,7 +4880,12 @@ function setPage(id,{mode='push'}={}){
 }
 function handleAndroidBack(){
  const modal=$('modalRoot');
- if(modal&&!modal.classList.contains('hidden')){closeProgressive();return true}
+ if(modal&&!modal.classList.contains('hidden')){
+   const closeBtn=$('dialogCloseBtn')||$('dialogCancelBtn')||$('closeModal')||$('closeMore')||$('closeAB')||$('skipOnboard');
+   if(closeBtn)closeBtn.click();
+   else closeProgressive();
+   return true
+ }
  const results=$('globalResults');
  if(results&&!results.classList.contains('hidden')){results.classList.add('hidden');return true}
  const feedback=$('feedbackCard');
@@ -4964,11 +5041,11 @@ $('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoice
  $('simDebtBtn').onclick=()=>{let b=+$('simDebtBalance').value,r=+$('simDebtRate').value/100,p=+$('simDebtPayment').value,x=+$('simDebtExtra').value;if(!b||!p)return toast('Preencha saldo e parcela');let run=pay=>{let bal=b,m=0,int=0;if(pay<=bal*r)return{m:999,int:Infinity};while(bal>0&&m<999){let j=bal*r;int+=j;bal=bal+j-pay;m++}return{m,int}};let n=run(p),f=run(p+x);$('simDebtRes').classList.remove('hidden');$('simDebtRes').innerHTML=`Prazo normal: <b>${n.m}</b> meses.<br>Com extra: <b>${f.m}</b> meses.<br>Economia estimada de juros: <b>${brl(Math.max(0,n.int-f.int))}</b>.`};
  $('simGoalBtn').onclick=()=>{let target=+$('simGoalTarget').value,v=+$('simGoalInitial').value,m=+$('simGoalMonthly').value,r=+$('simGoalRate').value/100,n=0,paid=0;if(!target||!m)return toast('Preencha objetivo e aporte');while(v<target&&n<999){v=(v+m)*(1+r);paid+=m;n++}$('simGoalRes').classList.remove('hidden');$('simGoalRes').innerHTML=`Tempo estimado: <b>${n}</b> meses.<br>Aportes: <b>${brl(paid)}</b>.<br>Rendimentos estimados: <b>${brl(Math.max(0,v-paid-(+$('simGoalInitial').value||0)))}</b>.`};
  $('exportBackup').onclick=()=>download(JSON.stringify(state,null,2),`sfp-backup-${localCivilDate()}.json`,'application/json');
- $('exportEncrypted').onclick=async()=>{let pass=$('backupPassword').value;if(pass.length<6)return toast('Use uma senha com pelo menos 6 caracteres.');try{let raw=await encryptBackup(pass);download(raw,`sfp-backup-${localCivilDate()}.sfp`,'application/octet-stream');toast('Backup criptografado criado.')}catch(e){toast(e.message)}};
- $('importEncrypted').onchange=e=>{let f=e.target.files[0];if(!f)return;let pass=prompt('Senha do backup criptografado:');if(!pass)return;let rd=new FileReader();rd.onload=async()=>{try{await restoreState(await decryptBackup(rd.result,pass));toast('Backup criptografado restaurado.')}catch{toast('Senha incorreta ou arquivo inválido.')}};rd.readAsText(f)};
+ $('exportEncrypted').onclick=async()=>{let pass=$('backupPassword').value;if(pass.length<6)return toast('Use uma senha com pelo menos 6 caracteres.','warning');try{let raw=await encryptBackup(pass);download(raw,`sfp-backup-${localCivilDate()}.sfp`,'application/octet-stream');toast('Backup criptografado criado.','success');showFeedback('Backup criptografado exportado com sucesso.',{title:'Backup exportado',type:'success',notify:true})}catch(e){toast(e.message,'error')}};
+ $('importEncrypted').onchange=async e=>{let f=e.target.files[0];if(!f)return;let pass=await sfpPrompt({title:'Backup Criptografado',message:'Digite a senha para descriptografar o backup:',placeholder:'Sua senha'});if(!pass)return;let rd=new FileReader();rd.onload=async()=>{try{await restoreState(await decryptBackup(rd.result,pass));toast('Backup criptografado restaurado.','success');showFeedback('Backup criptografado restaurado com sucesso.',{title:'Backup restaurado',type:'success',notify:true})}catch{toast('Senha incorreta ou arquivo inválido.','error')}};rd.readAsText(f)};
 
  $('exportCSV').onclick=()=>{let rows=[['Data','Tipo','Descrição','Categoria','Conta','Valor','Status'],...txInMonth().map(t=>[t.date,t.kind,t.desc,t.category,account(t.accountId)?.name||'',t.amount,t.status])];download('\ufeff'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n'),`sfp-${state.mesAtual}.csv`,'text/csv')};
- $('importBackup').onchange=e=>{let f=e.target.files[0];if(!f)return;let rd=new FileReader();rd.onload=async()=>{try{await restoreState(JSON.parse(rd.result));toast('Backup restaurado')}catch{toast('Backup inválido')}};rd.readAsText(f)};
+ $('importBackup').onchange=e=>{let f=e.target.files[0];if(!f)return;let rd=new FileReader();rd.onload=async()=>{try{await restoreState(JSON.parse(rd.result));toast('Backup restaurado','success');showFeedback('Backup de dados restaurado com sucesso.',{title:'Backup restaurado',type:'success',notify:true})}catch{toast('Backup inválido','error')}};rd.readAsText(f)};
  if($('runAudit'))$('runAudit').onclick=renderAudit;if($('repairOrphans'))$('repairOrphans').onclick=repairOrphans;if($('removeExactDuplicates'))$('removeExactDuplicates').onclick=removeExactDuplicates;if($('exportDiagnostic'))$('exportDiagnostic').onclick=()=>download(JSON.stringify({generatedAt:new Date().toISOString(),version:VERSION,schemaVersion:state.schemaVersion,audit:auditData(),counts:{accounts:state.accounts.length,transactions:state.transactions.length,cards:state.cards.length,purchases:state.purchases.length,debts:state.debts.length,goals:state.goals.length}},null,2),'sfp-diagnostico.json','application/json');$('autoBackupBtn').onclick=showAutoBackups;$('undoBtn').onclick=async()=>{try{let u=await undoLast();toast(u?`Desfeito: ${u.label}`:'Nada para desfazer.')}catch{toast('Não foi possível persistir o desfazer.')}};
  $('trashBtn').onclick=()=>showTrash();
  $('resetBtn').onclick=()=>resetSystem();
@@ -5019,7 +5096,7 @@ function renderGlobalSearch(){let q=$('globalSearch').value.trim().toLowerCase()
 
 function showAutoBackups(){
  let arr=[];try{arr=JSON.parse(localStorage.getItem('sfp_auto_backups')||'[]')}catch{}
- let root=$('modalRoot');root.className='modalback';root.innerHTML=`<div class="modal"><div class="head"><div><h2>Backups automáticos</h2><p>Últimas versões locais antes de alterações</p></div><button class="btn2" id="closeAB">Fechar</button></div><div class="list">${arr.length?arr.slice().reverse().map((b,i)=>`<div class="item"><div><b>${new Date(b.at).toLocaleString('pt-BR')}</b><small>Snapshot automático</small></div><button class="btn2 tiny" data-ab="${arr.length-1-i}">Restaurar</button></div>`).join(''):'<div class="item"><span>Nenhum backup automático ainda.</span></div>'}</div></div>`;$('closeAB').onclick=()=>root.className='hidden';document.querySelectorAll('[data-ab]').forEach(b=>b.onclick=async()=>{if(!confirm('Restaurar este backup? O estado atual será substituído.'))return;try{await restoreState(arr[+b.dataset.ab].state);root.className='hidden';toast('Backup automático restaurado')}catch{toast('Não foi possível restaurar o backup automático.')}})
+ let root=$('modalRoot');root.className='modalback';root.innerHTML=`<div class="modal"><div class="head"><div><h2>Backups automáticos</h2><p>Últimas versões locais antes de alterações</p></div><button class="btn2" id="closeAB">Fechar</button></div><div class="list">${arr.length?arr.slice().reverse().map((b,i)=>`<div class="item"><div><b>${new Date(b.at).toLocaleString('pt-BR')}</b><small>Snapshot automático</small></div><button class="btn2 tiny" data-ab="${arr.length-1-i}">Restaurar</button></div>`).join(''):'<div class="item"><span>Nenhum backup automático ainda.</span></div>'}</div></div>`;$('closeAB').onclick=()=>root.className='hidden';document.querySelectorAll('[data-ab]').forEach(b=>b.onclick=async()=>{if(!confirm('Restaurar este backup? O estado atual será substituído.'))return;try{await restoreState(arr[+b.dataset.ab].state);root.className='hidden';toast('Backup automático restaurado','success');showFeedback('Backup automático restaurado com sucesso.',{title:'Backup restaurado',type:'success',notify:true})}catch{toast('Não foi possível restaurar o backup automático.','error')}})
 }
 
 
@@ -5027,23 +5104,23 @@ function showOnboarding(){
  if(state.settings.onboardingDone)return;
  let root=$('modalRoot');root.className='modalback';
  let step=0;
- const render=()=>{root.innerHTML=`<div class="modal"><div class="head"><div><h2>Configuração inicial</h2><p>Vamos deixar o SFP pronto sem complicação</p></div><button class="btn2" id="skipOnboard">Pular</button></div>
+ const render=()=>{root.innerHTML=`<div class="modal"><div class="head"><div><h2>Configuração inicial</h2><p>Vamos deixar o Smart Financial Planner pronto sem complicação</p></div><button class="btn2" id="skipOnboard">Pular</button></div>
  <div class="onboarding-step ${step===0?'active':''}"><h3>1. Sua conta principal</h3><label>Nome da conta<input id="obAccountName" value="${state.accounts[0]?.name||'Conta principal'}"/></label><label>Saldo atual aproximado<input id="obBalance" type="number" step="0.01" value="${(accountBalance(state.accounts[0]?.id)||0).toFixed(2)}" inputmode="decimal"/></label></div>
  <div class="onboarding-step ${step===1?'active':''}"><h3>2. Recebimentos principais</h3><div class="two"><label>Dia 1<input id="obDay1" type="number" value="${state.settings.day1||1}"/></label><label>Dia 2<input id="obDay2" type="number" value="${state.settings.day2||15}"/></label></div><div class="note">Depois você pode cadastrar os valores exatos como recorrências.</div></div>
  <div class="onboarding-step ${step===2?'active':''}"><h3>3. Cartões</h3><div class="note">${state.cards.length?`Já encontrei ${state.cards.length} cartão(ões) cadastrado(s).`:'Você pode cadastrar cartões agora ou depois na aba Cartões.'}</div></div>
- <div class="onboarding-step ${step===3?'active':''}"><h3>Pronto</h3><div class="note">O SFP está configurado. Você pode começar por um lançamento ou importar um extrato bancário.</div></div>
+ <div class="onboarding-step ${step===3?'active':''}"><h3>Pronto</h3><div class="note">O Smart Financial Planner está configurado. Você pode começar por um lançamento ou importar um extrato bancário.</div></div>
  <div class="onboard-dots">${[0,1,2,3].map(i=>`<span class="onboard-dot ${i===step?'active':''}"></span>`).join('')}</div>
  <div class="actions"><button class="btn2" id="obPrev" ${step===0?'disabled':''}>Voltar</button><button class="btn" id="obNext">${step===3?'Concluir':'Continuar'}</button></div></div>`;
  $('skipOnboard').onclick=async()=>{state.settings.onboardingDone=true;await dbSet(state);lastSavedState=clone(state);root.className='hidden'};
  $('obPrev').onclick=()=>{if(step>0){step--;render()}};
- $('obNext').onclick=async()=>{if(step===0){let a=state.accounts[0];if(a){a.name=$('obAccountName').value||a.name;let target=Math.round((parseFloat(String($('obBalance').value).replace(',','.'))||0)*100)/100,diff=target-accountBalance(a.id);if(Math.abs(diff)>.009)a.initial+=diff}}if(step===1){state.settings.day1=+$('obDay1').value||1;state.settings.day2=+$('obDay2').value||15}if(step<3){step++;render()}else{state.settings.onboardingDone=true;await save('Concluir onboarding');root.className='hidden';showFeedback('Configuração inicial concluída. Seu SFP está pronto para uso.')}}};
+ $('obNext').onclick=async()=>{if(step===0){let a=state.accounts[0];if(a){a.name=$('obAccountName').value||a.name;let target=Math.round((parseFloat(String($('obBalance').value).replace(',','.'))||0)*100)/100,diff=target-accountBalance(a.id);if(Math.abs(diff)>.009)a.initial+=diff}}if(step===1){state.settings.day1=+$('obDay1').value||1;state.settings.day2=+$('obDay2').value||15}if(step<3){step++;render()}else{state.settings.onboardingDone=true;await save('Concluir onboarding');root.className='hidden';showFeedback('Configuração inicial concluída. O Smart Financial Planner está pronto para uso.',{title:'Bem-vindo',type:'success'})}}};
  render()
 }
 
 function showMoreMenu(){
  let root=$('modalRoot');root.className='modalback';
  let items=[['visao','◈','Visão Geral'],['contas','◉','Contas'],['recorrencias','↻','Recorrências'],['orcamento','◫','Orçamento'],['dividas','↘','Dívidas'],['metas','◎','Metas'],['patrimonio','◆','Patrimônio'],['calendario','□','Calendário'],['relatorios','≋','Relatórios'],['simuladores','⌁','Simuladores'],['dados','🗄','Central de Dados'],['auditoria','✓','Auditoria'],['config','⚙','Configurações']];
- root.innerHTML=`<div class="modal"><div class="head"><div><h2>Mais</h2><p>Outros módulos do SFP</p></div><button class="btn2" id="closeMore">Fechar</button></div><div class="grid2">${items.map(x=>`<button class="btn2 wide" data-more="${x[0]}" style="text-align:left">${x[1]} ${x[2]}</button>`).join('')}</div></div>`;
+ root.innerHTML=`<div class="modal"><div class="head"><div><h2>Mais</h2><p>Outros módulos do Smart Financial Planner</p></div><button class="btn2" id="closeMore">Fechar</button></div><div class="grid2">${items.map(x=>`<button class="btn2 wide" data-more="${x[0]}" style="text-align:left">${x[1]} ${x[2]}</button>`).join('')}</div></div>`;
  $('closeMore').onclick=()=>root.className='hidden';document.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>{root.className='hidden';setPage(b.dataset.more)})
 }
 
