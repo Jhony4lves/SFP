@@ -4727,6 +4727,7 @@ async function sophySendMessage(text){
   state.sophy.messages.push(userMsg);
   state.sophy.messages=state.sophy.messages.slice(-50);
   renderSophy();
+  await save('Mensagem enviada para Sophy');
   const response=await sophyAIProvider.generateResponse(raw);
   state.sophy.personaState=response.emotion||state.sophy.personaState||'cheerful';
   const sophyMsg={id:uid(),sender:'sophy',text:response.text,at:new Date().toISOString(),emotion:response.emotion,structured:response.structured||null};

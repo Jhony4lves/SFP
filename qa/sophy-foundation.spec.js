@@ -213,6 +213,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
     await page.locator('#sophyInput').fill('Teste de persistência do chat');
     await page.locator('#sophySendBtn').click();
     await expect(page.locator('.sophy-msg-row.user').last()).toContainText('Teste de persistência do chat');
+    await expect(page.locator('.sophy-msg-row.sophy').last()).toBeVisible();
 
     // Recarrega a página
     await page.reload();
