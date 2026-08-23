@@ -1,4 +1,7 @@
 import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import vm from 'node:vm';
 
 const source = fs.readFileSync('app/src/main/assets/www/index.html', 'utf8');
 const staticHtml = source.replace(/<script\b[\s\S]*?<\/script>/gi, '');
@@ -9,6 +12,22 @@ const duplicates = (text, pattern) => {
 };
 
 const problems = [];
+
+// 1. Sintaxe JavaScript rigorosa em todas as tags <script> do index.html
+const scriptRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+let scriptIdx = 0;
+let scriptMatch;
+while ((scriptMatch = scriptRegex.exec(source)) !== null) {
+  const code = scriptMatch[1];
+  try {
+    new vm.Script(code, { filename: `index.html#script-${scriptIdx}` });
+  } catch (error) {
+    problems.push(`Erro de sintaxe JavaScript em <script> tag ${scriptIdx}: ${error.message}`);
+  }
+  scriptIdx++;
+}
+
+// 2. IDs estáticos, conflitos e declarações
 for (const [name, count] of duplicates(staticHtml, /\bid=["']([^"']+)["']/g)) problems.push(`DOM id estático duplicado: ${name} (${count}x)`);
 for (const [name, count] of duplicates(source, /\bfunction\s+([\w$]+)\s*\(/g)) problems.push(`função duplicada: ${name} (${count}x)`);
 for (const keyword of ['const', 'let']) {
@@ -19,9 +38,29 @@ for (const marker of ['<<<<<<<', '>>>>>>>']) {
   const count = source.split(marker).length - 1;
   if (count) problems.push(`marcador de patch/conflito encontrado: ${marker} (${count}x)`);
 }
+
+// 3. Contrato IndexedDB
 if (!source.includes("DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main'")) problems.push('contrato de persistência IndexedDB foi alterado');
 
-// UX-02 protects the shared contract rather than individual cosmetic values.
+// 4. Integridade da logo master oficial
+const logoMasterPath = '_input/sfp-logo-master.png';
+if (fs.existsSync(logoMasterPath)) {
+  const logoBuf = fs.readFileSync(logoMasterPath);
+  const logoSha = crypto.createHash('sha256').update(logoBuf).digest('hex');
+  const EXPECTED_LOGO_SHA = '79d98edae8bbecebca451ec8d37a838d926092621b4c20c55172c434ef71091d';
+  if (logoSha !== EXPECTED_LOGO_SHA) {
+    problems.push(`SHA-256 da logo master oficial divergente: ${logoSha}`);
+  }
+} else {
+  problems.push('Arquivo master da logo oficial (_input/sfp-logo-master.png) não encontrado.');
+}
+
+// 5. Fonte única da versão de schema
+if (!source.includes('SCHEMA_VERSION=11')) {
+  problems.push('SCHEMA_VERSION única fonte de verdade divergente de 11');
+}
+
+// 6. UX-02 design system foundation
 for (const contract of [
   'id="sfp-design-system-foundation"',
   '--color-surface:',
@@ -44,4 +83,4 @@ if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);
 }
-console.log('Static QA: IDs estáticos, declarações, window, conflitos e contrato IndexedDB verificados.');
+console.log('Static QA: Sintaxe JavaScript, IDs estáticos, logo oficial SHA-256, schema v11 e contratos verificados com sucesso.');
