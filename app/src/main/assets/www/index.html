@@ -5735,7 +5735,7 @@ function download(content,name,type){
  a.click();
  setTimeout(()=>URL.revokeObjectURL(a.href),500);
 }
-async function init(){await load();renderSelects();initForms();initOther();$('txDate').value=localCivilDate();$('recStart').value=state.mesAtual;let defaultInvoiceMonth=currentInvoiceMonth(state.cards[0]||{closeDay:31});if($('cardImportMonth'))$('cardImportMonth').value=defaultInvoiceMonth;if($('invoiceMonth'))$('invoiceMonth').value=defaultInvoiceMonth;renderAll();runtimeSanityCheck();sophyCheckProactivity();setTimeout(showOnboarding,250)}
+async function init(){initForms();initOther();await load();renderSelects();$('txDate').value=localCivilDate();$('recStart').value=state.mesAtual;let defaultInvoiceMonth=currentInvoiceMonth(state.cards[0]||{closeDay:31});if($('cardImportMonth'))$('cardImportMonth').value=defaultInvoiceMonth;if($('invoiceMonth'))$('invoiceMonth').value=defaultInvoiceMonth;renderAll();runtimeSanityCheck();sophyCheckProactivity();setTimeout(showOnboarding,250)}
 document.addEventListener('DOMContentLoaded',init);
 </script>
 </body>

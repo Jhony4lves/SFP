@@ -23,6 +23,7 @@ function monitor(page) {
 }
 
 async function expectBootComplete(page, expect, name) {
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
   await expect(page.locator('#pageTitle')).toHaveText('Hoje');
   const btn = page.locator('.nav button[data-page="config"]');
   if (await btn.isVisible()) {
