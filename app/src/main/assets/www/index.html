@@ -16,8 +16,8 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .shell{min-height:100vh;display:grid;grid-template-columns:235px minmax(0,1fr)}
 .sidebar{height:100vh;position:sticky;top:0;padding:18px 13px;background:rgba(5,14,25,.96);border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:20}
 .brand{display:flex;gap:10px;align-items:center;padding:4px 8px 18px}.brandmark{width:39px;height:39px;border-radius:12px;background:linear-gradient(135deg,#2ed1a2,#4cc2ff);display:grid;place-items:center;color:#04141d;font-weight:900;box-shadow:0 2px 10px rgba(46,209,162,.25)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:10px;margin-top:2px}
-.nav{display:flex;flex-direction:column;gap:4px;overflow-y:auto;padding-right:2px}.nav button{border:0;background:transparent;color:var(--muted);border-radius:10px;padding:10px 11px;text-align:left;display:flex;gap:9px;align-items:center;font-size:13px}.nav button:hover{background:#0d1b2c;color:var(--text)}.nav button.active{background:linear-gradient(90deg,rgba(76,194,255,.18),rgba(76,194,255,.03));color:var(--blue);box-shadow:inset 3px 0 0 var(--blue)}
-.sidefoot{margin-top:auto;border:1px solid var(--line);background:#091726;border-radius:13px;padding:12px}.sidefoot small,.sidefoot span{display:block;color:var(--muted);font-size:10px}.sidefoot strong{display:block;margin:5px 0;font-size:18px}
+.nav{display:flex;flex-direction:column;gap:4px;overflow-y:auto;padding-right:2px;flex:1 1 auto;min-height:0}.nav button{border:0;background:transparent;color:var(--muted);border-radius:10px;padding:10px 11px;text-align:left;display:flex;gap:9px;align-items:center;font-size:13px;flex-shrink:0}.nav button:hover{background:#0d1b2c;color:var(--text)}.nav button.active{background:linear-gradient(90deg,rgba(76,194,255,.18),rgba(76,194,255,.03));color:var(--blue);box-shadow:inset 3px 0 0 var(--blue)}
+.sidefoot{margin-top:auto;flex-shrink:0;border:1px solid var(--line);background:#091726;border-radius:13px;padding:12px}.sidefoot small,.sidefoot span{display:block;color:var(--muted);font-size:10px}.sidefoot strong{display:block;margin:5px 0;font-size:18px}
 main{min-width:0;padding:22px 26px 55px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:20px}.top h1{font-size:26px;margin:0}.top p{margin:4px 0 0;color:var(--muted);font-size:12px}.actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 .btn,.btn2,.danger,.ghost{border-radius:9px;padding:9px 11px;border:1px solid var(--line)}.btn{background:var(--blue);color:#04131c;border-color:transparent;font-weight:800}.btn2,.ghost{background:#0b192a;color:var(--text)}.danger{background:rgba(255,109,126,.09);border-color:rgba(255,109,126,.32);color:#ff97a3}.ghost{padding:8px 10px}.wide{width:100%}
 .monthpill{background:#0b192a;border:1px solid var(--line);border-radius:999px;color:#dce7f3;padding:8px 12px;font-size:12px}
@@ -2196,7 +2196,7 @@ async function undoLast(){
 function createCleanInitialState(){
  return {
   version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:localCivilMonth(),baseDate:localCivilDate(),
-  settings:{name:'SFP',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:false},
+  settings:{name:'SFP',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:true},
   accounts:[],cards:[],transactions:[],transfers:[],purchases:[],invoiceAdjustments:[],invoices:[],recurring:[],debts:[],goals:[],assets:[],statements:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],creditFacilities:[],ui:{invoiceMonthByCard:{}},
   sophy:{personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,settings:{proactivityEnabled:true}}
  };
@@ -5406,6 +5406,8 @@ function activePage(){return document.querySelector('.tab.active')?.id||'hoje'}
 function setPage(id,{mode='push'}={}){
  if(!PAGE_TITLES[id])return false;
  if(progressiveRestore)closeProgressive(false);
+ const root=$('modalRoot');
+ if(root&&!root.classList.contains('hidden')){root.className='hidden';root.replaceChildren()}
  const current=activePage();
  if(mode==='push'&&id!==current)pageStack.push(id);
  else if(mode==='replace')pageStack=[id];
