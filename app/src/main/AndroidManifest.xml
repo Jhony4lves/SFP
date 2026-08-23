@@ -4,7 +4,9 @@
     <application
         android:allowBackup="true"
         android:fullBackupContent="true"
-        android:label="SFP"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
         android:theme="@style/Theme.SFP"
         android:usesCleartextTraffic="false">
         <activity
