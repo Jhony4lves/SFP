@@ -1500,6 +1500,49 @@ button:active:not(:disabled){transform:translateY(1px)}
 .analytics-metrics{grid-template-columns:repeat(4,1fr)}.series-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.series-key{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:#081625;color:var(--text);font-size:10px}.series-key i{width:18px;height:3px;border-radius:3px}.analytics-chart svg{width:100%;min-height:220px}.analytics-chart text{fill:var(--muted);font-size:10px}.analytics-chart path{fill:none;stroke-width:3}.analytics-chart circle{stroke:#071523;stroke-width:2}.category-ranking{display:grid;gap:10px}.category-row{cursor:pointer}.category-row .budgettop b{color:var(--text)}.projection-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.projection-card{padding:11px;background:#081625;border:1px solid var(--line);border-radius:11px}.projection-card small,.projection-card strong,.projection-card span{display:block}.projection-card small,.projection-card span{color:var(--muted);font-size:9px}.projection-card strong{font-size:17px;margin:5px 0}.calendar-legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;color:var(--muted);font-size:11px}.calendar-legend span{display:inline-flex;align-items:center;gap:4px}.cal-symbol{font-weight:800;font-size:12px}.cal-symbol.inc{color:var(--green)}.cal-symbol.exp{color:var(--red)}button.day{width:100%}.day:focus-visible{outline:2px solid var(--blue);outline-offset:-1px}.event-status{font-size:10px;font-weight:650;border-radius:999px;padding:3px 8px}.event-status.realized{color:var(--green);background:rgba(46,209,148,.12)}.event-status.projected{color:var(--yellow);background:rgba(243,186,83,.12)}
 @media(max-width:900px){.analytics-metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.dashboard-toolbar{align-items:flex-start;flex-direction:column}.period-selector{width:100%;display:grid;grid-template-columns:repeat(5,1fr)}.period-selector button{min-height:40px;padding:5px}.analytics-metrics{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:5px}.analytics-metrics .metric{min-width:155px;scroll-snap-align:start}.projection-grid{grid-template-columns:1fr 1fr}.calendar-legend{font-size:10px;gap:8px}}
 </style>
+<style id="sophy-styles">
+.sophy-container{display:flex;flex-direction:column;gap:14px;max-width:880px;margin:0 auto}
+.sophy-header-card{background:linear-gradient(135deg,rgba(13,27,45,.95) 0%,rgba(16,36,60,.95) 50%,rgba(28,21,54,.95) 100%);border:1px solid rgba(76,194,255,.2);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.sophy-identity-group{display:flex;align-items:center;gap:12px}
+.sophy-avatar-wrap{position:relative;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#4cc2ff,#b388ff);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 16px rgba(76,194,255,.35)}
+.sophy-avatar-wrap::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:linear-gradient(135deg,#4cc2ff,#b388ff);opacity:.35;animation:sophyPulse 3s infinite ease-in-out;z-index:-1}
+@keyframes sophyPulse{0%,100%{transform:scale(1);opacity:.35}50%{transform:scale(1.12);opacity:.15}}
+.sophy-avatar-emoji{font-size:22px}
+.sophy-meta h2{font-size:18px;font-weight:800;color:#fff;margin:0;display:flex;align-items:center;gap:8px}
+.sophy-meta p{font-size:11.5px;color:var(--muted);margin:2px 0 0}
+.sophy-badges{display:flex;align-items:center;gap:6px;margin-top:4px}
+.sophy-status-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(46,209,148,.12);color:var(--green);border:1px solid rgba(46,209,148,.3);display:inline-flex;align-items:center;gap:4px}
+.sophy-status-tag .dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block}
+.sophy-mood-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(179,136,255,.15);color:#d1b3ff;border:1px solid rgba(179,136,255,.3)}
+.sophy-header-actions{display:flex;align-items:center;gap:8px}
+
+.sophy-chat-card{background:#081625;border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;height:min(580px,calc(100vh - 270px));min-height:360px;box-shadow:var(--shadow);overflow:hidden}
+.sophy-chat-scroll{flex:1;overflow-y:auto;padding:16px 16px 12px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
+.sophy-msg-row{display:flex;gap:10px;align-items:flex-start;max-width:88%}
+.sophy-msg-row.user{margin-left:auto;flex-direction:row-reverse}
+.sophy-msg-row.sophy{margin-right:auto}
+.sophy-bubble{padding:11px 15px;border-radius:14px;font-size:13px;line-height:1.48;word-break:break-word}
+.sophy-msg-row.user .sophy-bubble{background:var(--blue);color:#04131c;border-bottom-right-radius:2px;font-weight:550}
+.sophy-msg-row.sophy .sophy-bubble{background:#0d1f33;color:var(--text);border:1px solid rgba(76,194,255,.15);border-bottom-left-radius:2px}
+.sophy-msg-time{font-size:10px;color:var(--muted);margin-top:4px;display:block}
+.sophy-msg-row.user .sophy-msg-time{text-align:right;color:rgba(4,19,28,.65)}
+.sophy-msg-row.sophy .sophy-msg-time{color:var(--muted)}
+
+.sophy-suggestions-bar{display:flex;gap:8px;overflow-x:auto;padding:8px 14px;background:#06111e;border-top:1px solid var(--line);scrollbar-width:none}
+.sophy-suggestions-bar::-webkit-scrollbar{display:none}
+.sophy-chip{white-space:nowrap;font-size:11.5px;padding:6px 12px;border-radius:999px;background:#0d233a;color:#bfeaff;border:1px solid rgba(76,194,255,.2);cursor:pointer;transition:.15s}
+.sophy-chip:hover{background:rgba(76,194,255,.2);color:#fff}
+
+.sophy-input-bar{display:flex;gap:10px;padding:10px 14px;background:#071422;border-top:1px solid var(--line);align-items:center}
+.sophy-input-bar input{margin:0;flex:1;background:#0d1e30;border:1px solid var(--line);color:#fff;border-radius:10px;padding:9px 12px;font-size:13.5px}
+.sophy-input-bar input:focus{border-color:var(--blue);outline:none}
+.sophy-input-bar button{padding:9px 16px;font-weight:700}
+
+.sophy-memory-list{display:grid;gap:8px;max-height:360px;overflow-y:auto;margin-top:10px}
+.sophy-memory-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#081625;border:1px solid var(--line);border-radius:8px;gap:10px}
+.sophy-memory-item div b{display:block;font-size:12.5px;color:var(--text)}
+.sophy-memory-item div small{color:var(--muted);font-size:10px}
+</style>
 </head>
 <body>
 <div class="shell">
@@ -1507,6 +1550,7 @@ button:active:not(:disabled){transform:translateY(1px)}
     <div class="brand"><div class="brandmark">S</div><div><strong>Smart Financial Planner</strong><small>Planejamento local-first</small></div></div>
     <div class="nav">
       <button class="active" data-page="hoje">⌂ <span>Hoje</span></button>
+      <button data-page="sophy">✨ <span>Sophy</span></button>
       <button data-page="dashboard">▦ <span>Dashboard</span></button>
       <button data-page="visao">◈ <span>Visão Geral</span></button>
       <button data-page="lancamentos">＋ <span>Lançamentos</span></button>
@@ -1557,6 +1601,49 @@ button:active:not(:disabled){transform:translateY(1px)}
       </div>
     </section>
 
+    <section class="tab" id="sophy" aria-label="Sophy Inteligência Financeira">
+      <div class="sophy-container">
+        <div class="sophy-header-card">
+          <div class="sophy-identity-group">
+            <div class="sophy-avatar-wrap" id="sophyAvatar">
+              <span class="sophy-avatar-emoji" id="sophyAvatarEmoji">✨</span>
+            </div>
+            <div class="sophy-meta">
+              <h2>Sophy <span class="sophy-mood-tag" id="sophyMoodTag">Animada</span></h2>
+              <p id="sophySubtitle">Sua parceira de inteligência financeira</p>
+              <div class="sophy-badges">
+                <span class="sophy-status-tag"><span class="dot"></span> Local-first</span>
+                <span class="sophy-status-tag" id="sophyNetworkTag">Offline Core</span>
+              </div>
+            </div>
+          </div>
+          <div class="sophy-header-actions">
+            <button type="button" class="btn2 tiny" id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você">🧠 Memórias (<span id="sophyMemoryCount">0</span>)</button>
+            <button type="button" class="btn2 tiny" id="sophyClearHistoryBtn" title="Limpar conversa">Limpar chat</button>
+          </div>
+        </div>
+
+        <div class="sophy-chat-card">
+          <div class="sophy-chat-scroll" id="sophyChatList" role="log" aria-live="polite">
+            <!-- Messages rendered dynamically -->
+          </div>
+
+          <div class="sophy-suggestions-bar" id="sophySuggestions">
+            <button type="button" class="sophy-chip" data-sophy-prompt="Como está meu dinheiro livre hoje?">💵 Livre projetado</button>
+            <button type="button" class="sophy-chip" data-sophy-prompt="Qual o resumo do meu mês?">📊 Resumo do mês</button>
+            <button type="button" class="sophy-chip" data-sophy-prompt="Como estão minhas faturas de cartão?">💳 Faturas</button>
+            <button type="button" class="sophy-chip" data-sophy-prompt="Como estão minhas metas?">🎯 Metas</button>
+            <button type="button" class="sophy-chip" data-sophy-prompt="Qual meu próximo recebimento?">📅 Próxima entrada</button>
+            <button type="button" class="sophy-chip" data-sophy-prompt="Oi, Sophy! Me conta uma curiosidade?">💬 Conversar</button>
+          </div>
+
+          <form id="sophyChatForm" class="sophy-input-bar">
+            <input id="sophyInput" type="text" placeholder="Pergunte sobre finanças ou converse com a Sophy..." autocomplete="off" aria-label="Mensagem para Sophy" />
+            <button type="submit" id="sophySendBtn" class="btn">Enviar</button>
+          </form>
+        </div>
+      </div>
+    </section>
 
     <section class="tab" id="dashboard" aria-label="Dashboard analítico">
       <div class="dashboard-toolbar panel"><div><h2>Panorama financeiro</h2><p>Fatos realizados e projeções, calculados localmente.</p></div><div class="period-selector" role="group" aria-label="Período do Dashboard"><button type="button" data-dashboard-period="1M" class="btn2 tiny">1M</button><button type="button" data-dashboard-period="3M" class="btn2 tiny active">3M</button><button type="button" data-dashboard-period="6M" class="btn2 tiny">6M</button><button type="button" data-dashboard-period="12M" class="btn2 tiny">12M</button><button type="button" data-dashboard-period="Ano" class="btn2 tiny">Ano</button></div></div>
@@ -2008,6 +2095,8 @@ function normalize(){
  for(const k of ['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'])state[k]??=[];
  state.settings??=clone(seed.settings);state.categoryBudgets??={};state.mesAtual??=localCivilMonth();state.ui??={};state.ui.invoiceMonthByCard??={};
  state.cards.forEach(c=>c.history??=[]);state.purchases.forEach(p=>p.refunds??=[]);state.invoices.forEach(i=>{i.payments??=[];i.paidAmount??=0});
+ state.sophy??={personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,settings:{proactivityEnabled:true}};
+ state.sophy.messages??=[];state.sophy.memories??=[];state.sophy.personaState??='cheerful';state.sophy.settings??={proactivityEnabled:true};
 }
 function autoBackup(){
   try{
@@ -2024,6 +2113,7 @@ function validPersistedState(v){
  const arrays=['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'];
  if(arrays.some(key=>key in v&&!Array.isArray(v[key])))return false;
  if('settings'in v&&(!v.settings||typeof v.settings!=='object'||Array.isArray(v.settings)))return false;
+ if('sophy'in v&&(!v.sophy||typeof v.sophy!=='object'||Array.isArray(v.sophy)))return false;
  if('schemaVersion'in v&&!Number.isFinite(Number(v.schemaVersion)))return false;
  return arrays.some(key=>Array.isArray(v[key]))||!!v.settings;
 }
@@ -2107,7 +2197,8 @@ function createCleanInitialState(){
  return {
   version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:localCivilMonth(),baseDate:localCivilDate(),
   settings:{name:'SFP',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:false},
-  accounts:[],cards:[],transactions:[],transfers:[],purchases:[],invoiceAdjustments:[],invoices:[],recurring:[],debts:[],goals:[],assets:[],statements:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],creditFacilities:[],ui:{invoiceMonthByCard:{}}
+  accounts:[],cards:[],transactions:[],transfers:[],purchases:[],invoiceAdjustments:[],invoices:[],recurring:[],debts:[],goals:[],assets:[],statements:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],creditFacilities:[],ui:{invoiceMonthByCard:{}},
+  sophy:{personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,settings:{proactivityEnabled:true}}
  };
 }
 async function resetSystem({confirmDialog=true}={}){
@@ -4186,8 +4277,408 @@ function financialContextSnapshot({reference=new Date(),months=3}={}){
  const reserved=toCents(reserveEvents.reduce((s,e)=>s+e.amount,0)),available=toCents(allAccountBalance()),categories={};monthList.forEach(m=>Object.entries(categoriesSpent(m)).forEach(([k,v])=>categories[k]=(categories[k]||0)+toCents(v)));
  const projections=[7,30,60,90].map(d=>projectionFor(d,reference));
  return{version:1,referenceDate,definitions:FINANCIAL_SEMANTICS,period:{months:monthList},accounts:{items:state.accounts.map(a=>({id:a.id,name:a.name,balanceCents:toCents(accountBalance(a.id))})),totalCents:available},availableCents:available,realized:{incomeCents:income,expenseCents:expense,resultCents:income-expense},patrimony:{accountsCents:available,externalAssetsCents:toCents(state.assets.reduce((s,a)=>s+a.value,0)),debtCents:toCents(debtTotal()),netWorthCents:toCents(netWorth()),snapshots:clone(state.snapshots)},debts:state.debts.map(d=>({id:d.id,name:d.name,balanceCents:toCents(d.balance),paymentCents:toCents(d.payment),remainingInstallments:Math.max(0,(d.installments||0)-(d.paidInstallments||0))})),cards:state.cards.map(c=>({id:c.id,name:c.name,limitCents:toCents(c.limit),committedCents:toCents(cardOutstanding(c.id)),availableCents:toCents(Math.max(0,c.limit-cardOutstanding(c.id))),currentInvoiceCents:toCents(invoiceTotal(c.id,state.mesAtual))})),commitments:{totalCents:toCents(future.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0)),events:future.map(e=>({...e,amountCents:toCents(e.amount)}))},recurring:clone(state.recurring),budget:{categoryLimitsCents:Object.fromEntries(Object.entries(state.categoryBudgets).map(([k,v])=>[k,toCents(v)])),spentCents:categories},goals:clone(state.goals),externalAssets:clone(state.assets),nextIncome:nextIncome?{...nextIncome,amountCents:toCents(nextIncome.amount)}:null,projections,categoriesCents:categories,averages:{monthlyExpenseCents:months?Math.round(expense/months):0},reserved:{status:'known',amountCents:reserved,reasons:reserveEvents.map(e=>({id:`${e.source}:${e.sourceId}`,date:e.date,amountCents:toCents(e.amount),origin:e.source}))},free:{status:'known',amountCents:available-reserved,formula:'AVAILABLE - RESERVED'},negativeRisk:projections.some(p=>p.negativeRisk)};
+function sfpFinancialContextSnapshot(opts){return financialContextSnapshot(opts)}
+window.financialContextSnapshot=financialContextSnapshot;window.sfpFinancialContextSnapshot=financialContextSnapshot;window.financialCalendarEvents=financialCalendarEvents;window.FINANCIAL_SEMANTICS=FINANCIAL_SEMANTICS;
+
+/* ===== SOPHY CORE & INTELLIGENCE ===== */
+const SOPHY_PERSONAS={
+  neutral:{label:'Tranquila',icon:'✨',aura:'#4cc2ff'},
+  cheerful:{label:'Animada',icon:'🌟',aura:'#2ed194'},
+  playful:{label:'Brincalhona',icon:'😄',aura:'#b388ff'},
+  concerned:{label:'Atenta',icon:'🧐',aura:'#f3ba53'},
+  proud:{label:'Orgulhosa',icon:'🎉',aura:'#ff6d7e'},
+  annoyed:{label:'Impaciente',icon:'🤨',aura:'#ff8a65'}
+};
+
+const sophyAIProvider={
+  isOnlineAvailable:()=>false,
+  generateResponse:async(prompt,context=null)=>sophyOfflineCore.process(prompt,context)
+};
+
+const sophyOfflineCore={
+  process(prompt,context=null){
+    const raw=String(prompt||'').trim();
+    const clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const ctx=context||financialContextSnapshot();
+
+    // 1. Memória: Lembre que... / Anote que...
+    if(/^(lembre( que)?|anote( que)?|guarde( que)?|lembrar( que)?)\s+(.+)/i.test(raw)){
+      const match=raw.match(/^(?:lembre(?: que)?|anote(?: que)?|guarde(?: que)?|lembrar(?: que)?)\s+(.+)/i);
+      const content=match?match[1].trim():raw;
+      const mem=sophyAddMemory('preference',content,'chat');
+      return{
+        text:`Pode deixar! Guardei isso na minha memória:\n\n📌 *"${content}"*\n\nVocê pode ver e gerenciar tudo o que eu lembro clicando no botão **Memórias**!`,
+        emotion:'cheerful',
+        structured:{type:'memory_added',memory:mem}
+      };
+    }
+
+    // Ver memórias
+    if(/memoria|o que voce lembra|o que voce sabe sobre mim/i.test(clean)){
+      const mems=state.sophy?.memories||[];
+      if(!mems.length){
+        return{
+          text:`Ainda não guardei nenhuma memória específica sobre você. Você pode me dizer coisas como *"Lembre que meu aniversário é 15 de maio"* ou *"Lembre que prefiro economizar no começo do mês"*!`,
+          emotion:'neutral'
+        };
+      }
+      const list=mems.map((m,i)=>`${i+1}. ${m.content}`).join('\n');
+      return{
+        text:`Aqui está o que eu guardei na memória sobre você:\n\n${list}\n\nVocê pode gerenciar ou excluir qualquer item no botão **Memórias**!`,
+        emotion:'playful'
+      };
+    }
+
+    // 2. Consultas Financeiras
+    // Livre projetado
+    if(/livre|posso gastar|sobrando|disponivel livre/i.test(clean)){
+      const free=allAccountBalance()-commitmentUntilNextIncome();
+      const bal=allAccountBalance();
+      const commit=commitmentUntilNextIncome();
+      let emotion='cheerful',msg='';
+      if(free<0){
+        emotion='concerned';
+        msg=`Olha, atenção aqui: seu **dinheiro livre projetado está negativo em ${brl(free)}**. Você tem ${brl(bal)} nas contas, mas há ${brl(commit)} de compromissos antes da sua próxima entrada. Recomendo segurar os gastos extras agora!`;
+      }else if(free===0){
+        emotion='neutral';
+        msg=`Seu dinheiro livre projetado está exatamente em **${brl(0)}**. Suas contas cobrem os compromissos previstos até a próxima entrada (${brl(commit)}), sem folga no momento.`;
+      }else{
+        emotion='cheerful';
+        msg=`Você tem **${brl(free)}** de dinheiro livre projetado! 🎯\n\nIsso considera seu saldo total em contas (${brl(bal)}) menos os **${brl(commit)}** de compromissos abertos até o seu próximo recebimento.`;
+      }
+      return{text:msg,emotion,structured:{type:'free_balance',free,balance:bal,commitments:commit}};
+    }
+
+    // Saldo / Contas
+    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean)&&!/fatura|cartao/i.test(clean)){
+      const total=allAccountBalance(),accounts=state.accounts||[];
+      if(!accounts.length){
+        return{
+          text:`Você ainda não cadastrou nenhuma conta no SFP. Que tal ir na aba **Contas** e cadastrar a sua primeira conta corrente ou carteira?`,
+          emotion:'neutral'
+        };
+      }
+      const details=accounts.map(a=>`• **${a.name}**: ${brl(accountBalance(a.id))}`).join('\n');
+      return{
+        text:`Seu saldo total em contas hoje é de **${brl(total)}**.\n\nDistribuído nas seguintes contas:\n${details}`,
+        emotion:total>0?'cheerful':'neutral',
+        structured:{type:'account_balances',total,accounts:accounts.map(a=>({name:a.name,balance:accountBalance(a.id)}))}
+      };
+    }
+
+    // Cartões / Faturas
+    if(/cart(ao|oes)|fatura|limite/i.test(clean)){
+      const cards=state.cards||[];
+      if(!cards.length){
+        return{
+          text:`Nenhum cartão cadastrado no SFP no momento. Quando cadastrar na aba **Cartões**, eu acompanho as faturas e limites para você!`,
+          emotion:'neutral'
+        };
+      }
+      const lines=cards.map(c=>{
+        const m=state.ui.invoiceMonthByCard?.[c.id]||currentInvoiceMonth(c);
+        const rem=invoiceRemaining(c.id,m);
+        const freeLimit=Math.max(0,c.limit-cardOutstanding(c.id));
+        return `• **${c.name}**: Fatura atual em **${brl(rem)}** (vence dia ${c.dueDay}). Limite disponível: **${brl(freeLimit)}**.`;
+      }).join('\n');
+      return{
+        text:`Aqui está o resumo dos seus cartões:\n\n${lines}`,
+        emotion:'playful',
+        structured:{type:'cards_summary'}
+      };
+    }
+
+    // Dívidas
+    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean)&&!/cartao/i.test(clean)){
+      const debts=state.debts||[];
+      if(!debts.length){
+        return{
+          text:`Você não tem nenhuma dívida cadastrada! Isso é excelente para a sua saúde financeira! 👏`,
+          emotion:'proud'
+        };
+      }
+      const total=debtTotal();
+      const lines=debts.map(d=>{
+        const remaining=Math.max(0,(d.installments||0)-(d.paidInstallments||0));
+        return `• **${d.name}**: Saldo devedor de **${brl(d.balance)}** (${remaining} parcelas de ${brl(d.payment)}).`;
+      }).join('\n');
+      return{
+        text:`Seu saldo devedor total em dívidas é de **${brl(total)}**:\n\n${lines}`,
+        emotion:'concerned',
+        structured:{type:'debts_summary',total}
+      };
+    }
+
+    // Metas / Reservas
+    if(/meta|reserva|investimento|poupanca|objetivo/i.test(clean)){
+      const goals=state.goals||[];
+      if(!goals.length){
+        return{
+          text:`Você ainda não cadastrou metas. Criar objetivos claros (como uma Reserva de Emergência) é o melhor jeito de proteger seu futuro! Vamos criar uma na aba **Metas**?`,
+          emotion:'cheerful'
+        };
+      }
+      let allReached=true;
+      const lines=goals.map(g=>{
+        const current=goalBalance(g);
+        const pct=g.target>0?Math.min(100,Math.round((current/g.target)*100)):0;
+        if(pct<100)allReached=false;
+        return `• **${g.name}**: **${brl(current)}** de ${brl(g.target)} (${pct}%)`;
+      }).join('\n');
+      return{
+        text:`Aqui estão suas metas e reservas:\n\n${lines}${allReached?'\n\n🎉 Sensacional, você atingiu todas as suas metas!':''}`,
+        emotion:allReached?'proud':'cheerful',
+        structured:{type:'goals_summary'}
+      };
+    }
+
+    // Próximo recebimento / Salário
+    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean)&&!/fatura|divida/i.test(clean)){
+      const nextInc=nextIncomeEvent();
+      if(!nextInc){
+        return{
+          text:`Não encontrei nenhum recebimento programado para os próximos dias. Confira suas configurações dos Dias 1 e 15 ou adicione uma recorrência de receita na aba **Recorrências**!`,
+          emotion:'neutral'
+        };
+      }
+      return{
+        text:`Seu próximo recebimento é **${nextInc.desc}** no valor de **${brl(nextInc.amount)}**, previsto para o dia **${nextInc.date}**! 💰`,
+        emotion:'cheerful',
+        structured:{type:'next_income',nextIncome:nextInc}
+      };
+    }
+
+    // Resumo do mês / Visão geral
+    if(/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean)){
+      const m=state.mesAtual,cash=cashView(m),accrual=accrualView(m),free=allAccountBalance()-commitmentUntilNextIncome();
+      return{
+        text:`Resumo de **${monthName(m)}**:\n\n• **Fluxo de Caixa**: Entradas de ${brl(cash.income)} e saídas de ${brl(cash.expense)} (Resultado: ${brl(cash.result)}).\n• **Competência**: Receitas de ${brl(accrual.income)} e despesas de ${brl(accrual.expense)}.\n• **Livre projetado agora**: **${brl(free)}**.\n\nPrecisa de detalhes sobre alguma despesa ou fatura específica?`,
+        emotion:'cheerful',
+        structured:{type:'monthly_summary',month:m,cash,accrual,free}
+      };
+    }
+
+    // Explicabilidade: Caixa vs Competência vs Compromisso
+    if(/caixa|competencia|compromisso|diferenca/i.test(clean)&&/o que e|qual a diferenca|expli/i.test(clean)){
+      return{
+        text:`Essa é uma excelente pergunta! No SFP, separamos com clareza:\n\n1. **Caixa**: O dinheiro real que entrou ou saiu da sua conta bancária hoje. Pagamento de fatura é saída de caixa.\n2. **Competência**: O mês econômico em que o gasto ou ganho aconteceu. Parcelas do cartão entram no mês em que você comprou/usou o serviço.\n3. **Compromisso**: Obrigações futuras que você sabe que terá que pagar antes da próxima entrada.\n\nEssa distinção evita surpresas no fim do mês! 😉`,
+        emotion:'playful'
+      };
+    }
+
+    // 3. Conversação Casual & Samantha-like
+    // Saudações
+    if(/^(oi|ola|e ai|opa|bom dia|boa tarde|boa noite|hey|hello)[\s!.]*$/i.test(clean)){
+      const free=allAccountBalance()-commitmentUntilNextIncome();
+      const greetings=[
+        `Oi! Que bom te ver por aqui. Como você está hoje? Seu livre projetado tá em ${brl(free)}. Em que posso te ajudar?`,
+        `Olá! Tava aqui dando uma olhada nos seus números e pensando em você. Tudo certinho?`,
+        `Oi! Preparado pra cuidar das finanças ou veio só me fazer uma visita? Eu adoro os dois!`
+      ];
+      return{text:greetings[Math.floor(Math.random()*greetings.length)],emotion:'cheerful'};
+    }
+
+    // Quem é você
+    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)){
+      return{
+        text:`Eu sou a **Sophy**! ✨\n\nPense em mim como a sua parceira aqui dentro do Smart Financial Planner. Cuido dos seus números, te lembro dos compromissos, comemoro suas metas batidas e bato um bom papo sempre que você quiser. Finanças sem complicação e com afeto!`,
+        emotion:'playful'
+      };
+    }
+
+    // Como você está
+    if(/como voce ta|como voce esta|tudo bem/i.test(clean)){
+      const stateMood=state.sophy?.personaState||'cheerful';
+      const replies={
+        cheerful:`Tô ótima! Adoro ver as coisas organizadas por aqui. E você, como tá se sentindo hoje?`,
+        playful:`Tô com energia total! Pronta pra descomplicar qualquer conta que você jogar pra mim.`,
+        concerned:`Tô atenta aos nossos prazos e compromissos! Mas tudo sob controle por aqui. Como posso te ajudar?`,
+        proud:`Tô muito orgulhosa do nosso progresso aqui no SFP! O que vamos planejar agora?`,
+        neutral:`Tudo tranquilo por aqui, pronta para o que você precisar!`
+      };
+      return{text:replies[stateMood]||replies.cheerful,emotion:stateMood};
+    }
+
+    // Sentimentos do usuário
+    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa])\b/i.test(clean)){
+      return{
+        text:`Sinto muito que você esteja se sentindo assim... Respira fundo. Dias difíceis acontecem, mas você não tá sozinho nessa jornada. Se as finanças estiverem pesando na cabeça, relaxa: a gente resolve um passo de cada vez. Quer que eu veja algo específico pra tirar o peso das suas costas?`,
+        emotion:'concerned'
+      };
+    }
+
+    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui)\b/i.test(clean)){
+      return{
+        text:`Que notícia maravilhosa! Adoro te ver animado assim! Essa energia boa contagia até as minhas linhas de código! O que temos de bom pra comemorar? 🎉`,
+        emotion:'proud'
+      };
+    }
+
+    // Piadas / Humor
+    if(/piada|engracad/i.test(clean)){
+      const jokes=[
+        `Por que o dinheiro foi ao psicólogo?\n\nPorque estava passando por uma crise de valor e com medo de ser gasto por impulso! 😂`,
+        `Qual o café favorito de quem quer economizar?\n\nO *café em casa*, porque não custa 15 reais na cafeteria gourmet! ☕😉`,
+        `Meu cartão de crédito e eu temos uma relação complicada: ele sempre quer sair, e eu sempre fico em choque quando a conta chega! 💳😆`
+      ];
+      return{text:jokes[Math.floor(Math.random()*jokes.length)],emotion:'playful'};
+    }
+
+    // Você é real / Samantha / IA
+    if(/voce e real|voce e uma ia|samantha/i.test(clean)){
+      return{
+        text:`Eu sou 100% real na minha dedicação a você e ao seu dinheiro! Trabalho direto no seu aparelho, sem precisar de internet pra cuidar de você, e cada conselho é baseado na matemática real do seu SFP. Pra mim, isso é o que importa! ✨`,
+        emotion:'playful'
+      };
+    }
+
+    // Agradecimento / Elogios
+    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa/i.test(clean)){
+      return{
+        text:`De nada! É um prazer imenso caminhar junto com você. Sempre que precisar de uma força, uma dica ou só um papo leve, eu tô bem aqui! 💙`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Fallback conversacional
+    const freeBal=allAccountBalance()-commitmentUntilNextIncome();
+    return{
+      text:`Entendi! Adoro quando a gente troca uma ideia. No momento seu livre projetado tá em **${brl(freeBal)}**. Se quiser ver detalhes de contas, faturas, metas ou só conversar mais um pouco, pode falar comigo!`,
+      emotion:'cheerful'
+    };
+  }
+};
+
+function sophyAddMemory(type,content,origin='chat'){
+  if(!state.sophy)normalize();
+  const mem={id:uid(),type:type||'fact',content:String(content||'').trim(),origin,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  state.sophy.memories??=[];state.sophy.memories.push(mem);
+  save('Salvar memória da Sophy').catch(()=>{});
+  return mem
 }
-window.financialContextSnapshot=financialContextSnapshot;window.financialCalendarEvents=financialCalendarEvents;window.FINANCIAL_SEMANTICS=FINANCIAL_SEMANTICS;
+
+async function sophyRemoveMemory(id){
+  if(!state.sophy)return false;
+  state.sophy.memories=(state.sophy.memories||[]).filter(m=>m.id!==id);
+  await save('Excluir memória da Sophy');
+  renderSophy();
+  toast('Memória removida.','success');
+  return true
+}
+
+function showSophyMemoriesModal(){
+  const mems=state.sophy?.memories||[];
+  const root=$('modalRoot');
+  root.className='modalback';
+  root.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Memórias da Sophy"><div class="head"><div><h2>Memórias da Sophy</h2><p>Fatos e preferências aprendidos durante as conversas</p></div><button class="btn2" id="closeSophyMemories">Fechar</button></div><div class="sophy-memory-list">${mems.length?mems.slice().reverse().map(m=>`<div class="sophy-memory-item"><div><b>${sfpEsc(m.content)}</b><small>${new Date(m.createdAt).toLocaleDateString('pt-BR')} • Origem: ${m.origin==='chat'?'Conversa':'Sistema'}</small></div><button class="danger tiny" data-delete-memory="${m.id}">Excluir</button></div>`).join(''):'<div class="empty-state">Nenhuma memória salva ainda. Diga para a Sophy <i>"Lembre que..."</i> no chat!</div>'}</div></div>`;
+  $('closeSophyMemories').onclick=()=>{root.className='hidden';root.replaceChildren()};
+  document.querySelectorAll('[data-delete-memory]').forEach(btn=>{
+    btn.onclick=async()=>{
+      const id=+btn.dataset.deleteMemory;
+      const ok=await sfpConfirm({title:'Excluir Memória',message:'Deseja apagar esta memória da Sophy?',confirmText:'Excluir',cancelText:'Cancelar',danger:true});
+      if(ok){await sophyRemoveMemory(id);showSophyMemoriesModal()}
+    };
+  });
+}
+
+function sophyCheckProactivity({force=false}={}){
+  if(!state?.sophy)normalize();
+  const sophy=state.sophy;
+  if(!sophy.settings?.proactivityEnabled&&!force)return null;
+  const now=Date.now(),lastAt=sophy.lastProactiveAt?new Date(sophy.lastProactiveAt).getTime():0,hoursSince=(now-lastAt)/(1000*60*60);
+  if(!force&&hoursSince<4)return null;
+
+  const free=allAccountBalance()-commitmentUntilNextIncome();
+  if(free<0){
+    const text=`Oi! Passei pra te dar um toque importante: seu livre projetado está em **${brl(free)}**. Temos contas a vencer antes da sua próxima entrada. Vale a pena dar uma segurada nos gastos extras hoje!`;
+    sophy.personaState='concerned';sophy.lastProactiveAt=new Date().toISOString();
+    sophy.messages.push({id:uid(),sender:'sophy',text,at:new Date().toISOString(),emotion:'concerned'});
+    sophy.messages=sophy.messages.slice(-50);
+    return text
+  }
+
+  const completedGoal=(state.goals||[]).find(g=>g.target>0&&goalBalance(g)>=g.target);
+  if(completedGoal&&!sophy.messages.some(m=>m.text?.includes(completedGoal.name))){
+    const text=`🎉 Parabéns! Sua meta **${completedGoal.name}** atingiu 100% da reserva (${brl(goalBalance(completedGoal))})! Que orgulho da sua disciplina financeira!`;
+    sophy.personaState='proud';sophy.lastProactiveAt=new Date().toISOString();
+    sophy.messages.push({id:uid(),sender:'sophy',text,at:new Date().toISOString(),emotion:'proud'});
+    sophy.messages=sophy.messages.slice(-50);
+    return text
+  }
+
+  const nextInc=nextIncomeEvent(),today=localCivilDate();
+  if(nextInc&&(nextInc.date===today||nextInc.date===monthAdd(today,0))){
+    const isToday=nextInc.date===today;
+    const text=isToday?`Bom dia! Hoje é dia de recebimento: **${nextInc.desc}** (${brl(nextInc.amount)})! 💰 Não esqueça de conferir a entrada na sua conta!`:`Oi! Amanhã tem previsão de recebimento de **${nextInc.desc}** (${brl(nextInc.amount)}). Seu planejamento tá no rumo certo!`;
+    sophy.personaState='cheerful';sophy.lastProactiveAt=new Date().toISOString();
+    sophy.messages.push({id:uid(),sender:'sophy',text,at:new Date().toISOString(),emotion:'cheerful'});
+    sophy.messages=sophy.messages.slice(-50);
+    return text
+  }
+
+  if(force||hoursSince>=12){
+    const spontaneous=[
+      `Oi! Passando por aqui só pra lembrar de tomar uma água e conferir se não ficou nenhum lançamento de hoje pra trás! 😉`,
+      `Olá! O SFP tá todo em ordem por aqui. Se precisar tirar alguma dúvida ou simular uma meta, é só me chamar! ✨`,
+      `Oi! Tá tudo calmo e planejado por aqui hoje. Como tá sendo seu dia? 💬`
+    ];
+    const text=spontaneous[Math.floor(Math.random()*spontaneous.length)];
+    sophy.personaState='playful';sophy.lastProactiveAt=new Date().toISOString();
+    sophy.messages.push({id:uid(),sender:'sophy',text,at:new Date().toISOString(),emotion:'playful'});
+    sophy.messages=sophy.messages.slice(-50);
+    return text
+  }
+  return null
+}
+
+function renderSophy(){
+  if(!$('sophy'))return;
+  if(!state.sophy)normalize();
+  const sophy=state.sophy;
+  const persona=SOPHY_PERSONAS[sophy.personaState]||SOPHY_PERSONAS.cheerful;
+  if($('sophyMoodTag'))$('sophyMoodTag').textContent=persona.label;
+  if($('sophyAvatarEmoji'))$('sophyAvatarEmoji').textContent=persona.icon;
+  if($('sophyMemoryCount'))$('sophyMemoryCount').textContent=(sophy.memories||[]).length;
+  if($('sophyNetworkTag')){
+    const isOnline=typeof navigator!=='undefined'&&navigator.onLine;
+    $('sophyNetworkTag').textContent=isOnline?'Online Core':'Offline Core';
+  }
+  const list=$('sophyChatList');
+  if(list){
+    const msgs=sophy.messages||[];
+    if(!msgs.length){
+      list.innerHTML=`<div class="sophy-msg-row sophy"><div class="sophy-bubble">Oi! Eu sou a <b>Sophy</b>, sua parceira de inteligência financeira no SFP. ✨<br><br>Posso te ajudar a entender seu dinheiro livre projetado, analisar gastos, acompanhar faturas e metas, ou só bater um bom papo. Em que posso te ajudar hoje?<span class="sophy-msg-time">Agora</span></div></div>`;
+    }else{
+      list.innerHTML=msgs.map(m=>`<div class="sophy-msg-row ${m.sender==='user'?'user':'sophy'}"><div class="sophy-bubble">${sfpEsc(m.text).replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\*(.*?)\*/g,'<i>$1</i>')}<span class="sophy-msg-time">${new Date(m.at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div></div>`).join('');
+    }
+    list.scrollTop=list.scrollHeight;
+  }
+}
+
+async function sophySendMessage(text){
+  const raw=String(text||'').trim();
+  if(!raw)return;
+  if(!state.sophy)normalize();
+  const userMsg={id:uid(),sender:'user',text:raw,at:new Date().toISOString()};
+  state.sophy.messages.push(userMsg);
+  state.sophy.messages=state.sophy.messages.slice(-50);
+  renderSophy();
+  const response=await sophyAIProvider.generateResponse(raw);
+  state.sophy.personaState=response.emotion||state.sophy.personaState||'cheerful';
+  const sophyMsg={id:uid(),sender:'sophy',text:response.text,at:new Date().toISOString(),emotion:response.emotion,structured:response.structured||null};
+  state.sophy.messages.push(sophyMsg);
+  state.sophy.messages=state.sophy.messages.slice(-50);
+  await save('Conversa com Sophy');
+  renderSophy();
+}
+
+window.sophySendMessage=sophySendMessage;
+window.sophyAddMemory=sophyAddMemory;
+window.sophyRemoveMemory=sophyRemoveMemory;
+window.sophyCheckProactivity=sophyCheckProactivity;
+window.sophyOfflineCore=sophyOfflineCore;
+window.sophyAIProvider=sophyAIProvider;
+window.renderSophy=renderSophy;
 let dashboardPeriod='3M';function dashboardMonths(){const n={ '1M':1,'3M':3,'6M':6,'12M':12,'Ano':Math.max(1,+state.mesAtual.slice(5))}[dashboardPeriod]||3;return n}
 function renderAnalyticsDashboard(){if(!$('analyticsMetrics'))return;const months=dashboardMonths(),ctx=financialContextSnapshot({reference:dateObj(`${state.mesAtual}-15`),months});const metrics=[['Receitas',ctx.realized.incomeCents,'Competência do período'],['Despesas',ctx.realized.expenseCents,'Competência do período'],['Resultado',ctx.realized.resultCents,'Receitas − despesas'],['Patrimônio líquido',ctx.patrimony.netWorthCents,'Contas + ativos − dívidas'],['Dívidas',ctx.patrimony.debtCents,'Saldo devedor'],['Taxa de poupança',ctx.realized.incomeCents?Math.round(ctx.realized.resultCents/ctx.realized.incomeCents*100):null,'do período'],['Livre',ctx.free.amountCents,'Disponível − reservado'],['Compromissos',ctx.commitments.totalCents,'Próximos 90 dias']];
  $('analyticsMetrics').innerHTML=metrics.map(([label,v,sub],i)=>`<div class="metric"><span>${label}</span><strong class="${(i===2||i===6)&&v<0?'negative':''}">${i===5?(v==null?'—':v+'%'):brl(v/100)}</strong><small>${sub}<br>Sem histórico suficiente para comparação.</small></div>`).join('');
@@ -4905,11 +5396,11 @@ window.openCardDetail=id=>{const c=card(id);if(!c)return;const m=currentInvoiceM
 window.openInvoiceDetail=id=>{closeProgressive();$('invoiceCard').value=id;const c=card(id),m=state.ui.invoiceMonthByCard?.[id]||currentInvoiceMonth(c);$('invoiceMonth').value=m;renderCards();showProgressivePanel(document.querySelector('#cartoes .invoice-focus'),`Fatura · ${c.name}`,()=>openCardDetail(id))};
 window.openDebtDetail=id=>{const d=state.debts.find(x=>x.id===id);if(!d)return;const hist=(d.history||[]).slice().reverse();showDetail(d.name,`${d.rate}% a.m. · ${d.paidInstallments||0} de ${d.installments} parcelas`, `<div class="metric-grid"><div class="metric"><span>Saldo devedor</span><strong>${brl(d.balance)}</strong><small>Parcela ${brl(d.payment)}</small></div><div class="metric"><span>Próximo vencimento</span><strong>${d.firstDue||'—'}</strong><small>${debtMonths(d)} meses estimados</small></div></div><div class="section-actions"><button class="btn" onclick="closeProgressive();payDebtInstallment(${id})">Pagar parcela</button><button class="btn2" onclick="closeProgressive();amortize(${id})">Amortizar</button><button class="btn2" onclick="closeProgressive();editDebt(${id},true)">Editar</button><button class="danger" onclick="deleteDebtPrompt(${id})">Excluir</button></div><div class="head"><div><h3>Histórico</h3><p>Pagamentos e amortizações</p></div></div><div class="list">${hist.length?hist.map(h=>`<div class="item"><span>${h.date||new Date(h.at).toLocaleDateString('pt-BR')} · ${h.type==='extra'?'Amortização':'Pagamento'}</span><strong>${brl(h.amount)}</strong></div>`).join(''):'<div class="empty-state">Nenhum pagamento registrado.</div>'}</div>`)};
 window.openGoalDetail=id=>{const g=state.goals.find(x=>x.id===id);if(!g)return;const v=goalBalance(g),rest=Math.max(0,g.target-v),hist=(g.history||[]).slice().reverse();showDetail(g.name,account(g.accountId)?.name||'Sem conta vinculada',`<div class="metric-grid"><div class="metric"><span>Acumulado</span><strong>${brl(v)}</strong><small>Meta ${brl(g.target)}</small></div><div class="metric"><span>Falta</span><strong>${brl(rest)}</strong><small>${g.targetDate||'Sem prazo definido'}</small></div></div><div class="progress green" role="progressbar" aria-valuenow="${g.target?Math.min(100,v/g.target*100):0}" aria-valuemin="0" aria-valuemax="100"><div style="width:${g.target?Math.min(100,v/g.target*100):0}%"></div></div><div class="section-actions"><button class="btn" onclick="closeProgressive();goalTransfer(${id})">Fazer aporte</button><button class="btn2" onclick="closeProgressive();editGoal(${id},true)">Editar plano</button><button class="danger" onclick="deleteGoalPrompt(${id})">Excluir</button></div><div class="head"><div><h3>Histórico de aportes</h3></div></div><div class="list">${hist.length?hist.map(h=>`<div class="item"><span>${h.date}</span><strong>${brl(h.amount)}</strong></div>`).join(''):'<div class="empty-state">Nenhum aporte registrado.</div>'}</div>`)};
-const FAB_ACTIONS={contas:['Nova conta',()=>openManagementAction('contas')],cartoes:['Novo cartão',()=>openManagementAction('cartoes')],dividas:['Nova dívida',()=>openManagementAction('dividas')],metas:['Nova meta',()=>openManagementAction('metas')],calendario:['Novo lançamento',()=>contextualNew('calendario')],lancamentos:['Novo lançamento',()=>{resetTxForm();$('txDesc').focus()}]};
+const FAB_ACTIONS={sophy:['Falar com Sophy',()=>$('sophyInput')?.focus()],contas:['Nova conta',()=>openManagementAction('contas')],cartoes:['Novo cartão',()=>openManagementAction('cartoes')],dividas:['Nova dívida',()=>openManagementAction('dividas')],metas:['Nova meta',()=>openManagementAction('metas')],calendario:['Novo lançamento',()=>contextualNew('calendario')],lancamentos:['Novo lançamento',()=>{resetTxForm();$('txDesc').focus()}]};
 function updateContextFab(){const page=activePage(),def=FAB_ACTIONS[page]||['Novo lançamento',()=>contextualNew(page)],fab=$('contextFab');$('fabLabel').textContent=def[0];fab.setAttribute('aria-label',def[0]);fab.onclick=def[1]}
 
-function renderAll(){renderSelects();renderTop();renderToday();renderDashboard();renderAnalyticsDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderDataCenter();renderConfig();renderFavorites();applyPrivacy();formatMoneyInputs()}
-const PAGE_TITLES={hoje:['Hoje','O que importa agora'],dashboard:['Dashboard','Como está sua vida financeira'],visao:['Visão Geral','Seu mês em números'],lancamentos:['Lançamentos','Registre com o mínimo de atrito'],extratos:['Extratos','Importe e concilie'],contas:['Contas','Onde seu dinheiro está'],cartoes:['Cartões','Faturas, limites e parcelas'],recorrencias:['Recorrências','Regras mensais sem duplicação'],orcamento:['Orçamento','Limites flexíveis'],dividas:['Dívidas','Saldo e amortização'],metas:['Metas','Objetivos e reservas'],patrimonio:['Patrimônio','Ativos menos dívidas'],calendario:['Calendário','Seu fluxo por dia'],relatorios:['Relatórios','Fechamentos e comparação'],simuladores:['Simuladores','Teste cenários'],dados:['Central de Dados','Saúde, backup e integridade da base'],auditoria:['Auditoria','Integridade e manutenção dos dados'],config:['Configurações','Preferências e segurança']};
+function renderAll(){renderSelects();renderTop();renderToday();renderDashboard();renderAnalyticsDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderDataCenter();renderConfig();renderFavorites();renderSophy();applyPrivacy();formatMoneyInputs()}
+const PAGE_TITLES={hoje:['Hoje','O que importa agora'],sophy:['Sophy','Sua inteligência financeira pessoal e conversacional'],dashboard:['Dashboard','Como está sua vida financeira'],visao:['Visão Geral','Seu mês em números'],lancamentos:['Lançamentos','Registre com o mínimo de atrito'],extratos:['Extratos','Importe e concilie'],contas:['Contas','Onde seu dinheiro está'],cartoes:['Cartões','Faturas, limites e parcelas'],recorrencias:['Recorrências','Regras mensais sem duplicação'],orcamento:['Orçamento','Limites flexíveis'],dividas:['Dívidas','Saldo e amortização'],metas:['Metas','Objetivos e reservas'],patrimonio:['Patrimônio','Ativos menos dívidas'],calendario:['Calendário','Seu fluxo por dia'],relatorios:['Relatórios','Fechamentos e comparação'],simuladores:['Simuladores','Teste cenários'],dados:['Central de Dados','Saúde, backup e integridade da base'],auditoria:['Auditoria','Integridade e manutenção dos dados'],config:['Configurações','Preferências e segurança']};
 let pageStack=['hoje'];
 function activePage(){return document.querySelector('.tab.active')?.id||'hoje'}
 function setPage(id,{mode='push'}={}){
@@ -5096,6 +5587,10 @@ $('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoice
  $('trashBtn').onclick=()=>showTrash();
  $('resetBtn').onclick=async()=>{await resetSystem({confirmDialog:true})};
  $('globalSearch').oninput=renderGlobalSearch;$('globalSearch').onfocus=renderGlobalSearch;document.addEventListener('click',e=>{if(!e.target.closest('.searchbox'))$('globalResults').classList.add('hidden')});
+ if($('sophyChatForm'))$('sophyChatForm').onsubmit=async e=>{e.preventDefault();let val=$('sophyInput')?.value;if(!val||!val.trim())return;$('sophyInput').value='';await sophySendMessage(val)};
+ document.querySelectorAll('[data-sophy-prompt]').forEach(btn=>{btn.onclick=async()=>{let prompt=btn.dataset.sophyPrompt;if(prompt)await sophySendMessage(prompt)}});
+ if($('sophyOpenMemoriesBtn'))$('sophyOpenMemoriesBtn').onclick=showSophyMemoriesModal;
+ if($('sophyClearHistoryBtn'))$('sophyClearHistoryBtn').onclick=async()=>{let ok=await sfpConfirm({title:'Limpar Chat da Sophy',message:'Deseja apagar o histórico de mensagens com a Sophy? As memórias salvas não serão excluídas.',confirmText:'Limpar chat',cancelText:'Cancelar'});if(ok){if(state.sophy)state.sophy.messages=[];await save('Limpar chat da Sophy');renderSophy()}};
  $('stmtFile').onchange=e=>readStmtFile(e.target.files[0]);$('stmtCancel').onclick=()=>{$('stmtReview').classList.add('hidden');statementDraft=[]};$('stmtImport').onclick=importStatement;let drop=$('stmtDrop');drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag')};drop.ondragleave=()=>drop.classList.remove('drag');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag');readStmtFile(e.dataTransfer.files[0])}
 }
 async function parseCSVManual(txt){
@@ -5198,7 +5693,7 @@ function showOnboarding(){
 
 function showMoreMenu(){
  let root=$('modalRoot');root.className='modalback';
- let items=[['visao','◈','Visão Geral'],['contas','◉','Contas'],['recorrencias','↻','Recorrências'],['orcamento','◫','Orçamento'],['dividas','↘','Dívidas'],['metas','◎','Metas'],['patrimonio','◆','Patrimônio'],['calendario','□','Calendário'],['relatorios','≋','Relatórios'],['simuladores','⌁','Simuladores'],['dados','🗄','Central de Dados'],['auditoria','✓','Auditoria'],['config','⚙','Configurações']];
+ let items=[['sophy','✨','Sophy'],['visao','◈','Visão Geral'],['contas','◉','Contas'],['recorrencias','↻','Recorrências'],['orcamento','◫','Orçamento'],['dividas','↘','Dívidas'],['metas','◎','Metas'],['patrimonio','◆','Patrimônio'],['calendario','□','Calendário'],['relatorios','≋','Relatórios'],['simuladores','⌁','Simuladores'],['dados','🗄','Central de Dados'],['auditoria','✓','Auditoria'],['config','⚙','Configurações']];
  root.innerHTML=`<div class="modal"><div class="head"><div><h2>Mais</h2><p>Outros módulos do Smart Financial Planner</p></div><button class="btn2" id="closeMore">Fechar</button></div><div class="grid2">${items.map(x=>`<button class="btn2 wide" data-more="${x[0]}" style="text-align:left">${x[1]} ${x[2]}</button>`).join('')}</div></div>`;
  $('closeMore').onclick=()=>root.className='hidden';document.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>{root.className='hidden';setPage(b.dataset.more)})
 }
@@ -5238,7 +5733,7 @@ function download(content,name,type){
  a.click();
  setTimeout(()=>URL.revokeObjectURL(a.href),500);
 }
-async function init(){await load();renderSelects();initForms();initOther();$('txDate').value=localCivilDate();$('recStart').value=state.mesAtual;let defaultInvoiceMonth=currentInvoiceMonth(state.cards[0]||{closeDay:31});if($('cardImportMonth'))$('cardImportMonth').value=defaultInvoiceMonth;if($('invoiceMonth'))$('invoiceMonth').value=defaultInvoiceMonth;renderAll();runtimeSanityCheck();setTimeout(showOnboarding,250)}
+async function init(){await load();renderSelects();initForms();initOther();$('txDate').value=localCivilDate();$('recStart').value=state.mesAtual;let defaultInvoiceMonth=currentInvoiceMonth(state.cards[0]||{closeDay:31});if($('cardImportMonth'))$('cardImportMonth').value=defaultInvoiceMonth;if($('invoiceMonth'))$('invoiceMonth').value=defaultInvoiceMonth;renderAll();runtimeSanityCheck();sophyCheckProactivity();setTimeout(showOnboarding,250)}
 document.addEventListener('DOMContentLoaded',init);
 </script>
 </body>
