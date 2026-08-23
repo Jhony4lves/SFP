@@ -4,12 +4,15 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#07111e"/>
+<link rel="icon" href="data:,"/>
 <title>Smart Financial Planner</title>
 <style>
 :root{
   --bg:#06101d;--bg2:#0a1727;--panel:#0d1b2d;--panel2:#11233a;--line:#243a56;
   --text:#f7f9fc;--muted:#91a3ba;--blue:#4cc2ff;--green:#2ed194;--red:#ff6d7e;
   --yellow:#f3ba53;--purple:#a981ff;--cyan:#56e2d6;--shadow:0 18px 55px rgba(0,0,0,.23);
+  --bottom-nav-height:60px;--safe-bottom:env(safe-area-inset-bottom,0px);
+  --fab-bottom:calc(var(--bottom-nav-height) + var(--safe-bottom) + 14px);
 }
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 85% 0,#102c4a 0,#07111e 32%,#06101d 70%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
@@ -55,8 +58,8 @@ label{display:block;color:var(--muted);font-size:10px;margin-bottom:10px}input,s
 #moreNavBtn{display:none!important}
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.shell{grid-template-columns:74px 1fr}.sidebar{padding:15px 8px}.brand div:not(.brandmark),.nav button span,.sidefoot{display:none}.brand{justify-content:center}.nav button{justify-content:center;font-size:16px}.grid2,.grid3{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:650px) and (orientation:portrait){.shell{display:block}.sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;border-right:0;border-top:1px solid var(--line);padding:6px;background:#06101d;z-index:70}.brand,.sidefoot{display:none}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;overflow:visible;padding-right:0}.sidebar .nav button{display:none!important}.sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="sophy"],.sidebar .nav button[data-page="lancamentos"],.sidebar .nav button[data-page="contas"],.sidebar .nav #moreNavBtn{display:flex!important;padding:8px 2px;font-size:14px;justify-content:center}.sidebar .nav button.active{box-shadow:inset 0 -3px 0 var(--blue)}#moreNavBtn{color:var(--muted)}#moreNavBtn.active{color:var(--blue)}main{padding:14px 10px 82px}.top{flex-direction:column}.top .actions{width:100%}.top .actions .btn{flex:1}.metric-grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}.flow{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}.quicktypes{grid-template-columns:repeat(5,1fr)}.quicktype{padding:8px 3px;font-size:8px}.quicktype b{font-size:15px}.calendar{gap:2px}.calhead{font-size:10px;padding:2px 0}.day{min-height:58px;padding:4px 3px;gap:2px}.daynum{font-size:11px}.cal-dot{width:6px;height:6px}.cal-flow{font-size:10px}.cal-count{font-size:10px}.mobilefab{display:grid;position:fixed;right:16px;bottom:68px;width:50px;height:50px;border-radius:50%;background:var(--blue);color:#04131c;border:0;place-items:center;font-size:24px;font-weight:900;z-index:65;box-shadow:var(--shadow)}}
-@media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:fixed;top:0;bottom:0;left:0;height:100vh;max-height:100vh;display:flex;flex-direction:column;z-index:70;box-sizing:border-box}.shell{display:block}.nav{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;min-height:0}.mobilefab{bottom:16px;right:16px}}
+@media(max-width:650px) and (orientation:portrait){.shell{display:block}.sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;height:calc(var(--bottom-nav-height) + var(--safe-bottom));border-right:0;border-top:1px solid var(--line);padding:4px 6px max(4px,var(--safe-bottom));background:#06101d;z-index:70;box-sizing:border-box}.brand,.sidefoot{display:none}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;overflow:visible;padding:0;margin:0;width:100%;height:100%}.sidebar .nav button{display:none!important;min-width:0;padding:4px 2px}.sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="sophy"],.sidebar .nav button[data-page="lancamentos"],.sidebar .nav button[data-page="contas"],.sidebar .nav #moreNavBtn{display:flex!important;flex-direction:column;align-items:center;justify-content:center;padding:4px 1px;font-size:13px;border-radius:6px;min-width:0}.sidebar .nav button span{display:block;font-size:10px;line-height:1.2;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}.sidebar .nav button.active{box-shadow:inset 0 -3px 0 var(--blue);background:rgba(76,194,255,.08)}#moreNavBtn{color:var(--muted)}#moreNavBtn.active{color:var(--blue)}main{padding:14px 10px calc(var(--bottom-nav-height) + var(--safe-bottom) + 18px);width:100%;max-width:100vw;box-sizing:border-box}body[data-page="sophy"] .top{display:none!important}body[data-page="sophy"] main{padding:8px 8px calc(var(--bottom-nav-height) + var(--safe-bottom) + 8px);height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}body[data-page="sophy"] #sophy{flex:1;display:flex;flex-direction:column;min-height:0;height:100%}body[data-page="sophy"] .sophy-container{flex:1;display:flex;flex-direction:column;min-height:0;height:100%;gap:8px;max-width:100%}body[data-page="sophy"] .sophy-header-card{flex-shrink:0;padding:8px 12px}body[data-page="sophy"] .sophy-chat-card{flex:1 1 auto;min-height:0;height:100%;max-height:none}.top{flex-direction:column}.top .actions{width:100%}.top .actions .btn{flex:1}.metric-grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}.flow{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}.quicktypes{grid-template-columns:repeat(5,1fr)}.quicktype{padding:8px 3px;font-size:8px}.quicktype b{font-size:15px}.calendar{gap:2px}.calhead{font-size:10px;padding:2px 0}.day{min-height:58px;padding:4px 3px;gap:2px}.daynum{font-size:11px}.cal-dot{width:6px;height:6px}.cal-flow{font-size:10px}.cal-count{font-size:10px}.mobilefab{display:grid;position:fixed;right:16px;bottom:var(--fab-bottom);width:48px;height:48px;border-radius:50%;background:var(--blue);color:#04131c;border:0;place-items:center;font-size:24px;font-weight:900;z-index:75;box-shadow:var(--shadow)}}
+@media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:fixed;top:0;bottom:0;left:0;height:100vh;max-height:100vh;display:flex;flex-direction:column;z-index:70;box-sizing:border-box}.shell{display:block}.nav{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;min-height:0}.mobilefab{bottom:16px;right:16px;z-index:75}}
 @media(orientation:landscape) and (max-width:900px){.sidebar{width:74px}main{margin-left:74px;width:calc(100% - 74px);max-width:calc(100vw - 74px);box-sizing:border-box}}
 @media(orientation:landscape) and (min-width:901px){.sidebar{width:235px}main{margin-left:235px;width:calc(100% - 235px);max-width:calc(100vw - 235px);box-sizing:border-box}}
 
@@ -66,7 +69,8 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 img,canvas,svg{max-width:100%}
 
 @media(max-width:650px){
-  main{width:100%;max-width:100vw;padding:16px 10px calc(92px + env(safe-area-inset-bottom))}
+  main{width:100%;max-width:100vw;padding:14px 10px calc(var(--bottom-nav-height) + var(--safe-bottom) + 18px);box-sizing:border-box}
+  body[data-page="sophy"] main{padding:8px 8px calc(var(--bottom-nav-height) + var(--safe-bottom) + 8px);height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}
   .top{
     width:100%;
     display:block;
@@ -209,17 +213,6 @@ img,canvas,svg{max-width:100%}
 
 
 /* ===== SFP 1.0.2 — MOBILE NAV / UX ===== */
-@media(max-width:650px) and (orientation:portrait){
-  .sidebar .nav button{display:none!important}
-  .sidebar .nav button[data-page="hoje"],
-  .sidebar .nav button[data-page="dashboard"],
-  .sidebar .nav button[data-page="lancamentos"],
-  .sidebar .nav button[data-page="contas"],
-  .sidebar .nav #moreNavBtn{display:flex!important}
-  .sidebar .nav{grid-template-columns:repeat(5,1fr)}
-  #moreNavBtn{color:var(--muted)}
-  #moreNavBtn.active{color:var(--blue)}
-}
 @media(max-width:650px){
   .invoice-summary{grid-template-columns:repeat(2,1fr)!important}
   .mobile-stack-table thead{display:none}
@@ -1526,7 +1519,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 @media(max-width:900px){.analytics-metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.dashboard-toolbar{align-items:flex-start;flex-direction:column}.period-selector{width:100%;display:grid;grid-template-columns:repeat(5,1fr)}.period-selector button{min-height:40px;padding:5px}.analytics-metrics{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:5px}.analytics-metrics .metric{min-width:155px;scroll-snap-align:start}.projection-grid{grid-template-columns:1fr 1fr}.calendar-legend{font-size:10px;gap:8px}}
 </style>
 <style id="sophy-styles">
-.sophy-container{display:flex;flex-direction:column;gap:14px;max-width:880px;margin:0 auto}
+.sophy-container{display:flex;flex-direction:column;gap:12px;max-width:880px;margin:0 auto;width:100%}
 .sophy-header-card{background:linear-gradient(135deg,rgba(13,27,45,.95) 0%,rgba(16,36,60,.95) 50%,rgba(28,21,54,.95) 100%);border:1px solid rgba(76,194,255,.2);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
 .sophy-identity-group{display:flex;align-items:center;gap:12px}
 .sophy-avatar-wrap{position:relative;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#4cc2ff,#b388ff);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 16px rgba(76,194,255,.35)}
@@ -1541,8 +1534,8 @@ button:active:not(:disabled){transform:translateY(1px)}
 .sophy-mood-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(179,136,255,.15);color:#d1b3ff;border:1px solid rgba(179,136,255,.3)}
 .sophy-header-actions{display:flex;align-items:center;gap:8px}
 
-.sophy-chat-card{background:#081625;border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;height:min(580px,calc(100vh - 270px));min-height:360px;box-shadow:var(--shadow);overflow:hidden}
-.sophy-chat-scroll{flex:1;overflow-y:auto;padding:16px 16px 12px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
+.sophy-chat-card{background:#081625;border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;height:calc(100dvh - 270px);max-height:640px;min-height:320px;box-shadow:var(--shadow);overflow:hidden;position:relative}
+.sophy-chat-scroll{flex:1 1 auto;overflow-y:auto;padding:16px 16px 12px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;overscroll-behavior:contain;overflow-anchor:none;-webkit-overflow-scrolling:touch}
 .sophy-msg-row{display:flex;gap:10px;align-items:flex-start;max-width:88%}
 .sophy-msg-row.user{margin-left:auto;flex-direction:row-reverse}
 .sophy-msg-row.sophy{margin-right:auto}
@@ -1562,11 +1555,22 @@ button:active:not(:disabled){transform:translateY(1px)}
 .sophy-input-bar input{margin:0;flex:1;background:#0d1e30;border:1px solid var(--line);color:#fff;border-radius:10px;padding:9px 12px;font-size:13.5px}
 .sophy-input-bar input:focus{border-color:var(--blue);outline:none}
 .sophy-input-bar button{padding:9px 16px;font-weight:700}
+.sophy-input-bar button:disabled{opacity:.6;cursor:not-allowed}
 
 .sophy-memory-list{display:grid;gap:8px;max-height:360px;overflow-y:auto;margin-top:10px}
 .sophy-memory-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#081625;border:1px solid var(--line);border-radius:8px;gap:10px}
 .sophy-memory-item div b{display:block;font-size:12.5px;color:var(--text)}
 .sophy-memory-item div small{color:var(--muted);font-size:10px}
+@media(max-width:650px){
+  .sophy-chat-card{height:calc(100dvh - 195px);min-height:280px;border-radius:14px}
+  .sophy-header-card{padding:10px 14px;border-radius:14px;gap:10px}
+  .sophy-avatar-wrap{width:40px;height:40px}
+  .sophy-avatar-emoji{font-size:18px}
+  .sophy-meta h2{font-size:16px}
+  .sophy-input-bar{padding:8px 10px;gap:8px}
+  .sophy-input-bar input{padding:8px 10px;font-size:13px}
+  .sophy-input-bar button{padding:8px 12px;font-size:13px}
+}
 </style>
 </head>
 <body>
@@ -4712,25 +4716,35 @@ const sophyOfflineCore={
       };
     }
 
-    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal)\b/i.test(clean)){
+    if(/\b(sono|dormir|cansac[o|ç]o|cansad[oa]|exausto|exausta|acabad[oa])\b/i.test(clean)){
+      return{
+        text:`Vai descansar um tiquinho! 😴 Suas contas e planejamentos continuam seguros por aqui. Uma boa noite de sono clareia qualquer decisão amanhã.`,
+        emotion:'neutral'
+      };
+    }
+
+    if(/\b(triste|chatead[oa]|estressad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)){
       return{
         text:`Sinto muito que você esteja se sentindo assim... Respira fundo. Dias difíceis acontecem, mas você não tá sozinho nessa jornada. Se as finanças estiverem pesando na cabeça, relaxa: a gente resolve um passo de cada vez. Quer que eu veja algo específico pra tirar o peso das suas costas?`,
         emotion:'concerned'
       };
     }
 
-    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo)\b/i.test(clean)){
+    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(clean)){
       return{
         text:`Aí simmm! 🎉 Que notícia maravilhosa! Adoro te ver animado assim! O que temos de bom pra comemorar?`,
         emotion:'proud'
       };
     }
 
-    if(/\b(sono|dormir|cansac[o|ç]o|exausto)\b/i.test(clean)){
-      return{
-        text:`Vai descansar um tiquinho! 😴 Suas contas e planejamentos continuam seguros por aqui. Uma boa noite de sono clareia qualquer decisão amanhã.`,
-        emotion:'neutral'
-      };
+    // Risadas / Humor
+    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s!.]*$/i.test(clean)){
+      const laughs=[
+        `Hahaha! 😂 Rir é o melhor investimento que não custa nada! O que manda hoje?`,
+        `Kkkk adoro esse bom humor! O que estamos planejando de bom nas finanças?`,
+        `😂 Bom humor em dia! Como posso te ajudar hoje?`
+      ];
+      return{text:laughs[Math.floor(Math.random()*laughs.length)],emotion:'playful'};
     }
 
     // Piadas / Humor
@@ -4744,8 +4758,9 @@ const sophyOfflineCore={
     }
 
     // Saudações
-    if(/^(oi|ol[aá]|e a[ií]|opa|bom dia|boa tarde|boa noite|hey|hello)[\s!.]*$/i.test(clean)){
+    if(/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(clean)){
       const greetings=[
+        `Oiiii 😌 Tô por aqui. Como cê tá?`,
         `Oiee ✨ Que bom te ver por aqui! Tudo certinho? O que manda hoje?`,
         `Olá! Tava aqui dando uma olhada nos seus números e pensando em você. Tudo em ordem?`,
         `Oi oi! Preparado pra cuidar das finanças ou veio só me fazer uma visita? Eu adoro os dois!`
@@ -4762,7 +4777,7 @@ const sophyOfflineCore={
     }
 
     // Como você está
-    if(/como voce ta|como voce esta|tudo bem/i.test(clean)){
+    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b)/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(clean)){
       const stateMood=state.sophy?.personaState||'cheerful';
       const replies={
         cheerful:`Tô ótima! Adoro ver as coisas organizadas por aqui. E você, como tá se sentindo hoje?`,
@@ -4785,7 +4800,7 @@ const sophyOfflineCore={
     }
 
     // Agradecimento / Elogios
-    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa/i.test(clean)){
+    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean)){
       return{
         text:`De nada! É um prazer imenso caminhar junto com você. Sempre que precisar de uma força, uma dica ou só um papo leve, eu tô bem aqui! 💙`,
         emotion:'cheerful'
@@ -4815,7 +4830,47 @@ const sophyOfflineCore={
       };
     }
 
-    // 3. Follow-up Contextual
+    // 3. Simulações Hipotéticas (Empréstimo, Financiamento, Compras)
+    if(/(emprestimo|financiar|financiamento|parcelar|pegar\s+\d|pegar\s+um|simula|simular)/i.test(clean)&&/(se\s+eu|e\s+se|supondo|imagina|simula|simular|quanto\s+ficaria|valeria|parcela|vezes|x\b|meses)/i.test(clean)){
+      const parseColloquial=str=>{
+        if(!str)return 0;
+        let s=String(str).trim().toLowerCase().replace(/^r\$\s*/,'');
+        if(/(\d+(?:[.,]\d+)?)\s*mil\b/.test(s)){const m=s.match(/(\d+(?:[.,]\d+)?)\s*mil/);return parseMoney(m[1])*1000}
+        if(/(\d+(?:[.,]\d+)?)\s*k\b/.test(s)){const m=s.match(/(\d+(?:[.,]\d+)?)\s*k/);return parseMoney(m[1])*1000}
+        return parseMoney(s)
+      };
+      const countMatch=clean.match(/(\d+)\s*(?:parcelas?|vezes|x|meses)\s*(?:de\s+)?(r\$\s*[\d.,]+|\d+(?:[.,]\d+)?\s*(?:mil|k)?)/i)
+        || clean.match(/(?:em\s+)?(\d+)\s*(?:x|vezes|parcelas?)\s*(?:de\s+)?(r\$\s*[\d.,]+|\d+(?:[.,]\d+)?\s*(?:mil|k)?)/i)
+        || clean.match(/(?:em\s+)?(\d+)\s*(?:de\s+)(r\$\s*[\d.,]+|\d+(?:[.,]\d+)?\s*(?:mil|k)?)/i);
+      const princMatch=clean.match(/(?:emprestimo|financiar|financiamento|pegar|pegue|pego|tomar|contratar)\s+(?:de\s+)?(?:um\s+)?(?:valor\s+de\s+)?(r\$\s*[\d.,]+|\d+(?:[.,]\d+)?\s*(?:mil|k)?)/i)
+        || clean.match(/(r\$\s*[\d.,]+|\d+(?:[.,]\d+)?\s*(?:mil|k)?)\s*(?:pra|para|em)\s*(?:pagar\s+em\s+)?\d+/i);
+      if(countMatch&&princMatch){
+        const principal=parseColloquial(princMatch[1]);
+        const count=parseInt(countMatch[1],10);
+        const installment=parseColloquial(countMatch[2]);
+        if(principal>0&&count>0&&installment>0){
+          const totalPaid=Math.round(count*installment*100)/100;
+          const extraCost=Math.round((totalPaid-principal)*100)/100;
+          const extraPct=Math.round((extraCost/principal)*1000)/10;
+          const currentFree=allAccountBalance()-commitmentUntilNextIncome();
+          const impactRatio=currentFree>0?Math.min(100,Math.round((installment/currentFree)*100)):null;
+          let impactText='';
+          if(currentFree<installment){
+            impactText=`\n\n⚠️ *Atenção ao fluxo*: Seu dinheiro livre projetado atual é de **${brl(currentFree)}**. Essa parcela de **${brl(installment)}** pesaria bastante no seu orçamento imediato.`;
+          }else if(currentFree>0){
+            impactText=`\n\n💡 *Impacto no caixa*: Essa parcela consumiria cerca de **${impactRatio}%** do seu dinheiro livre projetado atual (${brl(currentFree)}).`;
+          }
+          state.sophy.context={lastIntent:'hypothetical_loan',lastAmount:totalPaid,lastEntity:'loan_simulation'};
+          return{
+            text:`Simulação de Cenário Hipotético:\n\nSe você contratar **${brl(principal)}** em **${count} parcelas de ${brl(installment)}**:\n\n• **Total a pagar**: **${brl(totalPaid)}** (${count}× de ${brl(installment)})\n• **Custo dos juros/acréscimo**: **${brl(extraCost)}** (+${extraPct}% sobre o valor recebido)\n• **Parcela mensal**: **${brl(installment)}/mês**${impactText}\n\n*Nota: Esta é apenas uma simulação para análise e não altera seus dados nem foi cadastrada como dívida real.*`,
+            emotion:extraCost>principal*0.3?'concerned':'playful',
+            structured:{type:'hypothetical_loan_simulation',principal,installments:count,installmentAmount:installment,totalPaid,extraCost}
+          };
+        }
+      }
+    }
+
+    // 4. Follow-up Contextual
     const ctxLast=state.sophy?.context;
     if(/^(e se|e quanto|e no|quanto fica se|se eu pagar|se eu gastar|e a metade|e metade)/i.test(clean)||clean==='metade?'||clean==='e metade?'){
       if(ctxLast?.lastEntity==='card_invoice'){
@@ -4841,7 +4896,7 @@ const sophyOfflineCore={
       }
     }
 
-    // 4. Consultas Financeiras Authoritative (Local Core)
+    // 5. Consultas Financeiras Authoritative (Local Core)
     // Livre projetado
     if(/livre|posso gastar|sobrando|disponivel livre/i.test(clean)){
       const free=allAccountBalance()-commitmentUntilNextIncome();
@@ -4991,7 +5046,7 @@ const sophyOfflineCore={
       };
     }
 
-    // 5. Fallback Honesto para Raciocínio Geral / Perguntas Não-Financeiras Offline
+    // 6. Fallback Honesto para Raciocínio Geral / Perguntas Não-Financeiras Offline
     return{
       text:`No momento estou operando no modo local (offline), então não consigo pesquisar ou responder sobre isso com segurança fora do seu planejamento financeiro. Mas se precisar de algo sobre seus números, contas, faturas ou metas, tô bem aqui! ✨`,
       emotion:'neutral'
@@ -5007,18 +5062,23 @@ const sophyRouter={
     if(/^(lembre( que)?|anote( que)?|guarde( que)?|lembrar( que)?)\s+(.+)/i.test(raw))return 'MEMORY_WRITE';
     if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean))return 'MEMORY_READ';
     if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean))return 'EMOTIONAL_DISTRESS';
-    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal)\b/i.test(clean))return 'EMOTIONAL_CONCERN';
-    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo)\b/i.test(clean))return 'EMOTIONAL_JOY';
-    if(/\b(sono|dormir|cansac[o|ç]o|exausto)\b/i.test(clean))return 'CASUAL_TIRED';
-    if(/^(oi|ol[aá]|e a[ií]|opa|bom dia|boa tarde|boa noite|hey|hello)[\s!.]*$/i.test(clean))return 'GREETING';
+    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean))return 'EMOTIONAL_CONCERN';
+    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(clean))return 'EMOTIONAL_JOY';
+    if(/\b(sono|dormir|cansac[o|ç]o|exausto|exausta|acabad[oa])\b/i.test(clean))return 'CASUAL_TIRED';
+    if(/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(clean))return 'GREETING';
     if(/quem e voce|qual seu nome|o que voce faz/i.test(clean))return 'IDENTITY';
-    if(/como voce ta|como voce esta|tudo bem/i.test(clean))return 'STATUS';
+    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b)/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(clean))return 'STATUS';
     if(/voce e real|voce e uma ia|samantha/i.test(clean))return 'AI_NATURE';
-    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa/i.test(clean))return 'COMPLIMENT';
+    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s!.]*$/i.test(clean))return 'HUMOR';
+    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean))return 'COMPLIMENT';
     if(/piada|engracad/i.test(clean))return 'HUMOR';
     if(/caixa|competencia|compromisso|diferenca/i.test(clean)&&/o que e|qual a diferenca|expli/i.test(clean))return 'FINANCIAL_SEMANTICS';
     if(/posso gastar tudo|torrar|comprar bobagem|comprar uma ferrari|comprar um aviao|gastar em pizza/i.test(clean))return 'SPENDING_IMPULSE';
+    
+    // Simulações Hipotéticas & Follow-ups
+    if(/(emprestimo|financiar|financiamento|parcelar|pegar\s+\d)/i.test(clean)&&/(se\s+eu|e\s+se|supondo|imagina|simula|simular|quanto\s+ficaria|valeria|parcela|vezes)/i.test(clean))return 'FOLLOWUP_FINANCIAL';
     if(/^(e se|e quanto|e no|quanto fica se|se eu pagar|se eu gastar|e a metade|e metade)/i.test(clean)||clean==='metade?'||clean==='e metade?')return 'FOLLOWUP_FINANCIAL';
+
     if(/livre|posso gastar|sobrando|disponivel livre/i.test(clean))return 'FINANCIAL_FREE';
     if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean))return 'FINANCIAL_ACCOUNTS';
     if(/cart(ao|oes)|fatura|limite/i.test(clean))return 'FINANCIAL_CARDS';
@@ -5267,38 +5327,94 @@ function renderSophy(){
         list.innerHTML=`<div class="sophy-msg-row sophy"><div class="sophy-bubble">Oiee ✨ Tô por aqui. O que manda?<span class="sophy-msg-time">Agora</span></div></div>`;
       }
     }else{
-      list.innerHTML=msgs.map(m=>`<div class="sophy-msg-row ${m.sender==='user'?'user':'sophy'}"><div class="sophy-bubble">${sfpEsc(m.text).replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\*(.*?)\*/g,'<i>$1</i>')}<span class="sophy-msg-time">${new Date(m.at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div></div>`).join('');
+      list.innerHTML=msgs.map(m=>`<div class="sophy-msg-row ${m?.sender==='user'?'user':'sophy'}"><div class="sophy-bubble">${sfpEsc(String(m?.text||'')).replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\*(.*?)\*/g,'<i>$1</i>')}<span class="sophy-msg-time">${m?.at?new Date(m.at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Agora'}</span></div></div>`).join('');
     }
     list.scrollTop=list.scrollHeight;
   }
 }
 
+let isSophySending=false;
 async function sophySendMessage(text){
   const raw=String(text||'').trim();
-  if(!raw)return;
-  if(!state.sophy)normalize();
-  state.sophy.introDone=true;
-  const userMsg={id:uid(),sender:'user',text:raw,at:new Date().toISOString()};
-  state.sophy.messages.push(userMsg);
-  state.sophy.messages=state.sophy.messages.slice(-50);
-  renderSophy();
-  await save('Mensagem enviada para Sophy');
+  if(!raw||isSophySending)return;
+  isSophySending=true;
 
-  const response=await sophyRouter.route(raw);
-  state.sophy.personaState=response.emotion||state.sophy.personaState||'cheerful';
-  const sophyMsg={
-    id:uid(),
-    sender:'sophy',
-    text:response.text,
-    at:new Date().toISOString(),
-    emotion:response.emotion,
-    provider:response.provider||'local',
-    structured:response.structured||null
-  };
-  state.sophy.messages.push(sophyMsg);
-  state.sophy.messages=state.sophy.messages.slice(-50);
-  await save('Conversa com Sophy');
-  renderSophy();
+  const sendBtn=$('sophySendBtn');
+  const inputEl=$('sophyInput');
+  if(sendBtn){sendBtn.disabled=true;sendBtn.textContent='...'}
+  if(inputEl){inputEl.readOnly=true}
+
+  try{
+    if(!state.sophy)normalize();
+    state.sophy.introDone=true;
+    state.sophy.messages=state.sophy.messages||[];
+    const userMsg={id:uid(),sender:'user',text:raw,at:new Date().toISOString()};
+    state.sophy.messages.push(userMsg);
+    state.sophy.messages=state.sophy.messages.slice(-50);
+    try{renderSophy()}catch(e){console.warn('Erro renderizando envio do usuário:',e)}
+
+    try{
+      await save('Mensagem enviada para Sophy');
+    }catch(e){
+      console.warn('Falha ao persistir mensagem enviada:',e);
+    }
+
+    let response=null;
+    try{
+      const routePromise=sophyRouter.route(raw);
+      const timeoutPromise=new Promise(resolve=>setTimeout(()=>resolve({
+        text:'Puxa, demorei um pouquinho mais que o esperado para calcular tudo aqui, mas continuo 100% pronta! Me dá mais um detalhe ou tenta de novo? ✨',
+        emotion:'concerned'
+      }),8000));
+      response=await Promise.race([routePromise,timeoutPromise]);
+    }catch(err){
+      console.error('Erro ao processar mensagem na Sophy:',err);
+      response={
+        text:'Tive um pequeno tropeço ao processar isso aqui, mas já tô de volta! Pode me perguntar de novo? ✨',
+        emotion:'concerned'
+      };
+    }
+
+    if(!response||!response.text||typeof response.text!=='string'||!response.text.trim()){
+      response={
+        text:'Tô por aqui! Como posso te ajudar com suas contas e metas hoje? ✨',
+        emotion:'cheerful'
+      };
+    }
+
+    state.sophy.personaState=response.emotion||state.sophy.personaState||'cheerful';
+    const sophyMsg={
+      id:uid(),
+      sender:'sophy',
+      text:response.text,
+      at:new Date().toISOString(),
+      emotion:response.emotion||'cheerful',
+      provider:response.provider||'local',
+      structured:response.structured||null
+    };
+    state.sophy.messages.push(sophyMsg);
+    state.sophy.messages=state.sophy.messages.slice(-50);
+
+    try{
+      await save('Conversa com Sophy');
+    }catch(e){
+      console.warn('Falha ao salvar resposta da Sophy:',e);
+    }
+
+    try{
+      renderSophy();
+    }catch(e){
+      console.error('Erro na renderização da resposta da Sophy:',e);
+    }
+  }catch(outerErr){
+    console.error('Erro geral no fluxo de mensagem da Sophy:',outerErr);
+  }finally{
+    isSophySending=false;
+    const sBtn=$('sophySendBtn');
+    const inp=$('sophyInput');
+    if(sBtn){sBtn.disabled=false;sBtn.textContent='Enviar'}
+    if(inp){inp.readOnly=false}
+  }
 }
 
 window.sophySendMessage=sophySendMessage;
@@ -6029,7 +6145,21 @@ window.openInvoiceDetail=id=>{closeProgressive();$('invoiceCard').value=id;const
 window.openDebtDetail=id=>{const d=state.debts.find(x=>x.id===id);if(!d)return;const hist=(d.history||[]).slice().reverse();showDetail(d.name,`${d.rate}% a.m. · ${d.paidInstallments||0} de ${d.installments} parcelas`, `<div class="metric-grid"><div class="metric"><span>Saldo devedor</span><strong>${brl(d.balance)}</strong><small>Parcela ${brl(d.payment)}</small></div><div class="metric"><span>Próximo vencimento</span><strong>${d.firstDue||'—'}</strong><small>${debtMonths(d)} meses estimados</small></div></div><div class="section-actions"><button class="btn" onclick="closeProgressive();payDebtInstallment(${id})">Pagar parcela</button><button class="btn2" onclick="closeProgressive();amortize(${id})">Amortizar</button><button class="btn2" onclick="closeProgressive();editDebt(${id},true)">Editar</button><button class="danger" onclick="deleteDebtPrompt(${id})">Excluir</button></div><div class="head"><div><h3>Histórico</h3><p>Pagamentos e amortizações</p></div></div><div class="list">${hist.length?hist.map(h=>`<div class="item"><span>${h.date||new Date(h.at).toLocaleDateString('pt-BR')} · ${h.type==='extra'?'Amortização':'Pagamento'}</span><strong>${brl(h.amount)}</strong></div>`).join(''):'<div class="empty-state">Nenhum pagamento registrado.</div>'}</div>`)};
 window.openGoalDetail=id=>{const g=state.goals.find(x=>x.id===id);if(!g)return;const v=goalBalance(g),rest=Math.max(0,g.target-v),hist=(g.history||[]).slice().reverse();showDetail(g.name,account(g.accountId)?.name||'Sem conta vinculada',`<div class="metric-grid"><div class="metric"><span>Acumulado</span><strong>${brl(v)}</strong><small>Meta ${brl(g.target)}</small></div><div class="metric"><span>Falta</span><strong>${brl(rest)}</strong><small>${g.targetDate||'Sem prazo definido'}</small></div></div><div class="progress green" role="progressbar" aria-valuenow="${g.target?Math.min(100,v/g.target*100):0}" aria-valuemin="0" aria-valuemax="100"><div style="width:${g.target?Math.min(100,v/g.target*100):0}%"></div></div><div class="section-actions"><button class="btn" onclick="closeProgressive();goalTransfer(${id})">Fazer aporte</button><button class="btn2" onclick="closeProgressive();editGoal(${id},true)">Editar plano</button><button class="danger" onclick="deleteGoalPrompt(${id})">Excluir</button></div><div class="head"><div><h3>Histórico de aportes</h3></div></div><div class="list">${hist.length?hist.map(h=>`<div class="item"><span>${h.date}</span><strong>${brl(h.amount)}</strong></div>`).join(''):'<div class="empty-state">Nenhum aporte registrado.</div>'}</div>`)};
 const FAB_ACTIONS={sophy:['Falar com Sophy',()=>$('sophyInput')?.focus()],contas:['Nova conta',()=>openManagementAction('contas')],cartoes:['Novo cartão',()=>openManagementAction('cartoes')],dividas:['Nova dívida',()=>openManagementAction('dividas')],metas:['Nova meta',()=>openManagementAction('metas')],calendario:['Novo lançamento',()=>contextualNew('calendario')],lancamentos:['Novo lançamento',()=>{resetTxForm();$('txDesc').focus()}]};
-function updateContextFab(){const page=activePage(),def=FAB_ACTIONS[page]||['Novo lançamento',()=>contextualNew(page)],fab=$('contextFab');$('fabLabel').textContent=def[0];fab.setAttribute('aria-label',def[0]);fab.onclick=def[1]}
+function updateContextFab(){
+  const page=activePage(),def=FAB_ACTIONS[page]||['Novo lançamento',()=>contextualNew(page)],fab=$('contextFab');
+  if(fab){
+    if(page==='sophy'){
+      fab.style.display='none';
+      if($('fabLabel'))$('fabLabel').style.display='none';
+    }else{
+      fab.style.display='';
+      if($('fabLabel'))$('fabLabel').style.display='';
+      $('fabLabel').textContent=def[0];
+      fab.setAttribute('aria-label',def[0]);
+      fab.onclick=def[1];
+    }
+  }
+}
 
 function renderAll(){renderSelects();renderTop();renderToday();renderDashboard();renderAnalyticsDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderDataCenter();renderConfig();renderFavorites();renderSophy();applyPrivacy();formatMoneyInputs()}
 const PAGE_TITLES={hoje:['Hoje','O que importa agora'],sophy:['Sophy','Sua inteligência financeira pessoal e conversacional'],dashboard:['Dashboard','Como está sua vida financeira'],visao:['Visão Geral','Seu mês em números'],lancamentos:['Lançamentos','Registre com o mínimo de atrito'],extratos:['Extratos','Importe e concilie'],contas:['Contas','Onde seu dinheiro está'],cartoes:['Cartões','Faturas, limites e parcelas'],recorrencias:['Recorrências','Regras mensais sem duplicação'],orcamento:['Orçamento','Limites flexíveis'],dividas:['Dívidas','Saldo e amortização'],metas:['Metas','Objetivos e reservas'],patrimonio:['Patrimônio','Ativos menos dívidas'],calendario:['Calendário','Seu fluxo por dia'],relatorios:['Relatórios','Fechamentos e comparação'],simuladores:['Simuladores','Teste cenários'],dados:['Central de Dados','Saúde, backup e integridade da base'],auditoria:['Auditoria','Integridade e manutenção dos dados'],config:['Configurações','Preferências e segurança']};
@@ -6046,6 +6176,8 @@ function setPage(id,{mode='push'}={}){
  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id===id));
  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
  $('pageTitle').textContent=PAGE_TITLES[id][0];$('pageSub').textContent=PAGE_TITLES[id][1];
+ document.body.dataset.page=id;
+ document.body.classList.toggle('page-sophy',id==='sophy');
  updateContextFab();window.scrollTo({top:0,behavior:'smooth'});return true
 }
 function handleAndroidBack(){
@@ -6143,7 +6275,7 @@ function initForms(){
  $('assetForm').onsubmit=async e=>{e.preventDefault();let id=+$('assetId').value,obj={id:id||uid(),name:$('assetName').value,value:+$('assetValue').value};if(id)state.assets=state.assets.map(a=>a.id===id?obj:a);else state.assets.push(obj);e.target.reset();$('assetId').value='';await save(id?'Editar ativo':'Novo ativo')};
  $('configForm').onsubmit=async e=>{e.preventDefault();state.settings.name=$('cfgName').value;state.settings.day1=+$('cfgDay1').value;state.settings.day2=+$('cfgDay2').value;await save('Configurações')};
 }
-function parseMoney(v){let s=String(v||'').trim().replace(/[R$\s]/g,'');if(s.includes(',')&&s.includes('.'))s=s.lastIndexOf(',')>s.lastIndexOf('.')?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'');else if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');return parseFloat(s)||0}
+function parseMoney(v){let s=String(v||'').trim().replace(/[R$\s]/g,'');if(s.includes(',')&&s.includes('.'))s=s.lastIndexOf(',')>s.lastIndexOf('.')?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'');else if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');else if(/^\d{1,3}(\.\d{3})+$/.test(s))s=s.replace(/\./g,'');return parseFloat(s)||0}
 function parseDate(v){let s=String(v||'').trim(),m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);if(m)return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);if(m)return `${m[3].length===2?'20'+m[3]:m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;m=s.match(/^(\d{4})(\d{2})(\d{2})/);return m?`${m[1]}-${m[2]}-${m[3]}`:null}
 function splitCSV(line,d){let out=[],cur='',q=false;for(let i=0;i<line.length;i++){let ch=line[i];if(ch==='"'){if(q&&line[i+1]==='"'){cur+='"';i++}else q=!q}else if(ch===d&&!q){out.push(cur);cur=''}else cur+=ch}out.push(cur);return out}
 function parseCSV(txt){let lines=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw Error('CSV vazio');let ds=[';',',','\t'],d=ds.sort((a,b)=>lines[0].split(b).length-lines[0].split(a).length)[0],heads=splitCSV(lines[0],d).map(x=>x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''));let find=names=>heads.findIndex(h=>names.some(n=>h.includes(n))),id=find(['data','date']),idesc=find(['descricao','historico','memo','description']),ival=find(['valor','amount']),ic=find(['credito','credit','entrada']),ideb=find(['debito','debit','saida']),ifit=find(['fitid','identificador','transaction id','transactionid','id transacao']);if(id<0)id=0;if(idesc<0)idesc=1;if(ival<0&&ic<0&&ideb<0)throw Error('Coluna de valor não encontrada');let rows=[];for(let i=1;i<lines.length;i++){let c=splitCSV(lines[i],d),date=parseDate(c[id]);if(!date)continue;let amount=ival>=0?parseMoney(c[ival]):Math.abs(parseMoney(c[ic]))-Math.abs(parseMoney(c[ideb]));if(amount)rows.push({date,desc:(c[idesc]||'Movimentação').trim(),amount,fitid:ifit>=0?(c[ifit]||'').trim():null})}return rows}
@@ -6332,7 +6464,7 @@ function showOnboarding(){
 
 function showMoreMenu(){
  let root=$('modalRoot');root.className='modalback';
- let items=[['sophy','✨','Sophy'],['visao','◈','Visão Geral'],['contas','◉','Contas'],['recorrencias','↻','Recorrências'],['orcamento','◫','Orçamento'],['dividas','↘','Dívidas'],['metas','◎','Metas'],['patrimonio','◆','Patrimônio'],['calendario','□','Calendário'],['relatorios','≋','Relatórios'],['simuladores','⌁','Simuladores'],['dados','🗄','Central de Dados'],['auditoria','✓','Auditoria'],['config','⚙','Configurações']];
+ let items=[['dashboard','▦','Dashboard'],['visao','◈','Visão Geral'],['cartoes','▣','Cartões'],['recorrencias','↻','Recorrências'],['orcamento','◫','Orçamento'],['dividas','↘','Dívidas'],['metas','◎','Metas'],['patrimonio','◆','Patrimônio'],['calendario','□','Calendário'],['relatorios','≋','Relatórios'],['simuladores','⌁','Simuladores'],['dados','🗄','Central de Dados'],['auditoria','✓','Auditoria'],['config','⚙','Configurações']];
  root.innerHTML=`<div class="modal"><div class="head"><div><h2>Mais</h2><p>Outros módulos do Smart Financial Planner</p></div><button class="btn2" id="closeMore">Fechar</button></div><div class="grid2">${items.map(x=>`<button class="btn2 wide" data-more="${x[0]}" style="text-align:left">${x[1]} ${x[2]}</button>`).join('')}</div></div>`;
  $('closeMore').onclick=()=>root.className='hidden';document.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>{root.className='hidden';setPage(b.dataset.more)})
 }
