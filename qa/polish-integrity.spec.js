@@ -235,4 +235,165 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
 
     expect(errors).toEqual([]);
   });
+
+  test('8. Onboarding a partir de accounts: [] cria primeira conta, persiste saldo R$ 15,00 e reflete no dashboard e reload', async ({ page }) => {
+    const errors = monitor(page);
+    await boot(page);
+
+    // Zera os dados e limpa accounts para simular estado inicial limpo
+    await page.evaluate(async () => {
+      await window.resetSystem({ confirmDialog: false });
+      // Garante que accounts está vazio e onboarding não concluído
+      window.state.accounts = [];
+      window.state.settings.onboardingDone = false;
+      await window.dbSet(window.state);
+      window.renderAll();
+      window.showOnboarding();
+    });
+
+    await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
+    await expect(page.locator('#modalRoot h2')).toHaveText('Configuração inicial');
+
+    // Preenche conta principal e saldo aproximado de R$ 15,00
+    await page.locator('#obAccountName').fill('Conta Nubank');
+    await page.locator('#obBalance').fill('15,00');
+
+    // Avança etapas
+    await page.locator('#obNext').click(); // Etapa 1 -> 2
+    await page.locator('#obNext').click(); // Etapa 2 -> 3
+    await page.locator('#obNext').click(); // Etapa 3 -> 4
+    await page.locator('#obNext').click(); // Concluir
+
+    await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
+
+    // Valida que o saldo na tela "Hoje" é de R$ 15,00
+    await expect(page.locator('#pageTitle')).toHaveText('Hoje');
+    const todayBalance = await page.locator('#sideFree').textContent();
+    expect(todayBalance).toContain('15,00');
+
+    // Valida que a conta foi criada no state
+    const accounts = await page.evaluate(() => window.state.accounts);
+    expect(accounts.length).toBe(1);
+    expect(accounts[0].name).toBe('Conta Nubank');
+    expect(accounts[0].initial).toBe(15);
+
+    // Recarrega a página e valida persistência
+    await page.reload();
+    await expect(page.locator('#pageTitle')).toHaveText('Hoje');
+    const persistedBalance = await page.locator('#sideFree').textContent();
+    expect(persistedBalance).toContain('15,00');
+
+    const persistedAccounts = await page.evaluate(() => window.state.accounts);
+    expect(persistedAccounts.length).toBe(1);
+    expect(persistedAccounts[0].initial).toBe(15);
+
+    expect(errors).toEqual([]);
+  });
+
+  test('9. Inputs monetários limitam a 2 casas decimais sem limitar percentuais como #debtRate', async ({ page }) => {
+    const errors = monitor(page);
+    await boot(page);
+
+    // Testa campo monetário de lançamentos: #txAmount
+    await page.locator('.nav button[data-page="lancamentos"]').click();
+    const txAmount = page.locator('#txAmount');
+    await txAmount.fill('15.00000');
+    expect(await txAmount.inputValue()).toBe('15.00');
+
+    await txAmount.fill('49.999');
+    expect(await txAmount.inputValue()).toBe('49.99');
+
+    // Testa campo de saldo inicial em contas: #accountInitial
+    await page.locator('.nav button[data-page="contas"]').click();
+    const accountInitial = page.locator('#accountInitial');
+    await accountInitial.fill('123.4567');
+    expect(await accountInitial.inputValue()).toBe('123.45');
+
+    // Testa que percentual de juros de dívidas (#debtRate) NÃO é truncado para 2 casas
+    await page.locator('.nav button[data-page="dividas"]').click();
+    const debtRate = page.locator('#debtRate');
+    await debtRate.fill('2.7458');
+    expect(await debtRate.inputValue()).toBe('2.7458');
+
+    expect(errors).toEqual([]);
+  });
+
+  test('10. Zerar sistema e fluxos de confirmação utilizam sfpConfirm sem diálogos nativos do WebView', async ({ page }) => {
+    const errors = monitor(page);
+    await boot(page);
+
+    // Espiona window.confirm nativo para garantir que NUNCA é chamado
+    await page.evaluate(() => {
+      window.nativeConfirmCalled = false;
+      window._originalConfirm = window.confirm;
+      window.confirm = () => {
+        window.nativeConfirmCalled = true;
+        return true;
+      };
+    });
+
+    // Clica no botão "Zerar sistema" em Configurações
+    await page.locator('.nav button[data-page="config"]').click();
+    await page.locator('#resetBtn').click();
+
+    // Deve abrir o diálogo com tema SFP (#modalRoot #dialogConfirmBtn)
+    await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
+    await expect(page.locator('#dialogTitle')).toHaveText('Zerar sistema');
+    await expect(page.locator('#dialogConfirmBtn')).toHaveClass(/danger/);
+
+    // Cancela o reset
+    await page.locator('#dialogCancelBtn').click();
+    await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
+
+    const nativeCalled = await page.evaluate(() => window.nativeConfirmCalled);
+    expect(nativeCalled).toBe(false);
+
+    expect(errors).toEqual([]);
+  });
+
+  test('11. Verificação de integridade: nenhum diálogo nativo Classe A remanescente no index.html', async () => {
+    const indexPath = path.resolve('app/src/main/assets/www/index.html');
+    const content = fs.readFileSync(indexPath, 'utf8');
+
+    // Remove as definições defensivas internas de fallback (Classe B) dentro de sfpConfirm, sfpAlert e sfpPrompt
+    const sanitized = content
+      .replace(/window\.confirm\?window\.confirm\(message\):true/g, '')
+      .replace(/if\(window\.alert\)window\.alert\(message\)/g, '')
+      .replace(/window\.prompt\?window\.prompt\(message,defaultValue\):defaultValue/g, '');
+
+    // Garante que não há nenhum confirm(, alert( ou prompt( solto
+    const confirmMatches = sanitized.match(/\bconfirm\s*\(/g) || [];
+    const alertMatches = sanitized.match(/\balert\s*\(/g) || [];
+    const promptMatches = sanitized.match(/\bprompt\s*\(/g) || [];
+
+    expect(confirmMatches).toEqual([]);
+    expect(alertMatches).toEqual([]);
+    expect(promptMatches).toEqual([]);
+  });
+
+  test('12. Sidebar em landscape permanece acessível e fixa na viewport durante rolagem vertical', async ({ page }) => {
+    const errors = monitor(page);
+    await boot(page, LANDSCAPE);
+
+    // Rola a página para baixo
+    await page.evaluate(() => {
+      window.scrollTo(0, 800);
+    });
+
+    // Valida que a sidebar continua no topo esquerdo da viewport visível
+    const sidebar = page.locator('.sidebar');
+    await expect(sidebar).toBeVisible();
+
+    const boundingBox = await sidebar.boundingBox();
+    expect(boundingBox).not.toBeNull();
+    expect(boundingBox.x).toBe(0);
+    expect(boundingBox.y).toBe(0);
+    expect(boundingBox.height).toBe(LANDSCAPE.height);
+
+    // Valida que os botões da sidebar continuam clicáveis
+    const hojeBtn = page.locator('.sidebar .nav button[data-page="hoje"]');
+    await expect(hojeBtn).toBeVisible();
+
+    expect(errors).toEqual([]);
+  });
 });
