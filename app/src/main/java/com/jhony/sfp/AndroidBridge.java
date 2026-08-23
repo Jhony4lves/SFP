@@ -69,7 +69,7 @@ public class AndroidBridge {
             PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, pendingFlags);
 
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setSmallIcon(R.mipmap.ic_launcher)
                     .setContentTitle(safeTitle)
                     .setContentText(safeMessage)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
