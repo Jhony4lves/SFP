@@ -4818,12 +4818,13 @@ const sophyOfflineCore={
     // 3. Follow-up Contextual
     const ctxLast=state.sophy?.context;
     if(/^(e se|e quanto|e no|quanto fica se|se eu pagar|se eu gastar|e a metade|e metade)/i.test(clean)||clean==='metade?'||clean==='e metade?'){
-      if(ctxLast?.lastEntity==='card_invoice'&&ctxLast.lastAmount>0){
-        const half=Math.round(ctxLast.lastAmount/2*100)/100;
-        const rem=Math.round((ctxLast.lastAmount-half)*100)/100;
+      if(ctxLast?.lastEntity==='card_invoice'){
+        const lastAmt=ctxLast.lastAmount||0;
+        const half=Math.round(lastAmt/2*100)/100;
+        const rem=Math.round((lastAmt-half)*100)/100;
         const currentFree=allAccountBalance()-commitmentUntilNextIncome();
         return{
-          text:`Se você pagar metade da fatura (**${brl(half)}**), sobram **${brl(rem)}** para o próximo ciclo. Seu livre projetado ajustado ficaria em **${brl(currentFree+rem)}** (considerando que você posterga essa parte).`,
+          text:lastAmt>0?`Se você pagar metade da fatura (**${brl(half)}**), sobram **${brl(rem)}** para o próximo ciclo. Seu livre projetado ajustado ficaria em **${brl(currentFree+rem)}** (considerando que você posterga essa parte).`:`Sua fatura atual já está zerada (**R$ 0,00**)! Metade de zero continua sendo **R$ 0,00**, então você não precisa pagar nada agora. 😉`,
           emotion:'playful',
           structured:{type:'invoice_half_simulation',half,remaining:rem}
         };
@@ -4909,7 +4910,7 @@ const sophyOfflineCore={
     }
 
     // Metas / Reservas
-    if(/meta|reserva|investimento|poupanca|objetivo/i.test(clean)){
+    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)){
       const goals=state.goals||[];
       if(!goals.length){
         return{
@@ -5022,7 +5023,7 @@ const sophyRouter={
     if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean))return 'FINANCIAL_ACCOUNTS';
     if(/cart(ao|oes)|fatura|limite/i.test(clean))return 'FINANCIAL_CARDS';
     if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean))return 'FINANCIAL_DEBTS';
-    if(/meta|reserva|investimento|poupanca|objetivo/i.test(clean))return 'FINANCIAL_GOALS';
+    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean))return 'FINANCIAL_GOALS';
     if(/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(clean))return 'FINANCIAL_CATEGORIES';
     if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean))return 'FINANCIAL_INCOME';
     if(/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean))return 'FINANCIAL_SUMMARY';

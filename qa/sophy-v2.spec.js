@@ -40,11 +40,12 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     await page.locator('#sophyClearHistoryBtn').click();
     await expect(page.locator('#dialogConfirmBtn')).toBeVisible();
     await page.locator('#dialogConfirmBtn').click();
+    await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
 
     // Após limpeza com introDone=true, não repete "Oi! Eu sou a Sophy" de apresentação inicial
-    const freshOpener = await page.locator('.sophy-msg-row.sophy .sophy-bubble').first().textContent();
-    expect(freshOpener).not.toContain('Eu sou a Sophy');
-    expect(freshOpener).toMatch(/Oiee|Tô por aqui|Tudo certinho/i);
+    const freshOpener = page.locator('.sophy-msg-row.sophy .sophy-bubble').first();
+    await expect(freshOpener).not.toContainText('Eu sou a Sophy');
+    await expect(freshOpener).toContainText(/Oiee|Tô por aqui|Tudo certinho/i);
 
     expect(errors).toEqual([]);
   });
@@ -172,6 +173,20 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     await boot(page);
 
     await page.locator('.nav button[data-page="sophy"]').click();
+
+    // Insere uma compra para termos fatura com saldo
+    await page.evaluate(() => {
+      const c = state.cards[0] || { id: 1 };
+      state.purchases.push({
+        id: 9999,
+        cardId: c.id,
+        desc: 'Compra Teste QA',
+        amount: 200,
+        month: currentInvoiceMonth(c),
+        installments: 1,
+        date: localCivilDate()
+      });
+    });
 
     await sendMessage(page, 'Como estão minhas faturas de cartão?');
     await expect(page.locator('.sophy-msg-row.sophy').last()).toContainText(/fatura/i);
