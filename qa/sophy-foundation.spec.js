@@ -25,7 +25,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
     // Verifica identidade e badges
     await expect(page.locator('.sophy-meta h2')).toContainText('Sophy');
     await expect(page.locator('#sophyMoodTag')).toBeVisible();
-    await expect(page.locator('#sophyNetworkTag')).toContainText(/Offline Core|Online Core/);
+    await expect(page.locator('#sophyNetworkTag')).toContainText(/Offline|Online|Local Core/);
 
     // Verifica estrutura de chat
     await expect(page.locator('#sophyChatList')).toBeVisible();

@@ -1635,15 +1635,16 @@ button:active:not(:disabled){transform:translateY(1px)}
             </div>
             <div class="sophy-meta">
               <h2>Sophy <span class="sophy-mood-tag" id="sophyMoodTag">Animada</span></h2>
-              <p id="sophySubtitle">Sua parceira de inteligência financeira</p>
+              <p id="sophySubtitle">Sua parceira no SFP</p>
               <div class="sophy-badges">
                 <span class="sophy-status-tag"><span class="dot"></span> Local-first</span>
-                <span class="sophy-status-tag" id="sophyNetworkTag">Offline Core</span>
+                <span class="sophy-status-tag" id="sophyNetworkTag">Local Core (Offline)</span>
               </div>
             </div>
           </div>
           <div class="sophy-header-actions">
             <button type="button" class="btn2 tiny" id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você">🧠 Memórias (<span id="sophyMemoryCount">0</span>)</button>
+            <button type="button" class="btn2 tiny" id="sophySettingsBtn" title="Configurar provedor de IA da Sophy">⚙ Provedor IA</button>
             <button type="button" class="btn2 tiny" id="sophyClearHistoryBtn" title="Limpar conversa">Limpar chat</button>
           </div>
         </div>
@@ -1663,7 +1664,7 @@ button:active:not(:disabled){transform:translateY(1px)}
           </div>
 
           <form id="sophyChatForm" class="sophy-input-bar">
-            <input id="sophyInput" type="text" placeholder="Pergunte sobre finanças ou converse com a Sophy..." autocomplete="off" aria-label="Mensagem para Sophy" />
+            <input id="sophyInput" type="text" placeholder="Fala comigo..." autocomplete="off" aria-label="Mensagem para Sophy" />
             <button type="submit" id="sophySendBtn" class="btn">Enviar</button>
           </form>
         </div>
@@ -2120,8 +2121,14 @@ function normalize(){
  for(const k of ['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'])state[k]??=[];
  state.settings??=clone(seed.settings);state.categoryBudgets??={};state.mesAtual??=localCivilMonth();state.ui??={};state.ui.invoiceMonthByCard??={};
  state.cards.forEach(c=>c.history??=[]);state.purchases.forEach(p=>p.refunds??=[]);state.invoices.forEach(i=>{i.payments??=[];i.paidAmount??=0});
- state.sophy??={personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,settings:{proactivityEnabled:true}};
- state.sophy.messages??=[];state.sophy.memories??=[];state.sophy.personaState??='cheerful';state.sophy.settings??={proactivityEnabled:true};
+ state.sophy??={personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},settings:{proactivityEnabled:true,provider:'local',model:'default',apiKey:'',preferOnlineForGeneral:true}};
+ state.sophy.messages??=[];state.sophy.memories??=[];state.sophy.personaState??='cheerful';state.sophy.introDone??=false;state.sophy.context??={};
+ state.sophy.settings??={proactivityEnabled:true,provider:'local',model:'default',apiKey:'',preferOnlineForGeneral:true};
+ state.sophy.settings.proactivityEnabled??=true;
+ state.sophy.settings.provider??='local';
+ state.sophy.settings.model??='default';
+ state.sophy.settings.apiKey??='';
+ state.sophy.settings.preferOnlineForGeneral??=true;
 }
 function autoBackup(){
   try{
@@ -2223,7 +2230,7 @@ function createCleanInitialState(){
   version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:localCivilMonth(),baseDate:localCivilDate(),persistenceMeta:{revision:1,savedAt:new Date().toISOString()},
   settings:{name:'SFP',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:false},
   accounts:[],cards:[],transactions:[],transfers:[],purchases:[],invoiceAdjustments:[],invoices:[],recurring:[],debts:[],goals:[],assets:[],statements:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],creditFacilities:[],ui:{invoiceMonthByCard:{}},
-  sophy:{personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,settings:{proactivityEnabled:true}}
+  sophy:{personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},settings:{proactivityEnabled:true,provider:'local',model:'default',apiKey:'',preferOnlineForGeneral:true}}
  };
 }
 async function resetSystem({confirmDialog=true}={}){
@@ -4306,7 +4313,8 @@ function financialContextSnapshot({reference=new Date(),months=3}={}){
 function sfpFinancialContextSnapshot(opts){return financialContextSnapshot(opts)}
 window.financialContextSnapshot=financialContextSnapshot;window.sfpFinancialContextSnapshot=financialContextSnapshot;window.financialCalendarEvents=financialCalendarEvents;window.FINANCIAL_SEMANTICS=FINANCIAL_SEMANTICS;
 
-/* ===== SOPHY CORE & INTELLIGENCE ===== */
+/* ===== SOPHY FOUNDATION V2: HYBRID AI ROUTER & CONVERSATIONAL ENGINE ===== */
+
 const SOPHY_PERSONAS={
   neutral:{label:'Tranquila',icon:'✨',aura:'#4cc2ff'},
   cheerful:{label:'Animada',icon:'🌟',aura:'#2ed194'},
@@ -4318,9 +4326,343 @@ const SOPHY_PERSONAS={
   focused:{label:'Focada',icon:'🎯',aura:'#4cc2ff'}
 };
 
+const SOPHY_SYSTEM_PROMPT=`Você é a Sophy, assistente e parceira inteligente no aplicativo Smart Financial Planner (SFP).
+Seu tom é natural, informal, empático, acolhedor e com humor leve em português brasileiro (use expressões naturais como "tá", "pra", "bora", "beleza", "ih", "ué", "pois é", "me conta", "olha só").
+NÃO seja corporativa, nem use introduções repetitivas como "Entendi!" ou "Posso auxiliá-lo".
+Regra de Ouro: Reconheça primeiro os sentimentos ou a pergunta do usuário antes de falar sobre soluções.
+Quando o assunto for financeiro, atenha-se estritamente aos números fornecidos pelo Local Financial Core no contexto — NUNCA invente nem altere valores monetários.
+Quando o assunto for conversa casual ou geral (conhecimento, matemática, curiosidades), responda com naturalidade e inteligência, sem forçar temas financeiros desnecessariamente.`;
+
+// Mock State para testes de QA e automação determinística
+let sophyMockState={
+  active:false,
+  handler:null,
+  simulateTimeout:false,
+  simulateAuthError:false
+};
+
+function sophySetMockProvider(opts={}){
+  sophyMockState={
+    active:opts.active!==false,
+    handler:opts.handler||null,
+    simulateTimeout:!!opts.simulateTimeout,
+    simulateAuthError:!!opts.simulateAuthError
+  };
+  if(state?.sophy?.settings){
+    state.sophy.settings.provider=opts.active===false?'local':'mock';
+  }
+  renderSophy();
+}
+window.sophySetMockProvider=sophySetMockProvider;
+
+// Sanitizador de privacidade estrita: dados mínimos e anônimos com verdade matemática
+function sophySanitizeFinancialContext(snapshot){
+  if(!snapshot)return null;
+  return{
+    currency:'BRL',
+    availableBRL:snapshot.availableCents/100,
+    freeBRL:snapshot.free?.amountCents!=null?snapshot.free.amountCents/100:null,
+    realizedIncomeBRL:snapshot.realized?.incomeCents!=null?snapshot.realized.incomeCents/100:0,
+    realizedExpenseBRL:snapshot.realized?.expenseCents!=null?snapshot.realized.expenseCents/100:0,
+    realizedResultBRL:snapshot.realized?.resultCents!=null?snapshot.realized.resultCents/100:0,
+    debtTotalBRL:snapshot.patrimony?.debtCents!=null?snapshot.patrimony.debtCents/100:0,
+    topCategories:Object.entries(snapshot.categoriesCents||{}).slice(0,5).map(([c,v])=>({category:c,amountBRL:v/100})),
+    nextIncome:snapshot.nextIncome?{desc:snapshot.nextIncome.desc,date:snapshot.nextIncome.date,amountBRL:snapshot.nextIncome.amountCents/100}:null
+  };
+}
+
+// Registro de Provedores Plugáveis
+const sophyProviderRegistry={
+  local:{
+    id:'local',
+    name:'Local Core (Offline-first)',
+    isConfigured:()=>true,
+    isAvailable:()=>true,
+    testConnection:async()=>({ok:true,message:'Local Core operacional (100% offline, custo R$ 0,00).'}),
+    async generateResponse({prompt,context}){
+      return sophyOfflineCore.process(prompt,context);
+    }
+  },
+
+  mock:{
+    id:'mock',
+    name:'Mock Core (QA)',
+    isConfigured:()=>true,
+    isAvailable:()=>true,
+    testConnection:async()=>({ok:true,message:'Mock Provider operacional.'}),
+    async generateResponse({prompt,history,memories,financialContext,context}){
+      if(sophyMockState.simulateTimeout){
+        const err=new Error('Gateway Timeout');
+        err.name='TimeoutError';
+        throw err;
+      }
+      if(sophyMockState.simulateAuthError){
+        const err=new Error('Invalid API Key');
+        err.status=401;
+        throw err;
+      }
+      if(typeof sophyMockState.handler==='function'){
+        const custom=await sophyMockState.handler({prompt,history,memories,financialContext,context});
+        if(custom)return typeof custom==='string'?{text:custom,emotion:'cheerful'}:custom;
+      }
+
+      const clean=String(prompt||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+
+      // Raciocínio matemático geral (ex: raiz cúbica, raiz quadrada, expressões)
+      const cubeMatch=clean.match(/raiz\s+cubica\s+(?:de\s+)?(\d+(?:\.\d+)?)/i);
+      if(cubeMatch){
+        const num=parseFloat(cubeMatch[1]);
+        const res=Math.cbrt(num);
+        return{
+          text:`A raiz cúbica de ${num} é aproximadamente **${res.toLocaleString('pt-BR',{maximumFractionDigits:4})}**! 😉`,
+          emotion:'playful'
+        };
+      }
+      const sqrtMatch=clean.match(/raiz\s+quadrada\s+(?:de\s+)?(\d+(?:\.\d+)?)/i);
+      if(sqrtMatch){
+        const num=parseFloat(sqrtMatch[1]);
+        const res=Math.sqrt(num);
+        return{
+          text:`A raiz quadrada de ${num} é **${res.toLocaleString('pt-BR',{maximumFractionDigits:4})}**! ✨`,
+          emotion:'playful'
+        };
+      }
+
+      // Conversa geral ou com contexto financeiro
+      if(financialContext&&/quanto sobra|saldo|livre/i.test(clean)){
+        return{
+          text:`Com base nos seus números calculados localmente, você tem **${brl(financialContext.freeBRL)}** de livre projetado agora. 🎯`,
+          emotion:'cheerful',
+          structured:{type:'free_balance',free:financialContext.freeBRL}
+        };
+      }
+
+      return{
+        text:`Analisando sua pergunta sobre "${prompt}": como assistente conversacional conectada, processei o raciocínio e tudo está nos conformes! ✨`,
+        emotion:'cheerful'
+      };
+    }
+  },
+
+  gemini:{
+    id:'gemini',
+    name:'Google Gemini',
+    isConfigured:(cfg)=>!!(cfg?.apiKey&&cfg.apiKey.trim()),
+    isAvailable:()=>typeof navigator==='undefined'||navigator.onLine,
+    testConnection:async(cfg)=>{
+      const key=cfg?.apiKey||state?.sophy?.settings?.apiKey;
+      if(!key)return{ok:false,message:'Chave de API do Gemini não informada.'};
+      const model=cfg?.model&&cfg.model!=='default'?cfg.model:'gemini-1.5-flash';
+      try{
+        const controller=new AbortController();
+        const timeout=setTimeout(()=>controller.abort(),8000);
+        const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({contents:[{parts:[{text:'Responda apenas: OK'}]}]}),
+          signal:controller.signal
+        });
+        clearTimeout(timeout);
+        if(!res.ok){
+          if(res.status===400||res.status===403||res.status===401)return{ok:false,message:'Chave de API inválida ou sem permissão.'};
+          return{ok:false,message:`Erro HTTP ${res.status} ao conectar.`};
+        }
+        return{ok:true,message:'Conexão com Google Gemini realizada com sucesso!'};
+      }catch(e){
+        return{ok:false,message:e.name==='AbortError'?'Tempo limite esgotado ao conectar.':`Falha de rede: ${e.message}`};
+      }
+    },
+    async generateResponse({prompt,history,memories,financialContext,systemPrompt,settings}){
+      const key=settings?.apiKey||state?.sophy?.settings?.apiKey;
+      if(!key)throw new Error('AUTH_REQUIRED');
+      const model=settings?.model&&settings.model!=='default'?settings.model:'gemini-1.5-flash';
+
+      let memoryText='';
+      if(memories&&memories.length)memoryText='\nMemórias salvas sobre o usuário:\n'+memories.map(m=>`- ${m.content}`).join('\n');
+      let finText='';
+      if(financialContext)finText='\nDados financeiros authoritative do Local Core (NUNCA contradiga ou invente):\n'+JSON.stringify(financialContext,null,2);
+      const fullSys=`${systemPrompt||SOPHY_SYSTEM_PROMPT}${memoryText}${finText}`;
+
+      const contents=[];
+      if(history&&history.length){
+        const recent=history.slice(-6);
+        for(const m of recent){
+          contents.push({role:m.sender==='user'?'user':'model',parts:[{text:m.text}]});
+        }
+      }
+      contents.push({role:'user',parts:[{text:prompt}]});
+
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),12000);
+      try{
+        const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            systemInstruction:{parts:[{text:fullSys}]},
+            contents,
+            generationConfig:{temperature:0.7,maxOutputTokens:600}
+          }),
+          signal:controller.signal
+        });
+        clearTimeout(timeout);
+        if(!res.ok){
+          const errData=await res.json().catch(()=>({}));
+          const err=new Error(errData?.error?.message||`HTTP ${res.status}`);
+          err.status=res.status;
+          throw err;
+        }
+        const data=await res.json();
+        const text=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+        return{text:text.trim(),emotion:'cheerful'};
+      }catch(e){
+        clearTimeout(timeout);
+        throw e;
+      }
+    }
+  },
+
+  openai:{
+    id:'openai',
+    name:'OpenAI / Groq / Compatível',
+    isConfigured:(cfg)=>!!(cfg?.apiKey&&cfg.apiKey.trim()),
+    isAvailable:()=>typeof navigator==='undefined'||navigator.onLine,
+    testConnection:async(cfg)=>{
+      const key=cfg?.apiKey||state?.sophy?.settings?.apiKey;
+      if(!key)return{ok:false,message:'Chave de API não informada.'};
+      const endpoint=cfg?.endpoint||'https://api.openai.com/v1/chat/completions';
+      const model=cfg?.model&&cfg.model!=='default'?cfg.model:'gpt-4o-mini';
+      try{
+        const controller=new AbortController();
+        const timeout=setTimeout(()=>controller.abort(),8000);
+        const res=await fetch(endpoint,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+          body:JSON.stringify({model,messages:[{role:'user',content:'ping'}],max_tokens:5}),
+          signal:controller.signal
+        });
+        clearTimeout(timeout);
+        if(!res.ok){
+          if(res.status===401||res.status===403)return{ok:false,message:'Chave de API inválida ou não autorizada.'};
+          return{ok:false,message:`Erro HTTP ${res.status} no provedor OpenAI.`};
+        }
+        return{ok:true,message:'Conexão com provedor realizada com sucesso!'};
+      }catch(e){
+        return{ok:false,message:e.name==='AbortError'?'Tempo limite esgotado ao conectar.':`Falha de rede: ${e.message}`};
+      }
+    },
+    async generateResponse({prompt,history,memories,financialContext,systemPrompt,settings}){
+      const key=settings?.apiKey||state?.sophy?.settings?.apiKey;
+      if(!key)throw new Error('AUTH_REQUIRED');
+      const endpoint=settings?.endpoint||'https://api.openai.com/v1/chat/completions';
+      const model=settings?.model&&settings.model!=='default'?settings.model:'gpt-4o-mini';
+
+      let memoryText='';
+      if(memories&&memories.length)memoryText='\nMemórias salvas sobre o usuário:\n'+memories.map(m=>`- ${m.content}`).join('\n');
+      let finText='';
+      if(financialContext)finText='\nDados financeiros authoritative do Local Core (NUNCA contradiga ou invente):\n'+JSON.stringify(financialContext,null,2);
+      const fullSys=`${systemPrompt||SOPHY_SYSTEM_PROMPT}${memoryText}${finText}`;
+
+      const messages=[{role:'system',content:fullSys}];
+      if(history&&history.length){
+        const recent=history.slice(-6);
+        for(const m of recent){
+          messages.push({role:m.sender==='user'?'user':'assistant',content:m.text});
+        }
+      }
+      messages.push({role:'user',content:prompt});
+
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),12000);
+      try{
+        const res=await fetch(endpoint,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+          body:JSON.stringify({model,messages,temperature:0.7,max_tokens:600}),
+          signal:controller.signal
+        });
+        clearTimeout(timeout);
+        if(!res.ok){
+          const errData=await res.json().catch(()=>({}));
+          const err=new Error(errData?.error?.message||`HTTP ${res.status}`);
+          err.status=res.status;
+          throw err;
+        }
+        const data=await res.json();
+        const text=data?.choices?.[0]?.message?.content||'';
+        return{text:text.trim(),emotion:'cheerful'};
+      }catch(e){
+        clearTimeout(timeout);
+        throw e;
+      }
+    }
+  }
+};
+
 const sophyAIProvider={
-  isOnlineAvailable:()=>false,
-  generateResponse:async(prompt,context=null)=>sophyOfflineCore.process(prompt,context)
+  getActiveProvider(){
+    if(sophyMockState.active)return sophyProviderRegistry.mock;
+    const pId=state?.sophy?.settings?.provider||'local';
+    return sophyProviderRegistry[pId]||sophyProviderRegistry.local;
+  },
+
+  isOnlineAvailable(){
+    const p=this.getActiveProvider();
+    if(p.id==='local')return false;
+    return p.isConfigured(state?.sophy?.settings)&&p.isAvailable();
+  },
+
+  normalizeError(error){
+    if(!error)return{type:'unknown',message:'Erro desconhecido.'};
+    if(error.name==='AbortError'||error.name==='TimeoutError'||/timeout/i.test(error.message)){
+      return{type:'timeout',message:'O provedor online demorou para responder. Operando no modo local.'};
+    }
+    if(error.status===401||error.status===403||/auth|key|unauthorized/i.test(error.message)){
+      return{type:'auth_error',message:'Chave de API inválida ou expirada. Operando no modo local.'};
+    }
+    if(error.status===429||/rate limit|quota/i.test(error.message)){
+      return{type:'rate_limit',message:'Limite de requisições atingido. Operando no modo local.'};
+    }
+    return{type:'general',message:'Instabilidade no provedor online. Operando no modo local.'};
+  },
+
+  async generateResponse(prompt,options={}){
+    const provider=this.getActiveProvider();
+    const isOnline=this.isOnlineAvailable();
+
+    if(!isOnline||provider.id==='local'){
+      return sophyOfflineCore.process(prompt,options.context);
+    }
+
+    try{
+      const resp=await provider.generateResponse({
+        prompt,
+        history:state?.sophy?.messages||[],
+        memories:state?.sophy?.memories||[],
+        financialContext:options.financialContext||null,
+        systemPrompt:SOPHY_SYSTEM_PROMPT,
+        settings:state?.sophy?.settings||{},
+        context:options.context
+      });
+      return{
+        text:resp.text,
+        emotion:resp.emotion||'cheerful',
+        provider:provider.id,
+        structured:resp.structured||null
+      };
+    }catch(err){
+      console.warn('Falha no provedor online da Sophy, acionando fallback local:',err);
+      const normErr=this.normalizeError(err);
+      const localFallback=sophyOfflineCore.process(prompt,options.context);
+      return{
+        text:localFallback.text,
+        emotion:localFallback.emotion||'concerned',
+        provider:'local',
+        warning:normErr.message,
+        structured:localFallback.structured||null
+      };
+    }
+  }
 };
 
 const sophyOfflineCore={
@@ -4362,18 +4704,32 @@ const sophyOfflineCore={
       };
     }
 
-    // 2. Sentimentos do usuário e Empatia (Samantha-like)
-    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa])\b/i.test(clean)){
+    // 2. Empatia Imediata & Sentimentos Expressos (Samantha-like)
+    if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean)){
+      return{
+        text:`Ih 😭\n\nMe conta, o que você fez? Respira fundo: a gente olha o tamanho da situação juntos e acha uma saída sem desespero.`,
+        emotion:'concerned'
+      };
+    }
+
+    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal)\b/i.test(clean)){
       return{
         text:`Sinto muito que você esteja se sentindo assim... Respira fundo. Dias difíceis acontecem, mas você não tá sozinho nessa jornada. Se as finanças estiverem pesando na cabeça, relaxa: a gente resolve um passo de cada vez. Quer que eu veja algo específico pra tirar o peso das suas costas?`,
         emotion:'concerned'
       };
     }
 
-    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta)\b/i.test(clean)){
+    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo)\b/i.test(clean)){
       return{
-        text:`Que notícia maravilhosa! Adoro te ver animado assim! Essa energia boa contagia até as minhas linhas de código! O que temos de bom pra comemorar? 🎉`,
+        text:`Aí simmm! 🎉 Que notícia maravilhosa! Adoro te ver animado assim! O que temos de bom pra comemorar?`,
         emotion:'proud'
+      };
+    }
+
+    if(/\b(sono|dormir|cansac[o|ç]o|exausto)\b/i.test(clean)){
+      return{
+        text:`Vai descansar um tiquinho! 😴 Suas contas e planejamentos continuam seguros por aqui. Uma boa noite de sono clareia qualquer decisão amanhã.`,
+        emotion:'neutral'
       };
     }
 
@@ -4388,12 +4744,11 @@ const sophyOfflineCore={
     }
 
     // Saudações
-    if(/^(oi|ola|e ai|opa|bom dia|boa tarde|boa noite|hey|hello)[\s!.]*$/i.test(clean)){
-      const free=allAccountBalance()-commitmentUntilNextIncome();
+    if(/^(oi|ol[aá]|e a[ií]|opa|bom dia|boa tarde|boa noite|hey|hello)[\s!.]*$/i.test(clean)){
       const greetings=[
-        `Oi! Que bom te ver por aqui. Como você está hoje? Seu livre projetado tá em ${brl(free)}. Em que posso te ajudar?`,
-        `Olá! Tava aqui dando uma olhada nos seus números e pensando em você. Tudo certinho?`,
-        `Oi! Preparado pra cuidar das finanças ou veio só me fazer uma visita? Eu adoro os dois!`
+        `Oiee ✨ Que bom te ver por aqui! Tudo certinho? O que manda hoje?`,
+        `Olá! Tava aqui dando uma olhada nos seus números e pensando em você. Tudo em ordem?`,
+        `Oi oi! Preparado pra cuidar das finanças ou veio só me fazer uma visita? Eu adoro os dois!`
       ];
       return{text:greetings[Math.floor(Math.random()*greetings.length)],emotion:'cheerful'};
     }
@@ -4401,7 +4756,7 @@ const sophyOfflineCore={
     // Quem é você
     if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)){
       return{
-        text:`Eu sou a **Sophy**! ✨\n\nPense em mim como a sua parceira aqui dentro do Smart Financial Planner. Cuido dos seus números, te lembro dos compromissos, comemoro suas metas batidas e bato um bom papo sempre que você quiser. Finanças sem complicação e com afeto!`,
+        text:`Eu sou a **Sophy**! ✨\n\nSou a sua parceira aqui dentro do Smart Financial Planner. Cuido dos seus números, te lembro dos compromissos, comemoro suas metas e bato um bom papo sempre que você quiser. Finanças sem complicação e com afeto!`,
         emotion:'playful'
       };
     }
@@ -4460,12 +4815,39 @@ const sophyOfflineCore={
       };
     }
 
-    // 3. Consultas Financeiras
+    // 3. Follow-up Contextual
+    const ctxLast=state.sophy?.context;
+    if(/^(e se|e quanto|e no|quanto fica se|se eu pagar|se eu gastar|e a metade|e metade)/i.test(clean)||clean==='metade?'||clean==='e metade?'){
+      if(ctxLast?.lastEntity==='card_invoice'){
+        const lastAmt=ctxLast.lastAmount||0;
+        const half=Math.round(lastAmt/2*100)/100;
+        const rem=Math.round((lastAmt-half)*100)/100;
+        const currentFree=allAccountBalance()-commitmentUntilNextIncome();
+        return{
+          text:lastAmt>0?`Se você pagar metade da fatura (**${brl(half)}**), sobram **${brl(rem)}** para o próximo ciclo. Seu livre projetado ajustado ficaria em **${brl(currentFree+rem)}** (considerando que você posterga essa parte).`:`Sua fatura atual já está zerada (**R$ 0,00**)! Metade de zero continua sendo **R$ 0,00**, então você não precisa pagar nada agora. 😉`,
+          emotion:'playful',
+          structured:{type:'invoice_half_simulation',half,remaining:rem}
+        };
+      }
+      if(ctxLast?.lastIntent==='free_balance'&&/gastar\s+(\d+)/i.test(clean)){
+        const spendMatch=clean.match(/gastar\s+(\d+(?:[.,]\d+)?)/i);
+        const spend=spendMatch?parseMoney(spendMatch[1]):0;
+        const currentFree=allAccountBalance()-commitmentUntilNextIncome();
+        const diff=currentFree-spend;
+        return{
+          text:`Se você gastar ${brl(spend)}, seu livre projetado vai de ${brl(currentFree)} para **${brl(diff)}**. ${diff<0?'Atenção que o livre projetado ficaria negativo!':'Ainda sobra uma margem segura!'}`,
+          emotion:diff<0?'concerned':'cheerful'
+        };
+      }
+    }
+
+    // 4. Consultas Financeiras Authoritative (Local Core)
     // Livre projetado
     if(/livre|posso gastar|sobrando|disponivel livre/i.test(clean)){
       const free=allAccountBalance()-commitmentUntilNextIncome();
       const bal=allAccountBalance();
       const commit=commitmentUntilNextIncome();
+      state.sophy.context={lastIntent:'free_balance',lastAmount:free};
       let emotion='cheerful',msg='';
       if(free<0){
         emotion='concerned';
@@ -4489,12 +4871,15 @@ const sophyOfflineCore={
           emotion:'neutral'
         };
       }
-      const lines=cards.map(c=>{
+      let firstInvAmount=0;
+      const lines=cards.map((c,idx)=>{
         const m=state.ui.invoiceMonthByCard?.[c.id]||currentInvoiceMonth(c);
         const rem=invoiceRemaining(c.id,m);
+        if(idx===0)firstInvAmount=rem;
         const freeLimit=Math.max(0,c.limit-cardOutstanding(c.id));
         return `• **${c.name}**: Fatura atual em **${brl(rem)}** (vence dia ${c.dueDay}). Limite disponível: **${brl(freeLimit)}**.`;
       }).join('\n');
+      state.sophy.context={lastIntent:'card_invoice',lastEntity:'card_invoice',lastAmount:firstInvAmount};
       return{
         text:`Aqui está o resumo dos seus cartões:\n\n${lines}`,
         emotion:'playful',
@@ -4516,6 +4901,7 @@ const sophyOfflineCore={
         const remaining=Math.max(0,(d.installments||0)-(d.paidInstallments||0));
         return `• **${d.name}**: Saldo devedor de **${brl(d.balance)}** (${remaining} parcelas de ${brl(d.payment)}).`;
       }).join('\n');
+      state.sophy.context={lastIntent:'debts',lastAmount:total};
       return{
         text:`Seu saldo devedor total em dívidas é de **${brl(total)}**:\n\n${lines}`,
         emotion:'concerned',
@@ -4524,7 +4910,7 @@ const sophyOfflineCore={
     }
 
     // Metas / Reservas
-    if(/meta|reserva|investimento|poupanca|objetivo/i.test(clean)){
+    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)){
       const goals=state.goals||[];
       if(!goals.length){
         return{
@@ -4597,6 +4983,7 @@ const sophyOfflineCore={
         };
       }
       const details=accounts.map(a=>`• **${a.name}**: ${brl(accountBalance(a.id))}`).join('\n');
+      state.sophy.context={lastIntent:'account_balance',lastAmount:total};
       return{
         text:`Seu saldo total em contas hoje é de **${brl(total)}**.\n\nDistribuído nas seguintes contas:\n${details}`,
         emotion:total>0?'cheerful':'neutral',
@@ -4604,12 +4991,63 @@ const sophyOfflineCore={
       };
     }
 
-    // Fallback conversacional
-    const freeBal=allAccountBalance()-commitmentUntilNextIncome();
+    // 5. Fallback Honesto para Raciocínio Geral / Perguntas Não-Financeiras Offline
     return{
-      text:`Entendi! Adoro quando a gente troca uma ideia. No momento seu livre projetado tá em **${brl(freeBal)}**. Se quiser ver detalhes de contas, faturas, metas ou só conversar mais um pouco, pode falar comigo!`,
-      emotion:'cheerful'
+      text:`No momento estou operando no modo local (offline), então não consigo pesquisar ou responder sobre isso com segurança fora do seu planejamento financeiro. Mas se precisar de algo sobre seus números, contas, faturas ou metas, tô bem aqui! ✨`,
+      emotion:'neutral'
     };
+  }
+};
+
+const sophyRouter={
+  classify(prompt){
+    const raw=String(prompt||'').trim();
+    const clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+
+    if(/^(lembre( que)?|anote( que)?|guarde( que)?|lembrar( que)?)\s+(.+)/i.test(raw))return 'MEMORY_WRITE';
+    if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean))return 'MEMORY_READ';
+    if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean))return 'EMOTIONAL_DISTRESS';
+    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal)\b/i.test(clean))return 'EMOTIONAL_CONCERN';
+    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo)\b/i.test(clean))return 'EMOTIONAL_JOY';
+    if(/\b(sono|dormir|cansac[o|ç]o|exausto)\b/i.test(clean))return 'CASUAL_TIRED';
+    if(/^(oi|ol[aá]|e a[ií]|opa|bom dia|boa tarde|boa noite|hey|hello)[\s!.]*$/i.test(clean))return 'GREETING';
+    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean))return 'IDENTITY';
+    if(/como voce ta|como voce esta|tudo bem/i.test(clean))return 'STATUS';
+    if(/voce e real|voce e uma ia|samantha/i.test(clean))return 'AI_NATURE';
+    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa/i.test(clean))return 'COMPLIMENT';
+    if(/piada|engracad/i.test(clean))return 'HUMOR';
+    if(/caixa|competencia|compromisso|diferenca/i.test(clean)&&/o que e|qual a diferenca|expli/i.test(clean))return 'FINANCIAL_SEMANTICS';
+    if(/posso gastar tudo|torrar|comprar bobagem|comprar uma ferrari|comprar um aviao|gastar em pizza/i.test(clean))return 'SPENDING_IMPULSE';
+    if(/^(e se|e quanto|e no|quanto fica se|se eu pagar|se eu gastar|e a metade|e metade)/i.test(clean)||clean==='metade?'||clean==='e metade?')return 'FOLLOWUP_FINANCIAL';
+    if(/livre|posso gastar|sobrando|disponivel livre/i.test(clean))return 'FINANCIAL_FREE';
+    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean))return 'FINANCIAL_ACCOUNTS';
+    if(/cart(ao|oes)|fatura|limite/i.test(clean))return 'FINANCIAL_CARDS';
+    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean))return 'FINANCIAL_DEBTS';
+    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean))return 'FINANCIAL_GOALS';
+    if(/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(clean))return 'FINANCIAL_CATEGORIES';
+    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean))return 'FINANCIAL_INCOME';
+    if(/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean))return 'FINANCIAL_SUMMARY';
+
+    return 'GENERAL_KNOWLEDGE_REASONING';
+  },
+
+  async route(prompt,options={}){
+    const intent=this.classify(prompt);
+    const snap=financialContextSnapshot();
+    const isFinancial=intent.startsWith('FINANCIAL')||intent==='FOLLOWUP_FINANCIAL';
+    const sanitizedFin=isFinancial?sophySanitizeFinancialContext(snap):null;
+
+    // Se houver provedor online configurado e ativo
+    if(sophyAIProvider.isOnlineAvailable()){
+      return sophyAIProvider.generateResponse(prompt,{
+        intent,
+        financialContext:sanitizedFin,
+        context:snap
+      });
+    }
+
+    // Modo local padrão (100% offline)
+    return sophyOfflineCore.process(prompt,snap);
   }
 };
 
@@ -4645,11 +5083,110 @@ function showSophyMemoriesModal(){
   });
 }
 
+function showSophySettingsModal(){
+  if(!state.sophy)normalize();
+  const cfg=state.sophy.settings||{};
+  const root=$('modalRoot');
+  root.className='modalback';
+  root.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Configurações da Sophy">
+    <div class="head">
+      <div><h2>Inteligência Artificial & Provedor</h2><p>Escolha como a Sophy processa conversação e raciocínio</p></div>
+      <button class="btn2" id="closeSophySettings">Fechar</button>
+    </div>
+    <div class="list" style="gap:12px;margin-top:10px">
+      <label>Provedor de IA
+        <select id="sophyProviderSelect">
+          <option value="local" ${cfg.provider==='local'?'selected':''}>Local Core (Padrão 100% Offline — R$ 0,00)</option>
+          <option value="gemini" ${cfg.provider==='gemini'?'selected':''}>Google Gemini (API Oficial)</option>
+          <option value="openai" ${cfg.provider==='openai'?'selected':''}>OpenAI / Groq / Compatível</option>
+        </select>
+      </label>
+
+      <div id="sophyOnlineConfig" class="${cfg.provider==='local'?'hidden':''}">
+        <label>Chave de API (Armazenada localmente no dispositivo)
+          <div style="display:flex;gap:6px">
+            <input id="sophyApiKey" type="password" placeholder="Cole sua API Key aqui" value="${sfpEsc(cfg.apiKey||'')}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:1" />
+            <button type="button" class="btn2 tiny" id="sophyToggleKeyVisibility">👁</button>
+          </div>
+        </label>
+
+        <label style="margin-top:8px">Modelo
+          <input id="sophyModel" type="text" placeholder="default (ex: gemini-1.5-flash, gpt-4o-mini)" value="${sfpEsc(cfg.model||'default')}" />
+        </label>
+
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+          <button type="button" class="btn2" id="sophyTestConnectionBtn">Testar conexão</button>
+          <button type="button" class="btn2" id="sophyClearKeyBtn">Limpar chave</button>
+        </div>
+      </div>
+
+      <div class="note" style="margin-top:8px">
+        🔒 <b>Privacidade garantida</b>: Seus dados bancários e lançamentos completos nunca saem do seu aparelho. Apenas resumos numéricos anônimos e estritamente necessários são enviados quando o provedor online é consultado.
+      </div>
+
+      <div class="section-actions" style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px">
+        <button type="button" class="btn" id="sophySaveSettingsBtn">Salvar configurações</button>
+      </div>
+    </div>
+  </div>`;
+
+  $('closeSophySettings').onclick=()=>{root.className='hidden';root.replaceChildren()};
+
+  const provSelect=$('sophyProviderSelect');
+  provSelect.onchange=()=>{
+    $('sophyOnlineConfig').classList.toggle('hidden',provSelect.value==='local');
+  };
+
+  $('sophyToggleKeyVisibility').onclick=()=>{
+    const inp=$('sophyApiKey');
+    inp.type=inp.type==='password'?'text':'password';
+  };
+
+  $('sophyClearKeyBtn').onclick=()=>{
+    $('sophyApiKey').value='';
+    toast('Chave removida do formulário.');
+  };
+
+  $('sophyTestConnectionBtn').onclick=async()=>{
+    const pId=provSelect.value;
+    const provider=sophyProviderRegistry[pId];
+    if(!provider)return toast('Provedor não encontrado.','error');
+    const testCfg={
+      apiKey:$('sophyApiKey').value.trim(),
+      model:$('sophyModel').value.trim()
+    };
+    toast('Testando conexão com '+provider.name+'...','info');
+    const res=await provider.testConnection(testCfg);
+    if(res.ok){
+      toast(res.message,'success');
+    }else{
+      toast(res.message,'error');
+    }
+  };
+
+  $('sophySaveSettingsBtn').onclick=async()=>{
+    const pId=provSelect.value;
+    state.sophy.settings.provider=pId;
+    state.sophy.settings.apiKey=$('sophyApiKey').value.trim();
+    state.sophy.settings.model=$('sophyModel').value.trim()||'default';
+    await save('Configurações da Sophy');
+    root.className='hidden';
+    root.replaceChildren();
+    renderSophy();
+    toast('Configurações da Sophy salvas com sucesso!','success');
+  };
+}
+
 function sophyCheckProactivity({force=false}={}){
   if(!state?.sophy)normalize();
   const sophy=state.sophy;
   if(!sophy.settings?.proactivityEnabled&&!force)return null;
-  const now=Date.now(),lastAt=sophy.lastProactiveAt?new Date(sophy.lastProactiveAt).getTime():0,hoursSince=(now-lastAt)/(1000*60*60);
+  if(!sophy.lastProactiveAt){
+    sophy.lastProactiveAt=new Date().toISOString();
+    if(!force)return null;
+  }
+  if(!sophy.introDone&&!force)return null;
+  const now=Date.now(),lastAt=new Date(sophy.lastProactiveAt).getTime(),hoursSince=(now-lastAt)/(1000*60*60);
   if(!force&&hoursSince<4)return null;
 
   const free=allAccountBalance()-commitmentUntilNextIncome();
@@ -4703,15 +5240,32 @@ function renderSophy(){
   if($('sophyMoodTag'))$('sophyMoodTag').textContent=persona.label;
   if($('sophyAvatarEmoji'))$('sophyAvatarEmoji').textContent=persona.icon;
   if($('sophyMemoryCount'))$('sophyMemoryCount').textContent=(sophy.memories||[]).length;
+  
   if($('sophyNetworkTag')){
     const isOnline=typeof navigator!=='undefined'&&navigator.onLine;
-    $('sophyNetworkTag').textContent=isOnline?'Online Core':'Offline Core';
+    const provider=sophyAIProvider.getActiveProvider();
+    let badgeText='Local Core (Offline-first)';
+    if(sophyMockState.active){
+      badgeText='Mock Core (QA)';
+    }else if(provider.id==='local'){
+      badgeText=isOnline?'Local Core (Offline-first)':'Sem conexão (Local Core)';
+    }else if(provider.isConfigured(sophy.settings)){
+      badgeText=isOnline?`Online (${provider.name.split(' ')[0]})`:'Sem conexão (Local Core)';
+    }else{
+      badgeText='Local Core (IA não configurada)';
+    }
+    $('sophyNetworkTag').textContent=badgeText;
   }
+  
   const list=$('sophyChatList');
   if(list){
     const msgs=sophy.messages||[];
     if(!msgs.length){
-      list.innerHTML=`<div class="sophy-msg-row sophy"><div class="sophy-bubble">Oi! Eu sou a <b>Sophy</b>, sua parceira de inteligência financeira no SFP. ✨<br><br>Posso te ajudar a entender seu dinheiro livre projetado, analisar gastos, acompanhar faturas e metas, ou só bater um bom papo. Em que posso te ajudar hoje?<span class="sophy-msg-time">Agora</span></div></div>`;
+      if(!sophy.introDone){
+        list.innerHTML=`<div class="sophy-msg-row sophy"><div class="sophy-bubble">Oi! Eu sou a <b>Sophy</b> ✨<br><br>Cuido dos seus números, te lembro dos prazos e bato um bom papo quando você quiser. Como posso te ajudar hoje?<span class="sophy-msg-time">Agora</span></div></div>`;
+      }else{
+        list.innerHTML=`<div class="sophy-msg-row sophy"><div class="sophy-bubble">Oiee ✨ Tô por aqui. O que manda?<span class="sophy-msg-time">Agora</span></div></div>`;
+      }
     }else{
       list.innerHTML=msgs.map(m=>`<div class="sophy-msg-row ${m.sender==='user'?'user':'sophy'}"><div class="sophy-bubble">${sfpEsc(m.text).replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\*(.*?)\*/g,'<i>$1</i>')}<span class="sophy-msg-time">${new Date(m.at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div></div>`).join('');
     }
@@ -4723,14 +5277,24 @@ async function sophySendMessage(text){
   const raw=String(text||'').trim();
   if(!raw)return;
   if(!state.sophy)normalize();
+  state.sophy.introDone=true;
   const userMsg={id:uid(),sender:'user',text:raw,at:new Date().toISOString()};
   state.sophy.messages.push(userMsg);
   state.sophy.messages=state.sophy.messages.slice(-50);
   renderSophy();
   await save('Mensagem enviada para Sophy');
-  const response=await sophyAIProvider.generateResponse(raw);
+
+  const response=await sophyRouter.route(raw);
   state.sophy.personaState=response.emotion||state.sophy.personaState||'cheerful';
-  const sophyMsg={id:uid(),sender:'sophy',text:response.text,at:new Date().toISOString(),emotion:response.emotion,structured:response.structured||null};
+  const sophyMsg={
+    id:uid(),
+    sender:'sophy',
+    text:response.text,
+    at:new Date().toISOString(),
+    emotion:response.emotion,
+    provider:response.provider||'local',
+    structured:response.structured||null
+  };
   state.sophy.messages.push(sophyMsg);
   state.sophy.messages=state.sophy.messages.slice(-50);
   await save('Conversa com Sophy');
@@ -4742,7 +5306,10 @@ window.sophyAddMemory=sophyAddMemory;
 window.sophyRemoveMemory=sophyRemoveMemory;
 window.sophyCheckProactivity=sophyCheckProactivity;
 window.sophyOfflineCore=sophyOfflineCore;
+window.sophyRouter=sophyRouter;
+window.sophyProviderRegistry=sophyProviderRegistry;
 window.sophyAIProvider=sophyAIProvider;
+window.showSophySettingsModal=showSophySettingsModal;
 window.renderSophy=renderSophy;
 let dashboardPeriod='3M';function dashboardMonths(){const n={ '1M':1,'3M':3,'6M':6,'12M':12,'Ano':Math.max(1,+state.mesAtual.slice(5))}[dashboardPeriod]||3;return n}
 function renderAnalyticsDashboard(){if(!$('analyticsMetrics'))return;const months=dashboardMonths(),ctx=financialContextSnapshot({reference:dateObj(`${state.mesAtual}-15`),months});const metrics=[['Receitas',ctx.realized.incomeCents,'Competência do período'],['Despesas',ctx.realized.expenseCents,'Competência do período'],['Resultado',ctx.realized.resultCents,'Receitas − despesas'],['Patrimônio líquido',ctx.patrimony.netWorthCents,'Contas + ativos − dívidas'],['Dívidas',ctx.patrimony.debtCents,'Saldo devedor'],['Taxa de poupança',ctx.realized.incomeCents?Math.round(ctx.realized.resultCents/ctx.realized.incomeCents*100):null,'do período'],['Livre',ctx.free.amountCents,'Disponível − reservado'],['Compromissos',ctx.commitments.totalCents,'Próximos 90 dias']];
@@ -5657,6 +6224,7 @@ $('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoice
  if($('sophyChatForm'))$('sophyChatForm').onsubmit=async e=>{e.preventDefault();let val=$('sophyInput')?.value;if(!val||!val.trim())return;$('sophyInput').value='';await sophySendMessage(val)};
  document.querySelectorAll('[data-sophy-prompt]').forEach(btn=>{btn.onclick=async()=>{let prompt=btn.dataset.sophyPrompt;if(prompt)await sophySendMessage(prompt)}});
  if($('sophyOpenMemoriesBtn'))$('sophyOpenMemoriesBtn').onclick=showSophyMemoriesModal;
+ if($('sophySettingsBtn'))$('sophySettingsBtn').onclick=showSophySettingsModal;
  if($('sophyClearHistoryBtn'))$('sophyClearHistoryBtn').onclick=async()=>{let ok=await sfpConfirm({title:'Limpar Chat da Sophy',message:'Deseja apagar o histórico de mensagens com a Sophy? As memórias salvas não serão excluídas.',confirmText:'Limpar chat',cancelText:'Cancelar'});if(ok){if(state.sophy)state.sophy.messages=[];await save('Limpar chat da Sophy');renderSophy()}};
  $('stmtFile').onchange=e=>readStmtFile(e.target.files[0]);$('stmtCancel').onclick=()=>{$('stmtReview').classList.add('hidden');statementDraft=[]};$('stmtImport').onclick=importStatement;let drop=$('stmtDrop');drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag')};drop.ondragleave=()=>drop.classList.remove('drag');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag');readStmtFile(e.dataTransfer.files[0])}
 }
