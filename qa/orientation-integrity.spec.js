@@ -5,14 +5,13 @@ const { fixture, monitor, expectBootComplete, writeIndexedDB } = require('./help
 const PORTRAIT = { width: 390, height: 844 };
 const LANDSCAPE = { width: 844, height: 390 };
 
-async function boot(page, viewport = PORTRAIT) {
-  await page.setViewportSize(viewport);
+async function boot(page) {
   await page.goto('/index.html');
   await expect(page.locator('#pageTitle')).toHaveText('Hoje');
 }
 
 async function go(page, id) {
-  await page.locator(`.nav button[data-page="${id}"]`).click();
+  await page.evaluate(p => setPage(p), id);
   await expect(page.locator(`#${id}`)).toHaveClass(/active/);
 }
 
@@ -22,11 +21,13 @@ async function back(page) {
 
 test.describe('Preservação de Estado e Navegação em Mudança de Orientação', () => {
 
-  test('1. Rotação entre Portrait e Landscape preserva a página ativa (Lançamentos) e conteúdo do formulário', async ({ page }) => {
+  test('1. Rotação entre Portrait e Landscape via barra de navegação preserva a página ativa e dados do formulário', async ({ page }) => {
     const errors = monitor(page);
-    await boot(page, PORTRAIT);
+    await page.setViewportSize(PORTRAIT);
+    await boot(page);
 
-    await go(page, 'lancamentos');
+    // Na barra inferior mobile, o botão Lançamentos está visível
+    await page.locator('.nav button[data-page="lancamentos"]').click();
     await expect(page.locator('#lancamentos')).toHaveClass(/active/);
 
     // Preenche campo no formulário
@@ -36,6 +37,7 @@ test.describe('Preservação de Estado e Navegação em Mudança de Orientação
     // Rotaciona para Landscape
     await page.setViewportSize(LANDSCAPE);
     await expect(page.locator('#lancamentos')).toHaveClass(/active/);
+    await expect(page.locator('#pageTitle')).toHaveText('Lançamentos');
     await expect(page.locator('#txDesc')).toHaveValue('Compra de Teste Rotação');
     await expect(page.locator('#txAmount')).toHaveValue('150,00');
 
@@ -50,7 +52,8 @@ test.describe('Preservação de Estado e Navegação em Mudança de Orientação
 
   test('2. Rotação preserva histórico de navegação linear e comportamento do botão Voltar', async ({ page }) => {
     const errors = monitor(page);
-    await boot(page, PORTRAIT);
+    await page.setViewportSize(PORTRAIT);
+    await boot(page);
 
     await go(page, 'contas');
     await go(page, 'cartoes');
@@ -85,7 +88,8 @@ test.describe('Preservação de Estado e Navegação em Mudança de Orientação
 
   test('3. Rotação repetida e sucessiva (Portrait <-> Landscape) não causa perda de página nem erros', async ({ page }) => {
     const errors = monitor(page);
-    await boot(page, PORTRAIT);
+    await page.setViewportSize(PORTRAIT);
+    await boot(page);
 
     await go(page, 'calendario');
     await expect(page.locator('#calendario')).toHaveClass(/active/);
@@ -101,7 +105,8 @@ test.describe('Preservação de Estado e Navegação em Mudança de Orientação
 
   test('4. Rotação com modal/painel aberto mantém modal e retorna à página correta ao fechar', async ({ page }) => {
     const errors = monitor(page);
-    await boot(page, PORTRAIT);
+    await page.setViewportSize(PORTRAIT);
+    await boot(page);
 
     await go(page, 'recorrencias');
     await page.locator('#contextFab').click(); // Abre Nova recorrência via progressive panel
