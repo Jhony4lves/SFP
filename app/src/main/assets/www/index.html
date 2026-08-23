@@ -5153,46 +5153,48 @@ function showOnboarding(){
  if(state.settings.onboardingDone)return;
  let root=$('modalRoot');root.className='modalback';
  let step=0;
- const render=()=>{root.innerHTML=`<div class="modal"><div class="head"><div><h2>Configuração inicial</h2><p>Vamos deixar o Smart Financial Planner pronto sem complicação</p></div><button class="btn2" id="skipOnboard">Pular</button></div>
- <div class="onboarding-step ${step===0?'active':''}"><h3>1. Sua conta principal</h3><label>Nome da conta<input id="obAccountName" value="${state.accounts[0]?.name||'Conta principal'}"/></label><label class="money-field">Saldo atual aproximado<input id="obBalance" class="money-input" data-money-input="true" type="number" step="0.01" value="${(state.accounts[0]?accountBalance(state.accounts[0].id):0).toFixed(2)}" inputmode="decimal"/></label></div>
- <div class="onboarding-step ${step===1?'active':''}"><h3>2. Recebimentos principais</h3><div class="two"><label>Dia 1<input id="obDay1" type="number" value="${state.settings.day1||1}"/></label><label>Dia 2<input id="obDay2" type="number" value="${state.settings.day2||15}"/></label></div><div class="note">Depois você pode cadastrar os valores exatos como recorrências.</div></div>
- <div class="onboarding-step ${step===2?'active':''}"><h3>3. Cartões</h3><div class="note">${state.cards.length?`Já encontrei ${state.cards.length} cartão(ões) cadastrado(s).`:'Você pode cadastrar cartões agora ou depois na aba Cartões.'}</div></div>
- <div class="onboarding-step ${step===3?'active':''}"><h3>Pronto</h3><div class="note">O Smart Financial Planner está configurado. Você pode começar por um lançamento ou importar um extrato bancário.</div></div>
- <div class="onboard-dots">${[0,1,2,3].map(i=>`<span class="onboard-dot ${i===step?'active':''}"></span>`).join('')}</div>
- <div class="actions"><button class="btn2" id="obPrev" ${step===0?'disabled':''}>Voltar</button><button class="btn" id="obNext">${step===3?'Concluir':'Continuar'}</button></div></div>`;
- $('skipOnboard').onclick=async()=>{state.settings.onboardingDone=true;await dbSet(state);lastSavedState=clone(state);root.className='hidden'};
- $('obPrev').onclick=()=>{if(step>0){step--;render()}};
- $('obNext').onclick=async()=>{
-   if(step===0){
-     let accName=($('obAccountName').value||'').trim()||'Conta principal';
-     let target=Math.round((parseMoney($('obBalance').value)||0)*100)/100;
-     let a=state.accounts[0];
-     if(a){
-       a.name=accName;
-       let diff=target-accountBalance(a.id);
-       if(Math.abs(diff)>.009)a.initial=Math.round(((+a.initial||0)+diff)*100)/100;
-     }else{
-       state.accounts.push({
-         id:uid(),
-         name:accName,
-         type:'Conta corrente',
-         initial:target,
-         reconciled:null,
-         balanceMode:'snapshot',
-         balanceDate:state.baseDate||localCivilDate()
-       });
-     }
-   }
-   if(step===1){state.settings.day1=+$('obDay1').value||1;state.settings.day2=+$('obDay2').value||15}
-   if(step<3){step++;render()}
-   else{
-     state.settings.onboardingDone=true;
-     await save('Concluir onboarding');
-     root.className='hidden';
-     showFeedback('Configuração inicial concluída. O Smart Financial Planner está pronto para uso.',{title:'Bem-vindo',type:'success'});
-   }
+ const render=()=>{
+  root.innerHTML=`<div class="modal"><div class="head"><div><h2>Configuração inicial</h2><p>Vamos deixar o Smart Financial Planner pronto sem complicação</p></div><button class="btn2" id="skipOnboard">Pular</button></div>
+  <div class="onboarding-step ${step===0?'active':''}"><h3>1. Sua conta principal</h3><label>Nome da conta<input id="obAccountName" value="${state.accounts[0]?.name||'Conta principal'}"/></label><label class="money-field">Saldo atual aproximado<input id="obBalance" class="money-input" data-money-input="true" type="number" step="0.01" value="${(state.accounts[0]?accountBalance(state.accounts[0].id):0).toFixed(2)}" inputmode="decimal"/></label></div>
+  <div class="onboarding-step ${step===1?'active':''}"><h3>2. Recebimentos principais</h3><div class="two"><label>Dia 1<input id="obDay1" type="number" value="${state.settings.day1||1}"/></label><label>Dia 2<input id="obDay2" type="number" value="${state.settings.day2||15}"/></label></div><div class="note">Depois você pode cadastrar os valores exatos como recorrências.</div></div>
+  <div class="onboarding-step ${step===2?'active':''}"><h3>3. Cartões</h3><div class="note">${state.cards.length?`Já encontrei ${state.cards.length} cartão(ões) cadastrado(s).`:'Você pode cadastrar cartões agora ou depois na aba Cartões.'}</div></div>
+  <div class="onboarding-step ${step===3?'active':''}"><h3>Pronto</h3><div class="note">O Smart Financial Planner está configurado. Você pode começar por um lançamento ou importar um extrato bancário.</div></div>
+  <div class="onboard-dots">${[0,1,2,3].map(i=>`<span class="onboard-dot ${i===step?'active':''}"></span>`).join('')}</div>
+  <div class="actions"><button class="btn2" id="obPrev" ${step===0?'disabled':''}>Voltar</button><button class="btn" id="obNext">${step===3?'Concluir':'Continuar'}</button></div></div>`;
+  $('skipOnboard').onclick=async()=>{state.settings.onboardingDone=true;await dbSet(state);lastSavedState=clone(state);root.className='hidden'};
+  $('obPrev').onclick=()=>{if(step>0){step--;render()}};
+  $('obNext').onclick=async()=>{
+    if(step===0){
+      let accName=($('obAccountName').value||'').trim()||'Conta principal';
+      let target=Math.round((parseMoney($('obBalance').value)||0)*100)/100;
+      let a=state.accounts[0];
+      if(a){
+        a.name=accName;
+        let diff=target-accountBalance(a.id);
+        if(Math.abs(diff)>.009)a.initial=Math.round(((+a.initial||0)+diff)*100)/100;
+      }else{
+        state.accounts.push({
+          id:uid(),
+          name:accName,
+          type:'Conta corrente',
+          initial:target,
+          reconciled:null,
+          balanceMode:'snapshot',
+          balanceDate:state.baseDate||localCivilDate()
+        });
+      }
+    }
+    if(step===1){state.settings.day1=+$('obDay1').value||1;state.settings.day2=+$('obDay2').value||15}
+    if(step<3){step++;render()}
+    else{
+      state.settings.onboardingDone=true;
+      await save('Concluir onboarding');
+      root.className='hidden';
+      showFeedback('Configuração inicial concluída. O Smart Financial Planner está pronto para uso.',{title:'Bem-vindo',type:'success'});
+    }
+  };
  };
- render()
+ render();
 }
 
 function showMoreMenu(){
