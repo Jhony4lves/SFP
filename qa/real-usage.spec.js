@@ -16,6 +16,7 @@ test('múltiplos reenvios rápidos criam um único ajuste e mostram sucesso', as
 
   await page.evaluate(async () => {
     const button = document.querySelector('#modalRoot button[onclick*="reconcileAccount"]');
+    window.__reconcileBtn = button;
     const original = dbSet;
     window.__releaseReconcile = null;
     dbSet = async value => {
@@ -29,9 +30,9 @@ test('múltiplos reenvios rápidos criam um único ajuste e mostram sucesso', as
   await page.locator('#dialogConfirmBtn').click();
   await page.locator('#dialogConfirmBtn').click();
 
-  await expect(page.locator('#modalRoot button[onclick*="reconcileAccount"]')).toBeDisabled();
-  await expect(page.locator('#modalRoot button[onclick*="reconcileAccount"]')).toHaveText('Conciliando…');
-  await page.evaluate(() => reconcileAccount(1, document.querySelector('#modalRoot button[onclick*="reconcileAccount"]')));
+  expect(await page.evaluate(() => window.__reconcileBtn?.disabled)).toBe(true);
+  expect(await page.evaluate(() => window.__reconcileBtn?.textContent)).toBe('Conciliando…');
+  await page.evaluate(() => reconcileAccount(1, window.__reconcileBtn));
   await page.evaluate(() => window.__releaseReconcile());
   await page.evaluate(() => window.__reconcilePromise);
 
@@ -56,9 +57,11 @@ test('falha de persistência desfaz tentativa, reativa ação e informa erro', a
 
   const reconcilePromise = page.evaluate(async () => {
     const original = dbSet;
+    const button = document.querySelector('#modalRoot button[onclick*="reconcileAccount"]');
+    window.__failBtn = button;
     dbSet = async () => { throw Error('falha simulada'); };
     try {
-      await reconcileAccount(1, document.querySelector('#modalRoot button[onclick*="reconcileAccount"]'));
+      await reconcileAccount(1, button);
     } finally {
       dbSet = original;
     }
@@ -70,7 +73,7 @@ test('falha de persistência desfaz tentativa, reativa ação e informa erro', a
   await reconcilePromise;
 
   expect(await page.evaluate(() => state.transactions.filter(t => t.desc === 'Ajuste de conciliação').length)).toBe(0);
-  await expect(page.locator('#modalRoot button[onclick*="reconcileAccount"]')).toBeEnabled();
+  expect(await page.evaluate(() => window.__failBtn?.disabled)).toBe(false);
   await expect(page.locator('#toast')).toContainText('Não foi possível salvar a conciliação.');
   expect(consoleErrors.some(message => message.includes('Falha ao conciliar saldo'))).toBe(true);
 });

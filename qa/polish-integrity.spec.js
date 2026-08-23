@@ -242,13 +242,12 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
 
     // Zera os dados e limpa accounts para simular estado inicial limpo
     await page.evaluate(async () => {
-      await window.resetSystem({ confirmDialog: false });
-      // Garante que accounts está vazio e onboarding não concluído
-      window.state.accounts = [];
-      window.state.settings.onboardingDone = false;
-      await window.dbSet(window.state);
-      window.renderAll();
-      window.showOnboarding();
+      await resetSystem({ confirmDialog: false });
+      state.accounts = [];
+      state.settings.onboardingDone = false;
+      await dbSet(state);
+      renderAll();
+      showOnboarding();
     });
 
     await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
@@ -272,7 +271,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
     expect(todayBalance).toContain('15,00');
 
     // Valida que a conta foi criada no state
-    const accounts = await page.evaluate(() => window.state.accounts);
+    const accounts = await page.evaluate(() => state.accounts);
     expect(accounts.length).toBe(1);
     expect(accounts[0].name).toBe('Conta Nubank');
     expect(accounts[0].initial).toBe(15);
@@ -283,7 +282,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
     const persistedBalance = await page.locator('#sideFree').textContent();
     expect(persistedBalance).toContain('15,00');
 
-    const persistedAccounts = await page.evaluate(() => window.state.accounts);
+    const persistedAccounts = await page.evaluate(() => state.accounts);
     expect(persistedAccounts.length).toBe(1);
     expect(persistedAccounts[0].initial).toBe(15);
 
@@ -297,22 +296,27 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
     // Testa campo monetário de lançamentos: #txAmount
     await page.locator('.nav button[data-page="lancamentos"]').click();
     const txAmount = page.locator('#txAmount');
+    await txAmount.focus();
     await txAmount.fill('15.00000');
+    await txAmount.blur();
     expect(await txAmount.inputValue()).toBe('15.00');
 
     await txAmount.fill('49.999');
+    await txAmount.blur();
     expect(await txAmount.inputValue()).toBe('49.99');
 
     // Testa campo de saldo inicial em contas: #accountInitial
     await page.locator('.nav button[data-page="contas"]').click();
     const accountInitial = page.locator('#accountInitial');
     await accountInitial.fill('123.4567');
+    await accountInitial.blur();
     expect(await accountInitial.inputValue()).toBe('123.45');
 
     // Testa que percentual de juros de dívidas (#debtRate) NÃO é truncado para 2 casas
     await page.locator('.nav button[data-page="dividas"]').click();
     const debtRate = page.locator('#debtRate');
     await debtRate.fill('2.7458');
+    await debtRate.blur();
     expect(await debtRate.inputValue()).toBe('2.7458');
 
     expect(errors).toEqual([]);

@@ -54,9 +54,9 @@ label{display:block;color:var(--muted);font-size:10px;margin-bottom:10px}input,s
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.shell{grid-template-columns:74px 1fr}.sidebar{padding:15px 8px}.brand div:not(.brandmark),.nav button span,.sidefoot{display:none}.brand{justify-content:center}.nav button{justify-content:center;font-size:16px}.grid2,.grid3{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px) and (orientation:portrait){.shell{display:block}.sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;border-right:0;border-top:1px solid var(--line);padding:6px;background:#06101d;z-index:70}.brand,.sidefoot{display:none}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;overflow:visible;padding-right:0}.sidebar .nav button{display:none!important}.sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="dashboard"],.sidebar .nav button[data-page="lancamentos"],.sidebar .nav button[data-page="contas"],.sidebar .nav #moreNavBtn{display:flex!important;padding:8px 2px;font-size:14px;justify-content:center}.sidebar .nav button.active{box-shadow:inset 0 -3px 0 var(--blue)}#moreNavBtn{color:var(--muted)}#moreNavBtn.active{color:var(--blue)}main{padding:14px 10px 82px}.top{flex-direction:column}.top .actions{width:100%}.top .actions .btn{flex:1}.metric-grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}.flow{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}.quicktypes{grid-template-columns:repeat(5,1fr)}.quicktype{padding:8px 3px;font-size:8px}.quicktype b{font-size:15px}.calendar{gap:2px}.calhead{font-size:10px;padding:2px 0}.day{min-height:58px;padding:4px 3px;gap:2px}.daynum{font-size:11px}.cal-dot{width:6px;height:6px}.cal-flow{font-size:10px}.cal-count{font-size:10px}.mobilefab{display:grid;position:fixed;right:16px;bottom:68px;width:50px;height:50px;border-radius:50%;background:var(--blue);color:#04131c;border:0;place-items:center;font-size:24px;font-weight:900;z-index:65;box-shadow:var(--shadow)}}
-@media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:fixed;top:0;bottom:0;left:0;height:100vh;max-height:100vh;display:flex;flex-direction:column;z-index:70;box-sizing:border-box}.shell{display:grid}.nav{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;min-height:0}.mobilefab{bottom:16px;right:16px}}
-@media(orientation:landscape) and (max-width:900px){.shell{grid-template-columns:74px minmax(0,1fr)}.sidebar{width:74px}main{margin-left:74px;width:calc(100% - 74px);max-width:calc(100vw - 74px)}}
-@media(orientation:landscape) and (min-width:901px){.shell{grid-template-columns:235px minmax(0,1fr)}.sidebar{width:235px}main{margin-left:235px;width:calc(100% - 235px);max-width:calc(100vw - 235px)}}
+@media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:fixed;top:0;bottom:0;left:0;height:100vh;max-height:100vh;display:flex;flex-direction:column;z-index:70;box-sizing:border-box}.shell{display:block}.nav{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;min-height:0}.mobilefab{bottom:16px;right:16px}}
+@media(orientation:landscape) and (max-width:900px){.sidebar{width:74px}main{margin-left:74px;width:calc(100% - 74px);max-width:calc(100vw - 74px);box-sizing:border-box}}
+@media(orientation:landscape) and (min-width:901px){.sidebar{width:235px}main{margin-left:235px;width:calc(100% - 235px);max-width:calc(100vw - 235px);box-sizing:border-box}}
 
 /* ===== SFP 1.0.1 — MOBILE LAYOUT FIX ===== */
 html,body{width:100%;max-width:100%;overflow-x:hidden}
@@ -2625,11 +2625,9 @@ function handleMoneyInputEvent(e){
 
 function handleMoneyBlurEvent(e){
  const el=e.target;if(!isMonetaryInput(el))return;
- let val=el.value;
- if(val!==''&&!Number.isNaN(+val)){
-  let num=parseMoney(val);
-  if(Number.isFinite(num))el.value=(Math.round(num*100)/100).toFixed(2)
- }
+ let val=el.value;if(!val)return;
+ let num=parseMoney(val);
+ if(Number.isFinite(num))el.value=(Math.round(num*100)/100).toFixed(2);
 }
 
 document.addEventListener('input',handleMoneyInputEvent,true);
@@ -5150,7 +5148,7 @@ function showAutoBackups(){
 
 
 function showOnboarding(){
- if(state.settings.onboardingDone)return;
+ if(state.settings.onboardingDone||activePage()!=='hoje')return;
  let root=$('modalRoot');root.className='modalback';
  let step=0;
  const render=()=>{

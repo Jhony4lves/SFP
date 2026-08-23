@@ -202,13 +202,10 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
     const errors = monitor(page);
 
     await page.addLocatorHandler(
-      page.locator('#modalRoot.modalback'),
-      async () => {
-        const skipBtn = page.locator('#skipOnboard');
+      page.locator('#skipOnboard'),
+      async (skipBtn) => {
         if (await skipBtn.isVisible()) {
           await skipBtn.click();
-        } else {
-          await page.evaluate(() => closeProgressive());
         }
       }
     );
