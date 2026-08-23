@@ -6,6 +6,7 @@ const PORTRAIT = { width: 390, height: 844 };
 const LANDSCAPE = { width: 844, height: 390 };
 
 async function boot(page) {
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/index.html');
   await expect(page.locator('#pageTitle')).toHaveText('Hoje');
 }
@@ -20,6 +21,10 @@ async function back(page) {
 }
 
 test.describe('Preservação de Estado e Navegação em Mudança de Orientação', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+  });
 
   test('1. Rotação entre Portrait e Landscape via barra de navegação preserva a página ativa e dados do formulário', async ({ page }) => {
     const errors = monitor(page);
