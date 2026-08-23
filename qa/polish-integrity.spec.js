@@ -412,11 +412,10 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
     await page.locator('.nav button[data-page="relatorios"]').click();
     await expect(page.locator('#relatorios')).toHaveClass(/active/);
 
-    const legend = page.locator('.sfp-chart-legend');
-    if (await legend.count() > 0) {
-      await expect(page.locator('.chart-legend-dot.income').first()).toBeVisible();
-      await expect(page.locator('.chart-legend-dot.expense').first()).toBeVisible();
-    }
+    const incomeDots = page.locator('.chart-legend-dot.income');
+    const expenseDots = page.locator('.chart-legend-dot.expense');
+    expect(await incomeDots.count()).toBeGreaterThan(0);
+    expect(await expenseDots.count()).toBeGreaterThan(0);
 
     expect(errors).toEqual([]);
   });
@@ -428,7 +427,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
     await page.goto('/index.html');
     await expect(page.locator('#pageTitle')).toHaveText('Hoje');
 
-    await page.locator('.nav button[data-page="dados"]').click();
+    await page.evaluate(() => setPage('dados'));
     await expect(page.locator('#dados')).toHaveClass(/active/);
 
     // Valida que os tiles da Central de Dados têm display flex e small/strong separados

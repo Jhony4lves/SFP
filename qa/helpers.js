@@ -10,8 +10,7 @@ function fixture(name = 'Fixture QA') {
     accounts: [{ id: 1, name: 'Conta QA', type: 'Conta corrente', initial: 1000, balanceMode: 'snapshot', balanceDate: '2026-01-01' }],
     cards: [{ id: 1, name: 'Cartão QA', limit: 2000, closeDay: 10, dueDay: 17, payAccountId: 1, history: [] }],
     transactions: [], transfers: [], purchases: [], invoiceAdjustments: [], invoices: [], recurring: [], debts: [], goals: [], assets: [], statements: [], classificationRules: [], categoryBudgets: {}, snapshots: [], trash: [], undo: [], closedMonths: [], csvTemplates: [], favorites: [], creditFacilities: [], ui: { invoiceMonthByCard: {} },
-    sophy: { personaState: 'cheerful', messages: [], memories: [], lastProactiveAt: null, settings: { proactivityEnabled: true } },
-    persistenceMeta: { revision: 1, savedAt: new Date().toISOString() }
+    sophy: { personaState: 'cheerful', messages: [], memories: [], lastProactiveAt: null, settings: { proactivityEnabled: true } }
   };
 }
 
@@ -36,9 +35,6 @@ async function expectBootComplete(page, expect, name) {
 }
 
 async function writeIndexedDB(page, value) {
-  if (value && typeof value === 'object' && !value.persistenceMeta) {
-    value.persistenceMeta = { revision: Date.now(), savedAt: new Date().toISOString() };
-  }
   await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
   await page.evaluate(async ({ DB_NAME, STORE, DB_KEY, value }) => {
     if (typeof db !== 'undefined' && db) { try { db.close(); } catch {} db = null; }

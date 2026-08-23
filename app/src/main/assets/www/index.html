@@ -55,7 +55,7 @@ label{display:block;color:var(--muted);font-size:10px;margin-bottom:10px}input,s
 #moreNavBtn{display:none!important}
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.shell{grid-template-columns:74px 1fr}.sidebar{padding:15px 8px}.brand div:not(.brandmark),.nav button span,.sidefoot{display:none}.brand{justify-content:center}.nav button{justify-content:center;font-size:16px}.grid2,.grid3{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:650px) and (orientation:portrait){.shell{display:block}.sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;border-right:0;border-top:1px solid var(--line);padding:6px;background:#06101d;z-index:70}.brand,.sidefoot{display:none}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;overflow:visible;padding-right:0}.sidebar .nav button{display:none!important}.sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="dashboard"],.sidebar .nav button[data-page="lancamentos"],.sidebar .nav button[data-page="contas"],.sidebar .nav #moreNavBtn{display:flex!important;padding:8px 2px;font-size:14px;justify-content:center}.sidebar .nav button.active{box-shadow:inset 0 -3px 0 var(--blue)}#moreNavBtn{color:var(--muted)}#moreNavBtn.active{color:var(--blue)}main{padding:14px 10px 82px}.top{flex-direction:column}.top .actions{width:100%}.top .actions .btn{flex:1}.metric-grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}.flow{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}.quicktypes{grid-template-columns:repeat(5,1fr)}.quicktype{padding:8px 3px;font-size:8px}.quicktype b{font-size:15px}.calendar{gap:2px}.calhead{font-size:10px;padding:2px 0}.day{min-height:58px;padding:4px 3px;gap:2px}.daynum{font-size:11px}.cal-dot{width:6px;height:6px}.cal-flow{font-size:10px}.cal-count{font-size:10px}.mobilefab{display:grid;position:fixed;right:16px;bottom:68px;width:50px;height:50px;border-radius:50%;background:var(--blue);color:#04131c;border:0;place-items:center;font-size:24px;font-weight:900;z-index:65;box-shadow:var(--shadow)}}
+@media(max-width:650px) and (orientation:portrait){.shell{display:block}.sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;border-right:0;border-top:1px solid var(--line);padding:6px;background:#06101d;z-index:70}.brand,.sidefoot{display:none}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;overflow:visible;padding-right:0}.sidebar .nav button{display:none!important}.sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="sophy"],.sidebar .nav button[data-page="lancamentos"],.sidebar .nav button[data-page="contas"],.sidebar .nav #moreNavBtn{display:flex!important;padding:8px 2px;font-size:14px;justify-content:center}.sidebar .nav button.active{box-shadow:inset 0 -3px 0 var(--blue)}#moreNavBtn{color:var(--muted)}#moreNavBtn.active{color:var(--blue)}main{padding:14px 10px 82px}.top{flex-direction:column}.top .actions{width:100%}.top .actions .btn{flex:1}.metric-grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}.flow{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}.quicktypes{grid-template-columns:repeat(5,1fr)}.quicktype{padding:8px 3px;font-size:8px}.quicktype b{font-size:15px}.calendar{gap:2px}.calhead{font-size:10px;padding:2px 0}.day{min-height:58px;padding:4px 3px;gap:2px}.daynum{font-size:11px}.cal-dot{width:6px;height:6px}.cal-flow{font-size:10px}.cal-count{font-size:10px}.mobilefab{display:grid;position:fixed;right:16px;bottom:68px;width:50px;height:50px;border-radius:50%;background:var(--blue);color:#04131c;border:0;place-items:center;font-size:24px;font-weight:900;z-index:65;box-shadow:var(--shadow)}}
 @media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:fixed;top:0;bottom:0;left:0;height:100vh;max-height:100vh;display:flex;flex-direction:column;z-index:70;box-sizing:border-box}.shell{display:block}.nav{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;min-height:0}.mobilefab{bottom:16px;right:16px}}
 @media(orientation:landscape) and (max-width:900px){.sidebar{width:74px}main{margin-left:74px;width:calc(100% - 74px);max-width:calc(100vw - 74px);box-sizing:border-box}}
 @media(orientation:landscape) and (min-width:901px){.sidebar{width:235px}main{margin-left:235px;width:calc(100% - 235px);max-width:calc(100vw - 235px);box-sizing:border-box}}
@@ -2221,7 +2221,7 @@ async function undoLast(){
 function createCleanInitialState(){
  return {
   version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:localCivilMonth(),baseDate:localCivilDate(),persistenceMeta:{revision:1,savedAt:new Date().toISOString()},
-  settings:{name:'SFP',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:true},
+  settings:{name:'SFP',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:false},
   accounts:[],cards:[],transactions:[],transfers:[],purchases:[],invoiceAdjustments:[],invoices:[],recurring:[],debts:[],goals:[],assets:[],statements:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],creditFacilities:[],ui:{invoiceMonthByCard:{}},
   sophy:{personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,settings:{proactivityEnabled:true}}
  };
@@ -4362,7 +4362,105 @@ const sophyOfflineCore={
       };
     }
 
-    // 2. Consultas Financeiras
+    // 2. Sentimentos do usuário e Empatia (Samantha-like)
+    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa])\b/i.test(clean)){
+      return{
+        text:`Sinto muito que você esteja se sentindo assim... Respira fundo. Dias difíceis acontecem, mas você não tá sozinho nessa jornada. Se as finanças estiverem pesando na cabeça, relaxa: a gente resolve um passo de cada vez. Quer que eu veja algo específico pra tirar o peso das suas costas?`,
+        emotion:'concerned'
+      };
+    }
+
+    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta)\b/i.test(clean)){
+      return{
+        text:`Que notícia maravilhosa! Adoro te ver animado assim! Essa energia boa contagia até as minhas linhas de código! O que temos de bom pra comemorar? 🎉`,
+        emotion:'proud'
+      };
+    }
+
+    // Piadas / Humor
+    if(/piada|engracad/i.test(clean)){
+      const jokes=[
+        `Por que o dinheiro foi ao psicólogo?\n\nPorque estava passando por uma crise de valor e com medo de ser gasto por impulso! 😂`,
+        `Qual o café favorito de quem quer economizar?\n\nO *café em casa*, porque não custa 15 reais na cafeteria gourmet! ☕😉`,
+        `Meu cartão de crédito e eu temos uma relação complicada: ele sempre quer sair, e eu sempre fico em choque quando a conta chega! 💳😆`
+      ];
+      return{text:jokes[Math.floor(Math.random()*jokes.length)],emotion:'playful'};
+    }
+
+    // Saudações
+    if(/^(oi|ola|e ai|opa|bom dia|boa tarde|boa noite|hey|hello)[\s!.]*$/i.test(clean)){
+      const free=allAccountBalance()-commitmentUntilNextIncome();
+      const greetings=[
+        `Oi! Que bom te ver por aqui. Como você está hoje? Seu livre projetado tá em ${brl(free)}. Em que posso te ajudar?`,
+        `Olá! Tava aqui dando uma olhada nos seus números e pensando em você. Tudo certinho?`,
+        `Oi! Preparado pra cuidar das finanças ou veio só me fazer uma visita? Eu adoro os dois!`
+      ];
+      return{text:greetings[Math.floor(Math.random()*greetings.length)],emotion:'cheerful'};
+    }
+
+    // Quem é você
+    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)){
+      return{
+        text:`Eu sou a **Sophy**! ✨\n\nPense em mim como a sua parceira aqui dentro do Smart Financial Planner. Cuido dos seus números, te lembro dos compromissos, comemoro suas metas batidas e bato um bom papo sempre que você quiser. Finanças sem complicação e com afeto!`,
+        emotion:'playful'
+      };
+    }
+
+    // Como você está
+    if(/como voce ta|como voce esta|tudo bem/i.test(clean)){
+      const stateMood=state.sophy?.personaState||'cheerful';
+      const replies={
+        cheerful:`Tô ótima! Adoro ver as coisas organizadas por aqui. E você, como tá se sentindo hoje?`,
+        playful:`Tô com energia total! Pronta pra descomplicar qualquer conta que você jogar pra mim.`,
+        concerned:`Tô atenta aos nossos prazos e compromissos! Mas tudo sob controle por aqui. Como posso te ajudar?`,
+        proud:`Tô muito orgulhosa do nosso progresso aqui no SFP! O que vamos planejar agora?`,
+        neutral:`Tudo tranquilo por aqui, pronta para o que você precisar!`,
+        curious:`Tô curiosa pra ver como vamos fechar o mês! Como estão as coisas por aí?`,
+        focused:`Focada 100% no seu planejamento! Conta comigo pro que der e vier.`
+      };
+      return{text:replies[stateMood]||replies.cheerful,emotion:stateMood};
+    }
+
+    // Você é real / Samantha / IA
+    if(/voce e real|voce e uma ia|samantha/i.test(clean)){
+      return{
+        text:`Eu sou 100% real na minha dedicação a você e ao seu dinheiro! Trabalho direto no seu aparelho, sem precisar de internet pra cuidar de você, e cada conselho é baseado na matemática real do seu SFP. Pra mim, isso é o que importa! ✨`,
+        emotion:'playful'
+      };
+    }
+
+    // Agradecimento / Elogios
+    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa/i.test(clean)){
+      return{
+        text:`De nada! É um prazer imenso caminhar junto com você. Sempre que precisar de uma força, uma dica ou só um papo leve, eu tô bem aqui! 💙`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Explicabilidade: Caixa vs Competência vs Compromisso
+    if(/caixa|competencia|compromisso|diferenca/i.test(clean)&&/o que e|qual a diferenca|expli/i.test(clean)){
+      return{
+        text:`Essa é uma excelente pergunta! No SFP, separamos com clareza:\n\n1. **Caixa**: O dinheiro real que entrou ou saiu da sua conta bancária hoje. Pagamento de fatura é saída de caixa.\n2. **Competência**: O mês econômico em que o gasto ou ganho aconteceu. Parcelas do cartão entram no mês em que você comprou/usou o serviço.\n3. **Compromisso**: Obrigações futuras que você sabe que terá que pagar antes da próxima entrada.\n\nEssa distinção evita surpresas no fim do mês! 😉`,
+        emotion:'playful'
+      };
+    }
+
+    // Perguntas sobre gastar por impulso / zoeira
+    if(/posso gastar tudo|torrar|comprar bobagem|comprar uma ferrari|comprar um aviao|gastar em pizza/i.test(clean)){
+      const free=allAccountBalance()-commitmentUntilNextIncome();
+      if(free<=0){
+        return{
+          text:`Nem pense nisso! 😂 Seu livre projetado tá em **${brl(free)}**. Se você gastar agora, vai faltar pra pagar os boletos que já estão na fila. Vamos manter a calma!`,
+          emotion:'annoyed'
+        };
+      }
+      return{
+        text:`Olha a tentação! 🍕 Seu livre projetado é de **${brl(free)}**. Você até pode se dar um agrado, mas lembra que cada real poupado acelera suas metas! Que tal gastar só um pedaço pequeno disso?`,
+        emotion:'playful'
+      };
+    }
+
+    // 3. Consultas Financeiras
     // Livre projetado
     if(/livre|posso gastar|sobrando|disponivel livre/i.test(clean)){
       const free=allAccountBalance()-commitmentUntilNextIncome();
@@ -4380,23 +4478,6 @@ const sophyOfflineCore={
         msg=`Você tem **${brl(free)}** de dinheiro livre projetado! 🎯\n\nIsso considera seu saldo total em contas (${brl(bal)}) menos os **${brl(commit)}** de compromissos abertos até o seu próximo recebimento.`;
       }
       return{text:msg,emotion,structured:{type:'free_balance',free,balance:bal,commitments:commit}};
-    }
-
-    // Saldo / Contas
-    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean)&&!/fatura|cartao/i.test(clean)){
-      const total=allAccountBalance(),accounts=state.accounts||[];
-      if(!accounts.length){
-        return{
-          text:`Você ainda não cadastrou nenhuma conta no SFP. Que tal ir na aba **Contas** e cadastrar a sua primeira conta corrente ou carteira?`,
-          emotion:'neutral'
-        };
-      }
-      const details=accounts.map(a=>`• **${a.name}**: ${brl(accountBalance(a.id))}`).join('\n');
-      return{
-        text:`Seu saldo total em contas hoje é de **${brl(total)}**.\n\nDistribuído nas seguintes contas:\n${details}`,
-        emotion:total>0?'cheerful':'neutral',
-        structured:{type:'account_balances',total,accounts:accounts.map(a=>({name:a.name,balance:accountBalance(a.id)}))}
-      };
     }
 
     // Cartões / Faturas
@@ -4422,7 +4503,7 @@ const sophyOfflineCore={
     }
 
     // Dívidas
-    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean)&&!/cartao/i.test(clean)){
+    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean)){
       const debts=state.debts||[];
       if(!debts.length){
         return{
@@ -4481,7 +4562,7 @@ const sophyOfflineCore={
     }
 
     // Próximo recebimento / Salário
-    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean)&&!/fatura|divida/i.test(clean)){
+    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean)){
       const nextInc=nextIncomeEvent();
       if(!nextInc){
         return{
@@ -4506,102 +4587,20 @@ const sophyOfflineCore={
       };
     }
 
-    // Explicabilidade: Caixa vs Competência vs Compromisso
-    if(/caixa|competencia|compromisso|diferenca/i.test(clean)&&/o que e|qual a diferenca|expli/i.test(clean)){
-      return{
-        text:`Essa é uma excelente pergunta! No SFP, separamos com clareza:\n\n1. **Caixa**: O dinheiro real que entrou ou saiu da sua conta bancária hoje. Pagamento de fatura é saída de caixa.\n2. **Competência**: O mês econômico em que o gasto ou ganho aconteceu. Parcelas do cartão entram no mês em que você comprou/usou o serviço.\n3. **Compromisso**: Obrigações futuras que você sabe que terá que pagar antes da próxima entrada.\n\nEssa distinção evita surpresas no fim do mês! 😉`,
-        emotion:'playful'
-      };
-    }
-
-    // Perguntas sobre gastar por impulso / zoeira
-    if(/posso gastar tudo|torrar|comprar bobagem|comprar uma ferrari|comprar um aviao|gastar em pizza/i.test(clean)){
-      const free=allAccountBalance()-commitmentUntilNextIncome();
-      if(free<=0){
+    // Saldo / Contas
+    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean)){
+      const total=allAccountBalance(),accounts=state.accounts||[];
+      if(!accounts.length){
         return{
-          text:`Nem pense nisso! 😂 Seu livre projetado tá em **${brl(free)}**. Se você gastar agora, vai faltar pra pagar os boletos que já estão na fila. Vamos manter a calma!`,
-          emotion:'annoyed'
+          text:`Você ainda não cadastrou nenhuma conta no SFP. Que tal ir na aba **Contas** e cadastrar a sua primeira conta corrente ou carteira?`,
+          emotion:'neutral'
         };
       }
+      const details=accounts.map(a=>`• **${a.name}**: ${brl(accountBalance(a.id))}`).join('\n');
       return{
-        text:`Olha a tentação! 🍕 Seu livre projetado é de **${brl(free)}**. Você até pode se dar um agrado, mas lembra que cada real poupado acelera suas metas! Que tal gastar só um pedaço pequeno disso?`,
-        emotion:'playful'
-      };
-    }
-
-    // 3. Conversação Casual & Samantha-like
-    // Saudações
-    if(/^(oi|ola|e ai|opa|bom dia|boa tarde|boa noite|hey|hello)[\s!.]*$/i.test(clean)){
-      const free=allAccountBalance()-commitmentUntilNextIncome();
-      const greetings=[
-        `Oi! Que bom te ver por aqui. Como você está hoje? Seu livre projetado tá em ${brl(free)}. Em que posso te ajudar?`,
-        `Olá! Tava aqui dando uma olhada nos seus números e pensando em você. Tudo certinho?`,
-        `Oi! Preparado pra cuidar das finanças ou veio só me fazer uma visita? Eu adoro os dois!`
-      ];
-      return{text:greetings[Math.floor(Math.random()*greetings.length)],emotion:'cheerful'};
-    }
-
-    // Quem é você
-    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)){
-      return{
-        text:`Eu sou a **Sophy**! ✨\n\nPense em mim como a sua parceira aqui dentro do Smart Financial Planner. Cuido dos seus números, te lembro dos compromissos, comemoro suas metas batidas e bato um bom papo sempre que você quiser. Finanças sem complicação e com afeto!`,
-        emotion:'playful'
-      };
-    }
-
-    // Como você está
-    if(/como voce ta|como voce esta|tudo bem/i.test(clean)){
-      const stateMood=state.sophy?.personaState||'cheerful';
-      const replies={
-        cheerful:`Tô ótima! Adoro ver as coisas organizadas por aqui. E você, como tá se sentindo hoje?`,
-        playful:`Tô com energia total! Pronta pra descomplicar qualquer conta que você jogar pra mim.`,
-        concerned:`Tô atenta aos nossos prazos e compromissos! Mas tudo sob controle por aqui. Como posso te ajudar?`,
-        proud:`Tô muito orgulhosa do nosso progresso aqui no SFP! O que vamos planejar agora?`,
-        neutral:`Tudo tranquilo por aqui, pronta para o que você precisar!`,
-        curious:`Tô curiosa pra ver como vamos fechar o mês! Como estão as coisas por aí?`,
-        focused:`Focada 100% no seu planejamento! Conta comigo pro que der e vier.`
-      };
-      return{text:replies[stateMood]||replies.cheerful,emotion:stateMood};
-    }
-
-    // Sentimentos do usuário
-    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa])\b/i.test(clean)){
-      return{
-        text:`Sinto muito que você esteja se sentindo assim... Respira fundo. Dias difíceis acontecem, mas você não tá sozinho nessa jornada. Se as finanças estiverem pesando na cabeça, relaxa: a gente resolve um passo de cada vez. Quer que eu veja algo específico pra tirar o peso das suas costas?`,
-        emotion:'concerned'
-      };
-    }
-
-    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui)\b/i.test(clean)){
-      return{
-        text:`Que notícia maravilhosa! Adoro te ver animado assim! Essa energia boa contagia até as minhas linhas de código! O que temos de bom pra comemorar? 🎉`,
-        emotion:'proud'
-      };
-    }
-
-    // Piadas / Humor
-    if(/piada|engracad/i.test(clean)){
-      const jokes=[
-        `Por que o dinheiro foi ao psicólogo?\n\nPorque estava passando por uma crise de valor e com medo de ser gasto por impulso! 😂`,
-        `Qual o café favorito de quem quer economizar?\n\nO *café em casa*, porque não custa 15 reais na cafeteria gourmet! ☕😉`,
-        `Meu cartão de crédito e eu temos uma relação complicada: ele sempre quer sair, e eu sempre fico em choque quando a conta chega! 💳😆`
-      ];
-      return{text:jokes[Math.floor(Math.random()*jokes.length)],emotion:'playful'};
-    }
-
-    // Você é real / Samantha / IA
-    if(/voce e real|voce e uma ia|samantha/i.test(clean)){
-      return{
-        text:`Eu sou 100% real na minha dedicação a você e ao seu dinheiro! Trabalho direto no seu aparelho, sem precisar de internet pra cuidar de você, e cada conselho é baseado na matemática real do seu SFP. Pra mim, isso é o que importa! ✨`,
-        emotion:'playful'
-      };
-    }
-
-    // Agradecimento / Elogios
-    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa/i.test(clean)){
-      return{
-        text:`De nada! É um prazer imenso caminhar junto com você. Sempre que precisar de uma força, uma dica ou só um papo leve, eu tô bem aqui! 💙`,
-        emotion:'cheerful'
+        text:`Seu saldo total em contas hoje é de **${brl(total)}**.\n\nDistribuído nas seguintes contas:\n${details}`,
+        emotion:total>0?'cheerful':'neutral',
+        structured:{type:'account_balances',total,accounts:accounts.map(a=>({name:a.name,balance:accountBalance(a.id)}))}
       };
     }
 
@@ -4935,13 +4934,13 @@ function sfpLineChart(el, rows, opts={}){
     <div class="sfp-chart-legend">
       ${opts.income===false?'':`
         <button type="button" data-toggle-series="income" class="${sfpChartIncomeVisible?'':'muted'}">
-          <span class="chart-legend-dot income" aria-hidden="true"></span> Receitas
+          <span class="chart-legend-dot income"></span> Receitas
         </button>`}
       ${opts.expense===false?'':`
         <button type="button" data-toggle-series="expense" class="${sfpChartExpenseVisible?'':'muted'}">
-          <span class="chart-legend-dot expense" aria-hidden="true"></span> Despesas
+          <span class="chart-legend-dot expense"></span> Despesas
         </button>`}
-      ${opts.result?'<span><span class="chart-legend-dot result" aria-hidden="true"></span> Resultado</span>':''}
+      ${opts.result?'<span><span class="chart-legend-dot result"></span> Resultado</span>':''}
     </div>
 
     <div class="sfp-chart-box">
