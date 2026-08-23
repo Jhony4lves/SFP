@@ -11,6 +11,12 @@ async function boot(page, viewport = DESKTOP) {
   await expect(page.locator('#pageTitle')).toHaveText('Hoje');
 }
 
+async function sendMessage(page, text) {
+  await page.locator('#sophyInput').fill(text);
+  await page.locator('#sophySendBtn').click();
+  await expect(page.locator('.sophy-msg-row.user').last()).toContainText(text);
+}
+
 test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router & Resiliência', () => {
 
   test('SOPHY-V2-01: Primeira apresentação acontece apenas quando apropriado e não se repete', async ({ page }) => {
@@ -21,13 +27,10 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     await expect(page.locator('#sophyChatList')).toBeVisible();
 
     // Primeira vez: exibe bolha inicial de apresentação curta
-    const firstBubble = await page.locator('.sophy-msg-row.sophy .sophy-bubble').first().textContent();
-    expect(firstBubble).toContain('Sophy');
+    await expect(page.locator('.sophy-msg-row.sophy .sophy-bubble').first()).toContainText('Sophy');
 
     // Envia uma mensagem para marcar introDone como true
-    await page.locator('#sophyInput').fill('Oi, tudo bem?');
-    await page.locator('#sophySendBtn').click();
-    await expect(page.locator('.sophy-msg-row.user').last()).toContainText('Oi, tudo bem?');
+    await sendMessage(page, 'Oi, tudo bem?');
     await expect(page.locator('.sophy-msg-row.sophy').last()).toBeVisible();
 
     const isIntroDone = await page.evaluate(() => state.sophy.introDone);
@@ -52,16 +55,12 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
 
     await page.locator('.nav button[data-page="sophy"]').click();
 
-    await page.locator('#sophyInput').fill('Como você tá?');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Como você tá?');
 
     const response = page.locator('.sophy-msg-row.sophy').last();
-    await expect(response).toBeVisible();
-    const text = await response.textContent();
+    await expect(response).toContainText(/Tô ótima|energia total|Tudo tranquilo|Focada|pronta/i);
 
-    // Resposta deve ser casual e acolhedora
-    expect(text).toMatch(/Tô ótima|energia total|Tudo tranquilo|Focada/i);
-    // NÃO deve injetar números financeiros ou "livre projetado" em pergunta pessoal
+    const text = await response.textContent();
     expect(text).not.toContain('livre projetado');
     expect(text).not.toContain('R$');
 
@@ -74,16 +73,12 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
 
     await page.locator('.nav button[data-page="sophy"]').click();
 
-    // Pergunta de conhecimento geral em modo local
-    await page.locator('#sophyInput').fill('Qual é a capital da Mongólia?');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Qual é a capital da Mongólia?');
 
     const response = page.locator('.sophy-msg-row.sophy').last();
-    await expect(response).toBeVisible();
-    const text = await response.textContent();
+    await expect(response).toContainText('modo local');
 
-    // Deve explicar honestamente que opera no modo local sem desviar pra saldo de contas
-    expect(text).toContain('modo local');
+    const text = await response.textContent();
     expect(text).not.toContain('Seu saldo total em contas');
     expect(text).not.toContain('seu livre projetado tá em');
 
@@ -94,7 +89,6 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    // Ativa mock provider no client
     await page.evaluate(() => {
       window.sophySetMockProvider({ active: true });
     });
@@ -102,21 +96,15 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     await page.locator('.nav button[data-page="sophy"]').click();
     await expect(page.locator('#sophyNetworkTag')).toContainText('Mock Core');
 
-    // Pergunta da raiz cúbica de 1987 (Bug de referência do APK físico)
-    await page.locator('#sophyInput').fill('Então me diz, qual é a raiz cúbica de 1987');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Então me diz, qual é a raiz cúbica de 1987');
 
     const response = page.locator('.sophy-msg-row.sophy').last();
-    await expect(response).toBeVisible();
-    const text = await response.textContent();
+    await expect(response).toContainText(/12[,.]57/);
 
-    // A raiz cúbica de 1987 é aprox 12.576
-    expect(text).toMatch(/12[,.]57/);
+    const text = await response.textContent();
     expect(text).not.toContain('No momento seu livre projetado');
 
-    // Testa outra expressão variável para garantir que não é hardcoded
-    await page.locator('#sophyInput').fill('Qual é a raiz quadrada de 144');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Qual é a raiz quadrada de 144');
     await expect(page.locator('.sophy-msg-row.sophy').last()).toContainText('12');
 
     expect(errors).toEqual([]);
@@ -126,20 +114,17 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    // Garante modo local padrão
     await page.evaluate(() => {
       window.sophySetMockProvider({ active: false });
     });
 
     await page.locator('.nav button[data-page="sophy"]').click();
-    await page.locator('#sophyInput').fill('Por que o céu é azul?');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Por que o céu é azul?');
 
     const response = page.locator('.sophy-msg-row.sophy').last();
-    await expect(response).toBeVisible();
-    const text = await response.textContent();
+    await expect(response).toContainText('modo local');
 
-    expect(text).toContain('modo local');
+    const text = await response.textContent();
     expect(text).not.toContain('Entendi! Adoro quando a gente troca uma ideia. No momento seu livre');
 
     expect(errors).toEqual([]);
@@ -151,18 +136,13 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
 
     await page.locator('.nav button[data-page="sophy"]').click();
 
-    // Pergunta sobre livre projetado
-    await page.locator('#sophyInput').fill('Quanto tenho de livre projetado hoje?');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Quanto tenho de livre projetado hoje?');
 
     const freeResponse = page.locator('.sophy-msg-row.sophy').last();
     await expect(freeResponse).toContainText(/livre projetado/i);
 
-    // Valida que o número retornado bate exatamente com allAccountBalance() - commitmentUntilNextIncome()
-    const freeNum = await page.evaluate(() => {
-      return allAccountBalance() - commitmentUntilNextIncome();
-    });
-    expect(await freeResponse.textContent()).toContain(freeNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
+    const freeNum = await page.evaluate(() => allAccountBalance() - commitmentUntilNextIncome());
+    await expect(freeResponse).toContainText(freeNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
 
     expect(errors).toEqual([]);
   });
@@ -171,20 +151,18 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    // Ativa mock provider configurado para receber contexto financial
     await page.evaluate(() => {
       window.sophySetMockProvider({ active: true });
     });
 
     await page.locator('.nav button[data-page="sophy"]').click();
-    await page.locator('#sophyInput').fill('Quanto sobra depois das contas?');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Quanto sobra depois das contas?');
 
     const response = page.locator('.sophy-msg-row.sophy').last();
-    await expect(response).toBeVisible();
+    await expect(response).toContainText(/livre projetado/i);
 
     const calculatedFree = await page.evaluate(() => allAccountBalance() - commitmentUntilNextIncome());
-    expect(await response.textContent()).toContain(calculatedFree.toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
+    await expect(response).toContainText(calculatedFree.toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
 
     expect(errors).toEqual([]);
   });
@@ -195,20 +173,14 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
 
     await page.locator('.nav button[data-page="sophy"]').click();
 
-    // 1. Pergunta sobre faturas de cartão
-    await page.locator('#sophyInput').fill('Como estão minhas faturas de cartão?');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Como estão minhas faturas de cartão?');
     await expect(page.locator('.sophy-msg-row.sophy').last()).toContainText(/fatura/i);
 
-    // 2. Follow-up: "E se eu pagar metade?"
-    await page.locator('#sophyInput').fill('E se eu pagar metade?');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'E se eu pagar metade?');
 
     const followUp = page.locator('.sophy-msg-row.sophy').last();
-    await expect(followUp).toBeVisible();
-    const text = await followUp.textContent();
-    expect(text).toContain('metade da fatura');
-    expect(text).toMatch(/sobram|livre projetado ajustado/i);
+    await expect(followUp).toContainText('metade da fatura');
+    await expect(followUp).toContainText(/sobram|livre projetado ajustado/i);
 
     expect(errors).toEqual([]);
   });
@@ -219,8 +191,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
 
     await page.locator('.nav button[data-page="sophy"]').click();
 
-    await page.locator('#sophyInput').fill('Lembre que prefiro pagar o aluguel no dia 5');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Lembre que prefiro pagar o aluguel no dia 5');
 
     await expect(page.locator('.sophy-msg-row.sophy').last()).toContainText(/Guardei isso na minha memória/i);
 
@@ -237,16 +208,12 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
 
     await page.locator('.nav button[data-page="sophy"]').click();
 
-    // Mensagens casuais
-    await page.locator('#sophyInput').fill('Tô com sono');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Tô com sono');
     await expect(page.locator('.sophy-msg-row.sophy').last()).toContainText(/descansar/i);
 
-    await page.locator('#sophyInput').fill('Obrigado pela ajuda');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Obrigado pela ajuda');
     await expect(page.locator('.sophy-msg-row.sophy').last()).toContainText(/prazer/i);
 
-    // Memórias continuam vazias
     const mems = await page.evaluate(() => state.sophy.memories);
     expect(mems.length).toBe(0);
 
@@ -257,19 +224,15 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    // Simula timeout no provider
     await page.evaluate(() => {
       window.sophySetMockProvider({ active: true, simulateTimeout: true });
     });
 
     await page.locator('.nav button[data-page="sophy"]').click();
-    await page.locator('#sophyInput').fill('Quanto tenho nas contas?');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Quanto tenho nas contas?');
 
-    // Deve responder via fallback local determinístico sem travar a interface
     const response = page.locator('.sophy-msg-row.sophy').last();
-    await expect(response).toBeVisible();
-    expect(await response.textContent()).toContain('saldo total em contas');
+    await expect(response).toContainText('saldo total em contas');
 
     expect(errors).toEqual([]);
   });
@@ -278,20 +241,17 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    // Simula erro de autenticação (401 / Invalid Key)
     await page.evaluate(() => {
       window.sophySetMockProvider({ active: true, simulateAuthError: true });
     });
 
     await page.locator('.nav button[data-page="sophy"]').click();
-    await page.locator('#sophyInput').fill('Qual meu livre projetado?');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Qual meu livre projetado?');
 
     const response = page.locator('.sophy-msg-row.sophy').last();
-    await expect(response).toBeVisible();
-    const text = await response.textContent();
+    await expect(response).toContainText('livre projetado');
 
-    expect(text).toContain('livre projetado');
+    const text = await response.textContent();
     expect(text).not.toContain('Invalid API Key');
     expect(text).not.toContain('Bearer');
 
@@ -304,14 +264,11 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
 
     await page.locator('.nav button[data-page="sophy"]').click();
 
-    // 1. Padrão: Local Core
     await expect(page.locator('#sophyNetworkTag')).toContainText(/Local Core/i);
 
-    // 2. Mock ativo
     await page.evaluate(() => window.sophySetMockProvider({ active: true }));
     await expect(page.locator('#sophyNetworkTag')).toContainText('Mock Core (QA)');
 
-    // 3. Retorna a local
     await page.evaluate(() => window.sophySetMockProvider({ active: false }));
     await expect(page.locator('#sophyNetworkTag')).toContainText(/Local Core/i);
 
@@ -324,17 +281,14 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
 
     await page.locator('.nav button[data-page="sophy"]').click();
 
-    // Adiciona memória e mensagem
     await page.evaluate(() => {
       window.sophyAddMemory('fact', 'Trabalho como desenvolvedor', 'chat');
     });
 
-    await page.locator('#sophyInput').fill('Persistência V2 do SFP');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Persistência V2 do SFP');
     await expect(page.locator('.sophy-msg-row.user').last()).toContainText('Persistência V2 do SFP');
     await expect(page.locator('.sophy-msg-row.sophy').last()).toBeVisible();
 
-    // Recarrega página
     await page.reload();
     await page.locator('.nav button[data-page="sophy"]').click();
 
@@ -350,7 +304,6 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
   test('SOPHY-V2-15: Composer e UI funcionam em viewport mobile (Portrait & Landscape)', async ({ page }) => {
     const errors = monitor(page);
 
-    // Viewport Portrait Galaxy S24
     await boot(page, PORTRAIT);
     await page.locator('.nav button[data-page="sophy"]').click();
 
@@ -358,11 +311,9 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     await expect(input).toBeVisible();
     expect(await input.getAttribute('placeholder')).toBe('Fala comigo...');
 
-    await input.fill('Teste mobile portrait');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Teste mobile portrait');
     await expect(page.locator('.sophy-msg-row.user').last()).toContainText('Teste mobile portrait');
 
-    // Viewport Landscape
     await page.setViewportSize(LANDSCAPE);
     await expect(page.locator('#sophyChatList')).toBeVisible();
     await expect(page.locator('#sophySendBtn')).toBeVisible();
@@ -376,16 +327,13 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
 
     await page.locator('.nav button[data-page="sophy"]').click();
 
-    // Abre modal de configuração de IA
     await page.locator('#sophySettingsBtn').click();
     await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
     await expect(page.locator('#modalRoot h2')).toContainText('Inteligência Artificial');
 
-    // Testa alternância de provedor
     await page.locator('#sophyProviderSelect').selectOption('gemini');
     await expect(page.locator('#sophyOnlineConfig')).toBeVisible();
 
-    // Fecha modal
     await page.locator('#closeSophySettings').click();
     await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
 
@@ -406,8 +354,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     ];
 
     for (const prompt of prompts) {
-      await page.locator('#sophyInput').fill(prompt);
-      await page.locator('#sophySendBtn').click();
+      await sendMessage(page, prompt);
       const lastReply = await page.locator('.sophy-msg-row.sophy').last().textContent();
       expect(lastReply.startsWith('Entendi!')).toBe(false);
     }
@@ -421,16 +368,12 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
 
     await page.locator('.nav button[data-page="sophy"]').click();
 
-    // Desabafo emocional comum
-    await page.locator('#sophyInput').fill('Sophy, fiz uma merda.');
-    await page.locator('#sophySendBtn').click();
+    await sendMessage(page, 'Sophy, fiz uma merda.');
 
     const reply = page.locator('.sophy-msg-row.sophy').last();
-    await expect(reply).toBeVisible();
-    const text = await reply.textContent();
+    await expect(reply).toContainText(/Ih|Me conta|Respira fundo/i);
 
-    // Deve responder com empatia ("Ih 😭 Me conta...") e NÃO jogar saldo de primeira
-    expect(text).toMatch(/Ih|Me conta|Respira fundo/i);
+    const text = await reply.textContent();
     expect(text).not.toContain('Seu saldo total em contas hoje é');
 
     expect(errors).toEqual([]);

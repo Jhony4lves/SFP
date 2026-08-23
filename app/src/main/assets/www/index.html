@@ -5180,7 +5180,12 @@ function sophyCheckProactivity({force=false}={}){
   if(!state?.sophy)normalize();
   const sophy=state.sophy;
   if(!sophy.settings?.proactivityEnabled&&!force)return null;
-  const now=Date.now(),lastAt=sophy.lastProactiveAt?new Date(sophy.lastProactiveAt).getTime():0,hoursSince=(now-lastAt)/(1000*60*60);
+  if(!sophy.lastProactiveAt){
+    sophy.lastProactiveAt=new Date().toISOString();
+    if(!force)return null;
+  }
+  if(!sophy.introDone&&!force)return null;
+  const now=Date.now(),lastAt=new Date(sophy.lastProactiveAt).getTime(),hoursSince=(now-lastAt)/(1000*60*60);
   if(!force&&hoursSince<4)return null;
 
   const free=allAccountBalance()-commitmentUntilNextIncome();
