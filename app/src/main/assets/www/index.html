@@ -4914,6 +4914,7 @@ let pageStack=['hoje'];
 function activePage(){return document.querySelector('.tab.active')?.id||'hoje'}
 function setPage(id,{mode='push'}={}){
  if(!PAGE_TITLES[id])return false;
+ if(progressiveRestore)closeProgressive(false);
  const current=activePage();
  if(mode==='push'&&id!==current)pageStack.push(id);
  else if(mode==='replace')pageStack=[id];

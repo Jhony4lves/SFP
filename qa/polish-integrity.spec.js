@@ -267,8 +267,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
 
     // Valida que o saldo na tela "Hoje" é de R$ 15,00
     await expect(page.locator('#pageTitle')).toHaveText('Hoje');
-    const todayBalance = await page.locator('#sideFree').textContent();
-    expect(todayBalance).toContain('15,00');
+    await expect(page.locator('#sideFree')).toContainText('15,00');
 
     // Valida que a conta foi criada no state
     const accounts = await page.evaluate(() => state.accounts);
@@ -279,8 +278,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
     // Recarrega a página e valida persistência
     await page.reload();
     await expect(page.locator('#pageTitle')).toHaveText('Hoje');
-    const persistedBalance = await page.locator('#sideFree').textContent();
-    expect(persistedBalance).toContain('15,00');
+    await expect(page.locator('#sideFree')).toContainText('15,00');
 
     const persistedAccounts = await page.evaluate(() => state.accounts);
     expect(persistedAccounts.length).toBe(1);
