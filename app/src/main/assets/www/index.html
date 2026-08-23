@@ -1994,7 +1994,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 const VERSION=202, SCHEMA_VERSION=11, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
 const CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Saúde','Assinaturas','Dívida','Lazer','Casa','Trabalho','Ajuste','Outros'];
 const seed={
- version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:'2026-08',baseDate:'2026-08-18',
+ version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:'2026-08',baseDate:'2026-08-18',persistenceMeta:{revision:1,savedAt:'2026-08-18T00:00:00.000Z'},
  settings:{name:'SFP Jhony',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:true},
  accounts:[
   {id:1,name:'Nubank',type:'Conta corrente',initial:161.26,reconciled:null,balanceMode:'snapshot',balanceDate:'2026-08-18'},
@@ -2195,7 +2195,7 @@ async function undoLast(){
 }
 function createCleanInitialState(){
  return {
-  version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:localCivilMonth(),baseDate:localCivilDate(),
+  version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:localCivilMonth(),baseDate:localCivilDate(),persistenceMeta:{revision:1,savedAt:new Date().toISOString()},
   settings:{name:'SFP',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:true},
   accounts:[],cards:[],transactions:[],transfers:[],purchases:[],invoiceAdjustments:[],invoices:[],recurring:[],debts:[],goals:[],assets:[],statements:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],creditFacilities:[],ui:{invoiceMonthByCard:{}},
   sophy:{personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,settings:{proactivityEnabled:true}}
