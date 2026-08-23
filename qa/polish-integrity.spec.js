@@ -307,6 +307,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
 
     // Testa campo de saldo inicial em contas: #accountInitial
     await page.locator('.nav button[data-page="contas"]').click();
+    await page.evaluate(() => openManagementAction('contas'));
     const accountInitial = page.locator('#accountInitial');
     await accountInitial.fill('123.4567');
     await accountInitial.blur();
@@ -314,6 +315,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
 
     // Testa que percentual de juros de dívidas (#debtRate) NÃO é truncado para 2 casas
     await page.locator('.nav button[data-page="dividas"]').click();
+    await page.evaluate(() => openManagementAction('dividas'));
     const debtRate = page.locator('#debtRate');
     await debtRate.fill('2.7458');
     await debtRate.blur();
