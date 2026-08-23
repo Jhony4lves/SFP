@@ -5709,8 +5709,10 @@ function showAutoBackups(){
 }
 
 
+let onboardingShowing=false;
 function showOnboarding(){
- if(state.settings.onboardingDone||activePage()!=='hoje')return;
+ if(state.settings.onboardingDone||activePage()!=='hoje'||onboardingShowing)return;
+ onboardingShowing=true;
  let root=$('modalRoot');root.className='modalback';
  let step=0;
  const render=()=>{
@@ -5721,7 +5723,7 @@ function showOnboarding(){
   <div class="onboarding-step ${step===3?'active':''}"><h3>Pronto</h3><div class="note">O Smart Financial Planner está configurado. Você pode começar por um lançamento ou importar um extrato bancário.</div></div>
   <div class="onboard-dots">${[0,1,2,3].map(i=>`<span class="onboard-dot ${i===step?'active':''}"></span>`).join('')}</div>
   <div class="actions"><button class="btn2" id="obPrev" ${step===0?'disabled':''}>Voltar</button><button class="btn" id="obNext">${step===3?'Concluir':'Continuar'}</button></div></div>`;
-  $('skipOnboard').onclick=async()=>{state.settings.onboardingDone=true;await dbSet(state);lastSavedState=clone(state);root.className='hidden'};
+  $('skipOnboard').onclick=async()=>{onboardingShowing=false;state.settings.onboardingDone=true;await dbSet(state);lastSavedState=clone(state);root.className='hidden';root.innerHTML=''};
   $('obPrev').onclick=()=>{if(step>0){step--;render()}};
   $('obNext').onclick=async()=>{
     if(step===0){
@@ -5747,8 +5749,10 @@ function showOnboarding(){
     if(step===1){state.settings.day1=+$('obDay1').value||1;state.settings.day2=+$('obDay2').value||15}
     if(step<3){step++;render()}
     else{
+      onboardingShowing=false;
       state.settings.onboardingDone=true;
       root.className='hidden';
+      root.innerHTML='';
       await save('Concluir onboarding');
       showFeedback('Configuração inicial concluída. O Smart Financial Planner está pronto para uso.',{title:'Bem-vindo',type:'success'});
     }
