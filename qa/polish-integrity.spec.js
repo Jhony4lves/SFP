@@ -44,22 +44,33 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
   });
 
   test('2. Recursos de ícone oficial Android existem e possuem contratos válidos', async () => {
-    const bgPath = path.resolve('app/src/main/res/drawable/ic_launcher_background.xml');
-    const fgPath = path.resolve('app/src/main/res/drawable/ic_launcher_foreground.xml');
+    const colorsPath = path.resolve('app/src/main/res/values/colors.xml');
     const icLauncherPath = path.resolve('app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml');
     const icLauncherRoundPath = path.resolve('app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml');
-    const drawableFallback = path.resolve('app/src/main/res/drawable/ic_launcher.xml');
 
-    expect(fs.existsSync(bgPath)).toBe(true);
-    expect(fs.existsSync(fgPath)).toBe(true);
+    expect(fs.existsSync(colorsPath)).toBe(true);
     expect(fs.existsSync(icLauncherPath)).toBe(true);
     expect(fs.existsSync(icLauncherRoundPath)).toBe(true);
-    expect(fs.existsSync(drawableFallback)).toBe(true);
 
-    const fgContent = fs.readFileSync(fgPath, 'utf8');
-    // Cores turquesa/ciano da identidade visual escolhida
-    expect(fgContent).toContain('#2ED1A2');
-    expect(fgContent).toContain('#4CC2FF');
+    const colorsContent = fs.readFileSync(colorsPath, 'utf8');
+    expect(colorsContent).toContain('name="ic_launcher_background"');
+
+    const icLauncherContent = fs.readFileSync(icLauncherPath, 'utf8');
+    expect(icLauncherContent).toContain('android:drawable="@color/ic_launcher_background"');
+    expect(icLauncherContent).toContain('android:drawable="@mipmap/ic_launcher_foreground"');
+
+    const icLauncherRoundContent = fs.readFileSync(icLauncherRoundPath, 'utf8');
+    expect(icLauncherRoundContent).toContain('android:drawable="@color/ic_launcher_background"');
+    expect(icLauncherRoundContent).toContain('android:drawable="@mipmap/ic_launcher_foreground"');
+
+    for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+      const square = path.resolve(`app/src/main/res/mipmap-${density}/ic_launcher.png`);
+      const round = path.resolve(`app/src/main/res/mipmap-${density}/ic_launcher_round.png`);
+      const fg = path.resolve(`app/src/main/res/mipmap-${density}/ic_launcher_foreground.png`);
+      expect(fs.existsSync(square)).toBe(true);
+      expect(fs.existsSync(round)).toBe(true);
+      expect(fs.existsSync(fg)).toBe(true);
+    }
   });
 
   test('3. Botão "Mais" é visível em portrait mobile e oculto em landscape e desktop', async ({ page }) => {

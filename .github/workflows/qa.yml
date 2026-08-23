@@ -41,6 +41,10 @@ jobs:
       - run: yes | sdkmanager --licenses >/dev/null || true
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - run: gradle :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Inspect APK launcher resources
+        run: |
+          echo "=== RECURSOS DE LAUNCHER EMPACOTADOS NO APK DEBUG ==="
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E "res/mipmap|res/drawable|ic_launcher" || true
       - name: Record APK checksums without publishing app data
         run: |
           mkdir -p build/reports
@@ -51,3 +55,9 @@ jobs:
           name: android-qa-checksums
           path: build/reports/android-qa-checksums.txt
           if-no-files-found: error
+      - if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn

@@ -79,8 +79,42 @@ for (const contract of [
   if (!source.includes(contract)) problems.push(`contrato visual UX-02 ausente: ${contract}`);
 }
 
+// 7. Recursos e Contratos do Launcher Icon Oficial Android
+const manifestPath = 'app/src/main/AndroidManifest.xml';
+if (fs.existsSync(manifestPath)) {
+  const manifest = fs.readFileSync(manifestPath, 'utf8');
+  if (!manifest.includes('android:icon="@mipmap/ic_launcher"')) problems.push('Manifest não aponta android:icon para @mipmap/ic_launcher');
+  if (!manifest.includes('android:roundIcon="@mipmap/ic_launcher_round"')) problems.push('Manifest não aponta android:roundIcon para @mipmap/ic_launcher_round');
+} else {
+  problems.push('AndroidManifest.xml não encontrado.');
+}
+
+const colorsPath = 'app/src/main/res/values/colors.xml';
+if (!fs.existsSync(colorsPath) || !fs.readFileSync(colorsPath, 'utf8').includes('name="ic_launcher_background"')) {
+  problems.push('Recurso de cor ic_launcher_background ausente em values/colors.xml');
+}
+
+for (const adaptiveFile of ['ic_launcher.xml', 'ic_launcher_round.xml']) {
+  const p = `app/src/main/res/mipmap-anydpi-v26/${adaptiveFile}`;
+  if (!fs.existsSync(p)) {
+    problems.push(`Adaptive icon XML ausente: ${p}`);
+  } else {
+    const c = fs.readFileSync(p, 'utf8');
+    if (!c.includes('@mipmap/ic_launcher_foreground')) problems.push(`${p} não aponta para @mipmap/ic_launcher_foreground`);
+    if (!c.includes('@color/ic_launcher_background')) problems.push(`${p} não aponta para @color/ic_launcher_background`);
+  }
+}
+
+for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+  for (const iconFile of ['ic_launcher.png', 'ic_launcher_round.png', 'ic_launcher_foreground.png']) {
+    const p = `app/src/main/res/mipmap-${density}/${iconFile}`;
+    if (!fs.existsSync(p)) problems.push(`Launcher asset ausente: ${p}`);
+  }
+}
+
 if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);
 }
-console.log('Static QA: Sintaxe JavaScript, IDs estáticos, logo oficial SHA-256, schema v11 e contratos verificados com sucesso.');
+console.log('Static QA: Sintaxe JavaScript, IDs estáticos, logo oficial SHA-256, launcher icons, schema v11 e contratos verificados com sucesso.');
+
