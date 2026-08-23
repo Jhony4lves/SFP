@@ -310,6 +310,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
     await accountInitial.fill('123.4567');
     await accountInitial.blur();
     expect(await accountInitial.inputValue()).toBe('123.45');
+    await page.evaluate(() => closeProgressive());
 
     // Testa que percentual de juros de dívidas (#debtRate) NÃO é truncado para 2 casas
     await page.locator('.nav button[data-page="dividas"]').click();
@@ -318,6 +319,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
     await debtRate.fill('2.7458');
     await debtRate.blur();
     expect(await debtRate.inputValue()).toBe('2.7458');
+    await page.evaluate(() => closeProgressive());
 
     expect(errors).toEqual([]);
   });
