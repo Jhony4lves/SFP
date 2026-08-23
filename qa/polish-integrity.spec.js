@@ -256,7 +256,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
 
     // Preenche conta principal e saldo aproximado de R$ 15,00
     await page.locator('#obAccountName').fill('Conta Nubank');
-    await page.locator('#obBalance').fill('15,00');
+    await page.locator('#obBalance').fill('15.00');
 
     // Avança etapas
     await page.locator('#obNext').click(); // Etapa 1 -> 2

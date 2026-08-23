@@ -92,13 +92,9 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
     await setupAndBoot(page, custom);
     const errors = monitor(page);
 
-    page.once('dialog', async dialog => {
-      expect(dialog.message()).toContain('Apagar todos os dados e voltar à base inicial?');
-      await dialog.accept();
-    });
-
     await page.evaluate(() => setPage('config'));
     await page.locator('#resetBtn').click();
+    await page.locator('#dialogConfirmBtn').click();
     await expect(page.locator('#toast')).toHaveText('Sistema restaurado');
 
     const freshState = await page.evaluate(() => state);
@@ -161,11 +157,9 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
     const custom = richCustomState();
     await setupAndBoot(page, custom);
 
-    page.once('dialog', async dialog => {
-      await dialog.accept();
-    });
     await page.evaluate(() => setPage('config'));
     await page.locator('#resetBtn').click();
+    await page.locator('#dialogConfirmBtn').click();
     await expect(page.locator('#toast')).toHaveText('Sistema restaurado');
 
     // 14. IndexedDB contém estado limpo
@@ -220,14 +214,12 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
     );
 
     for (let i = 0; i < 3; i++) {
-      page.once('dialog', async dialog => {
-        await dialog.accept();
-      });
       await page.evaluate(() => {
         closeProgressive();
         setPage('config');
       });
       await page.locator('#resetBtn').click();
+      await page.locator('#dialogConfirmBtn').click();
       await expect(page.locator('#toast')).toHaveText('Sistema restaurado');
     }
 
@@ -247,12 +239,9 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
     await setupAndBoot(page, custom);
     const errors = monitor(page);
 
-    page.once('dialog', async dialog => {
-      await dialog.dismiss();
-    });
-
     await page.evaluate(() => setPage('config'));
     await page.locator('#resetBtn').click();
+    await page.locator('#dialogCancelBtn').click();
 
     // Estado em memória inalterado
     const currState = await page.evaluate(() => state);
@@ -278,12 +267,9 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
       dbSet = async () => { throw Error('Simulated storage write error'); };
     });
 
-    page.once('dialog', async dialog => {
-      await dialog.accept();
-    });
-
     await page.evaluate(() => setPage('config'));
     await page.locator('#resetBtn').click();
+    await page.locator('#dialogConfirmBtn').click();
 
     // 20. Toast de erro (NÃO sucesso)
     await expect(page.locator('#toast')).toHaveText('Não foi possível zerar o sistema. Nenhuma alteração foi aplicada.');
@@ -302,11 +288,9 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
     const custom = richCustomState();
     await setupAndBoot(page, custom);
 
-    page.once('dialog', async dialog => {
-      await dialog.accept();
-    });
     await page.evaluate(() => setPage('config'));
     await page.locator('#resetBtn').click();
+    await page.locator('#dialogConfirmBtn').click();
     await expect(page.locator('#toast')).toHaveText('Sistema restaurado');
 
     const errors = monitor(page);

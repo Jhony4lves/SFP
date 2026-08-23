@@ -38,8 +38,10 @@ test('CARD-01/02 fatura fechada conserva snapshot e estorno reduz apenas obriga�
     inv.closedAt = new Date().toISOString(); inv.status = 'closed';
     state.mesAtual = '2026-02';
   });
-  page.once('dialog', dialog => dialog.accept('50'));
-  await page.evaluate(() => refundPurchase(10));
+  const refundPromise = page.evaluate(() => refundPurchase(10));
+  await page.locator('#dialogPromptInput').fill('50');
+  await page.locator('#dialogConfirmBtn').click();
+  await refundPromise;
   const result = await page.evaluate(() => ({ historical: invoiceTotal(1, '2026-01'), feb: invoiceTotal(1, '2026-02'), outstanding: cardOutstanding(1, new Date(2026, 0, 15)), refunds: state.purchases[0].refunds }));
   expect(result.historical).toBe(100);
   expect(result.feb).toBe(50);
@@ -51,8 +53,10 @@ test('CARD-01/02 fatura fechada conserva snapshot e estorno reduz apenas obriga�
 test('CARD-03 múltiplos estornos são limitados ao elegível e nunca criam fatura negativa', async ({ page }) => {
   const errors = await boot(page, cardFixture());
   for (const amount of ['180', '180']) {
-    page.once('dialog', dialog => dialog.accept(amount));
-    await page.evaluate(() => refundPurchase(10));
+    const refundPromise = page.evaluate(() => refundPurchase(10));
+    await page.locator('#dialogPromptInput').fill(amount);
+    await page.locator('#dialogConfirmBtn').click();
+    await refundPromise;
   }
   const result = await page.evaluate(() => ({ refunds: state.purchases[0].refunds.map(r => r.amount), totals: ['2026-01', '2026-02', '2026-03'].map(m => invoiceTotal(1, m)), limit: card(1).limit - cardOutstanding(1, new Date(2025, 11, 15)) }));
   expect(result.refunds).toEqual([180, 120]);
@@ -66,8 +70,10 @@ test('CARD-04/05 pagamentos parcial e integral liquidam uma vez, sem competênci
   value.invoices = [{ id: 20, cardId: 1, month: '2026-01', officialTotal: 100, paidAmount: 0, accountId: 1, payments: [], status: 'closed', closedAt: '2026-01-10T12:00:00Z' }];
   const errors = await boot(page, value);
   for (const amount of ['40', '60']) {
-    page.once('dialog', dialog => dialog.accept(amount));
-    await page.evaluate(async () => { document.querySelector('#invoiceCard').value = '1'; document.querySelector('#invoiceMonth').value = '2026-01'; await document.querySelector('#payInvoice').onclick(); });
+    const payPromise = page.evaluate(async () => { document.querySelector('#invoiceCard').value = '1'; document.querySelector('#invoiceMonth').value = '2026-01'; await document.querySelector('#payInvoice').onclick(); });
+    await page.locator('#dialogPromptInput').fill(amount);
+    await page.locator('#dialogConfirmBtn').click();
+    await payPromise;
   }
   await persisted(page, s => s.invoices[0].paidAmount === 100 && s.invoices[0].payments.length === 2);
   const before = await page.evaluate(() => ({ remaining: invoiceRemaining(1, '2026-01'), cash: cashView(new Date().toISOString().slice(0, 7)).expense, accrual: accrualView('2026-01').expense, payments: state.invoices[0].payments.length }));
@@ -85,8 +91,9 @@ test('CARD-06 cancelamento preserva parcelas históricas e metadados e elimina s
   ];
   value.mesAtual = '2026-03';
   const errors = await boot(page, value);
-  page.once('dialog', dialog => dialog.accept());
-  await page.evaluate(() => cancelPurchase(10));
+  const cancelPromise = page.evaluate(() => cancelPurchase(10));
+  await page.locator('#dialogConfirmBtn').click();
+  await cancelPromise;
   await persisted(page, s => s.purchases[0].status === 'cancelled' && s.purchases[0].cancelledFromMonth === '2026-03');
   const result = await page.evaluate(() => ({ jan: invoiceTotal(1, '2026-01'), feb: invoiceTotal(1, '2026-02'), mar: invoiceTotal(1, '2026-03'), metadata: state.purchases[0].metadata }));
   expect(result).toEqual({ jan: 100, feb: 100, mar: 0, metadata: { future: true } });
@@ -98,8 +105,10 @@ test('CARD-07/08 sequência completa mantém limite, registros e histórico apó
   value.invoices = [{ id: 20, cardId: 1, month: '2026-01', officialTotal: 100, paidAmount: 40, accountId: 1, payments: [{ date: '2026-01-17', amount: 40, balanceImpact: true }], status: 'partial', closedAt: '2026-01-10' }];
   value.mesAtual = '2026-02';
   const errors = await boot(page, value);
-  page.once('dialog', dialog => dialog.accept('50'));
-  await page.evaluate(() => refundPurchase(10));
+  const refundPromise = page.evaluate(() => refundPurchase(10));
+  await page.locator('#dialogPromptInput').fill('50');
+  await page.locator('#dialogConfirmBtn').click();
+  await refundPromise;
   await page.evaluate(async () => { const i = state.invoices[0]; i.paidAmount = 100; i.status = 'paid'; i.payments.push({ date: '2026-02-01', amount: 60, balanceImpact: true }); addCardHistory(1, 'payment', 'Pagamento restante', 60); await save('Pagamento restante'); });
   await persisted(page, s => s.purchases[0].refunds.length === 1 && s.invoices[0].payments.length === 2 && s.cards[0].history.length === 2);
   const inspect = () => page.evaluate(() => ({ outstanding: cardOutstanding(1, new Date(2026, 0, 15)), available: card(1).limit - cardOutstanding(1, new Date(2026, 0, 15)), purchase: state.purchases.length, invoices: state.invoices.length, refunds: state.purchases[0].refunds.length, payments: state.invoices[0].payments.length, history: state.cards[0].history.length }));

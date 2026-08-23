@@ -22,9 +22,10 @@ test('MONTH-01/02/03/04 fechamento é histórico e só muda por substituição e
   expect(await page.evaluate(() => state.snapshots[0])).toEqual(original);
   await page.reload(); await expect.poll(() => page.evaluate(() => state?.snapshots[0])).toEqual(original);
   await page.waitForFunction(() => typeof lastSavedState !== 'undefined' && lastSavedState);
-  await page.evaluate(() => { window.confirm = () => true; setPage('relatorios'); });
+  await page.evaluate(() => setPage('relatorios'));
   await expect(closeMonth).toBeVisible();
   await closeMonth.click();
+  await page.locator('#dialogConfirmBtn').click();
   await expect.poll(() => page.evaluate(async () => {
     const persisted = (await dbGet()).value;
     const fields = snapshot => snapshot && ({ income: snapshot.income, assets: snapshot.assets, debts: snapshot.debts, netWorth: snapshot.netWorth });

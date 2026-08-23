@@ -126,15 +126,19 @@ test('amortizações e pagamentos sucessivos nunca aumentam saldo e limitam paid
   await loadState(page, value);
   const errors = monitor(page);
 
-  page.once('dialog', dialog => dialog.accept('250'));
-  await page.evaluate(() => amortize(501));
+  const amortizePromise = page.evaluate(() => amortize(501));
+  await page.locator('#dialogPromptInput').fill('250');
+  await page.locator('#dialogConfirmBtn').click();
+  await amortizePromise;
   await expect.poll(() => page.evaluate(() => state.debts[0].balance)).toBe(750);
   await page.evaluate(() => payDebtInstallment(501));
   await expect.poll(() => page.evaluate(() => state.debts[0].balance)).toBe(650);
 
   await page.evaluate(() => { state.mesAtual = '2026-10'; renderAll(); });
-  page.once('dialog', dialog => dialog.accept('75'));
-  await page.evaluate(() => amortize(501));
+  const amortizePromise2 = page.evaluate(() => amortize(501));
+  await page.locator('#dialogPromptInput').fill('75');
+  await page.locator('#dialogConfirmBtn').click();
+  await amortizePromise2;
   await expect.poll(() => page.evaluate(() => state.debts[0].balance)).toBe(575);
   await page.evaluate(() => payDebtInstallment(501));
   await expect.poll(() => page.evaluate(() => state.debts[0].balance)).toBe(475);

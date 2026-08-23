@@ -13,7 +13,6 @@ test('múltiplos reenvios rápidos criam um único ajuste e mostram sucesso', as
   const errors = await loadUsageFixture(page);
   await page.locator('.nav button[data-page="contas"]').click();
   await page.evaluate(() => openAccountDetail(1));
-  page.on('dialog', async dialog => dialog.accept(dialog.type() === 'prompt' ? '1100' : undefined));
 
   await page.evaluate(async () => {
     const button = document.querySelector('#modalRoot button[onclick*="reconcileAccount"]');
@@ -25,6 +24,10 @@ test('múltiplos reenvios rápidos criam um único ajuste e mostram sucesso', as
     };
     window.__reconcilePromise = reconcileAccount(1, button);
   });
+
+  await page.locator('#dialogPromptInput').fill('1100');
+  await page.locator('#dialogConfirmBtn').click();
+  await page.locator('#dialogConfirmBtn').click();
 
   await expect(page.locator('#modalRoot button[onclick*="reconcileAccount"]')).toBeDisabled();
   await expect(page.locator('#modalRoot button[onclick*="reconcileAccount"]')).toHaveText('Conciliando…');
@@ -50,14 +53,21 @@ test('falha de persistência desfaz tentativa, reativa ação e informa erro', a
   await page.evaluate(() => openAccountDetail(1));
   const consoleErrors = [];
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
-  page.on('dialog', async dialog => dialog.accept(dialog.type() === 'prompt' ? '1100' : undefined));
 
-  await page.evaluate(async () => {
+  const reconcilePromise = page.evaluate(async () => {
     const original = dbSet;
     dbSet = async () => { throw Error('falha simulada'); };
-    await reconcileAccount(1, document.querySelector('#modalRoot button[onclick*="reconcileAccount"]'));
-    dbSet = original;
+    try {
+      await reconcileAccount(1, document.querySelector('#modalRoot button[onclick*="reconcileAccount"]'));
+    } finally {
+      dbSet = original;
+    }
   });
+
+  await page.locator('#dialogPromptInput').fill('1100');
+  await page.locator('#dialogConfirmBtn').click();
+  await page.locator('#dialogConfirmBtn').click();
+  await reconcilePromise;
 
   expect(await page.evaluate(() => state.transactions.filter(t => t.desc === 'Ajuste de conciliação').length)).toBe(0);
   await expect(page.locator('#modalRoot button[onclick*="reconcileAccount"]')).toBeEnabled();
