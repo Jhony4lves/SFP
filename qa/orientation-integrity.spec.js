@@ -32,20 +32,20 @@ test.describe('Preservação de Estado e Navegação em Mudança de Orientação
 
     // Preenche campo no formulário
     await page.locator('#txDesc').fill('Compra de Teste Rotação');
-    await page.locator('#txAmount').fill('150,00');
+    await page.locator('#txAmount').fill('150.00');
 
     // Rotaciona para Landscape
     await page.setViewportSize(LANDSCAPE);
     await expect(page.locator('#lancamentos')).toHaveClass(/active/);
     await expect(page.locator('#pageTitle')).toHaveText('Lançamentos');
     await expect(page.locator('#txDesc')).toHaveValue('Compra de Teste Rotação');
-    await expect(page.locator('#txAmount')).toHaveValue('150,00');
+    await expect(page.locator('#txAmount')).toHaveValue('150.00');
 
     // Rotaciona de volta para Portrait
     await page.setViewportSize(PORTRAIT);
     await expect(page.locator('#lancamentos')).toHaveClass(/active/);
     await expect(page.locator('#txDesc')).toHaveValue('Compra de Teste Rotação');
-    await expect(page.locator('#txAmount')).toHaveValue('150,00');
+    await expect(page.locator('#txAmount')).toHaveValue('150.00');
 
     expect(errors).toEqual([]);
   });
@@ -108,22 +108,22 @@ test.describe('Preservação de Estado e Navegação em Mudança de Orientação
     await page.setViewportSize(PORTRAIT);
     await boot(page);
 
-    await go(page, 'recorrencias');
-    await page.locator('#contextFab').click(); // Abre Nova recorrência via progressive panel
+    await go(page, 'contas');
+    await page.locator('#contextFab').click(); // Abre Nova conta via progressive panel
     await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
 
     // Rotaciona para Landscape
     await page.setViewportSize(LANDSCAPE);
     await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
 
-    // Executa voltar via Android back -> fecha o modal mantendo a página recorrencias
+    // Executa voltar via Android back -> fecha o modal mantendo a página contas
     expect(await back(page)).toBe(true);
     await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
-    await expect(page.locator('#recorrencias')).toHaveClass(/active/);
+    await expect(page.locator('#contas')).toHaveClass(/active/);
 
     // Rotaciona de volta para Portrait
     await page.setViewportSize(PORTRAIT);
-    await expect(page.locator('#recorrencias')).toHaveClass(/active/);
+    await expect(page.locator('#contas')).toHaveClass(/active/);
 
     // Voltar leva para Hoje
     expect(await back(page)).toBe(true);
@@ -137,14 +137,14 @@ test.describe('Preservação de Estado e Navegação em Mudança de Orientação
     fix.accounts.push({ id: 2, name: 'Investimentos', type: 'Investimento', initial: 5000, balanceMode: 'snapshot', balanceDate: '2026-01-01' });
     fix.transactions.push({ id: 10, kind: 'expense', desc: 'Mercado', amount: 250, date: '2026-01-15', category: 'Alimentação', accountId: 1, status: 'paid', balanceImpact: true, createdAt: Date.now() });
 
-    await page.goto('/index.html');
-    await expect(page.locator('#pageTitle')).toHaveText('Hoje');
+    await boot(page);
     await writeIndexedDB(page, fix);
     await page.reload();
     await expectBootComplete(page, expect, 'Rotação QA');
 
     const errors = monitor(page);
 
+    await page.setViewportSize(PORTRAIT);
     await go(page, 'contas');
     await expect(page.locator('#contas')).toHaveClass(/active/);
 
