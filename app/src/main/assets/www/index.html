@@ -54,7 +54,9 @@ label{display:block;color:var(--muted);font-size:10px;margin-bottom:10px}input,s
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.shell{grid-template-columns:74px 1fr}.sidebar{padding:15px 8px}.brand div:not(.brandmark),.nav button span,.sidefoot{display:none}.brand{justify-content:center}.nav button{justify-content:center;font-size:16px}.grid2,.grid3{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px) and (orientation:portrait){.shell{display:block}.sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;border-right:0;border-top:1px solid var(--line);padding:6px;background:#06101d;z-index:70}.brand,.sidefoot{display:none}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;overflow:visible;padding-right:0}.sidebar .nav button{display:none!important}.sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="dashboard"],.sidebar .nav button[data-page="lancamentos"],.sidebar .nav button[data-page="contas"],.sidebar .nav #moreNavBtn{display:flex!important;padding:8px 2px;font-size:14px;justify-content:center}.sidebar .nav button.active{box-shadow:inset 0 -3px 0 var(--blue)}#moreNavBtn{color:var(--muted)}#moreNavBtn.active{color:var(--blue)}main{padding:14px 10px 82px}.top{flex-direction:column}.top .actions{width:100%}.top .actions .btn{flex:1}.metric-grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}.flow{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}.quicktypes{grid-template-columns:repeat(5,1fr)}.quicktype{padding:8px 3px;font-size:8px}.quicktype b{font-size:15px}.calendar{gap:2px}.calhead{font-size:10px;padding:2px 0}.day{min-height:58px;padding:4px 3px;gap:2px}.daynum{font-size:11px}.cal-dot{width:6px;height:6px}.cal-flow{font-size:10px}.cal-count{font-size:10px}.mobilefab{display:grid;position:fixed;right:16px;bottom:68px;width:50px;height:50px;border-radius:50%;background:var(--blue);color:#04131c;border:0;place-items:center;font-size:24px;font-weight:900;z-index:65;box-shadow:var(--shadow)}}
-@media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:sticky;top:0;left:0;height:100vh;display:flex;flex-direction:column;z-index:20}.nav{display:flex;flex-direction:column;gap:4px;overflow-y:auto;max-height:calc(100vh - 70px)}.mobilefab{bottom:16px;right:16px}}
+@media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:fixed;top:0;bottom:0;left:0;height:100vh;max-height:100vh;display:flex;flex-direction:column;z-index:70;box-sizing:border-box}.shell{display:block}.nav{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;min-height:0}.mobilefab{bottom:16px;right:16px}}
+@media(orientation:landscape) and (max-width:900px){.sidebar{width:74px}main{margin-left:74px;width:calc(100% - 74px);max-width:calc(100vw - 74px);box-sizing:border-box}}
+@media(orientation:landscape) and (min-width:901px){.sidebar{width:235px}main{margin-left:235px;width:calc(100% - 235px);max-width:calc(100vw - 235px);box-sizing:border-box}}
 
 /* ===== SFP 1.0.1 — MOBILE LAYOUT FIX ===== */
 html,body{width:100%;max-width:100%;overflow-x:hidden}
@@ -2109,7 +2111,7 @@ function createCleanInitialState(){
  };
 }
 async function resetSystem({confirmDialog=true}={}){
- if(confirmDialog&&!confirm('Apagar todos os dados e voltar à base inicial?'))return false;
+ if(confirmDialog&&!(await sfpConfirm({title:'Zerar sistema',message:'Apagar todos os dados e voltar à base inicial limpa? Esta ação é irreversível.',confirmText:'Zerar sistema',cancelText:'Cancelar',danger:true})))return false;
  let before=clone(state),previousSaved=clone(lastSavedState||state);
  try{
   state=createCleanInitialState();
@@ -2588,27 +2590,65 @@ function originOf(t){
 }
 function originChip(t){let [label,cls]=originOf(t);return `<span class="origin-chip origin-${cls}">${label}</span>`}
 function validateMoneyAction({amount,accountId,allowNegative=true,label='operação'}){
- if(!(amount>0))return `O valor da ${label} precisa ser maior que zero.`;
+if(!(amount>0))return `O valor da ${label} precisa ser maior que zero.`;
  if(accountId&&account(accountId)&&!allowNegative&&accountBalance(accountId)<amount)return `Saldo insuficiente em ${account(accountId).name}.`;
  return null
 }
 function knownMonths(){
  let s=new Set();state.transactions.forEach(t=>s.add(ym(t.date)));state.purchases.forEach(p=>{for(let i=0;i<p.installments;i++)s.add(monthAdd(p.firstMonth,i))});state.snapshots.forEach(x=>s.add(x.month));return [...s].filter(Boolean).sort()
 }
+const MONETARY_INPUT_IDS=new Set(['txAmount','accountInitial','cardLimit','recAmount','catBudgetAmount','debtBalance','debtPayment','goalTarget','goalPlan','assetValue','simDebtBalance','simDebtPayment','simDebtExtra','simGoalTarget','simGoalInitial','simGoalMonthly','obBalance']);
+
+function isMonetaryInput(el){
+ if(!el||el.tagName!=='INPUT')return false;
+ if(el.id==='debtRate'||el.id==='simDebtRate'||el.id==='simGoalRate'||el.id==='budgetNeeds'||el.id==='budgetWants'||el.id==='budgetSave'||el.id==='txInstallments'||el.id==='debtInstallments'||el.id==='recDay'||el.id==='cardClose'||el.id==='cardDue'||el.id==='cfgDay1'||el.id==='cfgDay2'||el.id==='obDay1'||el.id==='obDay2'||el.id==='debtDay'||el.id==='txDueDay')return false;
+ if(MONETARY_INPUT_IDS.has(el.id))return true;
+ if(el.classList.contains('money-input')||el.dataset.moneyInput==='true')return true;
+ if(el.closest('.money-field'))return true;
+ let labelTxt=(el.closest('label')?.textContent||'').toLowerCase();
+ return /valor|saldo|limite|parcela|meta|aporte|pagamento|receita|despesa/.test(labelTxt)&&!/juros|taxa|%|parcelas|dia|vencimento/.test(labelTxt)
+}
+
+function handleMoneyInputEvent(e){
+ const el=e.target;if(!isMonetaryInput(el))return;
+ let val=el.value;if(!val)return;
+ let normalized=val.replace(',','.');
+ let dotIdx=normalized.indexOf('.');
+ if(dotIdx!==-1){
+  let intPart=normalized.slice(0,dotIdx),decPart=normalized.slice(dotIdx+1);
+  if(decPart.length>2){
+   decPart=decPart.slice(0,2);
+   el.value=`${intPart}.${decPart}`
+  }
+ }
+}
+
+function handleMoneyBlurEvent(e){
+ const el=e.target;if(!isMonetaryInput(el))return;
+ let val=el.value;if(!val)return;
+ let num=parseMoney(val);
+ if(Number.isFinite(num))el.value=(Math.round(num*100)/100).toFixed(2);
+}
+
+document.addEventListener('input',handleMoneyInputEvent,true);
+document.addEventListener('blur',handleMoneyBlurEvent,true);
+
+function formatMoneyInputs(){
+ document.querySelectorAll('input').forEach(el=>{
+  if(isMonetaryInput(el)){
+   el.step='0.01';
+   if(el.value!==''&&!Number.isNaN(+el.value)){
+    let num=parseMoney(el.value);
+    if(Number.isFinite(num))el.value=(Math.round(num*100)/100).toFixed(2)
+   }
+  }
+ })
+}
+
 function applyPrivacy(){
  document.body.classList.toggle('privacy-on',!!state.settings.privacy);
  document.querySelectorAll('[data-money],.metric strong,.tile strong,.credit strong,.item strong,.history-line strong').forEach(el=>el.classList.toggle('private-value',!!state.settings.privacy));
  if($('privacyToggle')){$('privacyToggle').classList.toggle('active',!!state.settings.privacy);$('privacyToggle').textContent=state.settings.privacy?'🙈 Mostrar valores':'👁 Ocultar valores'}
-}
-
-function formatMoneyInputs(){
- document.querySelectorAll('input[type="number"]').forEach(el=>{
-   let txt=(el.id+' '+(el.closest('label')?.textContent||'')).toLowerCase();
-   if(/valor|saldo|limite|parcela|meta|aporte|pagamento|receita|despesa/.test(txt)){
-     el.step='0.01';
-     if(!el.dataset.moneyBound){el.dataset.moneyBound='1';el.addEventListener('blur',()=>{if(el.value!==''&&!Number.isNaN(+el.value))el.value=(Math.round(+el.value*100)/100).toFixed(2)})}
-   }
- })
 }
 
 function renderFavorites(){
@@ -4856,11 +4896,15 @@ window.openManagementAction=page=>{
  const def=map[page];if(!def)return contextualNew(page);
  const form=$(def[0]);form.reset();const hidden=form.querySelector('input[type="hidden"]');if(hidden)hidden.value='';showProgressivePanel(form.closest('.management-form-panel'),def[1])
 };
-window.openAccountDetail=id=>{const a=account(id);if(!a)return;const movements=state.transactions.filter(t=>t.accountId==id).sort((x,y)=>y.date.localeCompare(x.date)).slice(0,8);showDetail(a.name,`${a.type} · ${a.reconciled?'Saldo conciliado':'Conciliação pendente'}`,`<div class="metric"><span>Saldo atual</span><strong>${brl(accountBalance(id))}</strong><small>${a.reconciled?`Última conciliação em ${a.reconciled.date}`:'Ainda não conciliada'}</small></div><div class="section-actions"><button class="btn" onclick="closeProgressive();reconcileAccount(${id})">Conciliar</button><button class="btn2" onclick="closeProgressive();editAccount(${id},true)">Editar</button><button class="danger" onclick="if(confirm('Excluir esta conta?')){closeProgressive();removeAccount(${id})}">Excluir</button></div><div class="head"><div><h3>Movimentações recentes</h3><p>Últimos lançamentos desta conta</p></div></div><div class="list">${movements.length?movements.map(t=>`<div class="item"><div><b>${sfpEsc(t.desc)}</b><small>${t.date} · ${sfpEsc(t.category||'Sem categoria')}</small></div><strong class="${t.kind==='income'?'positive':'negative'}">${brl(t.amount)}</strong></div>`).join(''):'<div class="empty-state"><b>Sem movimentações</b>Nenhum lançamento vinculado a esta conta.</div>'}</div>`)};
-window.openCardDetail=id=>{const c=card(id);if(!c)return;const m=currentInvoiceMonth(c),current=invoiceTotal(id,m),next=invoiceTotal(id,monthAdd(m,1)),free=Math.max(0,c.limit-cardOutstanding(id));showDetail(c.name,`Fecha dia ${c.closeDay} · vence dia ${c.dueDay}`,`<div class="metric-grid"><div class="metric"><span>Fatura atual</span><strong>${brl(current)}</strong><small>${monthName(m)}</small></div><div class="metric"><span>Próxima fatura</span><strong>${brl(next)}</strong><small>Limite disponível ${brl(free)}</small></div></div><div class="section-actions"><button class="btn" onclick="openInvoiceDetail(${id})">Abrir fatura</button><button class="btn2" onclick="closeProgressive();editCard(${id},true)">Editar cartão</button><button class="danger" onclick="if(confirm('Excluir este cartão?')){closeProgressive();removeCard(${id})}">Excluir</button></div>`)};
+window.deleteAccountPrompt=async id=>{let a=account(id);if(!a)return;if(await sfpConfirm({title:'Excluir conta',message:`Deseja realmente excluir a conta "${a.name}"?`,confirmText:'Excluir conta',cancelText:'Cancelar',danger:true})){closeProgressive();await removeAccount(id)}};
+window.deleteCardPrompt=async id=>{let c=card(id);if(!c)return;if(await sfpConfirm({title:'Excluir cartão',message:`Deseja realmente excluir o cartão "${c.name}"?`,confirmText:'Excluir cartão',cancelText:'Cancelar',danger:true})){closeProgressive();await removeCard(id)}};
+window.deleteDebtPrompt=async id=>{let d=state.debts.find(x=>x.id===id);if(!d)return;if(await sfpConfirm({title:'Excluir dívida',message:`Deseja realmente excluir a dívida "${d.name}"?`,confirmText:'Excluir dívida',cancelText:'Cancelar',danger:true})){closeProgressive();await removeDebt(id)}};
+window.deleteGoalPrompt=async id=>{let g=state.goals.find(x=>x.id===id);if(!g)return;if(await sfpConfirm({title:'Excluir meta',message:`Deseja realmente excluir a meta "${g.name}"?`,confirmText:'Excluir meta',cancelText:'Cancelar',danger:true})){closeProgressive();await removeGoal(id)}};
+window.openAccountDetail=id=>{const a=account(id);if(!a)return;const movements=state.transactions.filter(t=>t.accountId==id).sort((x,y)=>y.date.localeCompare(x.date)).slice(0,8);showDetail(a.name,`${a.type} · ${a.reconciled?'Saldo conciliado':'Conciliação pendente'}`,`<div class="metric"><span>Saldo atual</span><strong>${brl(accountBalance(id))}</strong><small>${a.reconciled?`Última conciliação em ${a.reconciled.date}`:'Ainda não conciliada'}</small></div><div class="section-actions"><button class="btn" onclick="closeProgressive();reconcileAccount(${id})">Conciliar</button><button class="btn2" onclick="closeProgressive();editAccount(${id},true)">Editar</button><button class="danger" onclick="deleteAccountPrompt(${id})">Excluir</button></div><div class="head"><div><h3>Movimentações recentes</h3><p>Últimos lançamentos desta conta</p></div></div><div class="list">${movements.length?movements.map(t=>`<div class="item"><div><b>${sfpEsc(t.desc)}</b><small>${t.date} · ${sfpEsc(t.category||'Sem categoria')}</small></div><strong class="${t.kind==='income'?'positive':'negative'}">${brl(t.amount)}</strong></div>`).join(''):'<div class="empty-state"><b>Sem movimentações</b>Nenhum lançamento vinculado a esta conta.</div>'}</div>`)};
+window.openCardDetail=id=>{const c=card(id);if(!c)return;const m=currentInvoiceMonth(c),current=invoiceTotal(id,m),next=invoiceTotal(id,monthAdd(m,1)),free=Math.max(0,c.limit-cardOutstanding(id));showDetail(c.name,`Fecha dia ${c.closeDay} · vence dia ${c.dueDay}`,`<div class="metric-grid"><div class="metric"><span>Fatura atual</span><strong>${brl(current)}</strong><small>${monthName(m)}</small></div><div class="metric"><span>Próxima fatura</span><strong>${brl(next)}</strong><small>Limite disponível ${brl(free)}</small></div></div><div class="section-actions"><button class="btn" onclick="openInvoiceDetail(${id})">Abrir fatura</button><button class="btn2" onclick="closeProgressive();editCard(${id},true)">Editar cartão</button><button class="danger" onclick="deleteCardPrompt(${id})">Excluir</button></div>`)};
 window.openInvoiceDetail=id=>{closeProgressive();$('invoiceCard').value=id;const c=card(id),m=state.ui.invoiceMonthByCard?.[id]||currentInvoiceMonth(c);$('invoiceMonth').value=m;renderCards();showProgressivePanel(document.querySelector('#cartoes .invoice-focus'),`Fatura · ${c.name}`,()=>openCardDetail(id))};
-window.openDebtDetail=id=>{const d=state.debts.find(x=>x.id===id);if(!d)return;const hist=(d.history||[]).slice().reverse();showDetail(d.name,`${d.rate}% a.m. · ${d.paidInstallments||0} de ${d.installments} parcelas`, `<div class="metric-grid"><div class="metric"><span>Saldo devedor</span><strong>${brl(d.balance)}</strong><small>Parcela ${brl(d.payment)}</small></div><div class="metric"><span>Próximo vencimento</span><strong>${d.firstDue||'—'}</strong><small>${debtMonths(d)} meses estimados</small></div></div><div class="section-actions"><button class="btn" onclick="closeProgressive();payDebtInstallment(${id})">Pagar parcela</button><button class="btn2" onclick="closeProgressive();amortize(${id})">Amortizar</button><button class="btn2" onclick="closeProgressive();editDebt(${id},true)">Editar</button><button class="danger" onclick="if(confirm('Excluir esta dívida?')){closeProgressive();removeDebt(${id})}">Excluir</button></div><div class="head"><div><h3>Histórico</h3><p>Pagamentos e amortizações</p></div></div><div class="list">${hist.length?hist.map(h=>`<div class="item"><span>${h.date||new Date(h.at).toLocaleDateString('pt-BR')} · ${h.type==='extra'?'Amortização':'Pagamento'}</span><strong>${brl(h.amount)}</strong></div>`).join(''):'<div class="empty-state">Nenhum pagamento registrado.</div>'}</div>`)};
-window.openGoalDetail=id=>{const g=state.goals.find(x=>x.id===id);if(!g)return;const v=goalBalance(g),rest=Math.max(0,g.target-v),hist=(g.history||[]).slice().reverse();showDetail(g.name,account(g.accountId)?.name||'Sem conta vinculada',`<div class="metric-grid"><div class="metric"><span>Acumulado</span><strong>${brl(v)}</strong><small>Meta ${brl(g.target)}</small></div><div class="metric"><span>Falta</span><strong>${brl(rest)}</strong><small>${g.targetDate||'Sem prazo definido'}</small></div></div><div class="progress green" role="progressbar" aria-valuenow="${g.target?Math.min(100,v/g.target*100):0}" aria-valuemin="0" aria-valuemax="100"><div style="width:${g.target?Math.min(100,v/g.target*100):0}%"></div></div><div class="section-actions"><button class="btn" onclick="closeProgressive();goalTransfer(${id})">Fazer aporte</button><button class="btn2" onclick="closeProgressive();editGoal(${id},true)">Editar plano</button><button class="danger" onclick="if(confirm('Excluir esta meta?')){closeProgressive();removeGoal(${id})}">Excluir</button></div><div class="head"><div><h3>Histórico de aportes</h3></div></div><div class="list">${hist.length?hist.map(h=>`<div class="item"><span>${h.date}</span><strong>${brl(h.amount)}</strong></div>`).join(''):'<div class="empty-state">Nenhum aporte registrado.</div>'}</div>`)};
+window.openDebtDetail=id=>{const d=state.debts.find(x=>x.id===id);if(!d)return;const hist=(d.history||[]).slice().reverse();showDetail(d.name,`${d.rate}% a.m. · ${d.paidInstallments||0} de ${d.installments} parcelas`, `<div class="metric-grid"><div class="metric"><span>Saldo devedor</span><strong>${brl(d.balance)}</strong><small>Parcela ${brl(d.payment)}</small></div><div class="metric"><span>Próximo vencimento</span><strong>${d.firstDue||'—'}</strong><small>${debtMonths(d)} meses estimados</small></div></div><div class="section-actions"><button class="btn" onclick="closeProgressive();payDebtInstallment(${id})">Pagar parcela</button><button class="btn2" onclick="closeProgressive();amortize(${id})">Amortizar</button><button class="btn2" onclick="closeProgressive();editDebt(${id},true)">Editar</button><button class="danger" onclick="deleteDebtPrompt(${id})">Excluir</button></div><div class="head"><div><h3>Histórico</h3><p>Pagamentos e amortizações</p></div></div><div class="list">${hist.length?hist.map(h=>`<div class="item"><span>${h.date||new Date(h.at).toLocaleDateString('pt-BR')} · ${h.type==='extra'?'Amortização':'Pagamento'}</span><strong>${brl(h.amount)}</strong></div>`).join(''):'<div class="empty-state">Nenhum pagamento registrado.</div>'}</div>`)};
+window.openGoalDetail=id=>{const g=state.goals.find(x=>x.id===id);if(!g)return;const v=goalBalance(g),rest=Math.max(0,g.target-v),hist=(g.history||[]).slice().reverse();showDetail(g.name,account(g.accountId)?.name||'Sem conta vinculada',`<div class="metric-grid"><div class="metric"><span>Acumulado</span><strong>${brl(v)}</strong><small>Meta ${brl(g.target)}</small></div><div class="metric"><span>Falta</span><strong>${brl(rest)}</strong><small>${g.targetDate||'Sem prazo definido'}</small></div></div><div class="progress green" role="progressbar" aria-valuenow="${g.target?Math.min(100,v/g.target*100):0}" aria-valuemin="0" aria-valuemax="100"><div style="width:${g.target?Math.min(100,v/g.target*100):0}%"></div></div><div class="section-actions"><button class="btn" onclick="closeProgressive();goalTransfer(${id})">Fazer aporte</button><button class="btn2" onclick="closeProgressive();editGoal(${id},true)">Editar plano</button><button class="danger" onclick="deleteGoalPrompt(${id})">Excluir</button></div><div class="head"><div><h3>Histórico de aportes</h3></div></div><div class="list">${hist.length?hist.map(h=>`<div class="item"><span>${h.date}</span><strong>${brl(h.amount)}</strong></div>`).join(''):'<div class="empty-state">Nenhum aporte registrado.</div>'}</div>`)};
 const FAB_ACTIONS={contas:['Nova conta',()=>openManagementAction('contas')],cartoes:['Novo cartão',()=>openManagementAction('cartoes')],dividas:['Nova dívida',()=>openManagementAction('dividas')],metas:['Nova meta',()=>openManagementAction('metas')],calendario:['Novo lançamento',()=>contextualNew('calendario')],lancamentos:['Novo lançamento',()=>{resetTxForm();$('txDesc').focus()}]};
 function updateContextFab(){const page=activePage(),def=FAB_ACTIONS[page]||['Novo lançamento',()=>contextualNew(page)],fab=$('contextFab');$('fabLabel').textContent=def[0];fab.setAttribute('aria-label',def[0]);fab.onclick=def[1]}
 
@@ -4870,6 +4914,7 @@ let pageStack=['hoje'];
 function activePage(){return document.querySelector('.tab.active')?.id||'hoje'}
 function setPage(id,{mode='push'}={}){
  if(!PAGE_TITLES[id])return false;
+ if(progressiveRestore)closeProgressive(false);
  const current=activePage();
  if(mode==='push'&&id!==current)pageStack.push(id);
  else if(mode==='replace')pageStack=[id];
@@ -4909,7 +4954,7 @@ window.trashTx=async id=>{let i=state.transactions.findIndex(x=>x.id===id);if(i>
 window.editTx=id=>{let t=state.transactions.find(x=>x.id===id);if(!t)return;setPage('lancamentos');setKind(t.kind==='income'?'income':t.kind==='expense'?'expense':'expense');$('txEditId').value=t.id;$('txDesc').value=t.desc;$('txAmount').value=t.amount;$('txDate').value=t.date;$('txCategory').value=t.category||'Outros';$('txAccount').value=t.accountId||'';$('txIncomeStatus').value=t.status==='pending'?'pending':'paid';$('txNote').value=t.note||'';$('txTags').value=(t.tags||[]).join(', ');$('txMoreDetails').open=!!(t.note||(t.tags||[]).length);setTxFormMode(true);$('txFormTitle').scrollIntoView({block:'start'})}
 window.editAccount=(id,fromDetail=false)=>{let a=account(id);$('accountId').value=a.id;$('accountName').value=a.name;$('accountType').value=a.type;$('accountInitial').value=a.initial;$('accountFormTitle').textContent='Editar conta';$('accountFormMode').textContent='Edição';$('accountSubmit').textContent='Salvar alterações';setPage('contas');showProgressivePanel($('accountName').closest('.management-form-panel'),'Editar conta',fromDetail?()=>openAccountDetail(id):null)}
 const reconciliationInFlight=new Set();
-window.reconcileAccount=async(id,button=null)=>{if(reconciliationInFlight.has(id))return;reconciliationInFlight.add(id);if(button){button.disabled=true;button.textContent='Conciliando…'}let before=clone(state),persisted=false;try{let a=account(id),current=accountBalance(id),raw=prompt(`Saldo informado pelo banco para ${a.name}:\nSaldo calculado: ${brl(current)}`);if(raw==null)return;let v=parseFloat(raw.replace(',','.'));if(!Number.isFinite(v))return toast('Informe um saldo válido.');let diff=v-current;a.reconciled={balance:v,date:localCivilDate(),difference:diff};if(Math.abs(diff)>.009&&confirm(`Existe uma diferença de ${brl(diff)}.\n\nDeseja criar um lançamento de ajuste para fazer o saldo do sistema bater com o banco?`)){state.transactions.push({id:uid(),kind:diff>0?'income':'expense',desc:'Ajuste de conciliação',amount:Math.abs(diff),date:localCivilDate(),category:'Ajuste',accountId:id,status:'paid',dueDay:new Date().getDate(),tags:['conciliação'],note:'Criado automaticamente durante conciliação de saldo.',balanceImpact:true,createdAt:Date.now()});a.reconciled.difference=0}if(lastSavedState){autoBackup();snapshotUndo('Conciliar saldo',lastSavedState)}normalize();await dbSet(state);persisted=true;lastSavedState=clone(state);renderAll();let message=Math.abs(diff)<.01?'Saldo conciliado com sucesso.':'Conciliação registrada com sucesso.';toast(message);showFeedback(message)}catch(error){if(!persisted){state=before;lastSavedState=clone(state)}try{renderAll()}catch{}toast(persisted?'Conciliação salva, mas a tela não pôde ser atualizada.':'Não foi possível salvar a conciliação. Tente novamente.');console.error('Falha ao conciliar saldo:',error)}finally{reconciliationInFlight.delete(id);if(button?.isConnected){button.disabled=false;button.textContent='Conciliar saldo'}}}
+window.reconcileAccount=async(id,button=null)=>{if(reconciliationInFlight.has(id))return;reconciliationInFlight.add(id);if(button){button.disabled=true;button.textContent='Conciliando…'}let before=clone(state),persisted=false;try{let a=account(id),current=accountBalance(id),raw=await sfpPrompt({title:`Conciliar ${a.name}`,message:`Saldo calculado no SFP: ${brl(current)}\nInforme o saldo real exibido pelo banco:`,defaultValue:current.toFixed(2),placeholder:'0,00'});if(raw==null||raw==='')return;let v=parseMoney(raw);if(!Number.isFinite(v))return toast('Informe um saldo válido.','warning');let diff=Math.round((v-current)*100)/100;a.reconciled={balance:v,date:localCivilDate(),difference:diff};if(Math.abs(diff)>.009){let adjust=await sfpConfirm({title:'Ajuste de Conciliação',message:`Existe uma diferença de ${brl(diff)} entre o saldo do SFP e o banco.\n\nDeseja criar um lançamento de ajuste automático para sincronizar?`,confirmText:'Criar ajuste',cancelText:'Não ajustar'});if(adjust){state.transactions.push({id:uid(),kind:diff>0?'income':'expense',desc:'Ajuste de conciliação',amount:Math.abs(diff),date:localCivilDate(),category:'Ajuste',accountId:id,status:'paid',dueDay:new Date().getDate(),tags:['conciliação'],note:'Criado automaticamente durante conciliação de saldo.',balanceImpact:true,createdAt:Date.now()});a.reconciled.difference=0}}if(lastSavedState){autoBackup();snapshotUndo('Conciliar saldo',lastSavedState)}normalize();await dbSet(state);persisted=true;lastSavedState=clone(state);renderAll();let message=Math.abs(diff)<.01?'Saldo conciliado com sucesso.':'Conciliação registrada com sucesso.';toast(message,'success');showFeedback(message,{title:'Conciliação',type:'success'})}catch(error){if(!persisted){state=before;lastSavedState=clone(state)}try{renderAll()}catch{}toast(persisted?'Conciliação salva, mas a tela não pôde ser atualizada.':'Não foi possível salvar a conciliação. Tente novamente.','error');console.error('Falha ao conciliar saldo:',error)}finally{reconciliationInFlight.delete(id);if(button){button.disabled=false;button.textContent='Conciliar saldo'}}};
 window.removeAccount=async id=>{if(state.transactions.some(t=>t.accountId==id)||state.transfers.some(t=>t.fromId==id||t.toId==id)||state.cards.some(c=>c.payAccountId==id))return toast('Essa conta ainda está vinculada a movimentações.');let a=account(id);if(a)moveToTrash('account',a);state.accounts=state.accounts.filter(a=>a.id!=id);await save('Excluir conta')}
 window.editCard=(id,fromDetail=false)=>{let c=card(id);$('cardId').value=c.id;$('cardName').value=c.name;$('cardLimit').value=c.limit;$('cardClose').value=c.closeDay;$('cardDue').value=c.dueDay;$('cardPayAccount').value=c.payAccountId;$('cardFormTitle').textContent='Editar cartão';$('cardFormMode').textContent='Edição';$('cardSubmit').textContent='Salvar alterações';setPage('cartoes');showProgressivePanel($('cardName').closest('.management-form-panel'),'Editar cartão',fromDetail?()=>openCardDetail(id):null)}
 window.removeCard=async id=>{if(state.purchases.some(p=>p.cardId==id&&p.status!=='cancelled'))return toast('Há compras vinculadas a este cartão.');let c=card(id);if(c)moveToTrash('card',c);state.cards=state.cards.filter(c=>c.id!=id);await save('Excluir cartão')}
@@ -4917,10 +4962,11 @@ window.removeCard=async id=>{if(state.purchases.some(p=>p.cardId==id&&p.status!=
 window.refundPurchase=async id=>{
  let p=state.purchases.find(x=>x.id===id);if(!p)return;
  let refunded=(p.refunds||[]).reduce((s,r)=>s+Math.max(0,Number(r.amount)||0),0),max=Math.max(0,Math.round((Number(p.total||0)-refunded)*100)/100);
- if(max<=0)return toast('Essa compra já foi integralmente estornada.');
- let v=parseFloat(prompt(`Valor do estorno/reembolso para "${p.desc}" (elegível ${brl(max)}):`,max.toFixed(2))?.replace(',','.'));
+ if(max<=0)return toast('Essa compra já foi integralmente estornada.','info');
+ let raw=await sfpPrompt({title:'Estorno de Compra',message:`Valor do estorno/reembolso para "${p.desc}" (elegível ${brl(max)}):`,defaultValue:max.toFixed(2),placeholder:'0,00'});
+ if(raw==null||raw==='')return;let v=parseMoney(raw);
  if(!(v>0))return;v=Math.min(v,max);p.refunds??=[];p.refunds.push({id:uid(),month:state.mesAtual,amount:v,date:localCivilDate()});
- addCardHistory(p.cardId,'refund',`Estorno em ${p.desc}`,v);await save('Registrar estorno')
+ addCardHistory(p.cardId,'refund',`Estorno em ${p.desc}`,v);await save('Registrar estorno');toast('Estorno registrado com sucesso.','success')
 }
 function renderCardHistory(){
  if(!$('cardHistory'))return;let cid=+$('cardHistorySelect').value,c=card(cid),items=[...(c?.history||[])];
@@ -4929,14 +4975,14 @@ function renderCardHistory(){
  $('cardHistory').innerHTML=items.length?items.slice(0,30).map(h=>`<div class="history-line"><div><b>${h.text}</b><small>${new Date(h.at).toLocaleDateString('pt-BR')}</small></div><strong>${h.amount!=null?brl(h.amount):''}</strong></div>`).join(''):'<div class="item"><span>Nenhum histórico ainda.</span></div>'
 }
 
-window.cancelPurchase=async id=>{let p=state.purchases.find(x=>x.id===id);if(p&&confirm('Cancelar compra e parcelas futuras?')){p.status='cancelled';p.cancelledFromMonth=state.mesAtual;addCardHistory(p.cardId,'cancel',`Compra cancelada: ${p.desc}`);await save('Cancelar compra')}}
+window.cancelPurchase=async id=>{let p=state.purchases.find(x=>x.id===id);if(p&&await sfpConfirm({title:'Cancelar Compra',message:`Deseja cancelar a compra "${p.desc}" e suas parcelas futuras?`,confirmText:'Cancelar compra',cancelText:'Voltar',danger:true})){p.status='cancelled';p.cancelledFromMonth=state.mesAtual;addCardHistory(p.cardId,'cancel',`Compra cancelada: ${p.desc}`);await save('Cancelar compra');toast('Compra cancelada com sucesso.','success')}}
 window.postRec=async id=>{let r=state.recurring.find(x=>x.id===id),month=state.mesAtual;if(!r)return;if(!r.active||r.start>month||(r.end&&r.end<month)||(r.skips||[]).includes(month))return toast('Essa recorrência não está prevista neste mês.');let[y,m]=month.split('-').map(Number),day=clampDay(y,m,r.day),date=`${month}-${String(day).padStart(2,'0')}`;if(state.transactions.some(t=>t.recurringId===r.id&&ym(t.date)===month))return toast('Essa ocorrência já foi registrada.');state.transactions.push({id:uid(),recurringId:r.id,kind:r.type,desc:r.desc,amount:r.amount,date,category:r.category,accountId:r.accountId,status:'paid',dueDay:day,tags:['recorrente'],note:'',balanceImpact:date>state.baseDate,createdAt:Date.now()});await save('Registrar recorrência');toast('Ocorrência do mês registrada')}
 window.toggleRec=async id=>{let r=state.recurring.find(x=>x.id===id);r.active=!r.active;await save('Alterar recorrência')}
 window.skipRec=async id=>{let r=state.recurring.find(x=>x.id===id);r.skips??=[];if(!r.skips.includes(state.mesAtual))r.skips.push(state.mesAtual);await save('Pular recorrência')}
 window.editRec=id=>{let r=state.recurring.find(x=>x.id===id);if(!r)return;$('recId').value=r.id;$('recDesc').value=r.desc;$('recType').value=r.type;$('recAmount').value=r.amount;$('recDay').value=r.day;$('recCategory').value=r.category;$('recAccount').value=r.accountId;$('recStart').value=r.start;$('recEnd').value=r.end||'';setPage('recorrencias')}
 window.removeRec=async id=>{let r=state.recurring.find(x=>x.id===id);if(r)moveToTrash('recurring',r);state.recurring=state.recurring.filter(r=>r.id!==id);await save('Excluir recorrência')}
 window.removeCatBudget=async cat=>{delete state.categoryBudgets[cat];await save('Excluir orçamento de categoria')}
-window.amortize=async id=>{let d=state.debts.find(x=>x.id===id),v=parseFloat(prompt(`Valor extra para amortizar ${d.name}:`)?.replace(',','.'));if(v>0){d.balance=Math.max(0,d.balance-v);d.history??=[];d.history.push({date:localCivilDate(),type:'extra',amount:v});await save('Amortizar dívida')}}
+window.amortize=async id=>{let d=state.debts.find(x=>x.id===id);if(!d)return;let raw=await sfpPrompt({title:`Amortizar ${d.name}`,message:`Saldo devedor atual: ${brl(d.balance)}\nInforme o valor extra a amortizar:`,placeholder:'0,00'});if(raw==null||raw==='')return;let v=parseMoney(raw);if(v>0){d.balance=Math.max(0,Math.round((d.balance-v)*100)/100);d.history??=[];d.history.push({date:localCivilDate(),type:'extra',amount:v});await save('Amortizar dívida');toast('Amortização registrada com sucesso.','success')}}
 window.payDebtInstallment=async id=>{
  let d=state.debts.find(x=>x.id===id);if(!d)return;
  let due=debtDueForMonth(state.mesAtual).find(x=>x.debt.id===id);if(!due)return toast('Não há parcela prevista dessa dívida neste mês.');
@@ -4950,7 +4996,7 @@ window.payDebtInstallment=async id=>{
 }
 window.editDebt=(id,fromDetail=false)=>{let d=state.debts.find(x=>x.id===id);if(!d)return;$('debtId').value=d.id;$('debtName').value=d.name;$('debtBalance').value=d.balance;$('debtRate').value=d.rate;$('debtPayment').value=d.payment;$('debtFirstDue').value=d.firstDue||'';$('debtInstallments').value=d.installments||'';$('debtDay').value=d.dueDay||(+d.firstDue?.slice(8,10)||1);$('debtAccount').value=d.accountId||state.accounts[0]?.id||'';$('debtMoreDetails').open=!!(d.dueDay||d.accountId||d.paymentMethod);$('debtFormTitle').textContent='Editar dívida';$('debtFormMode').textContent='Edição';$('debtSubmit').textContent='Salvar alterações';setPage('dividas');showProgressivePanel($('debtName').closest('.management-form-panel'),'Editar dívida',fromDetail?()=>openDebtDetail(id):null)}
 window.removeDebt=async id=>{let d=state.debts.find(x=>x.id===id);if(d)moveToTrash('debt',d);state.debts=state.debts.filter(d=>d.id!==id);await save('Excluir dívida')}
-window.goalTransfer=async id=>{let g=state.goals.find(x=>x.id===id),v=parseFloat(prompt(`Valor do aporte em ${g.name}:`)?.replace(',','.'));if(!(v>0))return;let opts=state.accounts.filter(a=>a.id!==g.accountId);if(!opts.length)return toast('Crie outra conta para usar como origem.');let msg='Escolha a conta de origem:\n'+opts.map((a,i)=>`${i+1} - ${a.name} (${brl(accountBalance(a.id))})`).join('\n'),n=parseInt(prompt(msg),10)-1,from=opts[n];if(!from)return toast('Conta de origem inválida.');state.transfers.push({id:uid(),desc:`Aporte — ${g.name}`,amount:v,date:localCivilDate(),fromId:from.id,toId:g.accountId,tags:['aporte'],goalId:g.id});g.history.push({date:localCivilDate(),amount:v});await save('Aportar em meta')}
+window.goalTransfer=async id=>{let g=state.goals.find(x=>x.id===id);if(!g)return;let raw=await sfpPrompt({title:`Aporte em ${g.name}`,message:`Meta alvo: ${brl(g.target)} (Acumulado: ${brl(goalBalance(g))})\nInforme o valor do aporte:`,defaultValue:(g.plan||0)>0?(g.plan).toFixed(2):'',placeholder:'0,00'});if(raw==null||raw==='')return;let v=parseMoney(raw);if(!(v>0))return;let opts=state.accounts.filter(a=>a.id!==g.accountId);let from=account(g.accountId)||opts[0]||state.accounts[0];if(!from)return toast('Crie uma conta para realizar o aporte.','warning');state.transfers.push({id:uid(),desc:`Aporte — ${g.name}`,amount:v,date:localCivilDate(),fromId:from.id,toId:g.accountId||from.id,tags:['aporte'],goalId:g.id});g.history??=[];g.history.push({date:localCivilDate(),amount:v});await save('Aportar em meta');toast('Aporte registrado com sucesso.','success')};
 window.editGoal=(id,fromDetail=false)=>{let g=state.goals.find(x=>x.id===id);if(!g)return;$('goalId').value=g.id;$('goalName').value=g.name;$('goalTarget').value=g.target;$('goalAccount').value=g.accountId;$('goalPlan').value=g.plan;$('goalDate').value=g.targetDate||'';$('goalMoreDetails').open=!!(g.plan||g.targetDate);$('goalFormTitle').textContent='Editar meta';$('goalFormMode').textContent='Edição';$('goalSubmit').textContent='Salvar alterações';setPage('metas');showProgressivePanel($('goalName').closest('.management-form-panel'),'Editar meta',fromDetail?()=>openGoalDetail(id):null)}
 window.removeGoal=async id=>{let g=state.goals.find(x=>x.id===id);if(g)moveToTrash('goal',g);state.goals=state.goals.filter(g=>g.id!==id);await save('Excluir meta')}
 window.editAsset=id=>{let a=state.assets.find(x=>x.id===id);if(!a)return;$('assetId').value=a.id;$('assetName').value=a.name;$('assetValue').value=a.value;setPage('patrimonio')}
@@ -4959,7 +5005,7 @@ window.removeRule=async i=>{state.classificationRules.splice(i,1);await save('Ex
 function resetTxForm(){$('txForm').reset();$('txEditId').value='';$('txDate').value=localCivilDate();$('txMoreDetails').open=false;setKind('expense');setTxFormMode(false)}
 function initForms(){
  $('txForm').onsubmit=async e=>{e.preventDefault();let id=+$('txEditId').value,amount=+$('txAmount').value,date=$('txDate').value,desc=$('txDesc').value.trim(),note=$('txNote').value,tags=$('txTags').value.split(',').map(x=>x.trim()).filter(Boolean);
- if(currentKind==='transfer'){let from=+$('txFrom').value,to=+$('txTo').value;if(from===to)return toast('Origem e destino precisam ser diferentes.');let err=validateMoneyAction({amount,accountId:from,allowNegative:true,label:'transferência'});if(err)return toast(err);if(accountBalance(from)<amount&&!confirm(`A transferência deixará ${account(from)?.name||'a conta'} com saldo negativo. Continuar?`))return;state.transfers.push({id:uid(),desc,amount,date,fromId:from,toId:to,tags,note,balanceImpact:true});await save('Nova transferência')}
+ if(currentKind==='transfer'){let from=+$('txFrom').value,to=+$('txTo').value;if(from===to)return toast('Origem e destino precisam ser diferentes.','warning');let err=validateMoneyAction({amount,accountId:from,allowNegative:true,label:'transferência'});if(err)return toast(err,'warning');if(accountBalance(from)<amount&&!(await sfpConfirm({title:'Saldo Negativo',message:`Esta transferência deixará a conta "${account(from)?.name||'de origem'}" com saldo negativo (${brl(accountBalance(from)-amount)}).\n\nDeseja continuar?`,confirmText:'Continuar',cancelText:'Cancelar',danger:true})))return;state.transfers.push({id:uid(),desc,amount,date,fromId:from,toId:to,tags,note,balanceImpact:true});await save('Nova transferência')}
  else if(currentKind==='card'){let cd=card($('txCard').value),first=ym(date),day=+date.slice(8,10),mode=$('txFirstBill').value;if(mode==='auto'&&cd&&day>cd.closeDay)first=monthAdd(first,1);if(mode==='next')first=monthAdd(first,1);state.purchases.push({id:uid(),cardId:+$('txCard').value,desc,total:amount,installments:+$('txInstallments').value||1,purchaseDate:date,firstMonth:first,category:$('txCategory').value,status:'active',note,tags});await save('Nova compra no cartão')}
  else{let kind=currentKind==='income'?'income':'expense',status=currentKind==='income'?$('txIncomeStatus').value:(currentKind==='expense'?'paid':$('txStatus').value),dueDay=currentKind==='bill'?+$('txDueDay').value:+date.slice(8,10),old=id?state.transactions.find(t=>t.id===id):null,obj={...(old||{}),id:id||uid(),kind,desc,amount,date,category:$('txCategory').value,accountId:+$('txAccount').value,status,dueDay,note,tags,balanceImpact:status==='paid',createdAt:old?.createdAt||Date.now()};if(id)state.transactions=state.transactions.map(t=>t.id===id?obj:t);else state.transactions.push(obj);if($('txRecurring').checked||(currentKind==='income'&&$('txIncomeRecurring').value==='yes'))state.recurring.push({id:uid(),desc,type:kind,amount,day:dueDay,category:obj.category,accountId:obj.accountId,start:ym(date),end:'',active:true,skips:[]});await save(id?'Editar lançamento':'Novo lançamento')}
  let effect=currentKind==='income'?`Receita de ${brl(amount)} registrada.`:currentKind==='transfer'?`Transferência de ${brl(amount)} registrada.`:currentKind==='card'?`Compra de ${brl(amount)} adicionada ao cartão.`:`Saída de ${brl(amount)} registrada.`;resetTxForm();setPage('hoje',{mode:'replace'});showFeedback(`${effect}<br><b>Livre projetado agora: ${brl(allAccountBalance()-commitmentUntilNextIncome())}</b>`)};
@@ -5034,10 +5080,10 @@ function initOther(){
  $('prevMonth').onclick=async()=>{state.mesAtual=monthAdd(state.mesAtual,-1);await dbSet(state);renderAll()};$('nextMonth').onclick=async()=>{state.mesAtual=monthAdd(state.mesAtual,1);await dbSet(state);renderAll()};
  $('txSearch').oninput=renderTx;$('txFilter').onchange=renderTx;$('txCancelEdit').onclick=resetTxForm;$('invoiceCard').onchange=()=>{let cid=+$('invoiceCard').value,m=state.ui.invoiceMonthByCard?.[cid]||currentInvoiceMonth(card(cid));if($('invoiceMonth'))$('invoiceMonth').value=m;renderCards()};if($('invoiceMonth'))$('invoiceMonth').onchange=()=>{let cid=+$('invoiceCard').value;state.ui.invoiceMonthByCard[cid]=$('invoiceMonth').value;renderCards()};if($('cardImportFile'))$('cardImportFile').onchange=e=>importCardCsv(e.target.files[0]);if($('cardHistorySelect'))$('cardHistorySelect').onchange=renderCardHistory;
 $('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoiceMonth')?.value||currentInvoiceMonth(card(cid)),total=invoiceTotal(cid,m);if(total<=0)return toast('Essa fatura está vazia.');let inv=ensureInvoice(cid,m);if(inv.closedAt)return toast('A fatura já está fechada.');inv.officialTotal=total;inv.closedAt=new Date().toISOString();inv.status='closed';addCardHistory(cid,'close',`Fatura ${monthName(m)} fechada`,total);await save('Fechar fatura')};
- $('payInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoiceMonth')?.value||currentInvoiceMonth(card(cid)),total=invoiceRemaining(cid,m),cd=card(cid);if(total<=0)return toast('Essa fatura não tem saldo aberto.');let v=parseFloat(prompt(`Valor pago da fatura ${cd.name} (aberto ${brl(total)}):`,total.toFixed(2))?.replace(',','.'));if(!(v>0))return;if(v>total&&!confirm(`O valor informado (${brl(v)}) é maior que o restante da fatura (${brl(total)}). Registrar apenas ${brl(total)}?`))return;v=Math.min(v,total);let inv=state.invoices.find(i=>i.cardId==cid&&i.month===m);if(!inv){inv={id:uid(),cardId:cid,month:m,status:'open',paidAmount:0,accountId:cd.payAccountId,payments:[]};state.invoices.push(inv)}inv.paidAmount=Math.min(invoiceTotal(cid,m),inv.paidAmount+v);inv.status=inv.paidAmount>=invoiceTotal(cid,m)-.01?'paid':'partial';inv.payments.push({date:localCivilDate(),amount:v,balanceImpact:true,targetMonth:m});addCardHistory(cid,'payment',`Pagamento da fatura ${monthName(m)}`,v);await save('Pagar fatura')};
+ $('payInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoiceMonth')?.value||currentInvoiceMonth(card(cid)),total=invoiceRemaining(cid,m),cd=card(cid);if(total<=0)return toast('Essa fatura não tem saldo aberto.','info');let raw=await sfpPrompt({title:`Pagar fatura ${cd.name}`,message:`Fatura de ${monthName(m)}\nSaldo restante em aberto: ${brl(total)}\nInforme o valor do pagamento:`,defaultValue:total.toFixed(2),placeholder:'0,00'});if(raw==null||raw==='')return;let v=parseMoney(raw);if(!(v>0))return;if(v>total){let proceedExcess=await sfpConfirm({title:'Valor Superior',message:`O valor informado (${brl(v)}) é maior que o restante da fatura (${brl(total)}).\n\nDeseja registrar apenas ${brl(total)}?`,confirmText:`Registrar ${brl(total)}`,cancelText:'Cancelar'});if(!proceedExcess)return;v=total}let inv=state.invoices.find(i=>i.cardId==cid&&i.month===m);if(!inv){inv={id:uid(),cardId:cid,month:m,status:'open',paidAmount:0,accountId:cd.payAccountId,payments:[]};state.invoices.push(inv)}inv.paidAmount=Math.min(invoiceTotal(cid,m),Math.round(((inv.paidAmount||0)+v)*100)/100);inv.status=inv.paidAmount>=invoiceTotal(cid,m)-.01?'paid':'partial';inv.payments.push({date:localCivilDate(),amount:v,balanceImpact:true,targetMonth:m});addCardHistory(cid,'payment',`Pagamento da fatura ${monthName(m)}`,v);await save('Pagar fatura');toast('Pagamento registrado com sucesso.','success')};
  $('budgetPreset').onchange=()=>{let p=$('budgetPreset').value,vals=p==='503020'?[50,30,20]:p==='601020'?[60,20,20]:null;if(vals){$('budgetNeeds').value=vals[0];$('budgetWants').value=vals[1];$('budgetSave').value=vals[2]}};
  $('saveBudget').onclick=async()=>{let a=+$('budgetNeeds').value,b=+$('budgetWants').value,c=+$('budgetSave').value;if($('budgetPreset').value!=='none'&&Math.round(a+b+c)!==100)return toast('Os percentuais precisam somar 100%.');Object.assign(state.settings,{budgetPreset:$('budgetPreset').value,needs:a,wants:b,save:c});await save('Salvar orçamento')};
- $('closeMonth').onclick=async()=>{if(state.snapshots.some(s=>s.month===state.mesAtual)&&!confirm('Já existe fechamento deste mês. Substituir?'))return;let c=monthCalc(),snap={id:uid(),month:state.mesAtual,income:c.inc,expense:c.exp,result:c.result,assets:assetTotal(),debts:debtTotal(),netWorth:netWorth(),reserve:goalReserve(),closedAt:new Date().toISOString()};state.snapshots=state.snapshots.filter(s=>s.month!==state.mesAtual);state.snapshots.push(snap);await save('Fechar mês');toast('Mês fechado')};
+ $('closeMonth').onclick=async()=>{if(state.snapshots.some(s=>s.month===state.mesAtual)&&!(await sfpConfirm({title:'Substituir Fechamento',message:`Já existe um fechamento registrado para ${monthName(state.mesAtual)}.\n\nDeseja substituir este fechamento?`,confirmText:'Substituir',cancelText:'Cancelar'})))return;let c=monthCalc(),snap={id:uid(),month:state.mesAtual,income:c.inc,expense:c.exp,result:c.result,assets:assetTotal(),debts:debtTotal(),netWorth:netWorth(),reserve:goalReserve(),closedAt:new Date().toISOString()};state.snapshots=state.snapshots.filter(s=>s.month!==state.mesAtual);state.snapshots.push(snap);await save('Fechar mês');toast('Mês fechado com sucesso.','success')};
  $('simDebtBtn').onclick=()=>{let b=+$('simDebtBalance').value,r=+$('simDebtRate').value/100,p=+$('simDebtPayment').value,x=+$('simDebtExtra').value;if(!b||!p)return toast('Preencha saldo e parcela');let run=pay=>{let bal=b,m=0,int=0;if(pay<=bal*r)return{m:999,int:Infinity};while(bal>0&&m<999){let j=bal*r;int+=j;bal=bal+j-pay;m++}return{m,int}};let n=run(p),f=run(p+x);$('simDebtRes').classList.remove('hidden');$('simDebtRes').innerHTML=`Prazo normal: <b>${n.m}</b> meses.<br>Com extra: <b>${f.m}</b> meses.<br>Economia estimada de juros: <b>${brl(Math.max(0,n.int-f.int))}</b>.`};
  $('simGoalBtn').onclick=()=>{let target=+$('simGoalTarget').value,v=+$('simGoalInitial').value,m=+$('simGoalMonthly').value,r=+$('simGoalRate').value/100,n=0,paid=0;if(!target||!m)return toast('Preencha objetivo e aporte');while(v<target&&n<999){v=(v+m)*(1+r);paid+=m;n++}$('simGoalRes').classList.remove('hidden');$('simGoalRes').innerHTML=`Tempo estimado: <b>${n}</b> meses.<br>Aportes: <b>${brl(paid)}</b>.<br>Rendimentos estimados: <b>${brl(Math.max(0,v-paid-(+$('simGoalInitial').value||0)))}</b>.`};
  $('exportBackup').onclick=()=>download(JSON.stringify(state,null,2),`sfp-backup-${localCivilDate()}.json`,'application/json');
@@ -5048,73 +5094,106 @@ $('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoice
  $('importBackup').onchange=e=>{let f=e.target.files[0];if(!f)return;let rd=new FileReader();rd.onload=async()=>{try{await restoreState(JSON.parse(rd.result));toast('Backup restaurado','success');showFeedback('Backup de dados restaurado com sucesso.',{title:'Backup restaurado',type:'success',notify:true})}catch{toast('Backup inválido','error')}};rd.readAsText(f)};
  if($('runAudit'))$('runAudit').onclick=renderAudit;if($('repairOrphans'))$('repairOrphans').onclick=repairOrphans;if($('removeExactDuplicates'))$('removeExactDuplicates').onclick=removeExactDuplicates;if($('exportDiagnostic'))$('exportDiagnostic').onclick=()=>download(JSON.stringify({generatedAt:new Date().toISOString(),version:VERSION,schemaVersion:state.schemaVersion,audit:auditData(),counts:{accounts:state.accounts.length,transactions:state.transactions.length,cards:state.cards.length,purchases:state.purchases.length,debts:state.debts.length,goals:state.goals.length}},null,2),'sfp-diagnostico.json','application/json');$('autoBackupBtn').onclick=showAutoBackups;$('undoBtn').onclick=async()=>{try{let u=await undoLast();toast(u?`Desfeito: ${u.label}`:'Nada para desfazer.')}catch{toast('Não foi possível persistir o desfazer.')}};
  $('trashBtn').onclick=()=>showTrash();
- $('resetBtn').onclick=()=>resetSystem();
+ $('resetBtn').onclick=async()=>{await resetSystem({confirmDialog:true})};
  $('globalSearch').oninput=renderGlobalSearch;$('globalSearch').onfocus=renderGlobalSearch;document.addEventListener('click',e=>{if(!e.target.closest('.searchbox'))$('globalResults').classList.add('hidden')});
  $('stmtFile').onchange=e=>readStmtFile(e.target.files[0]);$('stmtCancel').onclick=()=>{$('stmtReview').classList.add('hidden');statementDraft=[]};$('stmtImport').onclick=importStatement;let drop=$('stmtDrop');drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag')};drop.ondragleave=()=>drop.classList.remove('drag');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag');readStmtFile(e.dataTransfer.files[0])}
 }
-function parseCSVManual(txt){
- let lines=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw Error('CSV vazio');let ds=[';',',','\t'],d=ds.sort((a,b)=>lines[0].split(b).length-lines[0].split(a).length)[0],heads=splitCSV(lines[0],d);
- let msg='Não consegui reconhecer o CSV automaticamente.\n\nColunas encontradas:\n'+heads.map((h,i)=>`${i+1} - ${h}`).join('\n');
- let saved=state.csvTemplates.find(t=>t.headersKey===heads.join('|').toLowerCase()),di,xi,vi;
- if(saved){di=saved.dateIndex;xi=saved.descIndex;vi=saved.valueIndex}
- else{
-   di=parseInt(prompt(msg+'\n\nNúmero da coluna DATA:'),10)-1;xi=parseInt(prompt('Número da coluna DESCRIÇÃO:'),10)-1;vi=parseInt(prompt('Número da coluna VALOR (negativo = saída, positivo = entrada):'),10)-1;
-   if([di,xi,vi].some(i=>i<0||i>=heads.length))throw Error('Mapeamento cancelado ou inválido');
-   if(confirm('Salvar este mapeamento para próximos extratos com as mesmas colunas?'))state.csvTemplates.push({id:uid(),name:heads.slice(0,3).join(' / '),headersKey:heads.join('|').toLowerCase(),dateIndex:di,descIndex:xi,valueIndex:vi,createdAt:new Date().toISOString()})
- }
- let rows=[];for(let i=1;i<lines.length;i++){let c=splitCSV(lines[i],d),date=parseDate(c[di]),amount=parseMoney(c[vi]);if(date&&amount)rows.push({date,desc:(c[xi]||'Movimentação').trim(),amount,fitid:null})}return rows
+async function parseCSVManual(txt){
+  let lines=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw Error('CSV vazio');let ds=[';',',','\t'],d=ds.sort((a,b)=>lines[0].split(b).length-lines[0].split(a).length)[0],heads=splitCSV(lines[0],d);
+  let msg='Colunas encontradas no CSV:\n'+heads.map((h,i)=>`${i+1} - ${h}`).join('\n');
+  let saved=state.csvTemplates.find(t=>t.headersKey===heads.join('|').toLowerCase()),di,xi,vi;
+  if(saved){di=saved.dateIndex;xi=saved.descIndex;vi=saved.valueIndex}
+  else{
+    let rawD=await sfpPrompt({title:'Mapear Coluna de Data',message:msg+'\n\nNúmero da coluna DATA (1 a '+heads.length+'):',placeholder:'1'});
+    let rawX=await sfpPrompt({title:'Mapear Coluna de Descrição',message:msg+'\n\nNúmero da coluna DESCRIÇÃO (1 a '+heads.length+'):',placeholder:'2'});
+    let rawV=await sfpPrompt({title:'Mapear Coluna de Valor',message:msg+'\n\nNúmero da coluna VALOR (negativo = saída, positivo = entrada):',placeholder:'3'});
+    di=parseInt(rawD,10)-1;xi=parseInt(rawX,10)-1;vi=parseInt(rawV,10)-1;
+    if([di,xi,vi].some(i=>i<0||i>=heads.length||Number.isNaN(i)))throw Error('Mapeamento cancelado ou inválido');
+    if(await sfpConfirm({title:'Salvar Modelo de CSV',message:'Deseja salvar este mapeamento de colunas para futuros extratos com as mesmas colunas?',confirmText:'Salvar modelo',cancelText:'Apenas desta vez'}))state.csvTemplates.push({id:uid(),name:heads.slice(0,3).join(' / '),headersKey:heads.join('|').toLowerCase(),dateIndex:di,descIndex:xi,valueIndex:vi,createdAt:new Date().toISOString()})
+  }
+  let rows=[];for(let i=1;i<lines.length;i++){let c=splitCSV(lines[i],d),date=parseDate(c[di]),amount=parseMoney(c[vi]);if(date&&amount)rows.push({date,desc:(c[xi]||'Movimentação').trim(),amount,fitid:null})}return rows
 }
 
 function parseCardCsv(txt){
- let lines=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw Error('CSV vazio');
- let d=lines[0].includes(';')?';':',',h=splitCSV(lines[0],d).map(x=>x.toLowerCase()),di=h.findIndex(x=>x.includes('date')||x.includes('data')),ti=h.findIndex(x=>x.includes('title')||x.includes('titulo')||x.includes('descr')),ai=h.findIndex(x=>x.includes('amount')||x.includes('valor'));
- if(di<0||ti<0||ai<0)throw Error('Preciso das colunas data, título/descrição e valor.');
- return lines.slice(1).map(l=>{let c=splitCSV(l,d),date=parseDate(c[di]),desc=(c[ti]||'').trim(),amount=parseMoney(c[ai]);return{date,desc,amount}}).filter(x=>x.date&&x.desc&&x.amount)
+  let lines=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw Error('CSV vazio');
+  let d=lines[0].includes(';')?';':',',h=splitCSV(lines[0],d).map(x=>x.toLowerCase()),di=h.findIndex(x=>x.includes('date')||x.includes('data')),ti=h.findIndex(x=>x.includes('title')||x.includes('titulo')||x.includes('descr')),ai=h.findIndex(x=>x.includes('amount')||x.includes('valor'));
+  if(di<0||ti<0||ai<0)throw Error('Preciso das colunas data, título/descrição e valor.');
+  return lines.slice(1).map(l=>{let c=splitCSV(l,d),date=parseDate(c[di]),desc=(c[ti]||'').trim(),amount=parseMoney(c[ai]);return{date,desc,amount}}).filter(x=>x.date&&x.desc&&x.amount)
 }
 async function importCardCsv(file){
- let cid=+$('cardImportCard').value,m=$('cardImportMonth').value||currentInvoiceMonth(card(cid));if(!file)return;
- let rd=new FileReader();rd.onload=async()=>{try{
-   let rows=parseCardCsv(rd.result),added=0,credits=0;
-   for(let r of rows){
-     if(r.amount<0){
-       let prev=monthAdd(m,-1),inv=ensureInvoice(cid,prev),amt=Math.abs(r.amount);
-       let dup=(inv.payments||[]).some(p=>p.date===r.date&&Math.abs(p.amount-amt)<.01);
-       if(!dup){inv.payments.push({date:r.date,amount:amt,balanceImpact:false,targetMonth:prev,sourceDesc:r.desc});inv.paidAmount=Math.round(((inv.paidAmount||0)+amt)*100)/100;if(inv.officialTotal==null)inv.officialTotal=inv.paidAmount;credits++}
-       continue
-     }
-     let pm=r.desc.match(/Parcela\s*(\d+)\s*\/\s*(\d+)/i),desc=r.desc.replace(/\s*-\s*Parcela\s*\d+\s*\/\s*\d+/i,'').trim();
-     if(pm){let n=+pm[1],tot=+pm[2],first=monthAdd(m,-(n-1)),total=Math.round(r.amount*tot*100)/100,dup=state.purchases.some(p=>p.cardId===cid&&p.desc===desc&&p.installments===tot&&Math.abs(p.total-total)<.02);if(!dup){state.purchases.push({id:uid(),cardId:cid,desc,total,installments:tot,purchaseDate:r.date,firstMonth:first,category:'Outros',status:'active',note:'Importado de fatura.',tags:['fatura-importada'],refunds:[]});added++}}
-     else{let dup=state.purchases.some(p=>p.cardId===cid&&p.installments===1&&p.purchaseDate===r.date&&p.desc===desc&&Math.abs(p.total-r.amount)<.01);if(!dup){state.purchases.push({id:uid(),cardId:cid,desc,total:r.amount,installments:1,purchaseDate:r.date,firstMonth:m,category:'Outros',status:'active',note:'Importado de fatura.',tags:['fatura-importada'],refunds:[]});added++}}
-   }
-   let inv=ensureInvoice(cid,m);inv.officialTotal=invoiceCalculated(cid,m);state.ui.invoiceMonthByCard[cid]=m;await save('Importar fatura de cartão');toast(`${added} compras e ${credits} créditos importados.`)
- }catch(e){toast('Erro na fatura: '+e.message)}};rd.readAsText(file,'UTF-8')
+  let cid=+$('cardImportCard').value,m=$('cardImportMonth').value||currentInvoiceMonth(card(cid));if(!file)return;
+  let rd=new FileReader();rd.onload=async()=>{try{
+    let rows=parseCardCsv(rd.result),added=0,credits=0;
+    for(let r of rows){
+      if(r.amount<0){
+        let prev=monthAdd(m,-1),inv=ensureInvoice(cid,prev),amt=Math.abs(r.amount);
+        let dup=(inv.payments||[]).some(p=>p.date===r.date&&Math.abs(p.amount-amt)<.01);
+        if(!dup){inv.payments.push({date:r.date,amount:amt,balanceImpact:false,targetMonth:prev,sourceDesc:r.desc});inv.paidAmount=Math.round(((inv.paidAmount||0)+amt)*100)/100;if(inv.officialTotal==null)inv.officialTotal=inv.paidAmount;credits++}
+        continue
+      }
+      let pm=r.desc.match(/Parcela\s*(\d+)\s*\/\s*(\d+)/i),desc=r.desc.replace(/\s*-\s*Parcela\s*\d+\s*\/\s*\d+/i,'').trim();
+      if(pm){let n=+pm[1],tot=+pm[2],first=monthAdd(m,-(n-1)),total=Math.round(r.amount*tot*100)/100,dup=state.purchases.some(p=>p.cardId===cid&&p.desc===desc&&p.installments===tot&&Math.abs(p.total-total)<.02);if(!dup){state.purchases.push({id:uid(),cardId:cid,desc,total,installments:tot,purchaseDate:r.date,firstMonth:first,category:'Outros',status:'active',note:'Importado de fatura.',tags:['fatura-importada'],refunds:[]});added++}}
+      else{let dup=state.purchases.some(p=>p.cardId===cid&&p.installments===1&&p.purchaseDate===r.date&&p.desc===desc&&Math.abs(p.total-r.amount)<.01);if(!dup){state.purchases.push({id:uid(),cardId:cid,desc,total:r.amount,installments:1,purchaseDate:r.date,firstMonth:m,category:'Outros',status:'active',note:'Importado de fatura.',tags:['fatura-importada'],refunds:[]});added++}}
+    }
+    let inv=ensureInvoice(cid,m);inv.officialTotal=invoiceCalculated(cid,m);state.ui.invoiceMonthByCard[cid]=m;await save('Importar fatura de cartão');toast(`${added} compras e ${credits} créditos importados.`)
+  }catch(e){toast('Erro na fatura: '+e.message)}};rd.readAsText(file,'UTF-8')
 }
 
-function readStmtFile(f){if(!f)return;let rd=new FileReader();rd.onload=()=>{try{let ext=f.name.split('.').pop().toLowerCase(),rows;if(ext==='ofx')rows=parseOFX(rd.result);else{try{rows=parseCSV(rd.result)}catch{rows=parseCSVManual(rd.result)}}if(!rows.length)throw Error('Nenhuma movimentação reconhecida');prepareStatement(rows,f.name)}catch(e){toast('Não consegui ler: '+e.message)}};rd.readAsText(f,'UTF-8')}
+function readStmtFile(f){if(!f)return;let rd=new FileReader();rd.onload=async()=>{try{let ext=f.name.split('.').pop().toLowerCase(),rows;if(ext==='ofx')rows=parseOFX(rd.result);else{try{rows=parseCSV(rd.result)}catch{rows=await parseCSVManual(rd.result)}}if(!rows.length)throw Error('Nenhuma movimentação reconhecida');prepareStatement(rows,f.name)}catch(e){toast('Não consegui ler: '+e.message)}};rd.readAsText(f,'UTF-8')}
 function renderGlobalSearch(){let q=$('globalSearch').value.trim().toLowerCase();if(q.length<2)return $('globalResults').classList.add('hidden');let res=[];state.transactions.filter(t=>`${t.desc} ${t.category} ${(t.tags||[]).join(' ')}`.toLowerCase().includes(q)).slice(0,8).forEach(t=>res.push({title:t.desc,sub:`${t.date} • ${brl(t.amount)} • ${t.kind}`,page:'lancamentos'}));state.purchases.filter(p=>p.desc.toLowerCase().includes(q)).slice(0,5).forEach(p=>res.push({title:p.desc,sub:`Compra em ${card(p.cardId)?.name||'cartão'} • ${brl(p.total)}`,page:'cartoes'}));state.accounts.filter(a=>a.name.toLowerCase().includes(q)).forEach(a=>res.push({title:a.name,sub:`Conta • ${brl(accountBalance(a.id))}`,page:'contas'}));$('globalResults').innerHTML=res.length?res.map((r,i)=>`<div class="item" data-sr="${i}"><div><b>${r.title}</b><small>${r.sub}</small></div></div>`).join(''):'<div class="item"><span>Nada encontrado.</span></div>';$('globalResults').classList.remove('hidden');document.querySelectorAll('[data-sr]').forEach((el,i)=>el.onclick=()=>{setPage(res[i].page);$('globalResults').classList.add('hidden')})}
-
 
 function showAutoBackups(){
  let arr=[];try{arr=JSON.parse(localStorage.getItem('sfp_auto_backups')||'[]')}catch{}
- let root=$('modalRoot');root.className='modalback';root.innerHTML=`<div class="modal"><div class="head"><div><h2>Backups automáticos</h2><p>Últimas versões locais antes de alterações</p></div><button class="btn2" id="closeAB">Fechar</button></div><div class="list">${arr.length?arr.slice().reverse().map((b,i)=>`<div class="item"><div><b>${new Date(b.at).toLocaleString('pt-BR')}</b><small>Snapshot automático</small></div><button class="btn2 tiny" data-ab="${arr.length-1-i}">Restaurar</button></div>`).join(''):'<div class="item"><span>Nenhum backup automático ainda.</span></div>'}</div></div>`;$('closeAB').onclick=()=>root.className='hidden';document.querySelectorAll('[data-ab]').forEach(b=>b.onclick=async()=>{if(!confirm('Restaurar este backup? O estado atual será substituído.'))return;try{await restoreState(arr[+b.dataset.ab].state);root.className='hidden';toast('Backup automático restaurado','success');showFeedback('Backup automático restaurado com sucesso.',{title:'Backup restaurado',type:'success',notify:true})}catch{toast('Não foi possível restaurar o backup automático.','error')}})
+ let root=$('modalRoot');root.className='modalback';root.innerHTML=`<div class="modal"><div class="head"><div><h2>Backups automáticos</h2><p>Últimas versões locais antes de alterações</p></div><button class="btn2" id="closeAB">Fechar</button></div><div class="list">${arr.length?arr.slice().reverse().map((b,i)=>`<div class="item"><div><b>${new Date(b.at).toLocaleString('pt-BR')}</b><small>Snapshot automático</small></div><button class="btn2 tiny" data-ab="${arr.length-1-i}">Restaurar</button></div>`).join(''):'<div class="item"><span>Nenhum backup automático ainda.</span></div>'}</div></div>`;$('closeAB').onclick=()=>root.className='hidden';document.querySelectorAll('[data-ab]').forEach(b=>b.onclick=async()=>{if(!(await sfpConfirm({title:'Restaurar Backup Automático',message:'Deseja restaurar este backup automático? O estado atual será substituído.',confirmText:'Restaurar',cancelText:'Cancelar',danger:true})))return;try{await restoreState(arr[+b.dataset.ab].state);root.className='hidden';toast('Backup automático restaurado','success');showFeedback('Backup automático restaurado com sucesso.',{title:'Backup restaurado',type:'success',notify:true})}catch{toast('Não foi possível restaurar o backup automático.','error')}})
 }
 
 
 function showOnboarding(){
- if(state.settings.onboardingDone)return;
+ if(state.settings.onboardingDone||activePage()!=='hoje')return;
  let root=$('modalRoot');root.className='modalback';
  let step=0;
- const render=()=>{root.innerHTML=`<div class="modal"><div class="head"><div><h2>Configuração inicial</h2><p>Vamos deixar o Smart Financial Planner pronto sem complicação</p></div><button class="btn2" id="skipOnboard">Pular</button></div>
- <div class="onboarding-step ${step===0?'active':''}"><h3>1. Sua conta principal</h3><label>Nome da conta<input id="obAccountName" value="${state.accounts[0]?.name||'Conta principal'}"/></label><label>Saldo atual aproximado<input id="obBalance" type="number" step="0.01" value="${(accountBalance(state.accounts[0]?.id)||0).toFixed(2)}" inputmode="decimal"/></label></div>
- <div class="onboarding-step ${step===1?'active':''}"><h3>2. Recebimentos principais</h3><div class="two"><label>Dia 1<input id="obDay1" type="number" value="${state.settings.day1||1}"/></label><label>Dia 2<input id="obDay2" type="number" value="${state.settings.day2||15}"/></label></div><div class="note">Depois você pode cadastrar os valores exatos como recorrências.</div></div>
- <div class="onboarding-step ${step===2?'active':''}"><h3>3. Cartões</h3><div class="note">${state.cards.length?`Já encontrei ${state.cards.length} cartão(ões) cadastrado(s).`:'Você pode cadastrar cartões agora ou depois na aba Cartões.'}</div></div>
- <div class="onboarding-step ${step===3?'active':''}"><h3>Pronto</h3><div class="note">O Smart Financial Planner está configurado. Você pode começar por um lançamento ou importar um extrato bancário.</div></div>
- <div class="onboard-dots">${[0,1,2,3].map(i=>`<span class="onboard-dot ${i===step?'active':''}"></span>`).join('')}</div>
- <div class="actions"><button class="btn2" id="obPrev" ${step===0?'disabled':''}>Voltar</button><button class="btn" id="obNext">${step===3?'Concluir':'Continuar'}</button></div></div>`;
- $('skipOnboard').onclick=async()=>{state.settings.onboardingDone=true;await dbSet(state);lastSavedState=clone(state);root.className='hidden'};
- $('obPrev').onclick=()=>{if(step>0){step--;render()}};
- $('obNext').onclick=async()=>{if(step===0){let a=state.accounts[0];if(a){a.name=$('obAccountName').value||a.name;let target=Math.round((parseFloat(String($('obBalance').value).replace(',','.'))||0)*100)/100,diff=target-accountBalance(a.id);if(Math.abs(diff)>.009)a.initial+=diff}}if(step===1){state.settings.day1=+$('obDay1').value||1;state.settings.day2=+$('obDay2').value||15}if(step<3){step++;render()}else{state.settings.onboardingDone=true;await save('Concluir onboarding');root.className='hidden';showFeedback('Configuração inicial concluída. O Smart Financial Planner está pronto para uso.',{title:'Bem-vindo',type:'success'})}}};
- render()
+ const render=()=>{
+  root.innerHTML=`<div class="modal"><div class="head"><div><h2>Configuração inicial</h2><p>Vamos deixar o Smart Financial Planner pronto sem complicação</p></div><button class="btn2" id="skipOnboard">Pular</button></div>
+  <div class="onboarding-step ${step===0?'active':''}"><h3>1. Sua conta principal</h3><label>Nome da conta<input id="obAccountName" value="${state.accounts[0]?.name||'Conta principal'}"/></label><label class="money-field">Saldo atual aproximado<input id="obBalance" class="money-input" data-money-input="true" type="number" step="0.01" value="${(state.accounts[0]?accountBalance(state.accounts[0].id):0).toFixed(2)}" inputmode="decimal"/></label></div>
+  <div class="onboarding-step ${step===1?'active':''}"><h3>2. Recebimentos principais</h3><div class="two"><label>Dia 1<input id="obDay1" type="number" value="${state.settings.day1||1}"/></label><label>Dia 2<input id="obDay2" type="number" value="${state.settings.day2||15}"/></label></div><div class="note">Depois você pode cadastrar os valores exatos como recorrências.</div></div>
+  <div class="onboarding-step ${step===2?'active':''}"><h3>3. Cartões</h3><div class="note">${state.cards.length?`Já encontrei ${state.cards.length} cartão(ões) cadastrado(s).`:'Você pode cadastrar cartões agora ou depois na aba Cartões.'}</div></div>
+  <div class="onboarding-step ${step===3?'active':''}"><h3>Pronto</h3><div class="note">O Smart Financial Planner está configurado. Você pode começar por um lançamento ou importar um extrato bancário.</div></div>
+  <div class="onboard-dots">${[0,1,2,3].map(i=>`<span class="onboard-dot ${i===step?'active':''}"></span>`).join('')}</div>
+  <div class="actions"><button class="btn2" id="obPrev" ${step===0?'disabled':''}>Voltar</button><button class="btn" id="obNext">${step===3?'Concluir':'Continuar'}</button></div></div>`;
+  $('skipOnboard').onclick=async()=>{state.settings.onboardingDone=true;await dbSet(state);lastSavedState=clone(state);root.className='hidden'};
+  $('obPrev').onclick=()=>{if(step>0){step--;render()}};
+  $('obNext').onclick=async()=>{
+    if(step===0){
+      let accName=($('obAccountName').value||'').trim()||'Conta principal';
+      let target=Math.round((parseMoney($('obBalance').value)||0)*100)/100;
+      let a=state.accounts[0];
+      if(a){
+        a.name=accName;
+        let diff=target-accountBalance(a.id);
+        if(Math.abs(diff)>.009)a.initial=Math.round(((+a.initial||0)+diff)*100)/100;
+      }else{
+        state.accounts.push({
+          id:uid(),
+          name:accName,
+          type:'Conta corrente',
+          initial:target,
+          reconciled:null,
+          balanceMode:'snapshot',
+          balanceDate:state.baseDate||localCivilDate()
+        });
+      }
+    }
+    if(step===1){state.settings.day1=+$('obDay1').value||1;state.settings.day2=+$('obDay2').value||15}
+    if(step<3){step++;render()}
+    else{
+      state.settings.onboardingDone=true;
+      root.className='hidden';
+      await save('Concluir onboarding');
+      showFeedback('Configuração inicial concluída. O Smart Financial Planner está pronto para uso.',{title:'Bem-vindo',type:'success'});
+    }
+  };
+ };
+ render();
 }
 
 function showMoreMenu(){
