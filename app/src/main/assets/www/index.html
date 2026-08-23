@@ -2139,7 +2139,7 @@ function fallbackGet(){
  if(raw==null)return{status:'empty'};
  try{let value=JSON.parse(raw);return validPersistedState(value)?{status:'ok',value}:{status:'corrupt'}}catch(error){return{status:'corrupt',error}}
 }
-async function openDB(){return new Promise((res,rej)=>{if(!globalThis.indexedDB)return rej(Error('IndexedDB indisponível'));let r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error||Error('Falha ao abrir IndexedDB'));r.onblocked=()=>rej(Error('IndexedDB bloqueada'))})}
+async function openDB(){return new Promise((res,rej)=>{if(!globalThis.indexedDB)return rej(Error('IndexedDB indisponível'));let r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>{let d=r.result;d.onversionchange=()=>{try{d.close()}catch{}};res(d)};r.onerror=()=>rej(r.error||Error('Falha ao abrir IndexedDB'));r.onblocked=()=>rej(Error('IndexedDB bloqueada'))})}
 async function dbGet(){
  try{db=await openDB();let value=await new Promise((res,rej)=>{let r=db.transaction(STORE).objectStore(STORE).get(DB_KEY);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error||Error('Falha ao ler IndexedDB'))});if(value==null)return{status:'empty'};return validPersistedState(value)?{status:'ok',value}:{status:'corrupt'}}
  catch(error){db=null;return{status:'unavailable',error}}

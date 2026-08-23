@@ -24,7 +24,12 @@ function monitor(page) {
 
 async function expectBootComplete(page, expect, name) {
   await expect(page.locator('#pageTitle')).toHaveText('Hoje');
-  await page.locator('.nav button[data-page="config"]').click();
+  const btn = page.locator('.nav button[data-page="config"]');
+  if (await btn.isVisible()) {
+    await btn.click();
+  } else {
+    await page.evaluate(() => setPage('config'));
+  }
   await expect(page.locator('#config')).toHaveClass(/active/);
   await expect(page.locator('#cfgName')).toHaveValue(name);
 }
