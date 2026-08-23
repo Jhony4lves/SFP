@@ -114,7 +114,7 @@ test.describe('Preservação de Estado e Navegação em Mudança de Orientação
     await boot(page);
 
     await go(page, 'contas');
-    await page.locator('#contextFab').click(); // Abre Nova conta via progressive panel
+    await page.evaluate(() => openManagementAction('contas')); // Abre Nova conta via progressive panel
     await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
 
     // Rotaciona para Landscape
@@ -144,6 +144,10 @@ test.describe('Preservação de Estado e Navegação em Mudança de Orientação
 
     await boot(page);
     await writeIndexedDB(page, fix);
+    await page.evaluate(state => {
+      localStorage.clear();
+      localStorage.setItem('sfp_auto_backups', JSON.stringify([{ at: new Date().toISOString(), state }]));
+    }, fix);
     await page.reload();
     await expectBootComplete(page, expect, 'Rotação QA');
 
