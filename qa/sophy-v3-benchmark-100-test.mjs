@@ -1,5 +1,5 @@
 import { createSophyHarness } from './sophy-semantic-harness.mjs';
-import { runCycle1Tests, runCycle2Tests, runCycle3Tests, runCycle4Tests, runCycle5Tests, runCycle6Tests } from './sophy-v3-semantic.spec.mjs';
+import { runCycle1Tests, runCycle2Tests, runCycle3Tests, runCycle4Tests, runCycle5Tests, runCycle6Tests } from './sophy-v3-semantic-cycles.mjs';
 
 function assert(condition, message) {
   if (!condition) {

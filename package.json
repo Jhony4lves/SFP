@@ -4,8 +4,8 @@
   "scripts": {
     "test": "npm run test:static && npm run test:sophy-arch && npm run test:sophy-benchmark",
     "test:static": "node qa/static-check.mjs",
-    "test:sophy-arch": "node qa/sophy-v3-architecture.spec.mjs",
-    "test:sophy-benchmark": "node qa/sophy-v3-benchmark-100.spec.mjs",
+    "test:sophy-arch": "node qa/sophy-v3-architecture-test.mjs",
+    "test:sophy-benchmark": "node qa/sophy-v3-benchmark-100-test.mjs",
     "test:financial": "playwright test qa/financial.spec.js",
     "test:e2e": "playwright test qa/ui.spec.js",
     "test:qa": "playwright test"
