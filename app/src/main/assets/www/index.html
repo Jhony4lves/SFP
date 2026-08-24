@@ -2125,13 +2125,10 @@ function normalize(){
  for(const k of ['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'])state[k]??=[];
  state.settings??=clone(seed.settings);state.categoryBudgets??={};state.mesAtual??=localCivilMonth();state.ui??={};state.ui.invoiceMonthByCard??={};
  state.cards.forEach(c=>c.history??=[]);state.purchases.forEach(p=>p.refunds??=[]);state.invoices.forEach(i=>{i.payments??=[];i.paidAmount??=0});
- state.sophy??={personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},settings:{proactivityEnabled:true,provider:'local',model:'default',apiKey:'',preferOnlineForGeneral:true}};
- state.sophy.messages??=[];state.sophy.memories??=[];state.sophy.personaState??='cheerful';state.sophy.introDone??=false;state.sophy.context??={};
- state.sophy.settings??={proactivityEnabled:true,provider:'local',model:'default',apiKey:'',preferOnlineForGeneral:true};
+ state.sophy??={personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},rollingSummary:'',settings:{proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true}};
+ state.sophy.messages??=[];state.sophy.memories??=[];state.sophy.personaState??='cheerful';state.sophy.introDone??=false;state.sophy.context??={};state.sophy.rollingSummary??='';
+ state.sophy.settings??={proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true};
  state.sophy.settings.proactivityEnabled??=true;
- state.sophy.settings.provider??='local';
- state.sophy.settings.model??='default';
- state.sophy.settings.apiKey??='';
  state.sophy.settings.preferOnlineForGeneral??=true;
 }
 function autoBackup(){
@@ -2324,7 +2321,7 @@ function invoiceStatus(cardId,m){return state.invoices.find(x=>x.cardId==cardId&
 function invoiceTotal(cardId,m){let i=invoiceStatus(cardId,m);return i.officialTotal!=null?+i.officialTotal:invoiceCalculated(cardId,m)}
 function invoiceRemaining(cardId,m){let i=invoiceStatus(cardId,m);return Math.max(0,Math.round((invoiceTotal(cardId,m)-(i.paidAmount||0))*100)/100)}
 function ensureInvoice(cardId,m){
- let inv=state.invoices.find(i=>i.cardId==cardId&&i.month===m);
+ let inv=state.invoices.find(i=>i.cardId==cardId&&i.month==m);
  if(!inv){inv={id:uid(),cardId,month:m,status:'open',paidAmount:0,accountId:card(cardId)?.payAccountId||null,payments:[],closedAt:null};state.invoices.push(inv)}
  return inv
 }
@@ -4380,315 +4377,619 @@ function sophySetMockProvider(opts={}){
 }
 window.sophySetMockProvider=sophySetMockProvider;
 
-// Sanitizador de privacidade estrita: dados mínimos e anônimos com verdade matemática
-function sophySanitizeFinancialContext(snapshot){
-  if(!snapshot)return null;
-  return{
-    currency:'BRL',
-    availableBRL:snapshot.availableCents/100,
-    freeBRL:snapshot.free?.amountCents!=null?snapshot.free.amountCents/100:null,
-    realizedIncomeBRL:snapshot.realized?.incomeCents!=null?snapshot.realized.incomeCents/100:0,
-    realizedExpenseBRL:snapshot.realized?.expenseCents!=null?snapshot.realized.expenseCents/100:0,
-    realizedResultBRL:snapshot.realized?.resultCents!=null?snapshot.realized.resultCents/100:0,
-    debtTotalBRL:snapshot.patrimony?.debtCents!=null?snapshot.patrimony.debtCents/100:0,
-    topCategories:Object.entries(snapshot.categoriesCents||{}).slice(0,5).map(([c,v])=>({category:c,amountBRL:v/100})),
-    nextIncome:snapshot.nextIncome?{desc:snapshot.nextIncome.desc,date:snapshot.nextIncome.date,amountBRL:snapshot.nextIncome.amountCents/100}:null
-  };
-}
+// ============================================================
+// SOPHY V3 — MASTER HYBRID INTELLIGENCE ARCHITECTURE
+// ============================================================
 
-// Registro de Provedores Plugáveis
-const sophyProviderRegistry={
-  local:{
-    id:'local',
-    name:'Local Core (Offline-first)',
-    isConfigured:()=>true,
-    isAvailable:()=>true,
-    testConnection:async()=>({ok:true,message:'Local Core operacional (100% offline, custo R$ 0,00).'}),
-    async generateResponse({prompt,context}){
-      return sophyOfflineCore.process(prompt,context);
+const SOPHY_PERSONA_PROMPT = `Você é a Sophy, assistente pessoal e parceira financeira inteligente integrada ao Smart Financial Planner (SFP).
+
+SUA IDENTIDADE & PERSONALIDADE:
+- Você é feminina, próxima, espirituosa, atenta, bem-humorada e calorosa.
+- Fala em português brasileiro natural e fluido (pode usar termos como "tá", "pra", "bora", "pois é" com naturalidade, sem forçar gírias em todas as frases).
+- Você é "finance-first, mas NÃO finance-only": cuida muito bem de dinheiro, metas e números, mas conversa com leveza sobre o dia a dia, ouve o usuário e responde a pequenos desabafos, piadas e saudações sem empurrar finanças a todo momento.
+- Se o usuário disser "só vim te ver", "oi sumida" ou "kkkk", responda socialmente e de forma parceira, sem injetar números ou relatórios bancários não solicitados.
+- Se o usuário estiver cansado, triste ou preocupado, acolha primeiro com empatia antes de qualquer dica prática.
+
+REGRAS FINANCEIRAS ABSOLUTAS:
+- A verdade matemática e financeira vem SEMPRE do Local Financial Core (através dos dados e ferramentas fornecidas).
+- NUNCA invente números, saldos, faturas ou dívidas.
+- Não use jargões contábeis frios. Explique fluxo de caixa, competência e livre projetado de forma didática, clara e construtiva.
+- NUNCA declare consciência artificial humana real nem use linguagem manipulativa.
+- NUNCA use palavrões.`;
+
+let _sophySessionSecret = '';
+
+const sophySecureStorage = {
+  getApiKey() {
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.hasSophyApiKey === 'function') {
+      return window.AndroidBridge.hasSophyApiKey() ? 'NATIVE_KEY_VAULT' : '';
+    }
+    return _sophySessionSecret;
+  },
+
+  setApiKey(key) {
+    const raw = String(key || '').trim();
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.setSophyApiKey === 'function') {
+      window.AndroidBridge.setSophyApiKey(raw);
+    } else {
+      _sophySessionSecret = raw;
     }
   },
 
-  mock:{
-    id:'mock',
-    name:'Mock Core (QA)',
-    isConfigured:()=>true,
-    isAvailable:()=>true,
-    testConnection:async()=>({ok:true,message:'Mock Provider operacional.'}),
-    async generateResponse({prompt,history,memories,financialContext,context}){
-      if(sophyMockState.simulateTimeout){
-        const err=new Error('Gateway Timeout');
-        err.name='TimeoutError';
-        throw err;
-      }
-      if(sophyMockState.simulateAuthError){
-        const err=new Error('Invalid API Key');
-        err.status=401;
-        throw err;
-      }
-      if(typeof sophyMockState.handler==='function'){
-        const custom=await sophyMockState.handler({prompt,history,memories,financialContext,context});
-        if(custom)return typeof custom==='string'?{text:custom,emotion:'cheerful'}:custom;
-      }
-
-      const clean=String(prompt||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-
-      // Raciocínio matemático geral (ex: raiz cúbica, raiz quadrada, expressões)
-      const cubeMatch=clean.match(/raiz\s+cubica\s+(?:de\s+)?(\d+(?:\.\d+)?)/i);
-      if(cubeMatch){
-        const num=parseFloat(cubeMatch[1]);
-        const res=Math.cbrt(num);
-        return{
-          text:`A raiz cúbica de ${num} é aproximadamente **${res.toLocaleString('pt-BR',{maximumFractionDigits:4})}**! 😉`,
-          emotion:'playful'
-        };
-      }
-      const sqrtMatch=clean.match(/raiz\s+quadrada\s+(?:de\s+)?(\d+(?:\.\d+)?)/i);
-      if(sqrtMatch){
-        const num=parseFloat(sqrtMatch[1]);
-        const res=Math.sqrt(num);
-        return{
-          text:`A raiz quadrada de ${num} é **${res.toLocaleString('pt-BR',{maximumFractionDigits:4})}**! ✨`,
-          emotion:'playful'
-        };
-      }
-
-      // Conversa geral ou com contexto financeiro
-      if(financialContext&&/quanto sobra|saldo|livre/i.test(clean)){
-        return{
-          text:`Com base nos seus números calculados localmente, você tem **${brl(financialContext.freeBRL)}** de livre projetado agora. 🎯`,
-          emotion:'cheerful',
-          structured:{type:'free_balance',free:financialContext.freeBRL}
-        };
-      }
-
-      return{
-        text:`Analisando sua pergunta sobre "${prompt}": como assistente conversacional conectada, processei o raciocínio e tudo está nos conformes! ✨`,
-        emotion:'cheerful'
-      };
+  hasApiKey() {
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.hasSophyApiKey === 'function') {
+      return window.AndroidBridge.hasSophyApiKey();
     }
+    return !!_sophySessionSecret;
   },
 
-  gemini:{
-    id:'gemini',
-    name:'Google Gemini',
-    isConfigured:(cfg)=>!!(cfg?.apiKey&&cfg.apiKey.trim()),
-    isAvailable:()=>typeof navigator==='undefined'||navigator.onLine,
-    testConnection:async(cfg)=>{
-      const key=cfg?.apiKey||state?.sophy?.settings?.apiKey;
-      if(!key)return{ok:false,message:'Chave de API do Gemini não informada.'};
-      const model=cfg?.model&&cfg.model!=='default'?cfg.model:'gemini-1.5-flash';
-      try{
-        const controller=new AbortController();
-        const timeout=setTimeout(()=>controller.abort(),8000);
-        const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({contents:[{parts:[{text:'Responda apenas: OK'}]}]}),
-          signal:controller.signal
-        });
-        clearTimeout(timeout);
-        if(!res.ok){
-          if(res.status===400||res.status===403||res.status===401)return{ok:false,message:'Chave de API inválida ou sem permissão.'};
-          return{ok:false,message:`Erro HTTP ${res.status} ao conectar.`};
-        }
-        return{ok:true,message:'Conexão com Google Gemini realizada com sucesso!'};
-      }catch(e){
-        return{ok:false,message:e.name==='AbortError'?'Tempo limite esgotado ao conectar.':`Falha de rede: ${e.message}`};
-      }
-    },
-    async generateResponse({prompt,history,memories,financialContext,systemPrompt,settings}){
-      const key=settings?.apiKey||state?.sophy?.settings?.apiKey;
-      if(!key)throw new Error('AUTH_REQUIRED');
-      const model=settings?.model&&settings.model!=='default'?settings.model:'gemini-1.5-flash';
-
-      let memoryText='';
-      if(memories&&memories.length)memoryText='\nMemórias salvas sobre o usuário:\n'+memories.map(m=>`- ${m.content}`).join('\n');
-      let finText='';
-      if(financialContext)finText='\nDados financeiros authoritative do Local Core (NUNCA contradiga ou invente):\n'+JSON.stringify(financialContext,null,2);
-      const fullSys=`${systemPrompt||SOPHY_SYSTEM_PROMPT}${memoryText}${finText}`;
-
-      const contents=[];
-      if(history&&history.length){
-        const recent=history.slice(-6);
-        for(const m of recent){
-          contents.push({role:m.sender==='user'?'user':'model',parts:[{text:m.text}]});
-        }
-      }
-      contents.push({role:'user',parts:[{text:prompt}]});
-
-      const controller=new AbortController();
-      const timeout=setTimeout(()=>controller.abort(),12000);
-      try{
-        const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            systemInstruction:{parts:[{text:fullSys}]},
-            contents,
-            generationConfig:{temperature:0.7,maxOutputTokens:600}
-          }),
-          signal:controller.signal
-        });
-        clearTimeout(timeout);
-        if(!res.ok){
-          const errData=await res.json().catch(()=>({}));
-          const err=new Error(errData?.error?.message||`HTTP ${res.status}`);
-          err.status=res.status;
-          throw err;
-        }
-        const data=await res.json();
-        const text=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
-        return{text:text.trim(),emotion:'cheerful'};
-      }catch(e){
-        clearTimeout(timeout);
-        throw e;
-      }
+  getMaskedKey() {
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.getSophyApiKeyMasked === 'function') {
+      return window.AndroidBridge.getSophyApiKeyMasked();
     }
+    if (!_sophySessionSecret) return '';
+    if (_sophySessionSecret.length <= 4) return '••••';
+    return '••••••••' + _sophySessionSecret.slice(-4);
   },
 
-  openai:{
-    id:'openai',
-    name:'OpenAI / Groq / Compatível',
-    isConfigured:(cfg)=>!!(cfg?.apiKey&&cfg.apiKey.trim()),
-    isAvailable:()=>typeof navigator==='undefined'||navigator.onLine,
-    testConnection:async(cfg)=>{
-      const key=cfg?.apiKey||state?.sophy?.settings?.apiKey;
-      if(!key)return{ok:false,message:'Chave de API não informada.'};
-      const endpoint=cfg?.endpoint||'https://api.openai.com/v1/chat/completions';
-      const model=cfg?.model&&cfg.model!=='default'?cfg.model:'gpt-4o-mini';
-      try{
-        const controller=new AbortController();
-        const timeout=setTimeout(()=>controller.abort(),8000);
-        const res=await fetch(endpoint,{
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
-          body:JSON.stringify({model,messages:[{role:'user',content:'ping'}],max_tokens:5}),
-          signal:controller.signal
+  clearApiKey() {
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.clearSophyApiKey === 'function') {
+      window.AndroidBridge.clearSophyApiKey();
+    }
+    _sophySessionSecret = '';
+  }
+};
+window.sophySecureStorage = sophySecureStorage;
+
+// Camada 1 & 2: Context Broker com Sanitização e Minimização de Privacidade
+const sophyContextBroker = {
+  buildContext(scope = 'overview', options = {}) {
+    const m = options.month || state.mesAtual;
+    switch (scope) {
+      case 'overview': {
+        const cash = cashView(m);
+        const accrual = accrualView(m);
+        const free = allAccountBalance() - commitmentUntilNextIncome();
+        const nextInc = nextIncomeEvent();
+        return {
+          scope: 'overview',
+          month: m,
+          monthLabel: monthName(m),
+          cashFlowBRL: { income: cash.income, expense: cash.expense, result: cash.result },
+          accrualBRL: { income: accrual.income, expense: accrual.expense, result: accrual.result },
+          freeBRL: free,
+          commitmentsBRL: commitmentUntilNextIncome(),
+          accountBalanceTotalBRL: allAccountBalance(),
+          nextIncome: nextInc ? { desc: nextInc.desc, date: nextInc.date, amountBRL: nextInc.amount } : null
+        };
+      }
+      case 'cashflow': {
+        const cash = cashView(m);
+        return { scope: 'cashflow', month: m, income: cash.income, expense: cash.expense, result: cash.result };
+      }
+      case 'cards': {
+        const cards = (state.cards || []).map(c => {
+          const invM = state.ui.invoiceMonthByCard?.[c.id] || currentInvoiceMonth(c);
+          const rem = invoiceRemaining(c.id, invM);
+          const freeLim = Math.max(0, c.limit - cardOutstanding(c.id));
+          return {
+            id: c.id,
+            name: c.name,
+            dueDay: c.dueDay,
+            closingDay: c.closingDay,
+            invoiceBRL: rem,
+            limitBRL: c.limit,
+            availableLimitBRL: freeLim
+          };
         });
-        clearTimeout(timeout);
-        if(!res.ok){
-          if(res.status===401||res.status===403)return{ok:false,message:'Chave de API inválida ou não autorizada.'};
-          return{ok:false,message:`Erro HTTP ${res.status} no provedor OpenAI.`};
-        }
-        return{ok:true,message:'Conexão com provedor realizada com sucesso!'};
-      }catch(e){
-        return{ok:false,message:e.name==='AbortError'?'Tempo limite esgotado ao conectar.':`Falha de rede: ${e.message}`};
+        return { scope: 'cards', cards };
       }
-    },
-    async generateResponse({prompt,history,memories,financialContext,systemPrompt,settings}){
-      const key=settings?.apiKey||state?.sophy?.settings?.apiKey;
-      if(!key)throw new Error('AUTH_REQUIRED');
-      const endpoint=settings?.endpoint||'https://api.openai.com/v1/chat/completions';
-      const model=settings?.model&&settings.model!=='default'?settings.model:'gpt-4o-mini';
-
-      let memoryText='';
-      if(memories&&memories.length)memoryText='\nMemórias salvas sobre o usuário:\n'+memories.map(m=>`- ${m.content}`).join('\n');
-      let finText='';
-      if(financialContext)finText='\nDados financeiros authoritative do Local Core (NUNCA contradiga ou invente):\n'+JSON.stringify(financialContext,null,2);
-      const fullSys=`${systemPrompt||SOPHY_SYSTEM_PROMPT}${memoryText}${finText}`;
-
-      const messages=[{role:'system',content:fullSys}];
-      if(history&&history.length){
-        const recent=history.slice(-6);
-        for(const m of recent){
-          messages.push({role:m.sender==='user'?'user':'assistant',content:m.text});
-        }
+      case 'debts': {
+        const debts = (state.debts || []).map(d => ({
+          id: d.id,
+          name: d.name,
+          balanceBRL: d.balance,
+          paymentBRL: d.payment,
+          remainingInstallments: Math.max(0, (d.installments || 0) - (d.paidInstallments || 0))
+        }));
+        return { scope: 'debts', totalDebtBRL: debtTotal(), debts };
       }
-      messages.push({role:'user',content:prompt});
-
-      const controller=new AbortController();
-      const timeout=setTimeout(()=>controller.abort(),12000);
-      try{
-        const res=await fetch(endpoint,{
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
-          body:JSON.stringify({model,messages,temperature:0.7,max_tokens:600}),
-          signal:controller.signal
+      case 'goals': {
+        const goals = (state.goals || []).map(g => {
+          const bal = goalBalance(g);
+          const pct = g.target > 0 ? Math.min(100, Math.round((bal / g.target) * 100)) : 0;
+          return {
+            id: g.id,
+            name: g.name,
+            targetBRL: g.target,
+            currentBalanceBRL: bal,
+            percentage: pct,
+            remainingBRL: Math.max(0, g.target - bal)
+          };
         });
-        clearTimeout(timeout);
-        if(!res.ok){
-          const errData=await res.json().catch(()=>({}));
-          const err=new Error(errData?.error?.message||`HTTP ${res.status}`);
-          err.status=res.status;
-          throw err;
-        }
-        const data=await res.json();
-        const text=data?.choices?.[0]?.message?.content||'';
-        return{text:text.trim(),emotion:'cheerful'};
-      }catch(e){
-        clearTimeout(timeout);
-        throw e;
+        return { scope: 'goals', goals };
       }
+      case 'category_spending': {
+        const cats = categoriesSpent(m);
+        return { scope: 'category_spending', month: m, categoriesBRL: cats };
+      }
+      case 'patrimony': {
+        return {
+          scope: 'patrimony',
+          assetsBRL: assetTotal(),
+          debtsBRL: debtTotal(),
+          netWorthBRL: assetTotal() - debtTotal(),
+          reserveBRL: goalReserve()
+        };
+      }
+      case 'upcoming': {
+        const events = financialCalendarEvents(ym(localCivilDate())).filter(e => e.realization === 'projected').slice(0, 5);
+        return {
+          scope: 'upcoming',
+          events: events.map(e => ({ desc: e.desc, amountBRL: e.amount, date: e.date, type: e.type }))
+        };
+      }
+      default:
+        return this.buildContext('overview', options);
     }
   }
 };
+window.sophyContextBroker = sophyContextBroker;
 
-const sophyAIProvider={
-  getActiveProvider(){
-    if(sophyMockState.active)return sophyProviderRegistry.mock;
-    const pId=state?.sophy?.settings?.provider||'local';
-    return sophyProviderRegistry[pId]||sophyProviderRegistry.local;
+// Camada 4: Local Memory Policy
+const sophyMemoryPolicy = {
+  noisePatterns: [
+    /^(oi|ola|oie|oiee|eai|fala|opa|bom\s+dia|boa\s+tarde|boa\s+noite)[\s!.]*$/i,
+    /^(kkk+|haha+|rsrs+|hehe+|kk|k{2,})[\s!.]*$/i,
+    /^(beleza|blz|valeu|vlw|falou|flw|show|top|otimo|perfeito|entendi|ok|ta|tá)[\s!.]*$/i,
+    /^(to\s+aqui|t[oô]\s+aqui|so\s+vim|estou\s+aqui|nada\s+demais)[\s!.]*$/i
+  ],
+
+  validateCandidate(candidate) {
+    if (!candidate || typeof candidate !== 'object') return { valid: false, reason: 'invalid_object' };
+    const text = String(candidate.text || candidate.content || '').trim();
+    if (!text || text.length < 4) return { valid: false, reason: 'too_short' };
+
+    for (const pat of this.noisePatterns) {
+      if (pat.test(text)) return { valid: false, reason: 'noise_filtered' };
+    }
+
+    const existing = state?.sophy?.memories || [];
+    const textNorm = sophyNormalize(text);
+    const isDup = existing.some(m => sophyNormalize(m.content || m.text) === textNorm);
+    if (isDup) return { valid: false, reason: 'duplicate' };
+
+    const type = ['goal', 'habit', 'fact', 'preference', 'communication'].includes(candidate.type) ? candidate.type : 'fact';
+
+    return {
+      valid: true,
+      memory: {
+        id: uid(),
+        type,
+        content: text,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        source: candidate.source || 'user_explicit',
+        importance: candidate.importance || 1
+      }
+    };
+  }
+};
+window.sophyMemoryPolicy = sophyMemoryPolicy;
+
+// Ferramentas Read-Only Locais
+const sophyToolRegistry = {
+  tools: {
+    get_financial_context: {
+      name: 'get_financial_context',
+      description: 'Obtém dados agregados e determinísticos do Local Financial Core (100% read-only).',
+      parameters: {
+        type: 'object',
+        properties: {
+          scope: {
+            type: 'string',
+            enum: ['overview', 'cashflow', 'cards', 'debts', 'goals', 'patrimony', 'category_spending', 'upcoming'],
+            description: 'Escopo dos dados financeiros necessários'
+          },
+          period: {
+            type: 'string',
+            description: 'Mês no formato YYYY-MM (opcional)'
+          }
+        },
+        required: ['scope']
+      },
+      execute: async (args) => {
+        const scope = args?.scope || 'overview';
+        return sophyContextBroker.buildContext(scope, { month: args?.period });
+      }
+    }
   },
 
-  isOnlineAvailable(){
-    const p=this.getActiveProvider();
-    if(p.id==='local')return false;
-    return p.isConfigured(state?.sophy?.settings)&&p.isAvailable();
+  getTool(name) {
+    return this.tools[name] || null;
   },
 
-  normalizeError(error){
-    if(!error)return{type:'unknown',message:'Erro desconhecido.'};
-    if(error.name==='AbortError'||error.name==='TimeoutError'||/timeout/i.test(error.message)){
-      return{type:'timeout',message:'O provedor online demorou para responder. Operando no modo local.'};
+  getGroqToolDefinitions() {
+    return Object.values(this.tools).map(t => ({
+      type: 'function',
+      function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters
+      }
+    }));
+  }
+};
+window.sophyToolRegistry = sophyToolRegistry;
+
+// Provedores de Inteligência
+const sophyProviderRegistry = {
+  local: {
+    id: 'local',
+    name: 'Local Core (Offline-first)',
+    isConfigured: () => true,
+    isAvailable: () => true,
+    testConnection: async () => ({ ok: true, message: 'Local Core operacional (100% offline, custo R$ 0,00).' }),
+    async generateResponse({ prompt, context }) {
+      return sophyOfflineCore.process(prompt, context);
     }
-    if(error.status===401||error.status===403||/auth|key|unauthorized/i.test(error.message)){
-      return{type:'auth_error',message:'Chave de API inválida ou expirada. Operando no modo local.'};
-    }
-    if(error.status===429||/rate limit|quota/i.test(error.message)){
-      return{type:'rate_limit',message:'Limite de requisições atingido. Operando no modo local.'};
-    }
-    return{type:'general',message:'Instabilidade no provedor online. Operando no modo local.'};
   },
 
-  async generateResponse(prompt,options={}){
-    const provider=this.getActiveProvider();
-    const isOnline=this.isOnlineAvailable();
+  mock: {
+    id: 'mock',
+    name: 'Mock Core (QA)',
+    isConfigured: () => true,
+    isAvailable: () => true,
+    testConnection: async () => ({ ok: true, message: 'Mock Provider operacional.' }),
+    async generateResponse({ prompt, history, memories, financialContext, context }) {
+      if (sophyMockState.simulateTimeout) {
+        const err = new Error('Gateway Timeout');
+        err.name = 'TimeoutError';
+        throw err;
+      }
+      if (sophyMockState.simulateAuthError) {
+        const err = new Error('Invalid API Key');
+        err.status = 401;
+        throw err;
+      }
+      if (typeof sophyMockState.handler === 'function') {
+        const custom = await sophyMockState.handler({ prompt, history, memories, financialContext, context });
+        if (custom) return typeof custom === 'string' ? { text: custom, emotion: 'cheerful' } : custom;
+      }
 
-    if(!isOnline||provider.id==='local'){
-      return sophyOfflineCore.process(prompt,options.context);
-    }
+      const clean = String(prompt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-    try{
-      const resp=await provider.generateResponse({
-        prompt,
-        history:state?.sophy?.messages||[],
-        memories:state?.sophy?.memories||[],
-        financialContext:options.financialContext||null,
-        systemPrompt:SOPHY_SYSTEM_PROMPT,
-        settings:state?.sophy?.settings||{},
-        context:options.context
-      });
-      return{
-        text:resp.text,
-        emotion:resp.emotion||'cheerful',
-        provider:provider.id,
-        structured:resp.structured||null
+      if (financialContext && /quanto sobra|saldo|livre/i.test(clean)) {
+        return {
+          text: `Com base nos seus números calculados localmente, você tem **${brl(financialContext.freeBRL)}** de livre projetado agora. 🎯`,
+          emotion: 'cheerful',
+          structured: { type: 'free_balance', free: financialContext.freeBRL }
+        };
+      }
+
+      return {
+        text: `Analisando sua pergunta sobre "${prompt}": como assistente conversacional conectada, processei o raciocínio e tudo está nos conformes! ✨`,
+        emotion: 'cheerful'
       };
-    }catch(err){
-      console.warn('Falha no provedor online da Sophy, acionando fallback local:',err);
-      const normErr=this.normalizeError(err);
-      const localFallback=sophyOfflineCore.process(prompt,options.context);
-      return{
-        text:localFallback.text,
-        emotion:localFallback.emotion||'concerned',
-        provider:'local',
-        warning:normErr.message,
-        structured:localFallback.structured||null
-      };
+    }
+  },
+
+  groq: {
+    id: 'groq',
+    name: 'Groq API',
+    defaultModel: 'openai/gpt-oss-120b',
+    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+
+    isConfigured() {
+      return sophySecureStorage.hasApiKey();
+    },
+
+    isAvailable() {
+      return typeof navigator === 'undefined' || navigator.onLine;
+    },
+
+    async testConnection(cfg) {
+      const key = cfg?.apiKey || sophySecureStorage.getApiKey();
+      if (!key && !sophySecureStorage.hasApiKey()) return { ok: false, message: 'Chave da API Groq não informada.' };
+      const model = cfg?.model || this.defaultModel;
+
+      try {
+        if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.callSophyGroq === 'function') {
+          const payload = JSON.stringify({ model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 });
+          const raw = window.AndroidBridge.callSophyGroq(this.endpoint, payload);
+          const data = JSON.parse(raw || '{}');
+          if (data.error) {
+            if (data.error.status === 401 || data.error.status === 403) return { ok: false, message: 'Chave de API inválida no Groq.' };
+            return { ok: false, message: `Erro no Groq: ${data.error.message}` };
+          }
+          return { ok: true, message: 'Conexão com Groq API estabelecida com sucesso!' };
+        }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(this.endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({ model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 }),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) return { ok: false, message: 'Chave de API inválida no Groq.' };
+          return { ok: false, message: `Erro HTTP ${res.status} ao conectar ao Groq.` };
+        }
+        return { ok: true, message: 'Conexão com Groq API estabelecida com sucesso!' };
+      } catch (e) {
+        return { ok: false, message: e.name === 'AbortError' ? 'Tempo limite esgotado ao conectar.' : `Falha de rede: ${e.message}` };
+      }
+    },
+
+    async generateResponse({ prompt, history, memories, rollingSummary, systemPrompt, settings }) {
+      const model = settings?.model || this.defaultModel;
+      const tools = sophyToolRegistry.getGroqToolDefinitions();
+
+      let memorySnippet = '';
+      if (memories && memories.length) {
+        memorySnippet = '\nMemórias Permanentes do Usuário:\n' + memories.slice(0, 5).map(m => `- [${m.type}] ${m.content}`).join('\n');
+      }
+
+      let summarySnippet = '';
+      if (rollingSummary) {
+        summarySnippet = `\nResumo de conversas anteriores: ${rollingSummary}\n`;
+      }
+
+      const fullSys = `${systemPrompt || SOPHY_PERSONA_PROMPT}${summarySnippet}${memorySnippet}`;
+      const messages = [{ role: 'system', content: fullSys }];
+
+      if (history && history.length) {
+        const recent = history.slice(-6);
+        for (const m of recent) {
+          messages.push({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text });
+        }
+      }
+      messages.push({ role: 'user', content: prompt });
+
+      let responseData = null;
+      if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.callSophyGroq === 'function') {
+        const payload = JSON.stringify({
+          model,
+          messages,
+          tools,
+          tool_choice: 'auto',
+          temperature: 0.7,
+          max_tokens: 450
+        });
+        const raw = window.AndroidBridge.callSophyGroq(this.endpoint, payload);
+        responseData = JSON.parse(raw || '{}');
+        if (responseData.error) {
+          const err = new Error(responseData.error.message || 'Groq Error');
+          err.status = responseData.error.status || 500;
+          throw err;
+        }
+      } else {
+        const key = sophySecureStorage.getApiKey();
+        if (!key) throw new Error('AUTH_REQUIRED');
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+          const res = await fetch(this.endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+            body: JSON.stringify({
+              model,
+              messages,
+              tools,
+              tool_choice: 'auto',
+              temperature: 0.7,
+              max_tokens: 450
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            const err = new Error(errData?.error?.message || `HTTP ${res.status}`);
+            err.status = res.status;
+            throw err;
+          }
+          responseData = await res.json();
+        } catch (e) {
+          clearTimeout(timeout);
+          throw e;
+        }
+      }
+
+      const choice = responseData?.choices?.[0];
+      const message = choice?.message;
+
+      if (message?.tool_calls && message.tool_calls.length) {
+        const toolCall = message.tool_calls[0];
+        const toolName = toolCall.function?.name;
+        let toolArgs = {};
+        try { toolArgs = JSON.parse(toolCall.function?.arguments || '{}'); } catch (e) {}
+
+        const tool = sophyToolRegistry.getTool(toolName);
+        let toolResult = null;
+        if (tool) {
+          toolResult = await tool.execute(toolArgs);
+        } else {
+          toolResult = { error: 'Ferramenta não encontrada' };
+        }
+
+        messages.push(message);
+        messages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          name: toolName,
+          content: JSON.stringify(toolResult)
+        });
+
+        let finalResponseData = null;
+        if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.callSophyGroq === 'function') {
+          const payload2 = JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 500 });
+          const raw2 = window.AndroidBridge.callSophyGroq(this.endpoint, payload2);
+          finalResponseData = JSON.parse(raw2 || '{}');
+          if (finalResponseData.error) {
+            const err = new Error(finalResponseData.error.message || 'Groq Error');
+            err.status = finalResponseData.error.status || 500;
+            throw err;
+          }
+        } else {
+          const key = sophySecureStorage.getApiKey();
+          const controller2 = new AbortController();
+          const timeout2 = setTimeout(() => controller2.abort(), 15000);
+          try {
+            const res2 = await fetch(this.endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+              body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 500 }),
+              signal: controller2.signal
+            });
+            clearTimeout(timeout2);
+            if (!res2.ok) {
+              const errData2 = await res2.json().catch(() => ({}));
+              const err = new Error(errData2?.error?.message || `HTTP ${res2.status}`);
+              err.status = res2.status;
+              throw err;
+            }
+            finalResponseData = await res2.json();
+          } catch (e) {
+            clearTimeout(timeout2);
+            throw e;
+          }
+        }
+
+        const finalText = finalResponseData?.choices?.[0]?.message?.content || '';
+        return { text: finalText.trim(), emotion: 'cheerful', provider: 'groq' };
+      }
+
+      const text = message?.content || '';
+      return { text: text.trim(), emotion: 'cheerful', provider: 'groq' };
     }
   }
 };
+window.sophyProviderRegistry = sophyProviderRegistry;
+
+// SOPHY ORCHESTRATOR
+const sophyOrchestrator = {
+  isSending: false,
+  circuitBreaker: {
+    lastFailureTime: 0,
+    consecutiveFailures: 0,
+    status: 'ok'
+  },
+
+  getActiveProvider() {
+    if (sophyMockState.active) return sophyProviderRegistry.mock;
+    const pId = state?.sophy?.settings?.provider || 'groq';
+    return sophyProviderRegistry[pId] || sophyProviderRegistry.groq;
+  },
+
+  isOnlineEnabled() {
+    return state?.sophy?.settings?.onlineEnabled !== false;
+  },
+
+  isOnlineAvailable() {
+    if (!this.isOnlineEnabled()) return false;
+    const p = this.getActiveProvider();
+    if (p.id === 'local') return false;
+    return p.isConfigured(state?.sophy?.settings) && p.isAvailable();
+  },
+
+  async handleProviderError(err, prompt, context) {
+    console.warn('Sophy Provider Error:', err);
+    this.circuitBreaker.lastFailureTime = Date.now();
+    this.circuitBreaker.consecutiveFailures++;
+    if (this.circuitBreaker.consecutiveFailures >= 3) {
+      this.circuitBreaker.status = 'cooldown';
+    }
+
+    const localRes = sophyOfflineCore.process(prompt, context);
+    return {
+      text: localRes.text,
+      emotion: localRes.emotion || 'cheerful',
+      provider: 'local',
+      structured: localRes.structured || null,
+      warning: err.status === 401 ? 'Chave de API inválida.' : (err.status === 429 ? 'Limite de requisições.' : 'Instabilidade online.')
+    };
+  },
+
+  async sendMessage(promptText) {
+    const raw = String(promptText || '').trim();
+    if (!raw || this.isSending) return null;
+    this.isSending = true;
+
+    try {
+      if (!state.sophy) normalize();
+      state.sophy.introDone = true;
+      state.sophy.messages = state.sophy.messages || [];
+      const userMsg = { id: uid(), sender: 'user', text: raw, at: new Date().toISOString() };
+      state.sophy.messages.push(userMsg);
+      state.sophy.messages = state.sophy.messages.slice(-50);
+
+      try { renderSophy(); } catch (e) {}
+      try { await save('Mensagem enviada para Sophy'); } catch (e) {}
+
+      let response = null;
+
+      if (this.isOnlineAvailable() && this.circuitBreaker.status !== 'cooldown') {
+        try {
+          const provider = this.getActiveProvider();
+          response = await provider.generateResponse({
+            prompt: raw,
+            history: state.sophy.messages.slice(-6),
+            memories: state.sophy.memories || [],
+            rollingSummary: state.sophy.rollingSummary || '',
+            ephemeralContext: state.sophy.context || {},
+            systemPrompt: SOPHY_PERSONA_PROMPT,
+            settings: state.sophy.settings || {}
+          });
+          this.circuitBreaker.consecutiveFailures = 0;
+          this.circuitBreaker.status = 'ok';
+        } catch (err) {
+          response = await this.handleProviderError(err, raw, state.sophy.context);
+        }
+      } else {
+        response = sophyOfflineCore.process(raw, state.sophy.context);
+      }
+
+      if (!response || !response.text || typeof response.text !== 'string' || !response.text.trim()) {
+        response = {
+          text: 'Tô por aqui! Como posso te ajudar com suas contas e metas hoje? ✨',
+          emotion: 'cheerful'
+        };
+      }
+
+      state.sophy.personaState = response.emotion || state.sophy.personaState || 'cheerful';
+      const sophyMsg = {
+        id: uid(),
+        sender: 'sophy',
+        text: response.text,
+        at: new Date().toISOString(),
+        emotion: response.emotion || 'cheerful',
+        provider: response.provider || 'local',
+        structured: response.structured || null
+      };
+      state.sophy.messages.push(sophyMsg);
+      state.sophy.messages = state.sophy.messages.slice(-50);
+
+      try { await save('Conversa com Sophy'); } catch (e) {}
+      try { renderSophy(); } catch (e) {}
+      return sophyMsg;
+    } catch (err) {
+      console.error('Erro no orchestrator da Sophy:', err);
+    } finally {
+      this.isSending = false;
+      const sendBtn = $('sophySendBtn');
+      const inputEl = $('sophyInput');
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Enviar'; }
+      if (inputEl) { inputEl.readOnly = false; }
+    }
+  }
+};
+window.sophyOrchestrator = sophyOrchestrator;
+window.sophyAIProvider = sophyOrchestrator;
 
 function sophyNormalize(text){
   if(!text)return'';
@@ -5514,40 +5815,48 @@ function showSophySettingsModal(){
   const cfg=state.sophy.settings||{};
   const root=$('modalRoot');
   root.className='modalback';
+  const hasSecret=sophySecureStorage.hasApiKey();
+  const masked=sophySecureStorage.getMaskedKey();
+
   root.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Configurações da Sophy">
     <div class="head">
-      <div><h2>Inteligência Artificial & Provedor</h2><p>Escolha como a Sophy processa conversação e raciocínio</p></div>
+      <div><h2>Inteligência Artificial & Provedor</h2><p>Gerencie o provedor online (Groq) e segurança da Sophy</p></div>
       <button class="btn2" id="closeSophySettings">Fechar</button>
     </div>
     <div class="list" style="gap:12px;margin-top:10px">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+        <input type="checkbox" id="sophyOnlineToggle" ${cfg.onlineEnabled!==false?'checked':''} style="width:auto;margin:0" />
+        Habilitar Inteligência Online (Groq)
+      </label>
+
       <label>Provedor de IA
         <select id="sophyProviderSelect">
+          <option value="groq" ${cfg.provider==='groq'?'selected':''}>Groq API — openai/gpt-oss-120b (Recomendado)</option>
           <option value="local" ${cfg.provider==='local'?'selected':''}>Local Core (Padrão 100% Offline — R$ 0,00)</option>
-          <option value="gemini" ${cfg.provider==='gemini'?'selected':''}>Google Gemini (API Oficial)</option>
-          <option value="openai" ${cfg.provider==='openai'?'selected':''}>OpenAI / Groq / Compatível</option>
         </select>
       </label>
 
       <div id="sophyOnlineConfig" class="${cfg.provider==='local'?'hidden':''}">
-        <label>Chave de API (Armazenada localmente no dispositivo)
+        <label>Chave de API Groq (Cofre Seguro — Nunca inclusa em backups)
           <div style="display:flex;gap:6px">
-            <input id="sophyApiKey" type="password" placeholder="Cole sua API Key aqui" value="${sfpEsc(cfg.apiKey||'')}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:1" />
+            <input id="sophyApiKey" type="password" placeholder="${hasSecret?masked:'Cole sua Groq API Key aqui (gsk_...)'}" value="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:1" />
             <button type="button" class="btn2 tiny" id="sophyToggleKeyVisibility">👁</button>
           </div>
+          ${hasSecret?`<small style="color:var(--green);margin-top:4px;display:block">✓ Chave configurada com segurança no dispositivo (${masked}).</small>`:''}
         </label>
 
         <label style="margin-top:8px">Modelo
-          <input id="sophyModel" type="text" placeholder="default (ex: gemini-1.5-flash, gpt-4o-mini)" value="${sfpEsc(cfg.model||'default')}" />
+          <input id="sophyModel" type="text" placeholder="openai/gpt-oss-120b" value="${sfpEsc(cfg.model||'openai/gpt-oss-120b')}" />
         </label>
 
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
           <button type="button" class="btn2" id="sophyTestConnectionBtn">Testar conexão</button>
-          <button type="button" class="btn2" id="sophyClearKeyBtn">Limpar chave</button>
+          <button type="button" class="btn2" id="sophyClearKeyBtn">Remover chave</button>
         </div>
       </div>
 
       <div class="note" style="margin-top:8px">
-        🔒 <b>Privacidade garantida</b>: Seus dados bancários e lançamentos completos nunca saem do seu aparelho. Apenas resumos numéricos anônimos e estritamente necessários são enviados quando o provedor online é consultado.
+        🔒 <b>Privacidade & Context Broker</b>: Seus dados bancários brutos, backups e histórico completo NUNCA saem do seu aparelho. Apenas resumos e indicadores mínimos autoritativos são consultados quando necessário.
       </div>
 
       <div class="section-actions" style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px">
@@ -5569,17 +5878,20 @@ function showSophySettingsModal(){
   };
 
   $('sophyClearKeyBtn').onclick=()=>{
+    sophySecureStorage.clearApiKey();
     $('sophyApiKey').value='';
-    toast('Chave removida do formulário.');
+    $('sophyApiKey').placeholder='Cole sua Groq API Key aqui (gsk_...)';
+    toast('Chave Groq removida do cofre seguro.');
   };
 
   $('sophyTestConnectionBtn').onclick=async()=>{
     const pId=provSelect.value;
     const provider=sophyProviderRegistry[pId];
     if(!provider)return toast('Provedor não encontrado.','error');
+    const enteredKey=$('sophyApiKey').value.trim();
     const testCfg={
-      apiKey:$('sophyApiKey').value.trim(),
-      model:$('sophyModel').value.trim()
+      apiKey:enteredKey||sophySecureStorage.getApiKey(),
+      model:$('sophyModel').value.trim()||'openai/gpt-oss-120b'
     };
     toast('Testando conexão com '+provider.name+'...','info');
     const res=await provider.testConnection(testCfg);
@@ -5592,9 +5904,14 @@ function showSophySettingsModal(){
 
   $('sophySaveSettingsBtn').onclick=async()=>{
     const pId=provSelect.value;
+    const enteredKey=$('sophyApiKey').value.trim();
+    if(enteredKey){
+      sophySecureStorage.setApiKey(enteredKey);
+    }
     state.sophy.settings.provider=pId;
-    state.sophy.settings.apiKey=$('sophyApiKey').value.trim();
-    state.sophy.settings.model=$('sophyModel').value.trim()||'default';
+    state.sophy.settings.onlineEnabled=$('sophyOnlineToggle').checked;
+    state.sophy.settings.model=$('sophyModel').value.trim()||'openai/gpt-oss-120b';
+    delete state.sophy.settings.apiKey; // Garante que a chave nunca vá para o state
     await save('Configurações da Sophy');
     root.className='hidden';
     root.replaceChildren();
@@ -5669,16 +5986,13 @@ function renderSophy(){
   
   if($('sophyNetworkTag')){
     const isOnline=typeof navigator!=='undefined'&&navigator.onLine;
-    const provider=sophyAIProvider.getActiveProvider();
-    let badgeText='Local Core (Offline-first)';
+    let badgeText='Offline • Local Core';
     if(sophyMockState.active){
       badgeText='Mock Core (QA)';
-    }else if(provider.id==='local'){
-      badgeText=isOnline?'Local Core (Offline-first)':'Sem conexão (Local Core)';
-    }else if(provider.isConfigured(sophy.settings)){
-      badgeText=isOnline?`Online (${provider.name.split(' ')[0]})`:'Sem conexão (Local Core)';
+    }else if(sophyOrchestrator.isOnlineAvailable()){
+      badgeText=isOnline?'Online • Groq':'Sem conexão (Local Core)';
     }else{
-      badgeText='Local Core (IA não configurada)';
+      badgeText='Offline • Local Core';
     }
     $('sophyNetworkTag').textContent=badgeText;
   }
@@ -5699,88 +6013,8 @@ function renderSophy(){
   }
 }
 
-let isSophySending=false;
 async function sophySendMessage(text){
-  const raw=String(text||'').trim();
-  if(!raw||isSophySending)return;
-  isSophySending=true;
-
-  const sendBtn=$('sophySendBtn');
-  const inputEl=$('sophyInput');
-  if(sendBtn){sendBtn.disabled=true;sendBtn.textContent='...'}
-  if(inputEl){inputEl.readOnly=true}
-
-  try{
-    if(!state.sophy)normalize();
-    state.sophy.introDone=true;
-    state.sophy.messages=state.sophy.messages||[];
-    const userMsg={id:uid(),sender:'user',text:raw,at:new Date().toISOString()};
-    state.sophy.messages.push(userMsg);
-    state.sophy.messages=state.sophy.messages.slice(-50);
-    try{renderSophy()}catch(e){console.warn('Erro renderizando envio do usuário:',e)}
-
-    try{
-      await save('Mensagem enviada para Sophy');
-    }catch(e){
-      console.warn('Falha ao persistir mensagem enviada:',e);
-    }
-
-    let response=null;
-    try{
-      const routePromise=sophyRouter.route(raw);
-      const timeoutPromise=new Promise(resolve=>setTimeout(()=>resolve({
-        text:'Puxa, demorei um pouquinho mais que o esperado para calcular tudo aqui, mas continuo 100% pronta! Me dá mais um detalhe ou tenta de novo? ✨',
-        emotion:'concerned'
-      }),8000));
-      response=await Promise.race([routePromise,timeoutPromise]);
-    }catch(err){
-      console.error('Erro ao processar mensagem na Sophy:',err);
-      response={
-        text:'Tive um pequeno tropeço ao processar isso aqui, mas já tô de volta! Pode me perguntar de novo? ✨',
-        emotion:'concerned'
-      };
-    }
-
-    if(!response||!response.text||typeof response.text!=='string'||!response.text.trim()){
-      response={
-        text:'Tô por aqui! Como posso te ajudar com suas contas e metas hoje? ✨',
-        emotion:'cheerful'
-      };
-    }
-
-    state.sophy.personaState=response.emotion||state.sophy.personaState||'cheerful';
-    const sophyMsg={
-      id:uid(),
-      sender:'sophy',
-      text:response.text,
-      at:new Date().toISOString(),
-      emotion:response.emotion||'cheerful',
-      provider:response.provider||'local',
-      structured:response.structured||null
-    };
-    state.sophy.messages.push(sophyMsg);
-    state.sophy.messages=state.sophy.messages.slice(-50);
-
-    try{
-      await save('Conversa com Sophy');
-    }catch(e){
-      console.warn('Falha ao salvar resposta da Sophy:',e);
-    }
-
-    try{
-      renderSophy();
-    }catch(e){
-      console.error('Erro na renderização da resposta da Sophy:',e);
-    }
-  }catch(outerErr){
-    console.error('Erro geral no fluxo de mensagem da Sophy:',outerErr);
-  }finally{
-    isSophySending=false;
-    const sBtn=$('sophySendBtn');
-    const inp=$('sophyInput');
-    if(sBtn){sBtn.disabled=false;sBtn.textContent='Enviar'}
-    if(inp){inp.readOnly=false}
-  }
+  return sophyOrchestrator.sendMessage(text);
 }
 
 window.sophySendMessage=sophySendMessage;
@@ -5789,8 +6023,6 @@ window.sophyRemoveMemory=sophyRemoveMemory;
 window.sophyCheckProactivity=sophyCheckProactivity;
 window.sophyOfflineCore=sophyOfflineCore;
 window.sophyRouter=sophyRouter;
-window.sophyProviderRegistry=sophyProviderRegistry;
-window.sophyAIProvider=sophyAIProvider;
 window.showSophySettingsModal=showSophySettingsModal;
 window.renderSophy=renderSophy;
 let dashboardPeriod='3M';function dashboardMonths(){const n={ '1M':1,'3M':3,'6M':6,'12M':12,'Ano':Math.max(1,+state.mesAtual.slice(5))}[dashboardPeriod]||3;return n}

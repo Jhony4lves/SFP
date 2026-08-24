@@ -118,4 +118,129 @@ public class AndroidBridge {
             Toast.makeText(context, "Falha ao salvar: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
+
+    // ============================================================
+    // SOPHY V3 SECURE KEYSTORE & NATIVE GROQ BRIDGE
+    // ============================================================
+    private static final String PREF_SECURE_VAULT = "sfp_sophy_secure_vault";
+    private static final String KEY_GROQ_SECRET = "sophy_groq_api_key";
+
+    @JavascriptInterface
+    public boolean setSophyApiKey(String key) {
+        try {
+            if (key == null || key.trim().isEmpty()) {
+                clearSophyApiKey();
+                return true;
+            }
+            context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
+                    .edit()
+                    .putString(KEY_GROQ_SECRET, key.trim())
+                    .apply();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @JavascriptInterface
+    public boolean hasSophyApiKey() {
+        try {
+            String key = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
+                    .getString(KEY_GROQ_SECRET, null);
+            return key != null && !key.trim().isEmpty();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @JavascriptInterface
+    public String getSophyApiKeyMasked() {
+        try {
+            String key = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
+                    .getString(KEY_GROQ_SECRET, null);
+            if (key == null || key.trim().isEmpty()) return "";
+            key = key.trim();
+            if (key.length() <= 4) return "••••";
+            String last4 = key.substring(key.length() - 4);
+            return "••••••••" + last4;
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    @JavascriptInterface
+    public boolean clearSophyApiKey() {
+        try {
+            context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
+                    .edit()
+                    .remove(KEY_GROQ_SECRET)
+                    .apply();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @JavascriptInterface
+    public String callSophyGroq(String endpointUrl, String payloadJson) {
+        java.net.HttpURLConnection conn = null;
+        try {
+            String key = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
+                    .getString(KEY_GROQ_SECRET, null);
+            if (key == null || key.trim().isEmpty()) {
+                return "{\"error\":{\"message\":\"AUTH_REQUIRED\",\"status\":401}}";
+            }
+
+            String targetUrl = (endpointUrl != null && !endpointUrl.trim().isEmpty())
+                    ? endpointUrl.trim()
+                    : "https://api.groq.com/openai/v1/chat/completions";
+
+            java.net.URL url = new java.net.URL(targetUrl);
+            conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            conn.setRequestProperty("Authorization", "Bearer " + key.trim());
+            conn.setRequestProperty("User-Agent", "SmartFinancialPlanner/2.0 Sophy/3.0");
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(20000);
+            conn.setDoOutput(true);
+
+            byte[] bodyBytes = payloadJson.getBytes(StandardCharsets.UTF_8);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(bodyBytes);
+                os.flush();
+            }
+
+            int responseCode = conn.getResponseCode();
+            java.io.InputStream is = (responseCode >= 200 && responseCode < 300)
+                    ? conn.getInputStream()
+                    : conn.getErrorStream();
+
+            if (is == null) {
+                return "{\"error\":{\"message\":\"HTTP " + responseCode + " - No response stream\",\"status\":" + responseCode + "}}";
+            }
+
+            java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = is.read(buf)) != -1) {
+                buffer.write(buf, 0, n);
+            }
+            String responseStr = buffer.toString("UTF-8");
+
+            if (responseCode >= 200 && responseCode < 300) {
+                return responseStr;
+            } else {
+                return "{\"error\":{\"message\":\"HTTP " + responseCode + "\",\"status\":" + responseCode + ",\"body\":" + responseStr + "}}";
+            }
+        } catch (java.net.SocketTimeoutException te) {
+            return "{\"error\":{\"message\":\"Timeout\",\"status\":408}}";
+        } catch (Exception e) {
+            return "{\"error\":{\"message\":\"" + e.getMessage() + "\",\"status\":500}}";
+        } finally {
+            if (conn != null) {
+                try { conn.disconnect(); } catch (Exception ignored) {}
+            }
+        }
+    }
 }
