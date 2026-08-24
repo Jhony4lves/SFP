@@ -181,9 +181,47 @@ test.describe('Recurrences Card Spacing (REC-SPACING-01..04)', () => {
     });
     expect(displayInfo.flexDirection).toBe('row');
   });
+
+  test('REC-SPACING-05: In portrait (384x854), vertical distance between .management-summary and .recurring-list-panel is >= 12px', async ({ page }) => {
+    await page.setViewportSize({ width: 384, height: 854 });
+    await page.goto('/index.html');
+    await expectBootComplete(page, expect, 'Fixture QA');
+    await page.evaluate(() => window.setPage('recorrencias'));
+    await page.waitForSelector('#recorrencias.active');
+
+    const gap = await page.evaluate(() => {
+      const summary = document.querySelector('#recorrencias .management-summary');
+      const listPanel = document.querySelector('#recorrencias .recurring-list-panel') || document.querySelector('#recorrencias .grid2');
+      if (!summary || !listPanel) return 0;
+      const sRect = summary.getBoundingClientRect();
+      const lRect = listPanel.getBoundingClientRect();
+      return lRect.top - sRect.bottom;
+    });
+
+    expect(gap).toBeGreaterThanOrEqual(12);
+  });
+
+  test('REC-SPACING-06: In landscape (854x384), vertical distance between .management-summary and .grid2 is >= 12px', async ({ page }) => {
+    await page.setViewportSize({ width: 854, height: 384 });
+    await page.goto('/index.html');
+    await expectBootComplete(page, expect, 'Fixture QA');
+    await page.evaluate(() => window.setPage('recorrencias'));
+    await page.waitForSelector('#recorrencias.active');
+
+    const gap = await page.evaluate(() => {
+      const summary = document.querySelector('#recorrencias .management-summary');
+      const grid = document.querySelector('#recorrencias .grid2');
+      if (!summary || !grid) return 0;
+      const sRect = summary.getBoundingClientRect();
+      const gRect = grid.getBoundingClientRect();
+      return gRect.top - sRect.bottom;
+    });
+
+    expect(gap).toBeGreaterThanOrEqual(12);
+  });
 });
 
-test.describe('Real Appearance Themes (THEME-01..18)', () => {
+test.describe('Real Appearance Themes (THEME-01..20)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/index.html');
     await expectBootComplete(page, expect, 'Fixture QA');
@@ -218,10 +256,10 @@ test.describe('Real Appearance Themes (THEME-01..18)', () => {
     expect(bodyTheme).toBe('light');
   });
 
-  test('THEME-04: Light theme sets meta theme-color to #f4f7fa', async ({ page }) => {
+  test('THEME-04: Light theme sets meta theme-color to #eaf0f7', async ({ page }) => {
     await page.evaluate(() => window.applyTheme('light'));
     const metaColor = await page.evaluate(() => document.querySelector('meta[name="theme-color"]')?.getAttribute('content'));
-    expect(metaColor).toBe('#f4f7fa');
+    expect(metaColor).toBe('#eaf0f7');
   });
 
   test('THEME-05: Dark theme sets meta theme-color to #07111e and data-theme="dark"', async ({ page }) => {
@@ -249,7 +287,53 @@ test.describe('Real Appearance Themes (THEME-01..18)', () => {
     expect(docTheme2).toBe('dark');
   });
 
-  test('THEME-08: Submitting #configForm persists state.settings.theme', async ({ page }) => {
+  test('THEME-08: Selecting theme in #cfgTheme persists state.settings.theme and survives real reload across light, dark, and system', async ({ page }) => {
+    await page.evaluate(() => window.setPage('config'));
+
+    // 1. Select Light
+    await page.selectOption('#cfgTheme', 'light');
+    await page.waitForTimeout(100);
+
+    let docTheme = await page.evaluate(() => document.documentElement.dataset.theme);
+    let stateTheme = await page.evaluate(() => window.state.settings.theme);
+    expect(docTheme).toBe('light');
+    expect(stateTheme).toBe('light');
+
+    // Reload page to simulate cold boot
+    await page.reload();
+    await expectBootComplete(page, expect, 'Fixture QA');
+
+    docTheme = await page.evaluate(() => document.documentElement.dataset.theme);
+    stateTheme = await page.evaluate(() => window.state.settings.theme);
+    expect(docTheme).toBe('light');
+    expect(stateTheme).toBe('light');
+
+    // 2. Select Dark
+    await page.evaluate(() => window.setPage('config'));
+    await page.selectOption('#cfgTheme', 'dark');
+    await page.waitForTimeout(100);
+
+    await page.reload();
+    await expectBootComplete(page, expect, 'Fixture QA');
+
+    docTheme = await page.evaluate(() => document.documentElement.dataset.theme);
+    stateTheme = await page.evaluate(() => window.state.settings.theme);
+    expect(docTheme).toBe('dark');
+    expect(stateTheme).toBe('dark');
+
+    // 3. Select System
+    await page.evaluate(() => window.setPage('config'));
+    await page.selectOption('#cfgTheme', 'system');
+    await page.waitForTimeout(100);
+
+    await page.reload();
+    await expectBootComplete(page, expect, 'Fixture QA');
+
+    stateTheme = await page.evaluate(() => window.state.settings.theme);
+    expect(stateTheme).toBe('system'); // must be stored literally as system
+  });
+
+  test('THEME-09: Submitting #configForm also persists and does not revert chosen theme', async ({ page }) => {
     await page.evaluate(() => window.setPage('config'));
     await page.selectOption('#cfgTheme', 'light');
     await page.click('#configForm button');
@@ -257,24 +341,10 @@ test.describe('Real Appearance Themes (THEME-01..18)', () => {
 
     const savedTheme = await page.evaluate(() => window.state.settings.theme);
     expect(savedTheme).toBe('light');
-  });
 
-  test('THEME-09: Saved theme is restored upon state load', async ({ page }) => {
-    await page.evaluate(async () => {
-      window.state.settings.theme = 'light';
-      window.applyTheme('light');
-      await window.save('Teste tema');
-    });
-
-    const docTheme = await page.evaluate(() => document.documentElement.dataset.theme);
-    expect(docTheme).toBe('light');
-
-    // Restore to dark for next tests
-    await page.evaluate(async () => {
-      window.state.settings.theme = 'dark';
-      window.applyTheme('dark');
-      await window.save('Restaurar tema');
-    });
+    await page.reload();
+    await expectBootComplete(page, expect, 'Fixture QA');
+    expect(await page.evaluate(() => window.state.settings.theme)).toBe('light');
   });
 
   test('THEME-10: Unknown/invalid theme gracefully normalizes to dark', async ({ page }) => {
@@ -293,8 +363,8 @@ test.describe('Real Appearance Themes (THEME-01..18)', () => {
       txCount: window.state.transactions.length
     }));
 
-    await page.evaluate(() => window.applyTheme('light'));
-    await page.evaluate(() => window.applyTheme('dark'));
+    await page.evaluate(() => window.setThemePreference('light'));
+    await page.evaluate(() => window.setThemePreference('dark'));
 
     const afterMath = await page.evaluate(() => ({
       accounts: window.state.accounts.length,
@@ -324,7 +394,7 @@ test.describe('Real Appearance Themes (THEME-01..18)', () => {
     await page.waitForSelector('#sophy.active');
 
     const cardBg = await page.locator('.sophy-chat-card').evaluate(el => window.getComputedStyle(el).backgroundColor);
-    expect(cardBg).toBe('rgb(248, 250, 252)'); // #f8fafc
+    expect(cardBg).toBe('rgb(244, 248, 252)'); // #f4f8fc
   });
 
   test('THEME-14: Calendar tab day cells render with clean light styling', async ({ page }) => {
@@ -375,7 +445,7 @@ test.describe('Real Appearance Themes (THEME-01..18)', () => {
     const banner = page.locator('#inAppBanner');
     await expect(banner).toBeVisible();
     const bannerBg = await banner.evaluate(el => window.getComputedStyle(el).backgroundColor);
-    expect(bannerBg).toBe('rgb(248, 250, 252)'); // #f8fafc
+    expect(bannerBg).toBe('rgb(244, 248, 251)'); // #f4f8fb
   });
 
   test('THEME-18: AndroidBridge setSystemBarTheme is invoked safely without errors', async ({ page }) => {
@@ -390,5 +460,52 @@ test.describe('Real Appearance Themes (THEME-01..18)', () => {
       return errors;
     });
     expect(errorCount).toBe(0);
+  });
+
+  test('THEME-19: Light mode establishes 3 distinct visual surface tiers (prevents all-white regression)', async ({ page }) => {
+    await page.evaluate(() => {
+      window.setPage('hoje');
+      window.applyTheme('light');
+    });
+
+    const surfaces = await page.evaluate(() => {
+      const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+      const panelBg = window.getComputedStyle(document.querySelector('.panel')).backgroundColor;
+      const item = document.querySelector('.item') || document.querySelector('.metric') || document.querySelector('.tile');
+      const itemBg = item ? window.getComputedStyle(item).backgroundColor : null;
+      return { bodyBg, panelBg, itemBg };
+    });
+
+    // Base background is not pure white
+    expect(surfaces.bodyBg).not.toBe('rgb(255, 255, 255)');
+    // Main panel is clean white
+    expect(surfaces.panelBg).toBe('rgb(255, 255, 255)');
+    // Base background and panel background are distinct
+    expect(surfaces.bodyBg).not.toBe(surfaces.panelBg);
+  });
+
+  test('THEME-20: Lançamentos quick chips render with light theme appearance without dark background', async ({ page }) => {
+    await page.evaluate(() => {
+      window.setPage('lancamentos');
+      window.applyTheme('light');
+    });
+    await page.waitForSelector('#lancamentos.active');
+
+    const chipColors = await page.evaluate(() => {
+      const quicktype = document.querySelector('.quicktype');
+      const favChip = document.querySelector('.favorite-chip');
+      return {
+        quicktypeBg: quicktype ? window.getComputedStyle(quicktype).backgroundColor : null,
+        favChipBg: favChip ? window.getComputedStyle(favChip).backgroundColor : null
+      };
+    });
+
+    // Must not be dark hardcoded #081626 (rgb(8, 22, 38))
+    if (chipColors.quicktypeBg) {
+      expect(chipColors.quicktypeBg).not.toBe('rgb(8, 22, 38)');
+    }
+    if (chipColors.favChipBg) {
+      expect(chipColors.favChipBg).not.toBe('rgb(8, 22, 38)');
+    }
   });
 });

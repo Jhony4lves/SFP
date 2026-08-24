@@ -89,7 +89,7 @@ async function run() {
 
   // 3. 854x384 LIGHT (Landscape)
   await page.setViewportSize({ width: 854, height: 384 });
-  const landscapePages = ['hoje', 'lancamentos', 'calendario'];
+  const landscapePages = ['hoje', 'lancamentos', 'recorrencias', 'calendario'];
   for (const p of landscapePages) {
     await page.evaluate((pageId) => window.setPage(pageId), p);
     await page.waitForTimeout(150);
