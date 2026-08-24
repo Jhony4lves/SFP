@@ -291,14 +291,28 @@ th{color:var(--color-text-secondary);font-size:9.5px;font-weight:700;text-transf
 .tiny{min-height:var(--control-height-compact);padding:6px 10px;font-size:9px;border-radius:8px}
 
 .integrity-card{
-  background:#081626;border:1px solid var(--color-border);border-radius:14px;
-  padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;gap:6px;
+  background:#081626;border:1px solid var(--color-border);border-radius:12px;
+  padding:12px 14px;display:flex;flex-direction:column;gap:6px;
 }
-.integrity-card small{color:var(--color-text-secondary);font-size:11px;font-weight:600;line-height:1.3}
-.integrity-card strong{margin-top:2px;font-size:18px;font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums;color:#fff}
+.tiletop{display:flex;justify-content:space-between;align-items:center}
+.tiletop b{font-size:13px;color:#fff}
+.tiletop strong{font-size:15px;color:var(--color-brand);font-variant-numeric:tabular-nums}
+.tile small{color:var(--color-text-secondary);font-size:10.5px}
+.tileactions{display:flex;gap:6px;margin-top:4px}
 
+.badge{
+  font-size:10px;font-weight:750;padding:2px 8px;border-radius:999px;
+  background:rgba(0,210,196,.12);color:var(--color-brand);border:1px solid rgba(0,210,196,.3);
+  display:inline-flex;align-items:center;gap:4px;
+}
+.badge.positive{background:rgba(34,197,94,.12);color:var(--color-positive);border-color:rgba(34,197,94,.3)}
+.badge.negative{background:rgba(244,63,94,.12);color:var(--color-negative);border-color:rgba(244,63,94,.3)}
+.badge.warning{background:rgba(245,158,11,.12);color:var(--color-warning);border-color:rgba(245,158,11,.3)}
+.badge.blue{background:rgba(56,189,248,.12);color:var(--color-blue);border-color:rgba(56,189,248,.3)}
+
+.note{background:#081626;border:1px solid var(--color-border);border-radius:12px;padding:12px;font-size:11.5px;color:var(--color-text-secondary);line-height:1.5}
 .alerts{display:grid;gap:8px}
-.alert{border-radius:12px;padding:10px 12px;border:1px solid var(--color-border);background:#081626;font-size:10px;line-height:1.4}
+.alert{border-radius:12px;padding:10px 12px;border:1px solid var(--color-border);background:#081626;font-size:10.5px;line-height:1.4}
 .alert.red{border-color:var(--color-negative-border);background:var(--color-negative-bg);color:#ff9fa9}
 .alert.yellow{border-color:var(--color-warning-border);background:var(--color-warning-bg);color:#fde047}
 .alert.green{border-color:var(--color-positive-border);background:var(--color-positive-bg);color:#86efac}
@@ -328,24 +342,26 @@ th{color:var(--color-text-secondary);font-size:9.5px;font-weight:700;text-transf
 
 .searchbox{position:relative}
 .searchresults{
-  position:absolute;z-index:50;top:44px;right:0;width:min(520px,92vw);max-height:420px;
+  position:absolute;z-index:50;top:42px;right:0;width:min(520px,92vw);max-height:420px;
   overflow:auto;background:#0d1e34;border:1px solid var(--color-border-strong);
   border-radius:14px;box-shadow:var(--shadow-lg);padding:10px;
 }
 .searchresults .item{cursor:pointer}
 
-.modalback{position:fixed;inset:0;background:rgba(2,6,12,.75);backdrop-filter:blur(8px);z-index:80;display:grid;place-items:center;padding:16px}
+.modalback{position:fixed;inset:0;background:rgba(2,6,12,.78);backdrop-filter:blur(8px);z-index:80;display:grid;place-items:center;padding:16px}
 .modal{width:min(640px,96vw);max-height:90vh;overflow:auto;background:#0c1a2d;border:1px solid #203e62;border-radius:18px;padding:20px;box-shadow:var(--shadow-lg)}
 
 .toast{
-  position:fixed;right:18px;bottom:18px;background:#0e2238;border:1px solid var(--color-border);
-  padding:12px 16px;border-radius:12px;opacity:0;transform:translateY(10px);transition:.2s ease;
-  pointer-events:none;z-index:100;font-size:12.5px;display:flex;align-items:center;gap:9px;box-shadow:var(--shadow-lg);
+  position:fixed;right:max(16px,calc(var(--safe-right) + 14px));
+  bottom:max(16px,calc(var(--safe-bottom) + 14px));
+  background:#0e2238;border:1px solid var(--color-border);
+  padding:10px 14px;border-radius:12px;opacity:0;transform:translateY(10px);transition:.2s ease;
+  pointer-events:none;z-index:100;font-size:12.5px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-lg);
 }
 .toast.show{opacity:1;transform:none}
-.toast-success{border-color:rgba(34,197,94,.4);box-shadow:0 4px 20px rgba(34,197,94,.18)}
-.toast-error{border-color:rgba(244,63,94,.4);box-shadow:0 4px 20px rgba(244,63,94,.18)}
-.toast-warning{border-color:rgba(245,158,11,.4);box-shadow:0 4px 20px rgba(245,158,11,.18)}
+.toast-success{border-color:rgba(34,197,94,.4);box-shadow:0 4px 20px rgba(34,197,94,.18);color:#86efac}
+.toast-error{border-color:rgba(244,63,94,.4);box-shadow:0 4px 20px rgba(244,63,94,.18);color:#ff9fa9}
+.toast-warning{border-color:rgba(245,158,11,.4);box-shadow:0 4px 20px rgba(245,158,11,.18);color:#fde047}
 .toast-indicator{width:7px;height:7px;border-radius:50%;background:var(--color-brand);flex-shrink:0}
 .toast-success .toast-indicator{background:var(--color-positive)}
 .toast-error .toast-indicator{background:var(--color-negative)}
@@ -394,11 +410,14 @@ th{color:var(--color-text-secondary);font-size:9.5px;font-weight:700;text-transf
   #moreNavBtn{color:var(--color-text-secondary)}
   #moreNavBtn.active{color:var(--color-brand)}
 
-  main{padding:14px 12px calc(var(--bottom-nav-height) + var(--safe-bottom) + 18px);width:100%;max-width:100vw;box-sizing:border-box}
+  main{
+    padding:max(16px,calc(var(--safe-top) + 12px)) max(12px,calc(var(--safe-right) + 10px)) calc(var(--bottom-nav-height) + var(--safe-bottom) + 90px) max(12px,calc(var(--safe-left) + 10px));
+    width:100%;max-width:100vw;box-sizing:border-box;
+  }
 
   body[data-page="sophy"] .top{display:none!important}
   body[data-page="sophy"] main{
-    padding:8px 8px calc(var(--bottom-nav-height) + var(--safe-bottom) + 8px);
+    padding:max(8px,calc(var(--safe-top) + 6px)) max(8px,calc(var(--safe-right) + 6px)) calc(var(--bottom-nav-height) + var(--safe-bottom) + 8px) max(8px,calc(var(--safe-left) + 6px));
     height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;
   }
   body[data-page="sophy"] #sophy{flex:1;display:flex;flex-direction:column;min-height:0;height:100%}
@@ -406,11 +425,24 @@ th{color:var(--color-text-secondary);font-size:9.5px;font-weight:700;text-transf
   body[data-page="sophy"] .sophy-header-card{flex-shrink:0;padding:8px 12px}
   body[data-page="sophy"] .sophy-chat-card{flex:1 1 auto;min-height:0;height:100%;max-height:none}
 
-  .top{flex-direction:column}
-  .top .actions{width:100%}
-  .top .actions .btn{flex:1}
+  .top{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;width:100%}
+  .top-row-main{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%}
+  .top-title-wrap{min-width:0;flex:1 1 auto}
+  .top-title-wrap h1{font-size:22px;line-height:1.2}
+  .top-title-wrap p{font-size:11px;line-height:1.3}
+  .top-quick-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+  .top-row-toolbar{display:grid;grid-template-columns:minmax(140px,1fr) minmax(130px,1fr);gap:8px;align-items:center;width:100%}
+  .month-selector-bar{min-height:36px;padding:2px 4px}
+  .month-selector-bar .monthpill{font-size:11.5px;padding:0 2px}
+  .top-row-toolbar .searchbox{width:100%;min-width:0}
+  .top-row-toolbar #globalSearch{
+    width:100%!important;min-width:0!important;height:36px!important;min-height:36px!important;
+    font-size:12px!important;padding:6px 10px!important;margin:0!important;border-radius:10px!important;
+  }
+  .searchresults{top:40px;left:0;right:0;width:auto}
+
   .metric-grid{grid-template-columns:1fr 1fr}
-  .metric strong{font-size:18px}
+  .metric strong{font-size:17px}
   .flow{grid-template-columns:1fr}
   .two,.three{grid-template-columns:1fr}
   .quicktypes{grid-template-columns:repeat(5,1fr)}
@@ -425,7 +457,8 @@ th{color:var(--color-text-secondary);font-size:9.5px;font-weight:700;text-transf
   .cal-count{font-size:9px}
 
   .mobilefab{
-    display:grid;position:fixed;right:16px;bottom:var(--fab-bottom);width:50px;height:50px;
+    display:grid;position:fixed;right:max(14px,calc(var(--safe-right) + 10px));
+    bottom:var(--fab-bottom);width:50px;height:50px;
     border-radius:50%;background:var(--color-brand);color:#04131c;border:0;place-items:center;
     font-size:24px;font-weight:900;z-index:75;box-shadow:0 6px 20px rgba(0,210,196,.35);
   }
@@ -437,13 +470,17 @@ th{color:var(--color-text-secondary);font-size:9.5px;font-weight:700;text-transf
   .sidebar{
     position:fixed;top:0;bottom:0;left:0;height:100vh;max-height:100vh;
     display:flex;flex-direction:column;z-index:70;box-sizing:border-box;
+    padding-top:max(14px,var(--safe-top));padding-bottom:max(14px,var(--safe-bottom));
   }
   .shell{display:block}
   .nav{flex:1;display:flex;flex-direction:column;gap:3px;overflow-y:auto;min-height:0}
-  .mobilefab{bottom:16px;right:16px;z-index:75}
+  .mobilefab{bottom:max(16px,calc(var(--safe-bottom) + 12px));right:max(16px,calc(var(--safe-right) + 12px));z-index:75}
 
   body[data-page="sophy"] .top{display:none!important}
-  body[data-page="sophy"] main{padding:8px 8px max(8px,var(--safe-bottom));height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}
+  body[data-page="sophy"] main{
+    padding:max(8px,calc(var(--safe-top) + 6px)) max(12px,calc(var(--safe-right) + 10px)) max(8px,var(--safe-bottom)) max(12px,calc(var(--safe-left) + 10px));
+    height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;
+  }
   body[data-page="sophy"] #sophy{flex:1 1 0;display:flex;flex-direction:column;min-height:0;height:100%}
   body[data-page="sophy"] .sophy-container{flex:1 1 0;display:flex;flex-direction:column;min-height:0;height:100%;gap:8px;max-width:100%}
   body[data-page="sophy"] .sophy-header-card{flex-shrink:0;padding:8px 12px}
@@ -452,159 +489,42 @@ th{color:var(--color-text-secondary);font-size:9.5px;font-weight:700;text-transf
 
 @media(orientation:landscape) and (max-width:900px){
   .sidebar{width:74px}
-  main{margin-left:74px;width:calc(100% - 74px);max-width:calc(100vw - 74px);box-sizing:border-box}
+  main{
+    margin-left:74px;width:calc(100% - 74px);max-width:calc(100vw - 74px);box-sizing:border-box;
+    padding:max(14px,calc(var(--safe-top) + 10px)) max(14px,calc(var(--safe-right) + 12px)) max(24px,calc(var(--safe-bottom) + 70px)) max(14px,calc(var(--safe-left) + 12px));
+  }
 }
 @media(orientation:landscape) and (min-width:901px){
   .sidebar{width:235px}
-  main{margin-left:235px;width:calc(100% - 235px);max-width:calc(100vw - 235px);box-sizing:border-box}
+  main{
+    margin-left:235px;width:calc(100% - 235px);max-width:calc(100vw - 235px);box-sizing:border-box;
+    padding:max(16px,calc(var(--safe-top) + 12px)) max(20px,calc(var(--safe-right) + 16px)) max(24px,calc(var(--safe-bottom) + 70px)) max(20px,calc(var(--safe-left) + 16px));
+  }
 }
 
 /* ===== SFP 1.0.1 — MOBILE LAYOUT FIX ===== */
-html,body{width:100%;max-width:100%;overflow-x:hidden}
-.shell,main,.top,.top>div,.actions,.panel,.metric{min-width:0;max-width:100%}
+.shell,main,.top,.actions,.panel,.metric{min-width:0;max-width:100%}
 img,canvas,svg{max-width:100%}
 
 @media(max-width:650px){
-  main{width:100%;max-width:100vw;padding:14px 10px calc(var(--bottom-nav-height) + var(--safe-bottom) + 18px);box-sizing:border-box}
-  body[data-page="sophy"] main{padding:8px 8px calc(var(--bottom-nav-height) + var(--safe-bottom) + 8px);height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}
-  .top{
-    width:100%;
-    display:block;
-    margin-bottom:16px;
-  }
-  .top>div:first-child{
-    width:100%;
-    padding:0 2px 12px;
-  }
-  .top h1{
-    font-size:25px;
-    line-height:1.15;
-    overflow-wrap:anywhere;
-  }
-  .top p{
-    font-size:12px;
-    line-height:1.4;
-  }
-  .top .actions{
-    width:100%;
-    display:grid;
-    grid-template-columns:42px minmax(0,1fr) 42px;
-    gap:8px;
-    align-items:center;
-  }
-  .top .searchbox{
-    grid-column:1/-1;
-    width:100%;
-    min-width:0;
-  }
-  .top #globalSearch{
-    width:100%!important;
-    min-width:0!important;
-    height:44px;
-  }
-  .top #prevMonth{
-    grid-column:1;
-    grid-row:2;
-    width:42px;
-    height:42px;
-    padding:0;
-  }
-  .top #monthLabel{
-    grid-column:2;
-    grid-row:2;
-    width:100%;
-    min-width:0;
-    text-align:center;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    padding:10px 8px;
-  }
-  .top #nextMonth{
-    grid-column:3;
-    grid-row:2;
-    width:42px;
-    height:42px;
-    padding:0;
-  }
-  .top .actions>.btn{
-    grid-column:1/-1;
-    grid-row:3;
-    width:100%;
-    min-height:44px;
-    flex:none;
-  }
-
-  .searchresults{
-    position:fixed;
-    left:10px;
-    right:10px;
-    top:132px;
-    width:auto;
-    max-width:none;
-  }
-
-  .panel{
-    width:100%;
-    padding:15px;
-    border-radius:14px;
-  }
-  .head{
-    min-width:0;
-  }
-  .head>div{
-    min-width:0;
-  }
-  .head h2,.head p{
-    overflow-wrap:anywhere;
-  }
-
-  .quicktypes{
-    width:100%;
-    grid-template-columns:repeat(5,minmax(0,1fr));
-    gap:6px;
-  }
-  .quicktype{
-    min-width:0;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    padding:9px 2px;
-  }
-
-  input,select,textarea{
-    max-width:100%;
-    min-width:0;
-  }
-
-  .tablewrap{
-    max-width:100%;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:thin;
-  }
-  table{
-    min-width:680px;
-  }
-
-  .metric-grid{
-    width:100%;
-  }
-
-  .sidebar{
-    padding-bottom:max(6px,env(safe-area-inset-bottom));
-  }
-  .mobilefab{
-    bottom:calc(72px + env(safe-area-inset-bottom));
-    right:14px;
-  }
+  .panel{width:100%;padding:14px;border-radius:14px}
+  .head{min-width:0}
+  .head>div{min-width:0}
+  .head h2,.head p{overflow-wrap:anywhere}
+  .quicktypes{width:100%;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+  .quicktype{min-width:0;overflow:hidden;text-overflow:ellipsis;padding:8px 2px}
+  input,select,textarea{max-width:100%;min-width:0}
+  .tablewrap{max-width:100%;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  table{min-width:680px}
+  .metric-grid{width:100%}
 }
 
 @media(max-width:390px){
-  main{padding-left:8px;padding-right:8px}
-  .top h1{font-size:23px}
+  .top h1{font-size:21px}
   .quicktype{font-size:8px}
   .quicktype b svg{width:16px;height:16px}
-  .metric{padding:12px}
-  .metric strong{font-size:16px}
+  .metric{padding:10px}
+  .metric strong{font-size:15px}
 }
 
 /* ===== SFP 1.0.2 — MOBILE NAV / UX ===== */
@@ -676,17 +596,16 @@ img,canvas,svg{max-width:100%}
 @media(max-width:650px){
   button,.btn,.btn2,.danger,.ghost,.status,.tiny{min-height:44px}
   .tiny{padding:8px 12px;font-size:10px}
-  .top .actions{gap:8px}
-  .top .actions .privacy-btn{grid-column:1/-1;grid-row:4;width:100%}
+  .top-cta{display:none}
   .data-health{grid-template-columns:1fr 1fr}
   .feedback-card{bottom:86px}
-  .panel{padding:15px}
-  .metric{min-height:92px}
+  .panel{padding:14px}
+  .metric{min-height:86px}
   .metric span{font-size:11px}
   .metric small{font-size:10px}
-  .metric strong{font-size:19px}
+  .metric strong{font-size:18px}
   label{font-size:11px}
-  input,select,textarea{font-size:16px;padding:11px 12px}
+  input,select,textarea{font-size:16px;padding:10px 12px}
 }
 @media(max-width:380px){
   .metric-grid{grid-template-columns:1fr}
@@ -2001,22 +1920,59 @@ button:active:not(:disabled){transform:translateY(1px)}
 
   <main>
     <header class="top">
-      <div><h1 id="pageTitle">Hoje</h1><p id="pageSub">O que importa agora</p></div>
-      <div class="actions">
-        <div class="searchbox"><input id="globalSearch" placeholder="Buscar em tudo..." style="margin:0;width:190px"/><div id="globalResults" class="searchresults hidden"></div></div>
-        <button class="ghost" id="prevMonth">‹</button><span class="monthpill" id="monthLabel"></span><button class="ghost" id="nextMonth">›</button>
-        <button class="btn" data-go="lancamentos">+ Novo</button><button class="ghost privacy-btn" id="privacyToggle">👁 Ocultar valores</button>
+      <div class="top-row-main">
+        <div class="top-title-wrap">
+          <h1 id="pageTitle">Hoje</h1>
+          <p id="pageSub">O que importa agora</p>
+        </div>
+        <div class="top-quick-actions">
+          <button type="button" class="icon-btn ghost privacy-btn" id="privacyToggle" title="Privacidade de valores" aria-label="Alternar privacidade">
+            <svg class="sfp-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="privacy-label" style="font-size:11px;margin-left:4px">Ocultar valores</span>
+          </button>
+          <button type="button" class="icon-btn ghost" id="notifBellBtn" title="Central de Avisos" aria-label="Notificações" onclick="openNotificationCenter()">
+            <svg class="sfp-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="notif-badge hidden" id="notifUnreadBadge">0</span>
+          </button>
+          <button class="btn compact top-cta" data-go="lancamentos">+ Novo</button>
+        </div>
+      </div>
+      <div class="top-row-toolbar">
+        <div class="month-selector-bar">
+          <button class="ghost month-nav-btn" id="prevMonth" aria-label="Mês anterior">‹</button>
+          <span class="monthpill" id="monthLabel"></span>
+          <button class="ghost month-nav-btn" id="nextMonth" aria-label="Próximo mês">›</button>
+        </div>
+        <div class="searchbox">
+          <input id="globalSearch" placeholder="Buscar em tudo..." autocomplete="off" />
+          <div id="globalResults" class="searchresults hidden"></div>
+        </div>
       </div>
     </header>
 
+    <div id="inAppBanner" class="in-app-banner hidden" role="region" aria-label="Avisos importantes"></div>
+
     <section class="tab active" id="hoje">
-      <div class="metric-grid">
+      <article class="panel today-cockpit-hero">
+        <div class="cockpit-hero-header">
+          <div>
+            <span class="cockpit-hero-tag"><span class="dot-pulse"></span> Cockpit Financeiro</span>
+            <small class="cockpit-hero-label">Dinheiro livre projetado</small>
+          </div>
+          <span class="badge positive" id="todayFreeStatus">Equilibrado</span>
+        </div>
+        <div class="cockpit-hero-body">
+          <strong id="todayFree" class="cockpit-hero-value" data-money>R$ 0,00</strong>
+          <p class="cockpit-hero-hint" id="todayFreeHint">Disponível para uso consciente após provisionar compromissos conhecidos.</p>
+        </div>
+      </article>
+
+      <div class="metric-grid today-secondary-grid">
         <div class="metric"><span>Saldo em contas</span><strong id="todayBalance">R$ 0,00</strong><small>Saldo atual informado/calculado</small></div>
-        <div class="metric"><span>Comprometido até a próxima entrada</span><strong id="todayCommitted">R$ 0,00</strong><small>Somente obrigações antes do próximo recebimento</small></div>
-        <div class="metric"><span>Livre projetado</span><strong id="todayFree" data-money>R$ 0,00</strong><small>Depois dos compromissos conhecidos</small></div>
+        <div class="metric"><span>Comprometido</span><strong id="todayCommitted">R$ 0,00</strong><small>Até a próxima entrada</small></div>
         <div class="metric"><span>Próximo recebimento</span><strong id="todayNextIncome">—</strong><small id="todayNextIncomeSub">Nenhum previsto</small></div>
-        <div class="metric"><span>Reserva</span><strong id="todayReserve">R$ 0,00</strong><small>Total nas metas/reservas</small></div>
       </div>
+
       <div class="grid2">
         <article class="panel"><div class="head"><div><h2>Próximos 7 dias</h2><p>Contas, faturas e receitas</p></div></div><div id="todayNext" class="list"></div></article>
         <article class="panel"><div class="head"><div><h2>Resumo inteligente</h2><p>Leitura rápida do mês</p></div><span class="badge">local</span></div><div id="smartSummary" class="note"></div><div id="alerts" class="alerts" style="margin-top:10px"></div></article>
@@ -2024,6 +1980,9 @@ button:active:not(:disabled){transform:translateY(1px)}
       <div class="grid2">
         <article class="panel"><div class="head"><div><h2>Contas</h2><p>Onde seu dinheiro está</p></div><button class="btn2 tiny" data-go="contas">Gerenciar</button></div><div id="todayAccounts" class="accountgrid"></div></article>
         <article class="panel"><div class="head"><div><h2>Cartões</h2><p>Faturas e limites</p></div><button class="btn2 tiny" data-go="cartoes">Gerenciar</button></div><div id="todayCards" class="cards"></div></article>
+      </div>
+      <div class="metric-grid" style="grid-template-columns:1fr;margin-top:10px">
+        <div class="metric"><span>Total em reservas & metas</span><strong id="todayReserve">R$ 0,00</strong><small>Patrimônio reservado para objetivos</small></div>
       </div>
     </section>
 
@@ -2036,7 +1995,7 @@ button:active:not(:disabled){transform:translateY(1px)}
             </div>
             <div class="sophy-meta">
               <h2>Sophy <span class="sophy-mood-tag" id="sophyMoodTag">Animada</span></h2>
-              <p id="sophySubtitle">Sua parceira no SFP</p>
+              <p id="sophySubtitle">Sua parceira no Smart Financial Planner</p>
               <div class="sophy-badges">
                 <span class="sophy-status-tag" id="sophyCoreTag"><span class="dot"></span> Local Core</span>
                 <span class="sophy-status-tag" id="sophyNetworkTag">Offline • Local Core</span>
@@ -2044,9 +2003,9 @@ button:active:not(:disabled){transform:translateY(1px)}
             </div>
           </div>
           <div class="sophy-header-actions">
-            <button type="button" class="btn2 tiny" id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você"><span>🧠 Memórias (<span id="sophyMemoryCount">0</span>)</span></button>
-            <button type="button" class="btn2 tiny" id="sophySettingsBtn" title="Configurar provedor de IA da Sophy">⚙ Provedor IA</button>
-            <button type="button" class="btn2 tiny" id="sophyClearHistoryBtn" title="Limpar conversa">Limpar chat</button>
+            <button type="button" class="btn2 tiny" id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg> <span>Memórias (<span id="sophyMemoryCount">0</span>)</span></button>
+            <button type="button" class="btn2 tiny" id="sophySettingsBtn" title="Configurar provedor de IA da Sophy"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> <span>Provedor IA</span></button>
+            <button type="button" class="btn2 tiny" id="sophyClearHistoryBtn" title="Limpar conversa"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> <span>Limpar chat</span></button>
           </div>
         </div>
 
@@ -2056,12 +2015,12 @@ button:active:not(:disabled){transform:translateY(1px)}
           </div>
 
           <div class="sophy-suggestions-bar" id="sophySuggestions">
-            <button type="button" class="sophy-chip" data-sophy-prompt="Como está meu dinheiro livre hoje?">💵 Livre projetado</button>
-            <button type="button" class="sophy-chip" data-sophy-prompt="Qual o resumo do meu mês?">📊 Resumo do mês</button>
-            <button type="button" class="sophy-chip" data-sophy-prompt="Como estão minhas faturas de cartão?">💳 Faturas</button>
-            <button type="button" class="sophy-chip" data-sophy-prompt="Como estão minhas metas?">🎯 Metas</button>
-            <button type="button" class="sophy-chip" data-sophy-prompt="Qual meu próximo recebimento?">📅 Próxima entrada</button>
-            <button type="button" class="sophy-chip" data-sophy-prompt="Oi, Sophy! Me conta uma curiosidade?">💬 Conversar</button>
+            <button type="button" class="sophy-chip" data-sophy-prompt="Como está meu dinheiro livre hoje?"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg> <span>Livre projetado</span></button>
+            <button type="button" class="sophy-chip" data-sophy-prompt="Qual o resumo do meu mês?"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg> <span>Resumo do mês</span></button>
+            <button type="button" class="sophy-chip" data-sophy-prompt="Como estão minhas faturas de cartão?"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> <span>Faturas</span></button>
+            <button type="button" class="sophy-chip" data-sophy-prompt="Como estão minhas metas?"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> <span>Metas</span></button>
+            <button type="button" class="sophy-chip" data-sophy-prompt="Qual meu próximo recebimento?"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> <span>Próxima entrada</span></button>
+            <button type="button" class="sophy-chip" data-sophy-prompt="Oi, Sophy! Me conta uma curiosidade?"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> <span>Conversar</span></button>
           </div>
 
           <form id="sophyChatForm" class="sophy-input-bar">
@@ -2491,7 +2450,20 @@ function monthName(k){let[y,m]=k.split('-').map(Number);return new Date(y,m-1,1)
 function clampDay(y,m,d){return Math.min(d,new Date(y,m,0).getDate())}
 function accountBalanceDateLabel(value){if(!value)return'data-base não informada';let date=new Date(value+'T12:00');return Number.isNaN(date.getTime())?'data-base inválida':`saldo-base ${date.toLocaleDateString('pt-BR')}`}
 let toastTimer=null;
-function toast(msg,type='info'){let el=$('toast');if(!el)return;el.className=`toast toast-${type} show`;el.innerHTML=`<span class="toast-indicator"></span><span>${sfpEsc(msg)}</span>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2200)}
+function toast(msg,type='info'){
+  let el=$('toast');if(!el)return;
+  const iconSvgs={
+    info:`<svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+    success:`<svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+    warning:`<svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    error:`<svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
+  };
+  el.className=`toast toast-${type} show`;
+  el.innerHTML=`<span class="toast-indicator"></span><span style="display:inline-flex;align-items:center;gap:6px">${iconSvgs[type]||iconSvgs.info}<span>${sfpEsc(msg)}</span></span>`;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2400);
+}
+window.toast=toast;
 let lastSavedState=null;
 function migrateSchema(s){
   s.schemaVersion??=1;
@@ -3095,9 +3067,14 @@ function smartText(m=state.mesAtual){
 let feedbackTimer=null;
 function showFeedback(msg,{title='Smart Financial Planner',type='info',notify=false}={}){
  let el=$('feedbackCard');if(!el)return;
- const icons={info:'ℹ',success:'✓',warning:'⚠',error:'✕'};
+ const iconSvgs={
+   info:`<svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+   success:`<svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+   warning:`<svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+   error:`<svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
+ };
  el.className=`feedback-card feedback-${type} show`;
- el.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><span class="badge ${type==='success'?'positive':type==='error'?'negative':type==='warning'?'warning':'blue'}" style="font-size:11px">${icons[type]||'✓'}</span><div><strong style="display:block;font-size:11px;color:var(--text)">${sfpEsc(title)}</strong><span style="font-size:10px;color:var(--muted)">${sfpEsc(msg)}</span></div></div>`;
+ el.innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span class="badge ${type==='success'?'positive':type==='error'?'negative':type==='warning'?'warning':'blue'}" style="padding:4px">${iconSvgs[type]||iconSvgs.info}</span><div><strong style="display:block;font-size:12px;color:var(--text)">${sfpEsc(title)}</strong><span style="font-size:10.5px;color:var(--muted)">${sfpEsc(msg)}</span></div></div>`;
  clearTimeout(feedbackTimer);
  feedbackTimer=setTimeout(()=>el.classList.remove('show'),3500);
  if(notify&&window.AndroidBridge&&typeof window.AndroidBridge.showNotification==='function'){
@@ -3112,7 +3089,24 @@ function sfpConfirm({title='Confirmação',message='Deseja prosseguir com esta a
    let root=$('modalRoot');
    if(!root){resolve(window.confirm?window.confirm(message):true);return}
    root.className='modalback';
-   root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><div class="head"><div><h2 id="dialogTitle">${sfpEsc(title)}</h2><p>${danger?'Ação de atenção / exclusão':'Confirme para continuar'}</p></div><button class="btn2" id="dialogCloseBtn" aria-label="Fechar">✕</button></div><div class="dialog-body" style="padding:14px 0;font-size:13px;line-height:1.5;color:var(--text)">${sfpEsc(message).replace(/\n/g,'<br/>')}</div><div class="section-actions" style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px"><button class="btn2" id="dialogCancelBtn">${sfpEsc(cancelText)}</button><button class="${danger?'danger':'btn'}" id="dialogConfirmBtn">${sfpEsc(confirmText)}</button></div></div>`;
+   const iconSvg = danger
+     ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
+     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+   root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+     <div class="sfp-dialog-head">
+       <div class="sfp-dialog-badge ${danger?'danger':'confirmation'}">${iconSvg}</div>
+       <div class="sfp-dialog-title">
+         <h2 id="dialogTitle">${sfpEsc(title)}</h2>
+         <p>${danger?'Ação destrutiva ou de atenção':'Confirmação necessária'}</p>
+       </div>
+       <button class="btn2 tiny icon-button" id="dialogCloseBtn" aria-label="Fechar">✕</button>
+     </div>
+     <div class="sfp-dialog-body">${sfpEsc(message).replace(/\n/g,'<br/>')}</div>
+     <div class="sfp-dialog-actions">
+       <button class="btn2" id="dialogCancelBtn">${sfpEsc(cancelText)}</button>
+       <button class="${danger?'danger':'btn'}" id="dialogConfirmBtn">${sfpEsc(confirmText)}</button>
+     </div>
+   </div>`;
    const finish=result=>{root.className='hidden';root.innerHTML='';window.removeEventListener('keydown',keyHandler);resolve(result)};
    const keyHandler=e=>{if(e.key==='Escape')finish(false);else if(e.key==='Enter')finish(true)};
    window.addEventListener('keydown',keyHandler);
@@ -3129,9 +3123,32 @@ function sfpAlert({title='Aviso',message='',buttonText='Entendido',type='info'}=
    let root=$('modalRoot');
    if(!root){if(window.alert)window.alert(message);resolve();return}
    root.className='modalback';
-   const typeLabels={info:'Informação',success:'Sucesso',warning:'Atenção',error:'Erro'};
-   root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true"><div class="head"><div><h2>${sfpEsc(title)}</h2><p>${typeLabels[type]||'Aviso do sistema'}</p></div><button class="btn2" id="dialogCloseBtn" aria-label="Fechar">✕</button></div><div class="dialog-body" style="padding:14px 0;font-size:13px;line-height:1.5;color:var(--text)">${sfpEsc(message).replace(/\n/g,'<br/>')}</div><div class="section-actions" style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn" id="dialogOkBtn">${sfpEsc(buttonText)}</button></div></div>`;
-   const finish=()=>{root.className='hidden';root.innerHTML='';resolve()};
+   const typeLabels={info:'Informação',success:'Sucesso',warning:'Atenção',error:'Erro',danger:'Atenção'};
+   const iconSvgs={
+     info:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+     success:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+     warning:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+     error:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+     danger:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
+   };
+   const badgeType = type === 'error' ? 'danger' : type;
+   root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+     <div class="sfp-dialog-head">
+       <div class="sfp-dialog-badge ${badgeType}">${iconSvgs[type]||iconSvgs.info}</div>
+       <div class="sfp-dialog-title">
+         <h2 id="dialogTitle">${sfpEsc(title)}</h2>
+         <p>${typeLabels[type]||'Aviso do sistema'}</p>
+       </div>
+       <button class="btn2 tiny icon-button" id="dialogCloseBtn" aria-label="Fechar">✕</button>
+     </div>
+     <div class="sfp-dialog-body">${sfpEsc(message).replace(/\n/g,'<br/>')}</div>
+     <div class="sfp-dialog-actions">
+       <button class="btn" id="dialogOkBtn">${sfpEsc(buttonText)}</button>
+     </div>
+   </div>`;
+   const finish=()=>{root.className='hidden';root.innerHTML='';window.removeEventListener('keydown',keyHandler);resolve()};
+   const keyHandler=e=>{if(e.key==='Escape'||e.key==='Enter')finish()};
+   window.addEventListener('keydown',keyHandler);
    $('dialogCloseBtn').onclick=finish;
    $('dialogOkBtn').onclick=finish;
    $('dialogOkBtn').focus();
@@ -3144,7 +3161,24 @@ function sfpPrompt({title='Entrada',message='',defaultValue='',placeholder='',co
    let root=$('modalRoot');
    if(!root){resolve(window.prompt?window.prompt(message,defaultValue):defaultValue);return}
    root.className='modalback';
-   root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true"><div class="head"><div><h2>${sfpEsc(title)}</h2><p>Preencha para continuar</p></div><button class="btn2" id="dialogCloseBtn" aria-label="Fechar">✕</button></div><div class="dialog-body" style="padding:10px 0;font-size:13px;line-height:1.5;color:var(--text)">${message?`<p style="margin:0 0 8px">${sfpEsc(message).replace(/\n/g,'<br/>')}</p>`:''}<input id="dialogPromptInput" value="${sfpEsc(String(defaultValue))}" placeholder="${sfpEsc(placeholder)}" style="width:100%"/></div><div class="section-actions" style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px"><button class="btn2" id="dialogCancelBtn">${sfpEsc(cancelText)}</button><button class="btn" id="dialogConfirmBtn">${sfpEsc(confirmText)}</button></div></div>`;
+   root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+     <div class="sfp-dialog-head">
+       <div class="sfp-dialog-badge info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
+       <div class="sfp-dialog-title">
+         <h2 id="dialogTitle">${sfpEsc(title)}</h2>
+         <p>Preencha para continuar</p>
+       </div>
+       <button class="btn2 tiny icon-button" id="dialogCloseBtn" aria-label="Fechar">✕</button>
+     </div>
+     <div class="sfp-dialog-body">
+       ${message?`<p style="margin:0 0 8px;font-size:13px">${sfpEsc(message).replace(/\n/g,'<br/>')}</p>`:''}
+       <input id="dialogPromptInput" value="${sfpEsc(String(defaultValue))}" placeholder="${sfpEsc(placeholder)}" style="width:100%"/>
+     </div>
+     <div class="sfp-dialog-actions">
+       <button class="btn2" id="dialogCancelBtn">${sfpEsc(cancelText)}</button>
+       <button class="btn" id="dialogConfirmBtn">${sfpEsc(confirmText)}</button>
+     </div>
+   </div>`;
    const input=$('dialogPromptInput');input.focus();input.select();
    const finish=val=>{root.className='hidden';root.innerHTML='';window.removeEventListener('keydown',keyHandler);resolve(val)};
    const keyHandler=e=>{if(e.key==='Escape')finish(null);else if(e.key==='Enter')finish(input.value)};
@@ -3155,6 +3189,204 @@ function sfpPrompt({title='Entrada',message='',defaultValue='',placeholder='',co
  });
 }
 window.sfpPrompt=sfpPrompt;
+
+function showInAppBanner({id='banner-default', type='info', title='Aviso', message='', actionText=null, onAction=null, dismissible=true}={}){
+  const container = $('inAppBanner');
+  if(!container) return;
+  try{ if(sessionStorage.getItem(`sfp_dismissed_${id}`)) return; }catch{}
+  
+  const iconSvgs = {
+    info: `<svg class="in-app-banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+    positive: `<svg class="in-app-banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+    warning: `<svg class="in-app-banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    negative: `<svg class="in-app-banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
+  };
+
+  container.className = `in-app-banner ${type}`;
+  container.innerHTML = `
+    <div class="in-app-banner-content">
+      ${iconSvgs[type]||iconSvgs.info}
+      <div class="in-app-banner-text">
+        <strong>${sfpEsc(title)}</strong>
+        <span>${sfpEsc(message)}</span>
+      </div>
+    </div>
+    <div class="in-app-banner-actions">
+      ${actionText ? `<button class="btn2 tiny" id="bannerActionBtn">${sfpEsc(actionText)}</button>` : ''}
+      ${dismissible ? `<button class="ghost tiny icon-button" id="bannerDismissBtn" aria-label="Dispensar">✕</button>` : ''}
+    </div>
+  `;
+  container.classList.remove('hidden');
+  
+  if(actionText && $('bannerActionBtn')){
+    $('bannerActionBtn').onclick = () => {
+      if(typeof onAction === 'function') onAction();
+    };
+  }
+  if(dismissible && $('bannerDismissBtn')){
+    $('bannerDismissBtn').onclick = () => {
+      try{ sessionStorage.setItem(`sfp_dismissed_${id}`, '1'); }catch{}
+      container.classList.add('hidden');
+    };
+  }
+}
+window.showInAppBanner = showInAppBanner;
+
+const notificationReadIds = new Set();
+function getSystemNotifications(){
+  const notifs = [];
+  const now = new Date();
+  
+  let backs=[];
+  try{backs=JSON.parse(localStorage.getItem('sfp_auto_backups')||'[]')}catch{}
+  if(!backs.length){
+    notifs.push({
+      id: 'notif-backup-initial',
+      type: 'warning',
+      title: 'Backup recomendado',
+      message: 'Você ainda não possui backups salvos no dispositivo. Exporte um backup em Central de Dados.',
+      time: 'Atenção',
+      actionPage: 'dados'
+    });
+  } else {
+    const lastBack = new Date(backs.at(-1).at);
+    const diffDays = Math.round((now - lastBack) / (1000 * 60 * 60 * 24));
+    if(diffDays >= 15){
+      notifs.push({
+        id: 'notif-backup-aged',
+        type: 'warning',
+        title: 'Backup preventivo',
+        message: `Seu último backup foi feito há ${diffDays} dias. Recomendamos exportar uma cópia recente.`,
+        time: `${diffDays}d atrás`,
+        actionPage: 'dados'
+      });
+    }
+  }
+
+  (state?.cards||[]).forEach(c => {
+    const dueDay = c.dueDay;
+    const todayDay = now.getDate();
+    const invTotal = invoiceTotal(c.id, state.mesAtual);
+    if(invTotal > 0 && Math.abs(dueDay - todayDay) <= 3){
+      notifs.push({
+        id: `notif-card-${c.id}-${state.mesAtual}`,
+        type: 'reminder',
+        title: `Fatura ${c.name}`,
+        message: `Fatura de ${brl(invTotal)} com vencimento próximo no dia ${dueDay}.`,
+        time: `Dia ${dueDay}`,
+        actionPage: 'cartoes'
+      });
+    }
+  });
+
+  (state?.goals||[]).forEach(g => {
+    const bal = goalBalance(g);
+    if(g.target > 0 && bal >= g.target){
+      notifs.push({
+        id: `notif-goal-${g.id}`,
+        type: 'success',
+        title: `Meta conquistada!`,
+        message: `Parabéns! Sua meta "${g.name}" atingiu 100% (${brl(bal)}).`,
+        time: 'Concluída',
+        actionPage: 'metas'
+      });
+    }
+  });
+
+  const a = typeof auditData === 'function' ? auditData() : { critical: 0 };
+  if(a.critical > 0){
+    notifs.push({
+      id: 'notif-audit-critical',
+      type: 'warning',
+      title: 'Integridade da base',
+      message: `Auditoria detectou ${a.critical} apontamento(s) crítico(s). Verifique em Auditoria.`,
+      time: 'Importante',
+      actionPage: 'auditoria'
+    });
+  }
+
+  return notifs;
+}
+window.getSystemNotifications = getSystemNotifications;
+
+function renderNotificationBadge(){
+  const notifs = getSystemNotifications();
+  const unreadCount = notifs.filter(n => !notificationReadIds.has(n.id)).length;
+  const badge = $('notifUnreadBadge');
+  if(badge){
+    if(unreadCount > 0){
+      badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+}
+window.renderNotificationBadge = renderNotificationBadge;
+
+function openNotificationCenter(){
+  const notifs = getSystemNotifications();
+  const root = $('modalRoot');
+  if(!root) return;
+  root.className = 'modalback';
+  
+  const typeIcons = {
+    info: `<svg class="sfp-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+    success: `<svg class="sfp-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+    warning: `<svg class="sfp-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    reminder: `<svg class="sfp-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`
+  };
+
+  const listHtml = notifs.length ? notifs.map(n => {
+    const isUnread = !notificationReadIds.has(n.id);
+    return `<div class="item notif-item ${isUnread ? 'unread' : ''}" style="cursor:pointer;padding:12px 14px" onclick="handleNotificationClick('${n.id}', '${n.actionPage || ''}')">
+      <div style="display:flex;gap:12px;align-items:flex-start;width:100%">
+        <span class="badge ${n.type==='success'?'positive':n.type==='warning'?'warning':'blue'}" style="margin-top:2px;flex-shrink:0">${typeIcons[n.type]||typeIcons.info}</span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <b style="font-size:13px;color:var(--color-text)">${sfpEsc(n.title)}</b>
+            <small style="color:var(--color-text-muted);font-size:10px">${sfpEsc(n.time)}</small>
+          </div>
+          <small style="display:block;margin-top:3px;color:var(--color-text-secondary);font-size:11.5px;line-height:1.4">${sfpEsc(n.message)}</small>
+        </div>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty-state" style="padding:24px 16px;text-align:center"><p style="margin:0;color:var(--color-text-secondary);font-size:13px">Nenhum aviso ou notificação pendente.</p></div>';
+
+  root.innerHTML = `<div class="modal sfp-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+    <div class="sfp-dialog-head">
+      <div class="sfp-dialog-badge info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+      <div class="sfp-dialog-title">
+        <h2 id="dialogTitle">Central de Avisos</h2>
+        <p>Avisos e lembretes gerados localmente</p>
+      </div>
+      <button class="btn2 tiny icon-button" id="dialogCloseBtn" aria-label="Fechar">✕</button>
+    </div>
+    <div class="list" style="max-height:360px;overflow-y:auto;gap:8px;margin-bottom:14px">
+      ${listHtml}
+    </div>
+    <div class="sfp-dialog-actions" style="justify-content:space-between">
+      <button class="ghost tiny" id="markAllReadBtn" style="font-size:11.5px">Marcar lidas</button>
+      <button class="btn compact" id="notifCloseBtn">Fechar</button>
+    </div>
+  </div>`;
+
+  const finish = () => { root.className = 'hidden'; root.innerHTML = ''; renderNotificationBadge(); };
+  $('dialogCloseBtn').onclick = finish;
+  $('notifCloseBtn').onclick = finish;
+  $('markAllReadBtn').onclick = () => {
+    notifs.forEach(n => notificationReadIds.add(n.id));
+    openNotificationCenter();
+  };
+}
+window.openNotificationCenter = openNotificationCenter;
+window.handleNotificationClick = (id, page) => {
+  notificationReadIds.add(id);
+  const root = $('modalRoot');
+  if(root) { root.className = 'hidden'; root.innerHTML = ''; }
+  renderNotificationBadge();
+  if(page) setPage(page);
+};
 function originOf(t){
  if(t.statementKey)return['Extrato','statement'];
  if(t.recurringId)return['Recorrente','recurring'];
@@ -3220,8 +3452,15 @@ function formatMoneyInputs(){
 
 function applyPrivacy(){
  document.body.classList.toggle('privacy-on',!!state.settings.privacy);
- document.querySelectorAll('[data-money],.metric strong,.tile strong,.credit strong,.item strong,.history-line strong').forEach(el=>el.classList.toggle('private-value',!!state.settings.privacy));
- if($('privacyToggle')){$('privacyToggle').classList.toggle('active',!!state.settings.privacy);$('privacyToggle').textContent=state.settings.privacy?'🙈 Mostrar valores':'👁 Ocultar valores'}
+ document.querySelectorAll('[data-money],.metric strong,.tile strong,.credit strong,.item strong,.history-line strong,.cockpit-hero-value').forEach(el=>el.classList.toggle('private-value',!!state.settings.privacy));
+ const btn = $('privacyToggle');
+ if(btn){
+   btn.classList.toggle('active',!!state.settings.privacy);
+   const isHidden = !!state.settings.privacy;
+   btn.innerHTML = isHidden
+     ? `<svg class="sfp-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg><span class="privacy-label" style="font-size:11px;margin-left:4px">Mostrar valores</span>`
+     : `<svg class="sfp-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><span class="privacy-label" style="font-size:11px;margin-left:4px">Ocultar valores</span>`;
+ }
 }
 
 function renderFavorites(){
@@ -3271,13 +3510,41 @@ function runtimeSanityCheck(){
 
 function renderToday(){
  let bal=allAccountBalance(),commit=commitmentUntilNextIncome(),free=Math.round((bal-commit)*100)/100,nextInc=nextIncomeEvent();
- $('todayBalance').textContent=brl(bal);$('todayCommitted').textContent=brl(commit);$('todayFree').textContent=brl(free);$('todayFree').className=free>=0?'positive':'negative';$('todayReserve').textContent=brl(goalReserve());
+ $('todayBalance').textContent=brl(bal);$('todayCommitted').textContent=brl(commit);
+ const todayFreeEl = $('todayFree');
+ if(todayFreeEl){
+   todayFreeEl.textContent=brl(free);
+   todayFreeEl.className='cockpit-hero-value ' + (free>=0?'positive':'negative');
+ }
+ const freeStatusEl = $('todayFreeStatus');
+ if(freeStatusEl){
+   if(free > 0){
+     freeStatusEl.textContent = 'Positivo';
+     freeStatusEl.className = 'badge positive';
+   } else if(free === 0){
+     freeStatusEl.textContent = 'Neutro';
+     freeStatusEl.className = 'badge warning';
+   } else {
+     freeStatusEl.textContent = 'Comprometido';
+     freeStatusEl.className = 'badge negative';
+   }
+ }
+ const freeHintEl = $('todayFreeHint');
+ if(freeHintEl){
+   if(free >= 0){
+     freeHintEl.textContent = nextInc ? `Livre real provisionado até ${nextInc.desc} (${dateObj(nextInc.date).toLocaleDateString('pt-BR')}).` : 'Nenhum compromisso pendente consumindo saldo atual.';
+   } else {
+     freeHintEl.textContent = `Atenção: faltam ${brl(Math.abs(free))} para cobrir os compromissos antes do próximo recebimento.`;
+   }
+ }
+ $('todayReserve').textContent=brl(goalReserve());
  $('todayNextIncome').textContent=nextInc?brl(nextInc.amount):'—';$('todayNextIncomeSub').textContent=nextInc?`${nextInc.desc} • ${dateObj(nextInc.date).toLocaleDateString('pt-BR')}`:'Nenhum previsto';
  let soon=pendingUpcomingEvents(7);
  $('todayNext').innerHTML=soon.length?soon.map(e=>`<div class="item"><div><b>${e.desc}</b><small>${dateObj(e.date).toLocaleDateString('pt-BR')} • ${statusLabel(e.status)}</small></div><strong class="${e.type==='income'?'positive':'negative'}">${e.type==='income'?'+ ':'- '}${brl(e.amount)}</strong></div>`).join(''):'<div class="item"><span>Nada previsto nos próximos 7 dias.</span></div>';
  $('smartSummary').textContent=smartText(localCivilMonth());$('alerts').innerHTML=healthAlerts().map(a=>`<div class="alert ${a.c}">${a.t}</div>`).join('');
  $('todayAccounts').innerHTML=state.accounts.slice(0,4).map(a=>`<div class="tile"><div class="tiletop"><b>${a.name}</b><strong>${brl(accountBalance(a.id))}</strong></div><small>${a.type} • ${accountBalanceDateLabel(a.balanceDate)}</small></div>`).join('');
- $('todayCards').innerHTML=state.cards.slice(0,3).map(c=>cardHtml(c,true)).join('')
+ $('todayCards').innerHTML=state.cards.slice(0,3).map(c=>cardHtml(c,true)).join('');
+ renderNotificationBadge();
 }
 
 /* SFP_DASHBOARD_DRILLDOWN_V1 */
@@ -6671,38 +6938,112 @@ window.sophyOfflineCore=sophyOfflineCore;
 window.sophyRouter=sophyRouter;
 window.showSophySettingsModal=showSophySettingsModal;
 window.renderSophy=renderSophy;
-let dashboardPeriod='3M';function dashboardMonths(){const n={ '1M':1,'3M':3,'6M':6,'12M':12,'Ano':Math.max(1,+state.mesAtual.slice(5))}[dashboardPeriod]||3;return n}
-function renderAnalyticsDashboard(){if(!$('analyticsMetrics'))return;const months=dashboardMonths(),ctx=financialContextSnapshot({reference:dateObj(`${state.mesAtual}-15`),months});const metrics=[['Receitas',ctx.realized.incomeCents,'Competência do período'],['Despesas',ctx.realized.expenseCents,'Competência do período'],['Resultado',ctx.realized.resultCents,'Receitas − despesas'],['Patrimônio líquido',ctx.patrimony.netWorthCents,'Contas + ativos − dívidas'],['Dívidas',ctx.patrimony.debtCents,'Saldo devedor'],['Taxa de poupança',ctx.realized.incomeCents?Math.round(ctx.realized.resultCents/ctx.realized.incomeCents*100):null,'do período'],['Livre',ctx.free.amountCents,'Disponível − reservado'],['Compromissos',ctx.commitments.totalCents,'Próximos 90 dias']];
- $('analyticsMetrics').innerHTML=metrics.map(([label,v,sub],i)=>`<div class="metric"><span>${label}</span><strong class="${(i===2||i===6)&&v<0?'negative':''}">${i===5?(v==null?'—':v+'%'):brl(v/100)}</strong><small>${sub}<br>Sem histórico suficiente para comparação.</small></div>`).join('');
- const rows=ctx.period.months.map(m=>{const v=accrualView(m);return{m,income:v.income,expense:v.expense,result:v.result}});$('analyticsPeriodLabel').textContent=`${months} ${months===1?'mês':'meses'} · regime de competência`;$('analyticsLegend').innerHTML=[['income','Receitas','#2ed194'],['expense','Despesas','#ff6d7e'],['result','Resultado','#4cc2ff']].map(([k,l,c])=>`<button class="series-key" data-series="${k}" aria-label="Série ${l}"><i style="background:${c}"></i>${l}</button>`).join('');
- const W=620,H=230,pad=32,vals=rows.flatMap(r=>[r.income,r.expense,r.result]),max=Math.max(1,...vals),min=Math.min(0,...vals),x=i=>pad+(rows.length<2?0:i*(W-pad*2)/(rows.length-1)),y=v=>pad+(max-v)*(H-pad*2)/(max-min||1),path=k=>rows.map((r,i)=>`${i?'L':'M'}${x(i)},${y(r[k])}`).join(' '),colors={income:'#2ed194',expense:'#ff6d7e',result:'#4cc2ff'};$('analyticsChart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico temporal de receitas, despesas e resultado">${Object.keys(colors).map(k=>`<path d="${path(k)}" stroke="${colors[k]}"></path>${rows.map((r,i)=>`<circle cx="${x(i)}" cy="${y(r[k])}" r="5" fill="${colors[k]}"><title>${monthName(r.m)} · ${k}: ${brl(r[k])}</title></circle>`).join('')}`).join('')}${rows.map((r,i)=>`<text x="${x(i)}" y="${H-5}" text-anchor="middle">${r.m.slice(5)}</text>`).join('')}</svg>`;
- const cats=Object.entries(ctx.categoriesCents).sort((a,b)=>b[1]-a[1]),total=cats.reduce((s,x)=>s+x[1],0);$('analyticsCategories').innerHTML=cats.length?cats.slice(0,7).map(([cat,v])=>`<div class="category-row" role="button" tabindex="0" onclick="setPage('lancamentos')"><div class="budgettop"><span>${sfpEsc(cat)}</span><b>${brl(v/100)} · ${total?Math.round(v/total*100):0}%</b></div><div class="progress"><div style="width:${total?v/total*100:0}%"></div></div></div>`).join(''):'<div class="empty-state">Sem despesas no período.</div>';
- $('analyticsProjection').innerHTML=ctx.projections.map(p=>`<div class="projection-card"><small>${p.days} dias</small><strong class="${p.projectedCents<0?'negative':''}">${brl(p.projectedCents/100)}</strong><span>mínimo ${brl(p.minBalanceCents/100)} em ${p.minDate}${p.negativeRisk?' · risco negativo':''}</span></div>`).join('');
- $('analyticsObligations').innerHTML=[...ctx.cards.map(c=>`<div class="item" role="button" tabindex="0" onclick="setPage('cartoes');openCardDetail(${c.id})"><div><b>${sfpEsc(c.name)}</b><small>Cartão · ${Math.round(c.committedCents/Math.max(1,c.limitCents)*100)}% utilizado</small></div><strong>${brl(c.committedCents/100)}</strong></div>`),...ctx.debts.map(d=>`<div class="item" role="button" tabindex="0" onclick="setPage('dividas');openDebtDetail(${d.id})"><div><b>${sfpEsc(d.name)}</b><small>${d.remainingInstallments} parcelas · ${brl(d.paymentCents/100)}/mês</small></div><strong class="negative">${brl(d.balanceCents/100)}</strong></div>`)].join('')||'<div class="empty-state">Sem cartões ou dívidas.</div>';
- const snaps=[...state.snapshots].sort((a,b)=>a.month.localeCompare(b.month)).slice(-12),mx=Math.max(1,...snaps.map(s=>Math.abs(s.netWorth)));$('analyticsNetWorth').innerHTML=snaps.length?snaps.map(s=>`<div class="barwrap"><div class="bar ${s.netWorth<0?'neg':''}" style="height:${Math.max(4,Math.abs(s.netWorth)/mx*130)}px" title="${monthName(s.month)}: ${brl(s.netWorth)}"></div><small>${s.month.slice(5)}</small></div>`).join(''):'<div class="empty-state">Faça fechamentos mensais para criar histórico confiável.</div>';
- document.querySelectorAll('[data-dashboard-period]').forEach(b=>{b.classList.toggle('active',b.dataset.dashboardPeriod===dashboardPeriod);b.onclick=()=>{dashboardPeriod=b.dataset.dashboardPeriod;renderAnalyticsDashboard()}})
+
+let dashboardPeriod='3M';
+function dashboardMonths(){const n={ '1M':1,'3M':3,'6M':6,'12M':12,'Ano':Math.max(1,+state.mesAtual.slice(5))}[dashboardPeriod]||3;return n}
+
+function renderAnalyticsDashboard(){
+  if(!$('analyticsMetrics'))return;
+  const months=dashboardMonths(),ctx=financialContextSnapshot({reference:dateObj(`${state.mesAtual}-15`),months});
+  const metrics=[
+    ['Receitas',ctx.realized.incomeCents,'Competência do período'],
+    ['Despesas',ctx.realized.expenseCents,'Competência do período'],
+    ['Resultado',ctx.realized.resultCents,'Receitas − despesas'],
+    ['Patrimônio líquido',ctx.patrimony.netWorthCents,'Contas + ativos − dívidas'],
+    ['Dívidas',ctx.patrimony.debtCents,'Saldo devedor'],
+    ['Taxa de poupança',ctx.realized.incomeCents?Math.round(ctx.realized.resultCents/ctx.realized.incomeCents*100):null,'do período'],
+    ['Livre',ctx.free.amountCents,'Disponível − reservado'],
+    ['Compromissos',ctx.commitments.totalCents,'Próximos 90 dias']
+  ];
+  $('analyticsMetrics').innerHTML=metrics.map(([label,v,sub],i)=>`<div class="metric"><span>${label}</span><strong class="${(i===2||i===6)&&v<0?'negative':''}">${i===5?(v==null?'—':v+'%'):brl(v/100)}</strong><small>${sub}<br>Sem histórico suficiente para comparação.</small></div>`).join('');
+  
+  const rows=ctx.period.months.map(m=>{const v=accrualView(m);return{m,income:v.income,expense:v.expense,result:v.result}});
+  $('analyticsPeriodLabel').textContent=`${months} ${months===1?'mês':'meses'} · regime de competência`;
+  $('analyticsLegend').innerHTML=[['income','Receitas','#2ed194'],['expense','Despesas','#ff6d7e'],['result','Resultado','#4cc2ff']].map(([k,l,c])=>`<button class="series-key" data-series="${k}" aria-label="Série ${l}"><i style="background:${c}"></i>${l}</button>`).join('');
+  
+  const W=620,H=230,pad=32,vals=rows.flatMap(r=>[r.income,r.expense,r.result]),max=Math.max(1,...vals),min=Math.min(0,...vals),x=i=>pad+(rows.length<2?0:i*(W-pad*2)/(rows.length-1)),y=v=>pad+(max-v)*(H-pad*2)/(max-min||1),path=k=>rows.map((r,i)=>`${i?'L':'M'}${x(i)},${y(r[k])}`).join(' '),colors={income:'#2ed194',expense:'#ff6d7e',result:'#4cc2ff'};
+  const hasChartData = vals.some(v => v !== 0);
+  $('analyticsChart').innerHTML=hasChartData
+    ? `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico temporal de receitas, despesas e resultado">${Object.keys(colors).map(k=>`<path d="${path(k)}" stroke="${colors[k]}"></path>${rows.map((r,i)=>`<circle cx="${x(i)}" cy="${y(r[k])}" r="5" fill="${colors[k]}"><title>${monthName(r.m)} · ${k}: ${brl(r[k])}</title></circle>`).join('')}`).join('')}${rows.map((r,i)=>`<text x="${x(i)}" y="${H-5}" text-anchor="middle">${r.m.slice(5)}</text>`).join('')}</svg>`
+    : `<div class="empty-chart-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg><p>Sem dados financeiros no período selecionado.</p></div>`;
+    
+  const cats=Object.entries(ctx.categoriesCents).sort((a,b)=>b[1]-a[1]),total=cats.reduce((s,x)=>s+x[1],0);
+  $('analyticsCategories').innerHTML=cats.length?cats.slice(0,7).map(([cat,v])=>`<div class="category-row" role="button" tabindex="0" onclick="setPage('lancamentos')"><div class="budgettop"><span>${sfpEsc(cat)}</span><b>${brl(v/100)} · ${total?Math.round(v/total*100):0}%</b></div><div class="progress"><div style="width:${total?v/total*100:0}%"></div></div></div>`).join(''):'<div class="empty-state">Sem despesas no período.</div>';
+  $('analyticsProjection').innerHTML=ctx.projections.map(p=>`<div class="projection-card"><small>${p.days} dias</small><strong class="${p.projectedCents<0?'negative':''}">${brl(p.projectedCents/100)}</strong><span>mínimo ${brl(p.minBalanceCents/100)} em ${p.minDate}${p.negativeRisk?' · risco negativo':''}</span></div>`).join('');
+  $('analyticsObligations').innerHTML=[...ctx.cards.map(c=>`<div class="item" role="button" tabindex="0" onclick="setPage('cartoes');openCardDetail(${c.id})"><div><b>${sfpEsc(c.name)}</b><small>Cartão · ${Math.round(c.committedCents/Math.max(1,c.limitCents)*100)}% utilizado</small></div><strong>${brl(c.committedCents/100)}</strong></div>`),...ctx.debts.map(d=>`<div class="item" role="button" tabindex="0" onclick="setPage('dividas');openDebtDetail(${d.id})"><div><b>${sfpEsc(d.name)}</b><small>${d.remainingInstallments} parcelas · ${brl(d.paymentCents/100)}/mês</small></div><strong class="negative">${brl(d.balanceCents/100)}</strong></div>`)].join('')||'<div class="empty-state">Sem cartões ou dívidas.</div>';
+  
+  const snaps=[...state.snapshots].sort((a,b)=>a.month.localeCompare(b.month)).slice(-12),mx=Math.max(1,...snaps.map(s=>Math.abs(s.netWorth)));
+  $('analyticsNetWorth').innerHTML=snaps.length
+    ? snaps.map(s=>`<div class="barwrap"><div class="bar ${s.netWorth<0?'neg':''}" style="height:${Math.max(4,Math.abs(s.netWorth)/mx*130)}px" title="${monthName(s.month)}: ${brl(s.netWorth)}"></div><small>${s.month.slice(5)}</small></div>`).join('')
+    : `<div class="empty-chart-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><p>Faça fechamentos mensais para construir o histórico patrimonial.</p></div>`;
+    
+  document.querySelectorAll('[data-dashboard-period]').forEach(b=>{b.classList.toggle('active',b.dataset.dashboardPeriod===dashboardPeriod);b.onclick=()=>{dashboardPeriod=b.dataset.dashboardPeriod;renderAnalyticsDashboard()}})
 }
-function openCalendarDay(date){const events=financialCalendarEvents(ym(date)).filter(e=>e.date===date),groups=events.map(e=>`<div class="item" role="button" tabindex="0" onclick="openCalendarEvent('${e.origin}', '${e.sourceId||''}', '${date}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCalendarEvent('${e.origin}', '${e.sourceId||''}', '${date}')}"><div><b>${sfpEsc(e.desc)}</b><small>${e.type==='income'?'Entrada':'Saída'} · ${sfpEsc(e.origin)} · ${e.date}</small></div><div><strong class="${e.type==='income'?'positive':'negative'}">${e.type==='income'?'+':'−'} ${brl(e.amount)}</strong><span class="event-status ${e.realization}">${e.realization==='realized'?'Realizado':'Previsto'}</span></div></div>`).join('');showDetail(`Dia ${date.slice(8,10)}`,monthName(ym(date)),`${groups||'<div class="empty-state">Nenhum evento financeiro neste dia.</div>'}<div class="section-actions"><button class="btn" onclick="newTransactionForDate('${date}')">+ Novo lançamento nesta data</button></div>`)}
-function openCalendarEvent(origin,id,date){if(origin==='invoice'||origin==='invoice-payment'){const cardId=String(id).split(':')[0];closeProgressive();setPage('cartoes');if(card(+cardId))openCardDetail(+cardId)}else if(origin==='payroll'){const debtId=String(id).split(':')[0];closeProgressive();setPage('dividas');if(state.debts.some(d=>d.id==debtId))openDebtDetail(+debtId)}else if(origin==='recurring'){const recId=String(id).replace(/^rec-/,'').split('-')[0];closeProgressive();setPage('recorrencias');if(state.recurring.some(r=>r.id==recId))editRec(+recId)}else{const txId=String(id).split(':')[0];closeProgressive();if(state.transactions.some(t=>t.id==txId))editTx(+txId);else setPage('lancamentos')}}
-function newTransactionForDate(date){closeProgressive();resetTxForm();setPage('lancamentos');$('txDate').value=date;$('txDesc').focus()}
-window.openCalendarDay=openCalendarDay;window.openCalendarEvent=openCalendarEvent;window.newTransactionForDate=newTransactionForDate;
+
+function openCalendarDay(date){
+  const events=financialCalendarEvents(ym(date)).filter(e=>e.date===date),groups=events.map(e=>`<div class="item" role="button" tabindex="0" onclick="openCalendarEvent('${e.origin}', '${e.sourceId||''}', '${date}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCalendarEvent('${e.origin}', '${e.sourceId||''}', '${date}')}"><div><b>${sfpEsc(e.desc)}</b><small>${e.type==='income'?'Entrada':'Saída'} · ${sfpEsc(e.origin)} · ${e.date}</small></div><div><strong class="${e.type==='income'?'positive':'negative'}">${e.type==='income'?'+':'−'} ${brl(e.amount)}</strong><span class="event-status ${e.realization}">${e.realization==='realized'?'Realizado':'Previsto'}</span></div></div>`).join('');
+  showDetail(`Dia ${date.slice(8,10)}`,monthName(ym(date)),`${groups||'<div class="empty-state">Nenhum evento financeiro neste dia.</div>'}<div class="section-actions"><button class="btn" onclick="newTransactionForDate('${date}')">+ Novo lançamento nesta data</button></div>`)
+}
+
+function openCalendarEvent(origin,id,date){
+  if(origin==='invoice'||origin==='invoice-payment'){
+    const cardId=String(id).split(':')[0];closeProgressive();setPage('cartoes');if(card(+cardId))openCardDetail(+cardId)
+  }else if(origin==='payroll'){
+    const debtId=String(id).split(':')[0];closeProgressive();setPage('dividas');if(state.debts.some(d=>d.id==debtId))openDebtDetail(+debtId)
+  }else if(origin==='recurring'){
+    const recId=String(id).replace(/^rec-/,'').split('-')[0];closeProgressive();setPage('recorrencias');if(state.recurring.some(r=>r.id==recId))editRec(+recId)
+  }else{
+    const txId=String(id).split(':')[0];closeProgressive();if(state.transactions.some(t=>t.id==txId))editTx(+txId);else setPage('lancamentos')
+  }
+}
+
+function newTransactionForDate(date){
+  closeProgressive();resetTxForm();setPage('lancamentos');$('txDate').value=date;$('txDesc').focus()
+}
+
+window.openCalendarDay=openCalendarDay;
+window.openCalendarEvent=openCalendarEvent;
+window.newTransactionForDate=newTransactionForDate;
 
 function renderPatrimony(){
- let at=assetTotal(),li=debtTotal(),net=at-li;$('assetTotal').textContent=brl(at);$('liabTotal').textContent=brl(li);$('netTotal').textContent=brl(net);$('reserveTotal').textContent=brl(goalReserve());let last=[...state.snapshots].sort((a,b)=>b.month.localeCompare(a.month))[0];$('netChange').textContent=last?brl(net-last.netWorth):'—';
- $('assetGrid').innerHTML=state.assets.map(a=>`<div class="tile"><div class="tiletop"><b>${a.name}</b><strong>${brl(a.value)}</strong></div><div class="tileactions"><button class="btn2 tiny" onclick="editAsset(${a.id})">Editar</button><button class="danger tiny" onclick="removeAsset(${a.id})">Excluir</button></div></div>`).join('');
- let snaps=[...state.snapshots].sort((a,b)=>a.month.localeCompare(b.month)).slice(-8),mx=Math.max(1,...snaps.map(s=>Math.abs(s.netWorth)));$('netBars').innerHTML=snaps.length?snaps.map(s=>`<div class="barwrap"><div class="bar ${s.netWorth<0?'neg':''}" style="height:${Math.max(4,Math.abs(s.netWorth)/mx*130)}px"></div><small>${s.month.slice(5)}</small></div>`).join(''):'<div class="item"><span>Faça fechamentos mensais para criar histórico.</span></div>'
+  let at=assetTotal(),li=debtTotal(),net=at-li;
+  $('assetTotal').textContent=brl(at);$('liabTotal').textContent=brl(li);$('netTotal').textContent=brl(net);$('reserveTotal').textContent=brl(goalReserve());
+  let last=[...state.snapshots].sort((a,b)=>b.month.localeCompare(a.month))[0];
+  $('netChange').textContent=last?brl(net-last.netWorth):'—';
+  $('assetGrid').innerHTML=state.assets.map(a=>`<div class="tile"><div class="tiletop"><b>${a.name}</b><strong>${brl(a.value)}</strong></div><div class="tileactions"><button class="btn2 tiny" onclick="editAsset(${a.id})">Editar</button><button class="danger tiny" onclick="removeAsset(${a.id})">Excluir</button></div></div>`).join('');
+  let snaps=[...state.snapshots].sort((a,b)=>a.month.localeCompare(b.month)).slice(-8),mx=Math.max(1,...snaps.map(s=>Math.abs(s.netWorth)));
+  $('netBars').innerHTML=snaps.length
+    ? snaps.map(s=>`<div class="barwrap"><div class="bar ${s.netWorth<0?'neg':''}" style="height:${Math.max(4,Math.abs(s.netWorth)/mx*130)}px"></div><small>${s.month.slice(5)}</small></div>`).join('')
+    : `<div class="empty-chart-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><p>Faça fechamentos mensais para criar histórico.</p></div>`;
 }
+
 function renderCalendar(){
- let[y,m]=state.mesAtual.split('-').map(Number),first=new Date(y,m-1,1),days=new Date(y,m,0).getDate(),start=first.getDay(),ev=financialCalendarEvents();let h=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(x=>`<div class="calhead">${x}</div>`).join('');for(let i=0;i<start;i++)h+='<div class="day off"></div>';for(let d=1;d<=days;d++){let ds=`${state.mesAtual}-${String(d).padStart(2,'0')}`,e=ev.filter(x=>x.date===ds),inc=e.filter(x=>x.type==='income').reduce((a,x)=>a+x.amount,0),exp=e.filter(x=>x.type==='expense').reduce((a,x)=>a+x.amount,0),hasRealized=e.some(x=>x.realization==='realized'),hasProjected=e.some(x=>x.realization==='projected'),dots=`${hasRealized?'<i class="cal-dot realized" title="Realizado"></i>':''}${hasProjected?'<i class="cal-dot projected" title="Previsto"></i>':''}`;let label=e.length?`Dia ${d}, ${e.length} evento${e.length>1?'s':''}${inc?`, receita de ${brl(inc)}`:''}${exp?`, despesa de ${brl(exp)}`:''}${hasProjected?' (com previsão)':''}`:`Dia ${d}, sem eventos`;h+=`<button type="button" class="day${e.length?' has-events':''}" onclick="openCalendarDay('${ds}')" aria-label="${label}"><div class="daytop"><span class="daynum">${d}</span>${dots?`<div class="cal-indicators">${dots}</div>`:''}</div>${inc?`<span class="cal-flow inc">+ ${brl(inc)}</span>`:''}${exp?`<span class="cal-flow exp">− ${brl(exp)}</span>`:''}${e.length?`<span class="cal-count">${e.length} ${e.length===1?'evento':'eventos'}</span>`:''}</button>`}$('calendar').innerHTML=h
+  let[y,m]=state.mesAtual.split('-').map(Number),first=new Date(y,m-1,1),days=new Date(y,m,0).getDate(),start=first.getDay(),ev=financialCalendarEvents();
+  let h=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(x=>`<div class="calhead">${x}</div>`).join('');
+  for(let i=0;i<start;i++)h+='<div class="day off"></div>';
+  for(let d=1;d<=days;d++){
+    let ds=`${state.mesAtual}-${String(d).padStart(2,'0')}`,e=ev.filter(x=>x.date===ds),inc=e.filter(x=>x.type==='income').reduce((a,x)=>a+x.amount,0),exp=e.filter(x=>x.type==='expense').reduce((a,x)=>a+x.amount,0),hasRealized=e.some(x=>x.realization==='realized'),hasProjected=e.some(x=>x.realization==='projected'),dots=`${hasRealized?'<i class="cal-dot realized" title="Realizado"></i>':''}${hasProjected?'<i class="cal-dot projected" title="Previsto"></i>':''}`;
+    let label=e.length?`Dia ${d}, ${e.length} evento${e.length>1?'s':''}${inc?`, receita de ${brl(inc)}`:''}${exp?`, despesa de ${brl(exp)}`:''}${hasProjected?' (com previsão)':''}`:`Dia ${d}, sem eventos`;
+    h+=`<button type="button" class="day${e.length?' has-events':''}" onclick="openCalendarDay('${ds}')" aria-label="${label}"><div class="daytop"><span class="daynum">${d}</span>${dots?`<div class="cal-indicators">${dots}</div>`:''}</div>${inc?`<span class="cal-flow inc">+ ${brl(inc)}</span>`:''}${exp?`<span class="cal-flow exp">− ${brl(exp)}</span>`:''}${e.length?`<span class="cal-count">${e.length} ${e.length===1?'evento':'eventos'}</span>`:''}</button>`
+  }
+  $('calendar').innerHTML=h
 }
+
 function renderReports(){
- let ss=[...state.snapshots].sort((a,b)=>b.month.localeCompare(a.month));$('snapshotList').innerHTML=ss.slice(0,12).map(s=>`<div class="item"><div><b>${monthName(s.month)}</b><small>Receita ${brl(s.income)} • Despesa ${brl(s.expense)}</small></div><strong class="${s.result>=0?'positive':'negative'}">${brl(s.result)}</strong></div>`).join('')||'<div class="item"><span>Nenhum mês fechado.</span></div>';
- let year=state.mesAtual.slice(0,4),months=Array.from({length:12},(_,i)=>`${year}-${String(i+1).padStart(2,'0')}`),vals=months.map(m=>monthCalc(m).result),mx=Math.max(1,...vals.map(Math.abs));$('yearBars').innerHTML=months.map((m,i)=>`<div class="barwrap"><div class="bar ${vals[i]<0?'neg':''}" style="height:${Math.max(3,Math.abs(vals[i])/mx*130)}px"></div><small>${m.slice(5)}</small></div>`).join('');
- let sums=months.map(monthCalc),inc=sums.reduce((s,x)=>s+x.inc,0),exp=sums.reduce((s,x)=>s+x.exp,0),best=months.map((m,i)=>({m,v:sums[i].result})).sort((a,b)=>b.v-a.v)[0];$('annualSummary').innerHTML=`<div><small>Receitas no ano</small><strong>${brl(inc)}</strong><span>${year}</span></div><div><small>Despesas no ano</small><strong>${brl(exp)}</strong><span>${year}</span></div><div><small>Melhor resultado projetado</small><strong>${best?monthName(best.m):'—'}</strong><span>${best?brl(best.v):''}</span></div>`
+  let ss=[...state.snapshots].sort((a,b)=>b.month.localeCompare(a.month));
+  $('snapshotList').innerHTML=ss.slice(0,12).map(s=>`<div class="item"><div><b>${monthName(s.month)}</b><small>Receita ${brl(s.income)} • Despesa ${brl(s.expense)}</small></div><strong class="${s.result>=0?'positive':'negative'}">${brl(s.result)}</strong></div>`).join('')||'<div class="item"><span>Nenhum mês fechado.</span></div>';
+  let year=state.mesAtual.slice(0,4),months=Array.from({length:12},(_,i)=>`${year}-${String(i+1).padStart(2,'0')}`),vals=months.map(m=>monthCalc(m).result),mx=Math.max(1,...vals.map(Math.abs));
+  const hasReportData = vals.some(v => v !== 0);
+  $('yearBars').innerHTML=hasReportData
+    ? months.map((m,i)=>`<div class="barwrap"><div class="bar ${vals[i]<0?'neg':''}" style="height:${Math.max(3,Math.abs(vals[i])/mx*130)}px"></div><small>${m.slice(5)}</small></div>`).join('')
+    : `<div class="empty-chart-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg><p>Sem movimentações registradas neste ano.</p></div>`;
+  let sums=months.map(monthCalc),inc=sums.reduce((s,x)=>s+x.inc,0),exp=sums.reduce((s,x)=>s+x.exp,0),best=months.map((m,i)=>({m,v:sums[i].result})).sort((a,b)=>b.v-a.v)[0];
+  $('annualSummary').innerHTML=`<div><small>Receitas no ano</small><strong>${brl(inc)}</strong><span>${year}</span></div><div><small>Despesas no ano</small><strong>${brl(exp)}</strong><span>${year}</span></div><div><small>Melhor resultado projetado</small><strong>${best?monthName(best.m):'—'}</strong><span>${best?brl(best.v):''}</span></div>`
 }
 
 function renderCsvTemplates(){
- if(!$('csvTemplates'))return;$('csvTemplates').innerHTML=state.csvTemplates.length?state.csvTemplates.map(t=>`<div class="item"><div><b>${t.name}</b><small>Data: coluna ${t.dateIndex+1} • Descrição: ${t.descIndex+1} • Valor: ${t.valueIndex+1}</small></div><button class="danger tiny" onclick="removeCsvTemplate(${t.id})">Excluir</button></div>`).join(''):'<div class="item"><span>Nenhum modelo salvo ainda.</span></div>'
+  if(!$('csvTemplates'))return;
+  $('csvTemplates').innerHTML=state.csvTemplates.length?state.csvTemplates.map(t=>`<div class="item"><div><b>${t.name}</b><small>Data: coluna ${t.dateIndex+1} • Descrição: ${t.descIndex+1} • Valor: ${t.valueIndex+1}</small></div><button class="danger tiny" onclick="removeCsvTemplate(${t.id})">Excluir</button></div>`).join(''):'<div class="item"><span>Nenhum modelo salvo ainda.</span></div>'
 }
 window.removeCsvTemplate=async id=>{state.csvTemplates=state.csvTemplates.filter(t=>t.id!==id);await save('Excluir modelo CSV')}
 
