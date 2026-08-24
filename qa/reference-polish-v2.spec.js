@@ -346,8 +346,7 @@ test.describe('SFP Reference Alignment + Physical Polish V2 Suite (POLISH-01 - P
     expect(monthLabel.length).toBeGreaterThan(3);
 
     await page.locator('#nextMonth').click();
-    const nextMonthLabel = await page.locator('#monthLabel').textContent();
-    expect(nextMonthLabel).not.toBe(monthLabel);
+    await expect(page.locator('#monthLabel')).not.toHaveText(monthLabel);
 
     await page.locator('#prevMonth').click();
     await expect(page.locator('#monthLabel')).toHaveText(monthLabel);
