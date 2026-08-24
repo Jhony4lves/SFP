@@ -1904,6 +1904,233 @@ button:active:not(:disabled){transform:translateY(1px)}
   .sophy-input-bar input{padding:8px 10px;font-size:13px}
   .sophy-input-bar button{padding:8px 12px;font-size:13px}
 }
+
+/* ===== SFP DIALOGS & POPUPS GLOBAL SPEC ===== */
+.modal.sfp-dialog {
+  max-width: min(440px, calc(100vw - 32px)) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  background: #091728 !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.06) !important;
+  padding: 18px 20px !important;
+  color: var(--color-text) !important;
+  margin: auto !important;
+}
+.sfp-dialog-head {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  width: 100% !important;
+  margin-bottom: 14px !important;
+  position: relative !important;
+}
+.sfp-dialog-badge {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
+  border-radius: 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+.sfp-dialog-badge svg {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
+  display: block !important;
+  flex-shrink: 0 !important;
+  stroke: currentColor !important;
+}
+.sfp-dialog-badge.info {
+  background: rgba(0,210,196,0.12) !important;
+  color: var(--color-brand) !important;
+  border: 1px solid rgba(0,210,196,0.25) !important;
+}
+.sfp-dialog-badge.confirmation {
+  background: rgba(56,189,248,0.12) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56,189,248,0.25) !important;
+}
+.sfp-dialog-badge.success {
+  background: rgba(34,197,94,0.12) !important;
+  color: var(--color-positive) !important;
+  border: 1px solid rgba(34,197,94,0.25) !important;
+}
+.sfp-dialog-badge.warning {
+  background: rgba(245,158,11,0.12) !important;
+  color: var(--color-warning) !important;
+  border: 1px solid rgba(245,158,11,0.25) !important;
+}
+.sfp-dialog-badge.danger,
+.sfp-dialog-badge.error {
+  background: rgba(244,63,94,0.12) !important;
+  color: var(--color-negative) !important;
+  border: 1px solid rgba(244,63,94,0.25) !important;
+}
+.sfp-dialog-title {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  padding-right: 4px !important;
+}
+.sfp-dialog-title h2,
+.sfp-dialog-title h3 {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  margin: 0 !important;
+  color: #fff !important;
+  letter-spacing: -0.01em !important;
+}
+.sfp-dialog-title p {
+  font-size: 11.5px !important;
+  color: var(--color-text-secondary) !important;
+  margin: 3px 0 0 !important;
+  line-height: 1.3 !important;
+}
+.sfp-dialog-close,
+.sfp-dialog-head .icon-button {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
+  color: var(--color-text-secondary) !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+.sfp-dialog-close:hover,
+.sfp-dialog-head .icon-button:hover {
+  background: rgba(255,255,255,0.08) !important;
+  color: #fff !important;
+  border-color: var(--color-border) !important;
+}
+.sfp-dialog-close svg,
+.sfp-dialog-head .icon-button svg {
+  width: 18px !important;
+  height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
+  display: block !important;
+  stroke: currentColor !important;
+}
+.sfp-dialog-body {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: var(--color-text-secondary) !important;
+  margin-bottom: 18px !important;
+}
+.sfp-dialog-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+
+/* ===== TODAY COCKPIT HERO SPEC ===== */
+.today-cockpit-hero {
+  background: linear-gradient(180deg, #0c2035 0%, #071524 100%) !important;
+  border: 1px solid rgba(0, 210, 196, 0.22) !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 16px 18px !important;
+  margin-bottom: 12px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+.cockpit-hero-top-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+.cockpit-hero-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  color: var(--color-brand) !important;
+  background: rgba(0, 210, 196, 0.1) !important;
+  padding: 3px 8px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(0, 210, 196, 0.2) !important;
+}
+.cockpit-hero-main {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+.cockpit-hero-label {
+  display: block !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--color-text-secondary) !important;
+  letter-spacing: 0.01em !important;
+}
+.cockpit-hero-value {
+  display: block !important;
+  font-size: clamp(24px, 6vw, 32px) !important;
+  font-weight: 800 !important;
+  color: #fff !important;
+  line-height: 1.15 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.02em !important;
+}
+.cockpit-hero-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+  padding-top: 8px !important;
+  margin-top: 2px !important;
+}
+.cockpit-hero-hint {
+  font-size: 11px !important;
+  color: var(--color-text-muted) !important;
+  line-height: 1.35 !important;
+  margin: 0 !important;
+}
+
+/* Section Header CTA size normalization */
+.head > button,
+.head > .btn,
+.head > .btn2 {
+  flex-shrink: 0 !important;
+  width: fit-content !important;
+  max-width: 55% !important;
+  white-space: nowrap !important;
+}
+@media(max-width:650px) {
+  .head > button,
+  .head > .btn,
+  .head > .btn2 {
+    min-height: 44px !important;
+    font-size: 11px !important;
+    padding: 6px 12px !important;
+    width: fit-content !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -1971,15 +2198,15 @@ button:active:not(:disabled){transform:translateY(1px)}
 
     <section class="tab active" id="hoje">
       <article class="panel today-cockpit-hero">
-        <div class="cockpit-hero-header">
-          <div>
-            <span class="cockpit-hero-tag"><span class="dot-pulse"></span> Cockpit Financeiro</span>
-            <small class="cockpit-hero-label">Dinheiro livre projetado</small>
-          </div>
+        <div class="cockpit-hero-top-row">
+          <span class="cockpit-hero-tag"><span class="dot-pulse"></span> Cockpit Financeiro</span>
           <span class="badge positive" id="todayFreeStatus">Equilibrado</span>
         </div>
-        <div class="cockpit-hero-body">
+        <div class="cockpit-hero-main">
+          <small class="cockpit-hero-label">Dinheiro livre projetado</small>
           <strong id="todayFree" class="cockpit-hero-value" data-money>R$ 0,00</strong>
+        </div>
+        <div class="cockpit-hero-footer">
           <p class="cockpit-hero-hint" id="todayFreeHint">Disponível para uso consciente após provisionar compromissos conhecidos.</p>
         </div>
       </article>
@@ -2020,7 +2247,7 @@ button:active:not(:disabled){transform:translateY(1px)}
             </div>
           </div>
           <div class="sophy-header-actions">
-            <button type="button" class="btn2 tiny" id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg> <span>Memórias (<span id="sophyMemoryCount">0</span>)</span></button>
+            <button type="button" class="btn2 tiny" id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-5.04z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-5.04z"/></svg> <span>Memórias (<span id="sophyMemoryCount">0</span>)</span></button>
             <button type="button" class="btn2 tiny" id="sophySettingsBtn" title="Configurar provedor de IA da Sophy"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> <span>Provedor IA</span></button>
             <button type="button" class="btn2 tiny" id="sophyClearHistoryBtn" title="Limpar conversa"><svg class="sfp-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> <span>Limpar chat</span></button>
           </div>
@@ -2306,7 +2533,7 @@ button:active:not(:disabled){transform:translateY(1px)}
         <article class="panel management-form-panel"><div class="head"><div><h2>Nova recorrência</h2><p>Uma regra gera as ocorrências mensais</p></div></div>
           <form id="recForm"><input id="recId" type="hidden"/><label>Descrição<input id="recDesc" required/></label><div class="two"><label>Tipo<select id="recType"><option value="expense">Despesa</option><option value="income">Receita</option></select></label><label>Categoria<select id="recCategory"></select></label></div><div class="three"><label>Valor<input id="recAmount" type="number" step="0.01" required/></label><label>Dia<input id="recDay" type="number" min="1" max="31" required/></label><label>Conta<select id="recAccount"></select></label></div><div class="two"><label>Começa em<input id="recStart" type="month" required/></label><label>Termina em<input id="recEnd" type="month"/></label></div><button class="btn wide">Salvar regra</button></form>
         </article>
-        <article class="panel"><div class="head"><div><h2>Regras recorrentes</h2><p>Pause, edite ou pule um mês</p></div><button class="btn" onclick="openRecurringForm()">+ Nova recorrência</button></div><div id="recList" class="list"></div></article>
+        <article class="panel"><div class="head"><div><h2>Regras recorrentes</h2><p>Pause, edite ou pule um mês</p></div><button class="btn compact" onclick="openRecurringForm()">+ Nova recorrência</button></div><div id="recList" class="list"></div></article>
       </div>
     </section>
 
@@ -3116,7 +3343,7 @@ function sfpConfirm({title='Confirmação',message='Deseja prosseguir com esta a
          <h2 id="dialogTitle">${sfpEsc(title)}</h2>
          <p>${danger?'Ação destrutiva ou de atenção':'Confirmação necessária'}</p>
        </div>
-       <button class="btn2 tiny icon-button" id="dialogCloseBtn" aria-label="Fechar">✕</button>
+       <button class="sfp-dialog-close icon-button" id="dialogCloseBtn" aria-label="Fechar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
      </div>
      <div class="sfp-dialog-body">${sfpEsc(message).replace(/\n/g,'<br/>')}</div>
      <div class="sfp-dialog-actions">
@@ -3156,7 +3383,7 @@ function sfpAlert({title='Aviso',message='',buttonText='Entendido',type='info'}=
          <h2 id="dialogTitle">${sfpEsc(title)}</h2>
          <p>${typeLabels[type]||'Aviso do sistema'}</p>
        </div>
-       <button class="btn2 tiny icon-button" id="dialogCloseBtn" aria-label="Fechar">✕</button>
+       <button class="sfp-dialog-close icon-button" id="dialogCloseBtn" aria-label="Fechar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
      </div>
      <div class="sfp-dialog-body">${sfpEsc(message).replace(/\n/g,'<br/>')}</div>
      <div class="sfp-dialog-actions">
@@ -3185,7 +3412,7 @@ function sfpPrompt({title='Entrada',message='',defaultValue='',placeholder='',co
          <h2 id="dialogTitle">${sfpEsc(title)}</h2>
          <p>Preencha para continuar</p>
        </div>
-       <button class="btn2 tiny icon-button" id="dialogCloseBtn" aria-label="Fechar">✕</button>
+       <button class="sfp-dialog-close icon-button" id="dialogCloseBtn" aria-label="Fechar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
      </div>
      <div class="sfp-dialog-body">
        ${message?`<p style="margin:0 0 8px;font-size:13px">${sfpEsc(message).replace(/\n/g,'<br/>')}</p>`:''}
@@ -3230,7 +3457,7 @@ function showInAppBanner({id='banner-default', type='info', title='Aviso', messa
     </div>
     <div class="in-app-banner-actions">
       ${actionText ? `<button class="btn2 tiny" id="bannerActionBtn">${sfpEsc(actionText)}</button>` : ''}
-      ${dismissible ? `<button class="ghost tiny icon-button" id="bannerDismissBtn" aria-label="Dispensar">✕</button>` : ''}
+      ${dismissible ? `<button class="ghost tiny icon-button" id="bannerDismissBtn" aria-label="Dispensar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>` : ''}
     </div>
   `;
   container.classList.remove('hidden');
@@ -3343,6 +3570,7 @@ window.renderNotificationBadge = renderNotificationBadge;
 
 function openNotificationCenter(){
   const notifs = getSystemNotifications();
+  const unreadCount = notifs.filter(n => !notificationReadIds.has(n.id)).length;
   const root = $('modalRoot');
   if(!root) return;
   root.className = 'modalback';
@@ -3368,7 +3596,10 @@ function openNotificationCenter(){
         </div>
       </div>
     </div>`;
-  }).join('') : '<div class="empty-state" style="padding:24px 16px;text-align:center"><p style="margin:0;color:var(--color-text-secondary);font-size:13px">Nenhum aviso ou notificação pendente.</p></div>';
+  }).join('') : `<div class="empty-state notif-empty-state" style="padding:28px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.75"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <p style="margin:0;color:var(--color-text-secondary);font-size:12.5px;line-height:1.4">Nenhum aviso ou notificação pendente no momento.</p>
+  </div>`;
 
   root.innerHTML = `<div class="modal sfp-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
     <div class="sfp-dialog-head">
@@ -3377,13 +3608,13 @@ function openNotificationCenter(){
         <h2 id="dialogTitle">Central de Avisos</h2>
         <p>Avisos e lembretes gerados localmente</p>
       </div>
-      <button class="btn2 tiny icon-button" id="dialogCloseBtn" aria-label="Fechar">✕</button>
+      <button class="sfp-dialog-close icon-button" id="dialogCloseBtn" aria-label="Fechar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="list" style="max-height:360px;overflow-y:auto;gap:8px;margin-bottom:14px">
       ${listHtml}
     </div>
     <div class="sfp-dialog-actions" style="justify-content:space-between">
-      <button class="ghost tiny" id="markAllReadBtn" style="font-size:11.5px">Marcar lidas</button>
+      ${notifs.length && unreadCount > 0 ? `<button class="ghost tiny" id="markAllReadBtn" style="font-size:11.5px">Marcar lidas</button>` : `<div style="flex:1"></div>`}
       <button class="btn compact" id="notifCloseBtn">Fechar</button>
     </div>
   </div>`;
@@ -3391,10 +3622,12 @@ function openNotificationCenter(){
   const finish = () => { root.className = 'hidden'; root.innerHTML = ''; renderNotificationBadge(); };
   $('dialogCloseBtn').onclick = finish;
   $('notifCloseBtn').onclick = finish;
-  $('markAllReadBtn').onclick = () => {
-    notifs.forEach(n => notificationReadIds.add(n.id));
-    openNotificationCenter();
-  };
+  if($('markAllReadBtn')){
+    $('markAllReadBtn').onclick = () => {
+      notifs.forEach(n => notificationReadIds.add(n.id));
+      openNotificationCenter();
+    };
+  }
 }
 window.openNotificationCenter = openNotificationCenter;
 window.handleNotificationClick = (id, page) => {

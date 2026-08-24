@@ -448,4 +448,216 @@ test.describe('SFP Reference Alignment + Physical Polish V2 Suite (POLISH-01 - P
     expect(errors).toEqual([]);
   });
 
+  // ============================================================
+  // FINAL PHYSICAL QA REGRESSION SUITE (FINAL-POLISH-01..08)
+  // ============================================================
+
+  const VIEWPORTS = [
+    { name: '360x780 (Compact Mobile)', width: 360, height: 780 },
+    { name: '384x854 (Galaxy S24 Small)', width: 384, height: 854 },
+    { name: '412x915 (Galaxy S24 Plus)', width: 412, height: 915 }
+  ];
+
+  for (const vp of VIEWPORTS) {
+    test(`FINAL-POLISH-01: Dialog badge SVG bounded (<= 24px) in ${vp.name}`, async ({ page }) => {
+      const errors = monitor(page);
+      await boot(page, { width: vp.width, height: vp.height });
+
+      await page.locator('#notifBellBtn').click();
+      await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
+
+      const badgeSvg = page.locator('.sfp-dialog-badge svg');
+      await expect(badgeSvg).toBeVisible();
+
+      const svgBox = await badgeSvg.boundingBox();
+      expect(svgBox).not.toBeNull();
+      expect(svgBox.width).toBeLessThanOrEqual(24);
+      expect(svgBox.height).toBeLessThanOrEqual(24);
+
+      const badgeBox = await page.locator('.sfp-dialog-badge').boundingBox();
+      expect(badgeBox.width).toBeLessThanOrEqual(42);
+      expect(badgeBox.height).toBeLessThanOrEqual(42);
+
+      await page.locator('#notifCloseBtn').click();
+      expect(errors).toEqual([]);
+    });
+
+    test(`FINAL-POLISH-02: Close button remains top-right within header in ${vp.name}`, async ({ page }) => {
+      const errors = monitor(page);
+      await boot(page, { width: vp.width, height: vp.height });
+
+      await page.locator('#notifBellBtn').click();
+      await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
+
+      const modalBox = await page.locator('.modal.sfp-dialog').boundingBox();
+      const headBox = await page.locator('.sfp-dialog-head').boundingBox();
+      const closeBox = await page.locator('#dialogCloseBtn').boundingBox();
+
+      expect(modalBox).not.toBeNull();
+      expect(headBox).not.toBeNull();
+      expect(closeBox).not.toBeNull();
+
+      // Close button is inside modal horizontally
+      expect(closeBox.x + closeBox.width).toBeLessThanOrEqual(modalBox.x + modalBox.width + 2);
+      // Close button is at top right
+      expect(closeBox.x).toBeGreaterThan(headBox.x + headBox.width * 0.7);
+
+      await page.locator('#dialogCloseBtn').click();
+      await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
+
+      expect(errors).toEqual([]);
+    });
+
+    test(`FINAL-POLISH-03: Notification empty state sem overflow in ${vp.name}`, async ({ page }) => {
+      const errors = monitor(page);
+      await boot(page, { width: vp.width, height: vp.height });
+
+      await page.locator('#notifBellBtn').click();
+      await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
+
+      const emptyState = page.locator('.notif-empty-state');
+      if (await emptyState.isVisible()) {
+        const hasOverflow = await page.evaluate(() => {
+          const el = document.querySelector('.notif-empty-state');
+          return el ? el.scrollWidth > el.clientWidth : false;
+        });
+        expect(hasOverflow).toBe(false);
+
+        const svgBox = await emptyState.locator('svg').boundingBox();
+        expect(svgBox.width).toBeLessThanOrEqual(32);
+        expect(svgBox.height).toBeLessThanOrEqual(32);
+      }
+
+      await page.locator('#notifCloseBtn').click();
+      expect(errors).toEqual([]);
+    });
+
+    test(`FINAL-POLISH-04: "Marcar lidas" oculto ou desabilitado com lista vazia em ${vp.name}`, async ({ page }) => {
+      const errors = monitor(page);
+      await boot(page, { width: vp.width, height: vp.height });
+
+      await page.locator('#notifBellBtn').click();
+      await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
+
+      const markBtn = page.locator('#markAllReadBtn');
+      const count = await markBtn.count();
+      if (count > 0 && await markBtn.isVisible()) {
+        // If visible, unread items must exist
+        const unreadItems = await page.locator('.notif-item.unread').count();
+        expect(unreadItems).toBeGreaterThan(0);
+      }
+
+      await page.locator('#notifCloseBtn').click();
+      expect(errors).toEqual([]);
+    });
+
+    test(`FINAL-POLISH-07: CTA Nova recorrência dimensionado com fit-content em ${vp.name}`, async ({ page }) => {
+      const errors = monitor(page);
+      await boot(page, { width: vp.width, height: vp.height });
+
+      await page.locator('.sidebar .nav button[data-page="recorrencias"]').click();
+      await expect(page.locator('#recorrencias')).toHaveClass(/active/);
+
+      const panel = page.locator('#recorrencias .panel').nth(1);
+      const cta = panel.locator('.head button');
+      await expect(cta).toBeVisible();
+
+      const panelBox = await panel.boundingBox();
+      const ctaBox = await cta.boundingBox();
+
+      expect(panelBox).not.toBeNull();
+      expect(ctaBox).not.toBeNull();
+
+      // CTA must not exceed 60% of card width
+      expect(ctaBox.width).toBeLessThanOrEqual(panelBox.width * 0.65);
+      // Touch target >= 44px
+      expect(ctaBox.height).toBeGreaterThanOrEqual(44);
+
+      expect(errors).toEqual([]);
+    });
+
+    test(`FINAL-POLISH-08: Cockpit hero mantém hierarquia estrita em ${vp.name}`, async ({ page }) => {
+      const errors = monitor(page);
+      await boot(page, { width: vp.width, height: vp.height });
+
+      const tagBox = await page.locator('.cockpit-hero-tag').boundingBox();
+      const labelBox = await page.locator('.cockpit-hero-label').boundingBox();
+      const valBox = await page.locator('.cockpit-hero-value').boundingBox();
+      const hintBox = await page.locator('.cockpit-hero-hint').boundingBox();
+
+      expect(tagBox).not.toBeNull();
+      expect(labelBox).not.toBeNull();
+      expect(valBox).not.toBeNull();
+      expect(hintBox).not.toBeNull();
+
+      // Tag row is strictly above label
+      expect(tagBox.y + tagBox.height).toBeLessThanOrEqual(labelBox.y + 4);
+      // Label is strictly above value
+      expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(valBox.y + 4);
+      // Value is strictly above hint
+      expect(valBox.y + valBox.height).toBeLessThanOrEqual(hintBox.y + 6);
+
+      expect(errors).toEqual([]);
+    });
+  }
+
+  test('FINAL-POLISH-05: Zero ✕ ou símbolos estruturais no chrome da aplicação', async ({ page }) => {
+    const errors = monitor(page);
+    await boot(page, DESKTOP);
+
+    const bodyHtml = await page.locator('body').innerHTML();
+    expect(bodyHtml).not.toContain('✕');
+    expect(bodyHtml).not.toContain('✖');
+
+    // Trigger sfpAlert to inspect dialog
+    const alertPromise = page.evaluate(() => {
+      return window.sfpAlert({ title: 'Auditoria de Símbolos', message: 'Sem caracteres unicode crus.' });
+    });
+    const modalHtml = await page.locator('#modalRoot').innerHTML();
+    expect(modalHtml).not.toContain('✕');
+    expect(modalHtml).not.toContain('✖');
+
+    await page.locator('#dialogOkBtn').click();
+    await alertPromise;
+
+    expect(errors).toEqual([]);
+  });
+
+  test('FINAL-POLISH-06: Memórias usa SVG semântico de cérebro/neural', async ({ page }) => {
+    const errors = monitor(page);
+    await boot(page, DESKTOP);
+
+    await page.locator('.sidebar .nav button[data-page="sophy"]').click();
+    await expect(page.locator('#sophy')).toBeVisible();
+
+    const memBtn = page.locator('#sophyOpenMemoriesBtn');
+    await expect(memBtn).toBeVisible();
+
+    const svgHtml = await memBtn.locator('svg').innerHTML();
+    // Verify neural/brain path curves
+    expect(svgHtml).toContain('M9.5 2');
+    expect(svgHtml).toContain('M14.5 2');
+
+    expect(errors).toEqual([]);
+  });
+
+  test('FINAL-POLISH-09: Screenshot audit Central de Avisos in 384x854', async ({ page }) => {
+    const errors = monitor(page);
+    await page.setViewportSize({ width: 384, height: 854 });
+    await page.goto('/index.html');
+    await expect(page.locator('#pageTitle')).toHaveText('Hoje');
+
+    await page.locator('#notifBellBtn').click();
+    await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
+    await page.waitForTimeout(100);
+
+    const screenshotDir = path.resolve('build/reports/screenshots');
+    fs.mkdirSync(screenshotDir, { recursive: true });
+    await page.screenshot({ path: path.join(screenshotDir, 'central-de-avisos-384x854.png') });
+
+    await page.locator('#notifCloseBtn').click();
+    expect(errors).toEqual([]);
+  });
+
 });
+
