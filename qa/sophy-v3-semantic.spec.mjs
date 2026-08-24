@@ -6,7 +6,7 @@ function assert(condition, message) {
   }
 }
 
-async function runCycle1Tests() {
+export async function runCycle1Tests() {
   console.log('=== TEST MATRIX: CICLO 1 — Small Talk & Casual Informal BR ===');
   const harness = createSophyHarness();
 
@@ -148,7 +148,157 @@ async function runCycle1Tests() {
   let passed = 0;
   let failed = 0;
 
-  console.log('-- Casos Primários --');
+  for (const tc of [...primaryCases, ...adversarialCases]) {
+    const res = harness.processOffline(tc.input);
+    try {
+      tc.check(res);
+      passed++;
+    } catch (err) {
+      console.log(`  ✗ FAIL: "${tc.input}" (${tc.desc}) [${err.message}]`);
+      failed++;
+    }
+  }
+
+  console.log(`Ciclo 1: ${passed} passados, ${failed} falhas.`);
+  if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 1.`);
+}
+
+export async function runCycle2Tests() {
+  console.log('=== TEST MATRIX: CICLO 2 — Perguntas Financeiras Naturais e Coloquiais ===');
+  const harness = createSophyHarness();
+
+  const primaryCases = [
+    {
+      input: 'como que eu tô esse mês?',
+      desc: 'Visão geral coloquial do mês',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/resumo|mês|caixa|competência|livre|resultado/i.test(res.text), 'Deve trazer o resumo do mês');
+        assert(res.text.includes('R$'), 'Deve conter valores formatados');
+      }
+    },
+    {
+      input: 'minha situação tá feia?',
+      desc: 'Avaliação da saúde financeira atual',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/situação|tranquil|livre|contas|caminho|fôlego|positivo|equilibrad/i.test(res.text), 'Deve avaliar com empatia e dados');
+      }
+    },
+    {
+      input: 'tá sobrando alguma coisa?',
+      desc: 'Consulta coloquial de dinheiro livre',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/livre projetado|sobra|disponível/i.test(res.text), 'Deve responder sobre livre projetado');
+        assert(res.text.includes('R$'), 'Deve conter valor');
+      }
+    },
+    {
+      input: 'eu consigo gastar mais esse mês?',
+      desc: 'Margem para novos gastos',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/livre projetado|gastar|margem|compromissos/i.test(res.text), 'Deve orientar com base no livre projetado');
+      }
+    },
+    {
+      input: 'como anda meu dinheiro?',
+      desc: 'Consulta geral de saldo/posicionamento',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/saldo|contas|livre|total/i.test(res.text), 'Deve responder sobre saldos e posicionamento');
+      }
+    },
+    {
+      input: 'me dá um parâmetro desse mês',
+      desc: 'Pedido de parâmetro/resumo',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/resumo|mês|entradas|saídas|livre/i.test(res.text), 'Deve trazer resumo do mês');
+      }
+    },
+    {
+      input: 'qual cartão tá mais pesado?',
+      desc: 'Cartão com maior fatura ou utilização',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/cartão|fatura|limite/i.test(res.text), 'Deve responder sobre o cartão mais pesado');
+      }
+    },
+    {
+      input: 'tô devendo muito?',
+      desc: 'Consulta de endividamento coloquial',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/dívida|saldo devedor|parcelas|não tem nenhuma dívida/i.test(res.text), 'Deve responder sobre dívidas');
+      }
+    }
+  ];
+
+  const adversarialCases = [
+    {
+      input: 'como q eu to esse mes?',
+      desc: 'Adversarial: abreviações "q" e "to" sem acento',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/resumo|mês|caixa|competência|livre/i.test(res.text), 'Deve trazer o resumo do mês');
+      }
+    },
+    {
+      input: 'minha situacao ta feia?',
+      desc: 'Adversarial: sem acentuação em "situação" e "tá"',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/situação|livre|equilibrada|tranquil/i.test(res.text), 'Deve avaliar saúde financeira');
+      }
+    },
+    {
+      input: 'to apertado esse mes?',
+      desc: 'Adversarial: gíria "apertado"',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/situação|livre|equilibrada|tranquil|atenção/i.test(res.text), 'Deve avaliar saúde financeira');
+      }
+    },
+    {
+      input: 'ta sobrando grana?',
+      desc: 'Adversarial: gíria "grana" com "sobrando"',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/livre projetado/i.test(res.text), 'Deve responder sobre livre projetado');
+      }
+    },
+    {
+      input: 'onde ta minha grana?',
+      desc: 'Adversarial: gíria "grana" com "onde tá"',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/saldo total em contas/i.test(res.text), 'Deve responder sobre saldos das contas');
+      }
+    },
+    {
+      input: 'qual cartao comeu mais limite?',
+      desc: 'Adversarial: linguagem figurada para limite',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/cartão|fatura|limite/i.test(res.text), 'Deve responder sobre cartão mais pesado');
+      }
+    },
+    {
+      input: 'quanto devo no total?',
+      desc: 'Adversarial: consulta total de dívidas',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/dívida|saldo devedor|não tem nenhuma dívida/i.test(res.text), 'Deve responder sobre dívidas');
+      }
+    }
+  ];
+
+  let passed = 0;
+  let failed = 0;
+
+  console.log('-- Casos Primários Ciclo 2 --');
   for (const tc of primaryCases) {
     const res = harness.processOffline(tc.input);
     try {
@@ -156,12 +306,12 @@ async function runCycle1Tests() {
       console.log(`  ✓ PASS: "${tc.input}" -> "${res.text.slice(0, 55)}..."`);
       passed++;
     } catch (err) {
-      console.log(`  ✗ FAIL: "${tc.input}" -> "${res.text}" [Error: ${err.message}]`);
+      console.log(`  ✗ FAIL: "${tc.input}" (${tc.desc}) -> "${res.text}" [Error: ${err.message}]`);
       failed++;
     }
   }
 
-  console.log('-- Casos Adversariais --');
+  console.log('-- Casos Adversariais Ciclo 2 --');
   for (const tc of adversarialCases) {
     const res = harness.processOffline(tc.input);
     try {
@@ -169,14 +319,19 @@ async function runCycle1Tests() {
       console.log(`  ✓ PASS: "${tc.input}" -> "${res.text.slice(0, 55)}..."`);
       passed++;
     } catch (err) {
-      console.log(`  ✗ FAIL: "${tc.input}" -> "${res.text}" [Error: ${err.message}]`);
+      console.log(`  ✗ FAIL: "${tc.input}" (${tc.desc}) -> "${res.text}" [Error: ${err.message}]`);
       failed++;
     }
   }
 
-  console.log(`Resultado Total: ${passed} passados, ${failed} falhas.`);
-  if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 1.`);
+  console.log(`Resultado Ciclo 2 Total: ${passed} passados, ${failed} falhas.`);
+  if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 2.`);
   return { passed, failed };
 }
 
-runCycle1Tests();
+async function main() {
+  await runCycle1Tests();
+  await runCycle2Tests();
+}
+
+main();

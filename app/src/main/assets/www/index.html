@@ -4709,7 +4709,8 @@ function sophyNormalize(text){
      .replace(/\b(pra|pro|pras|pros)\b/g,'para')
      .replace(/\b(q)\b/g,'que')
      .replace(/\b(hj)\b/g,'hoje')
-     .replace(/\b(nd|nda)\b/g,'nada');
+     .replace(/\b(nd|nda)\b/g,'nada')
+     .replace(/\b(grana)\b/g,'dinheiro');
   return s.trim();
 }
 window.sophyNormalize=sophyNormalize;
@@ -4769,7 +4770,7 @@ const sophyOfflineCore={
       };
     }
 
-    if(/\b(triste|chatead[oa]|estressad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)||/\b(triste|chateado|chateada|estressado|estressada|desanimado|desanimada|preocupado|preocupada|estou mal|angustiado|aflito|com medo)\b/i.test(norm)){
+    if((/\b(triste|chatead[oa]|estressad[oa]|desanimad[oa]|preocupad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)||/\b(triste|chateado|chateada|estressado|estressada|desanimado|desanimada|preocupado|preocupada|estou mal|angustiado|aflito|com medo)\b/i.test(norm)||(/(pesad[oa]|pesando)\b/i.test(clean)&&!/(cartao|cartoes|fatura|faturas|divida|dividas|conta|contas|limite)/i.test(norm)))) {
       return{
         text:`Sinto muito que você esteja se sentindo assim... Respira fundo. Dias difíceis acontecem, mas você não tá sozinho nessa jornada. Se as finanças estiverem pesando na cabeça, relaxa: a gente resolve um passo de cada vez. Quer que eu veja algo específico pra tirar o peso das suas costas?`,
         emotion:'concerned'
@@ -4975,8 +4976,38 @@ const sophyOfflineCore={
     }
 
     // 5. Consultas Financeiras Authoritative (Local Core)
-    // Livre projetado
-    if(/livre|posso gastar|sobrando|disponivel livre/i.test(clean)){
+    // Avaliação de Saúde / Situação Financeira Coloquial
+    if(/(minha\s+situacao\s+(esta\s+)?(feia|ruim|boa|tranquila|critica|apertada)|como\s+esta\s+minha\s+situacao|como\s+estou\s+de\s+grana|como\s+andam\s+minhas\s+financas|minha\s+vida\s+financeira|estou\s+(apertado|tranquilo|no\s+vermelho|no\s+azul))/i.test(norm)){
+      const free=allAccountBalance()-commitmentUntilNextIncome();
+      const m=state.mesAtual,cash=cashView(m);
+      state.sophy.context={lastIntent:'financial_health',lastAmount:free};
+      if(free<0){
+        return{
+          text:`Olha, sua situação exige atenção agora: seu **dinheiro livre projetado está negativo em ${brl(free)}**, com compromissos previstos antes da sua próxima entrada. Segurando os gastos variáveis este mês a gente reequilibra seu fluxo com tranquilidade! 💙`,
+          emotion:'concerned',
+          structured:{type:'financial_health',free,cashResult:cash.result,status:'warning'}
+        };
+      }
+      return{
+        text:`Sua situação tá equilibrada! ✨ Você tem **${brl(free)}** de dinheiro livre projetado após provisionar os compromissos até a próxima entrada. Seu resultado no mês em caixa está em **${brl(cash.result)}**. Dá pra seguir o plano com tranquilidade!`,
+        emotion:'cheerful',
+        structured:{type:'financial_health',free,cashResult:cash.result,status:'healthy'}
+      };
+    }
+
+    // Resumo do mês / Visão geral / Parâmetro
+    if(/resumo|visao geral|balanco|parametro|panorama|fechamento|como\s+(anda|esta|estamos|estou|que\s+eu\s+estou)\s+esse\s+mes|como\s+esta\s+o\s+mes/i.test(norm)||/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean)){
+      const m=state.mesAtual,cash=cashView(m),accrual=accrualView(m),free=allAccountBalance()-commitmentUntilNextIncome();
+      state.sophy.context={lastIntent:'monthly_summary',lastAmount:free};
+      return{
+        text:`Resumo de **${monthName(m)}**:\n\n• **Fluxo de Caixa**: Entradas de ${brl(cash.income)} e saídas de ${brl(cash.expense)} (Resultado: ${brl(cash.result)}).\n• **Competência**: Receitas de ${brl(accrual.income)} e despesas de ${brl(accrual.expense)}.\n• **Livre projetado agora**: **${brl(free)}**.\n\nPrecisa de detalhes sobre alguma despesa ou fatura específica?`,
+        emotion:'cheerful',
+        structured:{type:'monthly_summary',month:m,cash,accrual,free}
+      };
+    }
+
+    // Livre projetado / Sobrando / Margem para gastar
+    if(/livre|posso\s+gastar|consigo\s+gastar|sobrando|sobrar|margem\s+para\s+gastar|dinheiro\s+sobrando|vai\s+sobrar|sobra\s+quanto/i.test(norm)||/livre|posso gastar|sobrando|disponivel livre/i.test(clean)){
       const free=allAccountBalance()-commitmentUntilNextIncome();
       const bal=allAccountBalance();
       const commit=commitmentUntilNextIncome();
@@ -4995,13 +5026,29 @@ const sophyOfflineCore={
       return{text:msg,emotion,structured:{type:'free_balance',free,balance:bal,commitments:commit}};
     }
 
-    // Cartões / Faturas
-    if(/cart(ao|oes)|fatura|limite/i.test(clean)){
+    // Cartões / Faturas / Cartão mais pesado
+    if(/cart(ao|oes)|fatura|limite/i.test(clean)||/cartao|fatura|limite/i.test(norm)){
       const cards=state.cards||[];
       if(!cards.length){
         return{
           text:`Nenhum cartão cadastrado no SFP no momento. Quando cadastrar na aba **Cartões**, eu acompanho as faturas e limites para você!`,
           emotion:'neutral'
+        };
+      }
+      const isAskingHeaviest=/(mais\s+pesado|maior\s+fatura|mais\s+alto|comeu\s+mais|pesado)/i.test(norm);
+      if(isAskingHeaviest){
+        const sorted=[...cards].map(c=>{
+          const m=state.ui.invoiceMonthByCard?.[c.id]||currentInvoiceMonth(c);
+          const rem=invoiceRemaining(c.id,m);
+          const freeLim=Math.max(0,c.limit-cardOutstanding(c.id));
+          return{card:c,rem,freeLim};
+        }).sort((a,b)=>b.rem-a.rem);
+        const top=sorted[0];
+        state.sophy.context={lastIntent:'card_invoice',lastEntity:'card_invoice',lastAmount:top.rem,lastCardId:top.card.id};
+        return{
+          text:`O cartão mais pesado no momento é o **${top.card.name}**, com fatura atual em **${brl(top.rem)}** (vence dia ${top.card.dueDay}). Limite disponível: **${brl(top.freeLim)}** de ${brl(top.card.limit)}.`,
+          emotion:top.rem>0?'concerned':'cheerful',
+          structured:{type:'heaviest_card',cardId:top.card.id,cardName:top.card.name,remaining:top.rem}
         };
       }
       let firstInvAmount=0;
@@ -5021,7 +5068,7 @@ const sophyOfflineCore={
     }
 
     // Dívidas
-    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean)){
+    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean)||/divida|emprestimo|saldo devedor|parcelas|estou devendo|quanto devo/i.test(norm)){
       const debts=state.debts||[];
       if(!debts.length){
         return{
@@ -5043,7 +5090,7 @@ const sophyOfflineCore={
     }
 
     // Metas / Reservas
-    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)){
+    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)||/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(norm)){
       const goals=state.goals||[];
       if(!goals.length){
         return{
@@ -5066,7 +5113,7 @@ const sophyOfflineCore={
     }
 
     // Gastos por categoria
-    if(/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(clean)){
+    if(/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(clean)||/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(norm)){
       const cats=categoriesSpent(state.mesAtual);
       const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
       if(!entries.length){
@@ -5081,7 +5128,7 @@ const sophyOfflineCore={
     }
 
     // Próximo recebimento / Salário
-    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean)){
+    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean)||/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(norm)){
       const nextInc=nextIncomeEvent();
       if(!nextInc){
         return{
@@ -5096,18 +5143,8 @@ const sophyOfflineCore={
       };
     }
 
-    // Resumo do mês / Visão geral
-    if(/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean)){
-      const m=state.mesAtual,cash=cashView(m),accrual=accrualView(m),free=allAccountBalance()-commitmentUntilNextIncome();
-      return{
-        text:`Resumo de **${monthName(m)}**:\n\n• **Fluxo de Caixa**: Entradas de ${brl(cash.income)} e saídas de ${brl(cash.expense)} (Resultado: ${brl(cash.result)}).\n• **Competência**: Receitas de ${brl(accrual.income)} e despesas de ${brl(accrual.expense)}.\n• **Livre projetado agora**: **${brl(free)}**.\n\nPrecisa de detalhes sobre alguma despesa ou fatura específica?`,
-        emotion:'cheerful',
-        structured:{type:'monthly_summary',month:m,cash,accrual,free}
-      };
-    }
-
     // Saldo / Contas
-    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean)){
+    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean)||/saldo|contas?|quanto eu tenho|dinheiro total|como anda (o )?(meu )?dinheiro|onde esta (o )?(meu |minha )?dinheiro|quanto dinheiro eu tenho/i.test(norm)){
       const total=allAccountBalance(),accounts=state.accounts||[];
       if(!accounts.length){
         return{
@@ -5141,7 +5178,7 @@ const sophyRouter={
     if(/^(lembre( que)?|anote( que)?|guarde( que)?|lembrar( que)?)\s+(.+)/i.test(raw))return 'MEMORY_WRITE';
     if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean)||/o que voce lembra|o que voce sabe sobre mim/i.test(norm))return 'MEMORY_READ';
     if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean)||/fiz besteira|estou na pior|estou ferrado/i.test(norm))return 'EMOTIONAL_DISTRESS';
-    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)||/\b(triste|chateado|chateada|estressado|estressada|desanimado|desanimada|preocupado|preocupada|estou mal|angustiado|aflito|com medo)\b/i.test(norm))return 'EMOTIONAL_CONCERN';
+    if((/\b(triste|chatead[oa]|estressad[oa]|desanimad[oa]|preocupad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)||/\b(triste|chateado|chateada|estressado|estressada|desanimado|desanimada|preocupado|preocupada|estou mal|angustiado|aflito|com medo)\b/i.test(norm)||(/(pesad[oa]|pesando)\b/i.test(clean)&&!/(cartao|cartoes|fatura|faturas|divida|dividas|conta|contas|limite)/i.test(norm))))return 'EMOTIONAL_CONCERN';
     if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(clean)||/\b(feliz|alegre|empolgado|empolgada|animado|animada|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(norm))return 'EMOTIONAL_JOY';
     if(/\b(sono|dormir|cansac[o|ç]o|exausto|exausta|acabad[oa]|so o po|morto de cansado|morta de cansada|dia puxado|correria)\b/i.test(clean)||/\b(sono|dormir|cansaco|cansado|cansada|exausto|exausta|acabado|acabada|so o po|dia puxado|correria)\b/i.test(norm))return 'CASUAL_TIRED';
     if(/(so\s+vim\s+(te\s+ver?|dar\s+um\s+oi|ver?|trocar\s+uma?\s+ideia|conversar|falar)|passando\s+para\s+(te\s+ver?|dar\s+um\s+oi|conversar)|so\s+queria\s+(te\s+ver?|conversar|dar\s+um\s+oi)|vim\s+so\s+te\s+ver?|passei\s+so\s+para\s+te\s+ver?)/i.test(norm))return 'VISIT_AFFECTION';
@@ -5162,14 +5199,15 @@ const sophyRouter={
     if(/(emprestimo|financiar|financiamento|parcelar|pegar\s+\d)/i.test(clean)&&/(se\s+eu|e\s+se|supondo|imagina|simula|simular|quanto\s+ficaria|valeria|parcela|vezes)/i.test(clean))return 'FOLLOWUP_FINANCIAL';
     if(/^(e se|e quanto|e no|quanto fica se|se eu pagar|se eu gastar|e a metade|e metade)/i.test(clean)||clean==='metade?'||clean==='e metade?')return 'FOLLOWUP_FINANCIAL';
 
-    if(/livre|posso gastar|sobrando|disponivel livre/i.test(clean))return 'FINANCIAL_FREE';
-    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean))return 'FINANCIAL_ACCOUNTS';
-    if(/cart(ao|oes)|fatura|limite/i.test(clean))return 'FINANCIAL_CARDS';
-    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean))return 'FINANCIAL_DEBTS';
-    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean))return 'FINANCIAL_GOALS';
-    if(/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(clean))return 'FINANCIAL_CATEGORIES';
-    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean))return 'FINANCIAL_INCOME';
-    if(/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean))return 'FINANCIAL_SUMMARY';
+    if(/(minha\s+situacao\s+(esta\s+)?(feia|ruim|boa|tranquila|critica|apertada)|como\s+esta\s+minha\s+situacao|como\s+estou\s+de\s+grana|como\s+andam\s+minhas\s+financas|minha\s+vida\s+financeira|estou\s+(apertado|tranquilo|no\s+vermelho|no\s+azul))/i.test(norm))return 'FINANCIAL_HEALTH';
+    if(/resumo|visao geral|balanco|parametro|panorama|fechamento|como\s+(anda|esta|estamos|estou|que\s+eu\s+estou)\s+esse\s+mes|como\s+esta\s+o\s+mes/i.test(norm)||/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean))return 'FINANCIAL_SUMMARY';
+    if(/livre|posso\s+gastar|consigo\s+gastar|sobrando|sobrar|margem\s+para\s+gastar|dinheiro\s+sobrando|vai\s+sobrar|sobra\s+quanto/i.test(norm)||/livre|posso gastar|sobrando|disponivel livre/i.test(clean))return 'FINANCIAL_FREE';
+    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean)||/saldo|contas?|quanto eu tenho|dinheiro total|como anda (o )?(meu )?dinheiro|onde esta (o )?(meu |minha )?dinheiro|quanto dinheiro eu tenho/i.test(norm))return 'FINANCIAL_ACCOUNTS';
+    if(/cart(ao|oes)|fatura|limite/i.test(clean)||/cartao|fatura|limite/i.test(norm))return 'FINANCIAL_CARDS';
+    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean)||/divida|emprestimo|saldo devedor|parcelas|estou devendo|quanto devo/i.test(norm))return 'FINANCIAL_DEBTS';
+    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)||/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(norm))return 'FINANCIAL_GOALS';
+    if(/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(clean)||/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(norm))return 'FINANCIAL_CATEGORIES';
+    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean)||/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(norm))return 'FINANCIAL_INCOME';
 
     return 'GENERAL_KNOWLEDGE_REASONING';
   },
