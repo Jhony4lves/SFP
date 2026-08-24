@@ -4886,6 +4886,7 @@ const sophyProviderRegistry = {
 window.sophyProviderRegistry = sophyProviderRegistry;
 
 // SOPHY ORCHESTRATOR
+let sophyDefaultRoute = null;
 const sophyOrchestrator = {
   isSending: false,
   circuitBreaker: {
@@ -4947,7 +4948,16 @@ const sophyOrchestrator = {
 
       let response = null;
 
-      if (this.isOnlineAvailable() && this.circuitBreaker.status !== 'cooldown') {
+      if (typeof window !== 'undefined' && window.sophyRouter && typeof window.sophyRouter.route === 'function' && sophyDefaultRoute && window.sophyRouter.route !== sophyDefaultRoute) {
+        try {
+          response = await window.sophyRouter.route(raw, { context: state.sophy.context });
+        } catch (err) {
+          response = {
+            text: 'Opa, tivemos um pequeno tropeço aqui! 🙈 Mas já tô de volta. Se quiser, tenta de novo!',
+            emotion: 'concerned'
+          };
+        }
+      } else if (this.isOnlineAvailable() && this.circuitBreaker.status !== 'cooldown') {
         try {
           const provider = this.getActiveProvider();
           response = await provider.generateResponse({
@@ -5946,6 +5956,7 @@ const sophyRouter={
     return sophyOfflineCore.process(prompt,snap);
   }
 };
+sophyDefaultRoute = sophyRouter.route;
 
 function sophyAddMemory(type,content,origin='chat'){
   if(!state.sophy)normalize();
