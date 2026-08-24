@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://appassets.androidplatform.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://appassets.androidplatform.net; style-src 'self' 'unsafe-inline' https://appassets.androidplatform.net; img-src 'self' data: blob: https://appassets.androidplatform.net; connect-src 'self' blob: data: https://appassets.androidplatform.net https://api.groq.com; frame-src 'none'; object-src 'none'; base-uri 'none';"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://appassets.androidplatform.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://appassets.androidplatform.net; style-src 'self' 'unsafe-inline' https://appassets.androidplatform.net; img-src 'self' data: blob: https://appassets.androidplatform.net; connect-src 'self' blob: data: https://appassets.androidplatform.net; frame-src 'none'; object-src 'none'; base-uri 'none';"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#07111e"/>
 <link rel="icon" href="data:,"/>
@@ -4697,7 +4697,7 @@ const sophyProviderRegistry = {
     id: 'groq',
     name: 'Groq API',
     defaultModel: 'openai/gpt-oss-120b',
-    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    endpoint: 'native://groq/chat/completions',
 
     isConfigured() {
       return sophySecureStorage.hasApiKey();
@@ -4708,39 +4708,24 @@ const sophyProviderRegistry = {
     },
 
     async testConnection(cfg) {
-      const key = cfg?.apiKey || sophySecureStorage.getApiKey();
-      if (!key && !sophySecureStorage.hasApiKey()) return { ok: false, message: 'Chave da API Groq não informada.' };
-      const model = cfg?.model || this.defaultModel;
-
-      try {
-        if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.callSophyGroq === 'function') {
+      if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.callSophyGroq === 'function') {
+        const hasKey = typeof window.AndroidBridge.hasSophyApiKey === 'function' ? window.AndroidBridge.hasSophyApiKey() : false;
+        if (!hasKey) return { ok: false, message: 'Chave da API Groq não configurada no cofre seguro.' };
+        const model = cfg?.model || this.defaultModel;
+        try {
           const payload = JSON.stringify({ model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 });
-          const raw = window.AndroidBridge.callSophyGroq(this.endpoint, payload);
+          const raw = window.AndroidBridge.callSophyGroq(payload);
           const data = JSON.parse(raw || '{}');
           if (data.error) {
             if (data.error.status === 401 || data.error.status === 403) return { ok: false, message: 'Chave de API inválida no Groq.' };
             return { ok: false, message: `Erro no Groq: ${data.error.message}` };
           }
           return { ok: true, message: 'Conexão com Groq API estabelecida com sucesso!' };
+        } catch (e) {
+          return { ok: false, message: `Falha na conexão nativa: ${e.message}` };
         }
-
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000);
-        const res = await fetch(this.endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-          body: JSON.stringify({ model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 }),
-          signal: controller.signal
-        });
-        clearTimeout(timeout);
-        if (!res.ok) {
-          if (res.status === 401 || res.status === 403) return { ok: false, message: 'Chave de API inválida no Groq.' };
-          return { ok: false, message: `Erro HTTP ${res.status} ao conectar ao Groq.` };
-        }
-        return { ok: true, message: 'Conexão com Groq API estabelecida com sucesso!' };
-      } catch (e) {
-        return { ok: false, message: e.name === 'AbortError' ? 'Tempo limite esgotado ao conectar.' : `Falha de rede: ${e.message}` };
       }
+      return { ok: true, message: 'Modo Web/PWA: Operando em modo 100% Local Core.' };
     },
 
     async generateResponse({ prompt, history, memories, rollingSummary, systemPrompt, settings }) {
@@ -4786,37 +4771,7 @@ const sophyProviderRegistry = {
           throw err;
         }
       } else {
-        const key = sophySecureStorage.getApiKey();
-        if (!key) throw new Error('AUTH_REQUIRED');
-
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
-        try {
-          const res = await fetch(this.endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-            body: JSON.stringify({
-              model,
-              messages,
-              tools,
-              tool_choice: 'auto',
-              temperature: 0.7,
-              max_tokens: 450
-            }),
-            signal: controller.signal
-          });
-          clearTimeout(timeout);
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            const err = new Error(errData?.error?.message || `HTTP ${res.status}`);
-            err.status = res.status;
-            throw err;
-          }
-          responseData = await res.json();
-        } catch (e) {
-          clearTimeout(timeout);
-          throw e;
-        }
+        throw new Error('NATIVE_BRIDGE_REQUIRED');
       }
 
       const choice = responseData?.choices?.[0];
@@ -4855,28 +4810,7 @@ const sophyProviderRegistry = {
             throw err;
           }
         } else {
-          const key = sophySecureStorage.getApiKey();
-          const controller2 = new AbortController();
-          const timeout2 = setTimeout(() => controller2.abort(), 15000);
-          try {
-            const res2 = await fetch(this.endpoint, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-              body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 500 }),
-              signal: controller2.signal
-            });
-            clearTimeout(timeout2);
-            if (!res2.ok) {
-              const errData2 = await res2.json().catch(() => ({}));
-              const err = new Error(errData2?.error?.message || `HTTP ${res2.status}`);
-              err.status = res2.status;
-              throw err;
-            }
-            finalResponseData = await res2.json();
-          } catch (e) {
-            clearTimeout(timeout2);
-            throw e;
-          }
+          throw new Error('NATIVE_BRIDGE_REQUIRED');
         }
 
         const finalText = finalResponseData?.choices?.[0]?.message?.content || '';

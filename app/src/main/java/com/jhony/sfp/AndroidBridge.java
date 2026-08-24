@@ -202,30 +202,30 @@ public class AndroidBridge {
     }
 
     private String getDecryptedApiKeyInternal() {
-        try {
-            SharedPreferences prefs = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE);
-            String ciphertextB64 = prefs.getString(KEY_CIPHERTEXT, null);
-            String ivB64 = prefs.getString(KEY_IV, null);
+        SharedPreferences prefs = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE);
 
-            // Fail-secure legacy migration: if ciphertext is absent but legacy plaintext was set
-            if (ciphertextB64 == null || ivB64 == null) {
-                String legacyKey = prefs.getString(LEGACY_KEY_GROQ_SECRET, null);
-                if (legacyKey != null && !legacyKey.trim().isEmpty()) {
-                    try {
-                        encryptAndSaveApiKey(legacyKey.trim());
-                    } finally {
-                        // Fail-secure: ensure legacy plaintext key is unconditionally purged
-                        prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).apply();
-                    }
-                    ciphertextB64 = prefs.getString(KEY_CIPHERTEXT, null);
-                    ivB64 = prefs.getString(KEY_IV, null);
+        // Fail-secure legacy migration: if ciphertext is absent but legacy plaintext was set
+        String legacyKey = prefs.getString(LEGACY_KEY_GROQ_SECRET, null);
+        if (legacyKey != null) {
+            try {
+                if (!legacyKey.trim().isEmpty()) {
+                    encryptAndSaveApiKey(legacyKey.trim());
                 }
+            } catch (Exception ignored) {
+            } finally {
+                // Fail-secure: unconditionally purge legacy plaintext key from SharedPreferences
+                prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).apply();
             }
+        }
 
-            if (ciphertextB64 == null || ivB64 == null) {
-                return null;
-            }
+        String ciphertextB64 = prefs.getString(KEY_CIPHERTEXT, null);
+        String ivB64 = prefs.getString(KEY_IV, null);
 
+        if (ciphertextB64 == null || ivB64 == null || ciphertextB64.trim().isEmpty() || ivB64.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
             byte[] ciphertext = Base64.decode(ciphertextB64, Base64.NO_WRAP);
             byte[] iv = Base64.decode(ivB64, Base64.NO_WRAP);
 
@@ -234,6 +234,9 @@ public class AndroidBridge {
             GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv);
             cipher.init(Cipher.DECRYPT_MODE, secretKey, spec);
             byte[] decrypted = cipher.doFinal(ciphertext);
+            if (decrypted == null || decrypted.length == 0) {
+                return null;
+            }
             return new String(decrypted, StandardCharsets.UTF_8);
         } catch (Exception e) {
             return null;
@@ -247,17 +250,14 @@ public class AndroidBridge {
 
     @JavascriptInterface
     public boolean hasSophyApiKey() {
+        String key = null;
         try {
-            SharedPreferences prefs = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE);
-            boolean hasCipher = prefs.contains(KEY_CIPHERTEXT) && prefs.contains(KEY_IV);
-            if (hasCipher) return true;
-            String legacy = prefs.getString(LEGACY_KEY_GROQ_SECRET, null);
-            if (legacy != null && !legacy.trim().isEmpty()) {
-                return encryptAndSaveApiKey(legacy.trim());
-            }
-            return false;
+            key = getDecryptedApiKeyInternal();
+            return key != null && !key.trim().isEmpty();
         } catch (Exception e) {
             return false;
+        } finally {
+            key = null; // discard in-memory reference immediately
         }
     }
 
@@ -281,8 +281,8 @@ public class AndroidBridge {
     @JavascriptInterface
     public String getSophyKeyStatus() {
         try {
-            String masked = getSophyApiKeyMasked();
-            boolean configured = masked != null && !masked.isEmpty();
+            boolean configured = hasSophyApiKey();
+            String masked = configured ? getSophyApiKeyMasked() : "";
             JSONObject status = new JSONObject();
             status.put("configured", configured);
             status.put("masked", masked != null ? masked : "");

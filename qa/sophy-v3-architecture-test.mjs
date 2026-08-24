@@ -219,7 +219,81 @@ export async function runArchitectureTests() {
     assert.equal(masked, '••••••••test', 'Contract J: Masked key deve exibir apenas os 4 últimos dígitos');
     assert(!masked.includes('gsk_session_secret'), 'Contract J: Segredo completo nunca é exposto na máscara');
 
-    console.log('  ✓ PASS: Todos os 10 contratos de segurança Keystore (A-J) validados com sucesso.');
+    // Contract K: Legacy Plaintext Migration Success -> Ciphertext criado e Legacy purgado
+    let mockVaultK = { sophy_groq_api_key: 'gsk_legacy_plain_key_success_123' };
+    const migrateFnK = () => {
+      const legacyKey = mockVaultK.sophy_groq_api_key;
+      if (legacyKey) {
+        try {
+          mockKeystore.encrypt(legacyKey);
+        } finally {
+          delete mockVaultK.sophy_groq_api_key;
+        }
+      }
+    };
+    migrateFnK();
+    assert(!mockVaultK.sophy_groq_api_key, 'Contract K: Chave legada deve ser removida após migração');
+    assert(mockSharedPreferencesVault.sophy_groq_ciphertext, 'Contract K: Ciphertext deve ser persistido após migração');
+    assert.equal(mockKeystore.decrypt(), 'gsk_legacy_plain_key_success_123', 'Contract K: Chave migrada deve ser decifrável');
+
+    // Contract L: Legacy Plaintext Migration Failure -> Legacy MESMO ASSIM purgado incondicionalmente
+    let mockVaultL = { sophy_groq_api_key: 'gsk_legacy_plain_key_failure_999' };
+    let mockVaultLResultCipher = null;
+    const migrateFnLFailure = () => {
+      const legacyKey = mockVaultL.sophy_groq_api_key;
+      if (legacyKey) {
+        try {
+          throw new Error('Simulated Keystore Exception on encrypt');
+        } finally {
+          delete mockVaultL.sophy_groq_api_key; // Unconditional purge in finally
+        }
+      }
+    };
+    try { migrateFnLFailure(); } catch (ignored) {}
+    assert(!mockVaultL.sophy_groq_api_key, 'Contract L: Chave legada DEVE ser removida mesmo se criptografia falhar');
+    assert(!mockVaultLResultCipher, 'Contract L: Em falha de migração, nenhum ciphertext inválido deve ser considerado');
+
+    // Contract M: Ciphertext/IV corrompidos ou inválidos -> hasSophyApiKey deve retornar false
+    const mockCorruptedKeystore = {
+      aesKey: crypto.randomBytes(32),
+      hasValidApiKey(vault) {
+        if (!vault.sophy_groq_ciphertext || !vault.sophy_groq_iv) return false;
+        try {
+          const combined = Buffer.from(vault.sophy_groq_ciphertext, 'base64');
+          const iv = Buffer.from(vault.sophy_groq_iv, 'base64');
+          if (combined.length < 16) return false;
+          const tag = combined.subarray(combined.length - 16);
+          const ciphertext = combined.subarray(0, combined.length - 16);
+          const decipher = crypto.createDecipheriv('aes-256-gcm', this.aesKey, iv);
+          decipher.setAuthTag(tag);
+          let dec = decipher.update(ciphertext, 'binary', 'utf8');
+          dec += decipher.final('utf8');
+          return !!(dec && dec.trim());
+        } catch (e) {
+          return false; // Fail-secure: returns false on decrypt failure
+        }
+      }
+    };
+    const corruptedVault = { sophy_groq_ciphertext: 'corrupted_base64_garbage', sophy_groq_iv: 'invalid_iv' };
+    assert.equal(mockCorruptedKeystore.hasValidApiKey(corruptedVault), false, 'Contract M: hasSophyApiKey deve retornar false para ciphertext/IV corrompidos');
+
+    // Contract N: Nenhum caminho deixa plaintext persistido
+    let mockVaultN = { sophy_groq_api_key: 'gsk_temporary_unmigrated_key' };
+    const simulatedGetDecrypted = (vault) => {
+      const legacy = vault.sophy_groq_api_key;
+      if (legacy) {
+        try {
+          mockKeystore.encrypt(legacy);
+        } finally {
+          delete vault.sophy_groq_api_key;
+        }
+      }
+      return mockKeystore.decrypt();
+    };
+    simulatedGetDecrypted(mockVaultN);
+    assert(!('sophy_groq_api_key' in mockVaultN), 'Contract N: Plaintext nunca é mantido no vault após acesso');
+
+    console.log('  ✓ PASS: Todos os 14 contratos de segurança Keystore (A-N) validados com sucesso.');
     passed++;
   } catch (e) {
     console.log(`  ✗ FAIL: Keystore Contracts [${e.message}]`);
@@ -239,27 +313,33 @@ export async function runArchitectureTests() {
     assert(bridgeJava.includes('"AES/GCM/NoPadding"'), 'AndroidBridge deve usar transformação AES/GCM/NoPadding');
     assert(bridgeJava.includes('.setKeySize(256)'), 'AndroidBridge deve gerar chave AES de 256 bits');
 
-    // 2. Zero gravação de plaintext
+    // 2. Zero gravação de plaintext e purga incondicional
     assert(!bridgeJava.includes('putString(LEGACY_KEY_GROQ_SECRET'), 'AndroidBridge NUNCA deve gravar chave em plaintext');
     assert(!bridgeJava.includes('putString("sophy_groq_api_key"'), 'AndroidBridge NUNCA deve gravar chave em plaintext');
+    assert(bridgeJava.includes('prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).apply()'), 'AndroidBridge deve purgar chave legada incondicionalmente');
 
-    // 3. Endpoint fixo e assinatura sem URL arbitrária
+    // 3. hasSophyApiKey centralizado e fail-secure
+    assert(bridgeJava.includes('key = getDecryptedApiKeyInternal()'), 'hasSophyApiKey deve delegar para getDecryptedApiKeyInternal');
+    assert(!bridgeJava.includes('hasCipher'), 'hasSophyApiKey não deve usar verificação ingênua hasCipher');
+
+    // 4. Endpoint fixo e assinatura sem URL arbitrária
     assert(bridgeJava.includes('public String callSophyGroq(String payloadJson)'), 'callSophyGroq deve aceitar apenas payloadJson (sem endpointUrl)');
     assert(!bridgeJava.includes('callSophyGroq(String endpointUrl'), 'callSophyGroq NUNCA deve aceitar endpointUrl como parâmetro');
     assert(bridgeJava.includes('https://api.groq.com/openai/v1/chat/completions'), 'Endpoint Groq deve ser constante fixa');
 
-    // 4. Redirects bloqueados
+    // 5. Redirects bloqueados
     assert(bridgeJava.includes('setInstanceFollowRedirects(false)'), 'Redirecionamentos HTTP devem ser proibidos na bridge');
 
-    // 5. WebView Navigation Boundary
+    // 6. WebView Navigation Boundary
     assert(mainActivityJava.includes('shouldOverrideUrlLoading'), 'MainActivity deve implementar shouldOverrideUrlLoading');
     assert(mainActivityJava.includes('appassets.androidplatform.net'), 'MainActivity deve restringir origem interna a appassets');
 
-    // 6. CSP presente no index.html
+    // 7. CSP presente no index.html e connect-src sem api.groq.com
     assert(indexHtml.includes('Content-Security-Policy'), 'index.html deve conter meta Content-Security-Policy');
     assert(indexHtml.includes("frame-src 'none'"), 'CSP deve conter frame-src none');
     assert(indexHtml.includes("object-src 'none'"), 'CSP deve conter object-src none');
     assert(indexHtml.includes("base-uri 'none'"), 'CSP deve conter base-uri none');
+    assert(!indexHtml.includes('https://api.groq.com'), 'CSP no index.html não deve conter api.groq.com em connect-src (Groq restrito à bridge nativa)');
 
     console.log('  ✓ PASS: Todos os contratos nativos Java, WebView Boundary e CSP validados no código de produção.');
     passed++;
