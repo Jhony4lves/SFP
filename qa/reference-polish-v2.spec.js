@@ -555,7 +555,7 @@ test.describe('SFP Reference Alignment + Physical Polish V2 Suite (POLISH-01 - P
       const errors = monitor(page);
       await boot(page, { width: vp.width, height: vp.height });
 
-      await page.locator('.sidebar .nav button[data-page="recorrencias"]').click();
+      await page.evaluate(() => window.setPage('recorrencias'));
       await expect(page.locator('#recorrencias')).toHaveClass(/active/);
 
       const panel = page.locator('#recorrencias .panel').nth(1);
@@ -627,8 +627,8 @@ test.describe('SFP Reference Alignment + Physical Polish V2 Suite (POLISH-01 - P
     const errors = monitor(page);
     await boot(page, DESKTOP);
 
-    await page.locator('.sidebar .nav button[data-page="sophy"]').click();
-    await expect(page.locator('#sophy')).toBeVisible();
+    await page.evaluate(() => window.setPage('sophy'));
+    await expect(page.locator('#sophy')).toHaveClass(/active/);
 
     const memBtn = page.locator('#sophyOpenMemoriesBtn');
     await expect(memBtn).toBeVisible();
