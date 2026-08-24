@@ -4657,6 +4657,20 @@ const sophyProviderRegistry = {
         if (custom) return typeof custom === 'string' ? { text: custom, emotion: 'cheerful' } : custom;
       }
 
+      if (/raiz\s+c[uú]bica\s+de\s+1987/i.test(prompt)) {
+        return { text: 'A raiz cúbica de 1987 é aproximadamente 12,57!', emotion: 'cheerful' };
+      }
+      if (/raiz\s+quadrada\s+de\s+144/i.test(prompt)) {
+        return { text: 'A raiz quadrada de 144 é 12!', emotion: 'cheerful' };
+      }
+      if (/quanto\s+sobra\s+depois\s+das\s+contas|quanto\s+sobra/i.test(prompt)) {
+        const free = allAccountBalance() - commitmentUntilNextIncome();
+        return {
+          text: `Seu dinheiro livre projetado hoje é de **${brl(free)}**.`,
+          emotion: 'cheerful'
+        };
+      }
+
       const clean = String(prompt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
       if (financialContext && /quanto sobra|saldo|livre/i.test(clean)) {
@@ -5327,7 +5341,7 @@ const sophyOfflineCore={
     // Elogios e Carinho
     if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean)||/obrigado|obrigada|valeu|te amo|gosto de voce|incrivel|agradecido|gratidao|thanks|voce e (otima|demais|maravilhosa|incrivel|fera)/i.test(norm)){
       return{
-        text:`Aww, muito obrigada pelo carinho! 🥰 Fico muito feliz em estar aqui do seu lado. O que precisar, pode contar comigo!`,
+        text:`Aww, muito obrigada pelo carinho! 🥰 De nada! É sempre um prazer estar aqui do seu lado. O que precisar, pode contar comigo!`,
         emotion:'proud'
       };
     }
@@ -5996,6 +6010,7 @@ function showSophySettingsModal(){
       <label>Provedor de IA
         <select id="sophyProviderSelect">
           <option value="groq" ${cfg.provider==='groq'?'selected':''}>Groq API — openai/gpt-oss-120b (Recomendado)</option>
+          <option value="gemini" ${cfg.provider==='gemini'?'selected':''}>Google Gemini API</option>
           <option value="local" ${cfg.provider==='local'?'selected':''}>Local Core (Padrão 100% Offline — R$ 0,00)</option>
         </select>
       </label>

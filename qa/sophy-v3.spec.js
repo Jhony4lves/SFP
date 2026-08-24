@@ -19,11 +19,11 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
     await page.locator('.nav button[data-page="sophy"]').click();
     await expect(page.locator('#sophyChatList')).toBeVisible();
 
-    const bar = page.locator('#sophySuggestionsBar');
+    const bar = page.locator('#sophySuggestions');
     await expect(bar).toBeVisible();
 
     // Verify chips exist and are clickable
-    const chips = bar.locator('.sophy-suggestion-chip');
+    const chips = bar.locator('.sophy-chip');
     await expect(chips.first()).toBeVisible();
     const count = await chips.count();
     expect(count).toBeGreaterThanOrEqual(4);
@@ -54,10 +54,10 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
 
     const modal = page.locator('#modalRoot');
     await expect(modal).not.toHaveClass(/hidden/);
-    await expect(modal.locator('h2')).toContainText('Configurações da Sophy');
+    await expect(modal.locator('h2')).toContainText('Inteligência Artificial');
 
     // Model and Provider selectors
-    await expect(page.locator('#sophyProvider')).toHaveValue('groq');
+    await expect(page.locator('#sophyProviderSelect')).toHaveValue('groq');
     await expect(page.locator('#sophyApiKey')).toBeVisible();
 
     // Close settings modal
@@ -79,7 +79,7 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
     await boot(page);
 
     await page.locator('.nav button[data-page="sophy"]').click();
-    const memBtn = page.locator('#sophyMemoriesBtn');
+    const memBtn = page.locator('#sophyOpenMemoriesBtn');
     await expect(memBtn).toBeVisible();
     const btnText = await memBtn.textContent();
     expect(btnText).toMatch(/Memórias\s*\(\s*\d+\s*\)/);
