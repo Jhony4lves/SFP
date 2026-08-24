@@ -1,5 +1,6 @@
 package com.jhony.sfp;
 
+import android.app.Activity;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -63,6 +64,43 @@ public class AndroidBridge {
     @JavascriptInterface
     public String getAppVersion() {
         return "2.0.2";
+    }
+
+    @JavascriptInterface
+    public void setSystemBarTheme(String theme) {
+        if (context instanceof Activity) {
+            Activity activity = (Activity) context;
+            activity.runOnUiThread(() -> {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        boolean isLight = "light".equalsIgnoreCase(theme);
+                        int statusBarColor = isLight ? 0xFFF4F7FA : 0xFF07111E;
+                        int navBarColor = isLight ? 0xFFFFFFFF : 0xFF06101D;
+                        activity.getWindow().setStatusBarColor(statusBarColor);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            activity.getWindow().setNavigationBarColor(navBarColor);
+                            int flags = activity.getWindow().getDecorView().getSystemUiVisibility();
+                            if (isLight) {
+                                flags |= android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                                flags |= android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                            } else {
+                                flags &= ~android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                                flags &= ~android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                            }
+                            activity.getWindow().getDecorView().setSystemUiVisibility(flags);
+                        } else {
+                            int flags = activity.getWindow().getDecorView().getSystemUiVisibility();
+                            if (isLight) {
+                                flags |= android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                            } else {
+                                flags &= ~android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                            }
+                            activity.getWindow().getDecorView().setSystemUiVisibility(flags);
+                        }
+                    }
+                } catch (Exception ignored) {}
+            });
+        }
     }
 
     @JavascriptInterface
