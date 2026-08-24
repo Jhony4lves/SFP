@@ -656,12 +656,99 @@ export async function runCycle5Tests() {
   return { passed, failed };
 }
 
+export async function runCycle6Tests() {
+  console.log('=== TEST MATRIX: CICLO 6 — Metas Específicas, Progresso & Conquistas ===');
+  const harness = createSophyHarness();
+
+  // Configura metas de teste
+  const st = harness.getState();
+  st.goals = [
+    { id: 1, name: 'Reserva de Emergência', target: 10000, initialAllocated: 4000, accountId: 1 },
+    { id: 2, name: 'Viagem dos Sonhos', target: 5000, initialAllocated: 4500, accountId: 1 },
+    { id: 3, name: 'Curso de Especialização', target: 1000, initialAllocated: 1000, accountId: 1 }
+  ];
+  harness.setState(st);
+
+  let passed = 0;
+  let failed = 0;
+
+  // Caso 1: Consulta de meta específica com progresso parcial
+  console.log('-- Caso 1: Consulta de meta específica (Reserva de Emergência) --');
+  {
+    const r1 = await harness.sendMessage('quanto falta pra reserva de emergência?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/reserva de emergência/i.test(r1.text), 'Deve citar a meta');
+      assert(/4\.000|4000/i.test(r1.text), 'Deve citar valor acumulado');
+      assert(/6\.000|6000/i.test(r1.text), 'Deve citar valor restante');
+      console.log(`  ✓ PASS: Meta específica parcial -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Meta específica parcial -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 2: Consulta de meta mais próxima de conclusão
+  console.log('-- Caso 2: Qual meta está mais próxima de bater --');
+  {
+    const r1 = await harness.sendMessage('qual meta tá mais perto de bater?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/viagem dos sonhos/i.test(r1.text), 'Deve identificar a meta com maior progresso incompleto');
+      assert(/90%|500/i.test(r1.text), 'Deve informar a porcentagem ou o valor restante');
+      console.log(`  ✓ PASS: Meta mais próxima -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Meta mais próxima -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 3: Meta 100% atingida
+  console.log('-- Caso 3: Consulta de meta 100% concluída --');
+  {
+    const r1 = await harness.sendMessage('como tá a meta do curso?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/curso/i.test(r1.text), 'Deve citar a meta do curso');
+      assert(/100%|conquistou|atingiu|parabéns|sensacional/i.test(r1.text), 'Deve parabenizar pela conclusão');
+      console.log(`  ✓ PASS: Meta concluída -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Meta concluída -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 4 (Adversarial): Pergunta sem acento e abreviada "falta quanto pra reserva?"
+  console.log('-- Caso 4 (Adversarial): Pergunta sem acento e abreviada --');
+  {
+    const r1 = await harness.sendMessage('falta quanto pra reserva?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/reserva/i.test(r1.text), 'Deve resolver para a reserva');
+      assert(/6\.000|6000|40%/i.test(r1.text), 'Deve informar quanto falta');
+      console.log(`  ✓ PASS: Pergunta abreviada de meta -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Pergunta abreviada de meta -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  console.log(`Ciclo 6: ${passed} passados, ${failed} falhas.`);
+  if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 6.`);
+  return { passed, failed };
+}
+
 async function main() {
   await runCycle1Tests();
   await runCycle2Tests();
   await runCycle3Tests();
   await runCycle4Tests();
   await runCycle5Tests();
+  await runCycle6Tests();
 }
 
 main();

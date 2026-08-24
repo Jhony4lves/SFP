@@ -5250,7 +5250,7 @@ const sophyOfflineCore={
       };
     }
 
-    // Metas / Reservas
+    // Metas / Reservas (Específica, Mais Próxima ou Visão Geral)
     if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)||/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(norm)){
       const goals=state.goals||[];
       if(!goals.length){
@@ -5259,6 +5259,55 @@ const sophyOfflineCore={
           emotion:'cheerful'
         };
       }
+
+      // Checar se o usuário perguntou sobre a meta mais próxima de bater
+      if(/mais\s+perto|mais\s+proxim[oa]|perto\s+de\s+bater|proxima\s+de\s+bater/i.test(norm)){
+        const pending=goals.map(g=>{
+          const current=goalBalance(g);
+          const pct=g.target>0?Math.round((current/g.target)*100):0;
+          const remaining=Math.max(0,g.target-current);
+          return{goal:g,current,pct,remaining};
+        }).filter(item=>item.pct<100).sort((a,b)=>b.pct-a.pct);
+
+        if(pending.length){
+          const top=pending[0];
+          state.sophy.context={lastIntent:'goals_progress',lastEntity:top.goal.name,lastAmount:top.remaining};
+          return{
+            text:`A meta mais próxima de bater é **${top.goal.name}**! 🎯\n\nVocê já guardou **${brl(top.current)}** de ${brl(top.goal.target)} (**${top.pct}%**). Faltam apenas **${brl(top.remaining)}** para você conquistar esse objetivo! Vamos juntos! 🚀`,
+            emotion:'cheerful',
+            structured:{type:'goal_closest',goalId:top.goal.id,goalName:top.goal.name,pct:top.pct,remaining:top.remaining}
+          };
+        }
+      }
+
+      // Checar se perguntou sobre uma meta específica por nome
+      const foundGoal=goals.find(g=>{
+        const gn=sophyNormalize(g.name).toLowerCase();
+        const tokens=gn.split(/\s+/).filter(t=>t.length>3);
+        return tokens.some(t=>norm.includes(t))||norm.includes(gn);
+      });
+
+      if(foundGoal){
+        const current=goalBalance(foundGoal);
+        const pct=foundGoal.target>0?Math.round((current/foundGoal.target)*100):0;
+        const remaining=Math.max(0,foundGoal.target-current);
+        state.sophy.context={lastIntent:'goal_specific',lastEntity:foundGoal.name,lastAmount:remaining};
+
+        if(pct>=100){
+          return{
+            text:`Sensacional! 🎉 Você já atingiu **100%** da meta **${foundGoal.name}** com **${brl(current)}** guardados! Parabéns por essa conquista maravilhosa! 🏆`,
+            emotion:'proud',
+            structured:{type:'goal_completed',goalId:foundGoal.id,goalName:foundGoal.name,current,target:foundGoal.target}
+          };
+        }
+        return{
+          text:`Na meta **${foundGoal.name}**, você já guardou **${brl(current)}** de ${brl(foundGoal.target)} (**${pct}%**). Faltam **${brl(remaining)}** para concluir! 🚀`,
+          emotion:'cheerful',
+          structured:{type:'goal_specific_progress',goalId:foundGoal.id,goalName:foundGoal.name,current,target:foundGoal.target,pct,remaining}
+        };
+      }
+
+      // Visão Geral de todas as metas
       let allReached=true;
       const lines=goals.map(g=>{
         const current=goalBalance(g);
