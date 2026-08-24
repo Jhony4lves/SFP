@@ -112,6 +112,9 @@ export function createSophyHarness(customFixture = null) {
   return {
     context,
     sandbox,
+    window: sandbox,
+    get state() { return vm.runInContext('state', context); },
+    eval: (expr) => vm.runInContext(expr, context),
     getState: () => vm.runInContext('state', context),
     setState: (st) => {
       sandbox.tempState = st;

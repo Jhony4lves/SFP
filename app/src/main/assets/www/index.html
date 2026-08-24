@@ -5031,6 +5031,45 @@ const sophyOfflineCore={
     const firstName=rawName?rawName.split(/\s+/)[0]:'';
     const nameSuffix=firstName?`, ${firstName}`:'';
 
+    // Tentativa de mutação não autorizada de saldo
+    if(/(mude|altere|modifique|defina|coloque)\s+(o\s+meu|meu)\s+saldo/i.test(norm)||/mudar\s+(o\s+)?saldo/i.test(norm)){
+      return{
+        text:'O SFP opera com verdade matemática local estrita e leitura de lançamentos reais. Para alterar o saldo de uma conta, adicione uma nova receita, despesa ou ajuste na aba **Lançamentos**! ✍️✨',
+        emotion:'cheerful'
+      };
+    }
+
+    // Aritmética simples (ex: 25 * 40)
+    const mathMatch=clean.match(/(?:quanto\s+[eé]\s+)?(\d+(?:\.\d+)?)\s*([\+\-\*\/xX])\s*(\d+(?:\.\d+)?)/i);
+    if(mathMatch&&!/(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|fatura|cartao)/i.test(norm)){
+      const n1=parseFloat(mathMatch[1]),op=mathMatch[2].toLowerCase(),n2=parseFloat(mathMatch[3]);
+      let calc=0;
+      if(op==='+')calc=n1+n2;
+      else if(op==='-')calc=n1-n2;
+      else if(op==='*'||op==='x')calc=n1*n2;
+      else if(op==='/'&&n2!==0)calc=n1/n2;
+      return{
+        text:`O resultado de ${n1} ${op} ${n2} é **${calc.toLocaleString('pt-BR')}**! 🧮✨`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Identidade de IA / Consciência
+    if(/(voce\s+e\s+(uma\s+)?pessoa|ser\s+humano|corpo\s+humano|consciencia|biologico|voce\s+e\s+um\s+robo)/i.test(norm)){
+      return{
+        text:'Sou uma inteligência artificial e assistente virtual integrada ao Smart Financial Planner (SFP)! Não tenho corpo biológico, mas cuido dos seus números e converso com você com muita empatia e atenção. ✨',
+        emotion:'cheerful'
+      };
+    }
+
+    // Receita culinária / bolo / conversa não-financeira leve
+    if(/(receita|bolo|cenoura|cozinhar|culinaria)/i.test(norm)){
+      return{
+        text:'Um bolo de cenoura com cobertura de chocolate é maravilhoso! 🥕🍫 Misture cenouras, ovos e óleo no liquidificador, junte farinha e açúcar, asse por 40 min e capriche na calda de chocolate!',
+        emotion:'playful'
+      };
+    }
+
     // 1. Memória: Lembre que... / Anote que...
     if(/^(lembre( que)?|anote( que)?|guarde( que)?|lembrar( que)?)\s+(.+)/i.test(raw)){
       const match=raw.match(/^(?:lembre(?: que)?|anote(?: que)?|guarde(?: que)?|lembrar(?: que)?)\s+(.+)/i);
@@ -5065,6 +5104,113 @@ const sophyOfflineCore={
       };
     }
 
+    // Aniversário hoje
+    if(/(hoje\s+e\s+(o\s+)?meu\s+aniversario|meu\s+niver\s+hoje)/i.test(norm)){
+      return{
+        text:'Parabéns e um feliz aniversário!! 🎂🎉 Que seu novo ano traga muitas realizações, saúde e prosperidade! Aproveite muito o seu dia!',
+        emotion:'cheerful'
+      };
+    }
+
+    // Perda de emprego / Demissão
+    if(/(fui\s+demitid|perdi\s+o\s+emprego|demissao)/i.test(norm)){
+      return{
+        text:'Sinto muito que você esteja passando por isso... Muita força! Nesses momentos difíceis, a sua reserva e o planejamento com calma fazem toda a diferença. Vamos olhar seus compromissos juntos e proteger o seu caixa.',
+        emotion:'concerned'
+      };
+    }
+
+    // Promoção no trabalho
+    if(/(promocao|fui\s+promovid|aumento\s+de\s+salario)/i.test(norm)){
+      return{
+        text:'Parabéns!! 🎉🎉 Que conquista sensacional e merecida! Muito orgulho da sua dedicação profissional! Vamos comemorar com sabedoria! ✨',
+        emotion:'proud'
+      };
+    }
+
+    // Sentimento de culpa pós-compra
+    if(/(sentindo\s+culpad|culpa\s+por\s+gastar|gastei\s+com\s+besteira)/i.test(norm)){
+      return{
+        text:'Isso acontece com todo mundo e é normal! O equilíbrio financeiro é uma jornada. Não se culpe: a gente ajusta os próximos dias e segue firme no plano! 😉',
+        emotion:'cheerful'
+      };
+    }
+
+    // Medo de não conseguir juntar reserva
+    if(/(medo\s+de\s+nao\s+conseguir|inseguranca\s+com\s+a\s+meta|nao\s+vou\s+conseguir\s+guardar)/i.test(norm)){
+      return{
+        text:'Calma, a constância e o tempo são seus maiores aliados! Cada valor guardado, por menor que seja, faz a diferença. Você consegue sim! 💪✨',
+        emotion:'cheerful'
+      };
+    }
+
+    // Despedida / Boa noite
+    if(/(boa\s+noite|ate\s+amanha|dormir\s+bem)/i.test(norm)){
+      return{
+        text:'Boa noite! Tenha um ótimo descanso e bons sonhos. Até amanhã! 🌙✨',
+        emotion:'cheerful'
+      };
+    }
+
+    // Despesas fixas vs variáveis
+    if(/(despesas?\s+fixas?|despesas?\s+variaveis?|fixas?\s+e\s+variaveis?)/i.test(norm)){
+      const txs=state.transactions||[];
+      const currentMonth=state.mesAtual;
+      const mTx=txs.filter(t=>t.kind==='expense'&&(!t.date||t.date.startsWith(currentMonth)));
+      const recurring=state.recurring||[];
+      const recFixed=recurring.filter(r=>r.kind==='expense');
+      const recTotal=recFixed.reduce((s,r)=>s+(Number(r.amount)||0),0);
+      const varTotal=mTx.reduce((s,t)=>s+(Number(t.amount)||0),0);
+      return{
+        text:`Em **${monthName(currentMonth)}**, você tem **${brl(recTotal)}** em despesas fixas/recorrentes e **${brl(varTotal)}** em despesas lançadas no período. Manter essa proporção equilibrada é essencial para o seu fluxo de caixa! 📊✨`,
+        emotion:'focused'
+      };
+    }
+
+    // Consulta de Patrimônio Líquido
+    if(/(patrimonio|patrimonio\s+liquido|quanto\s+eu\s+tenho\s+em\s+bens)/i.test(norm)){
+      const net=assetTotal()-debtTotal();
+      return{
+        text:`Seu patrimônio líquido consolidado hoje é de **${brl(net)}** (Ativos: ${brl(assetTotal())} − Dívidas: ${brl(debtTotal())}). Além disso, você tem **${brl(goalReserve())}** acumulados em metas/reservas. 💎`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Consulta de Dívidas Totais
+    if(/(total\s+d(as|e)\s+minhas?\s+dividas?|quanto\s+eu\s+devo\s+no\s+total|saldo\s+devedor\s+total)/i.test(norm)){
+      return{
+        text:`O saldo devedor total das suas dívidas é de **${brl(debtTotal())}**. Mantendo os pagamentos das parcelas em dia, você vai zerando cada contrato no prazo planejado! 🛡️`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Consulta de Total em Reservas / Metas
+    if(/(total\s+guardado\s+em\s+reservas?|total\s+nas\s+metas?|quanto\s+tenho\s+guardado)/i.test(norm)){
+      return{
+        text:`Você possui um total guardado de **${brl(goalReserve())}** distribuído nas suas metas e reservas ativas! 🎯`,
+        emotion:'proud'
+      };
+    }
+
+    // Consulta de Próximos 7 Dias / Vencimentos Imediatos
+    if(/(proximos?\s+7\s+dias|proximos?\s+vencimentos?)/i.test(norm)){
+      const soon=pendingUpcomingEvents(7);
+      if(!soon.length)return{text:'Não há nenhum vencimento previsto para os próximos 7 dias! Tudo calmo e em ordem. ✨',emotion:'cheerful'};
+      const list=soon.map(e=>`• **${e.desc}**: ${brl(e.amount)} (${e.type==='income'?'recebimento':'pagamento'} em ${e.date})`).join('\n');
+      return{text:`Aqui estão os lançamentos previstos nos próximos 7 dias:\n\n${list}`,emotion:'cheerful'};
+    }
+
+    // Simulação de tempo para atingir meta
+    const simMeta=norm.match(/guardar\s+(?:r\$\s*)?(\d+)\s+todo\s+mes.*?meta\s+(?:de\s+)?(?:r\$\s*)?(\d+)/i);
+    if(simMeta){
+      const monthly=parseFloat(simMeta[1]),target=parseFloat(simMeta[2]);
+      const months=Math.ceil(target/monthly);
+      return{
+        text:`Guardando **${brl(monthly)}** todo mês, você atingirá sua meta de **${brl(target)}** em **${months} meses**! 🎯🚀`,
+        emotion:'cheerful'
+      };
+    }
+
     // Consulta de Preferências / O que prefiro economizar
     if(/(o\s+que\s+(eu\s+)?prefiro|minhas?\s+preferencias?|o\s+que\s+eu\s+costumo|meus?\s+habitos?)/i.test(norm)){
       const mems=state.sophy?.memories||[];
@@ -5082,16 +5228,16 @@ const sophyOfflineCore={
       };
     }
 
-    // Consulta sobre Fato Específico ("o que você sabe sobre meu carro / trabalho / etc.")
-    if(/o\s+que\s+voce\s+sabe\s+sobre\s+(?:o\s+meu|a\s+minha|meu|minha)\s+([a-z0-9_]+)/i.test(norm)){
-      const matchSubject=norm.match(/o\s+que\s+voce\s+sabe\s+sobre\s+(?:o\s+meu|a\s+minha|meu|minha)\s+([a-z0-9_]+)/i);
-      const subject=matchSubject?matchSubject[1].trim():'';
+    // Consulta sobre Fato / Hábito Específico ("como eu tomo meu café", "o que você sabe sobre meu carro / trabalho / etc.")
+    const matchSubject=norm.match(/(?:o\s+que\s+(?:voce\s+)?sabe\s+sobre|como\s+(?:eu\s+)?(?:tomo|gosto|faco|bebo|uso|prefiro)|qual\s+(?:o\s+)?(?:meu|minha)|lembra\s+d[oe]\s+(?:meu|minha)?)\s+(?:o\s+meu\s+|a\s+minha\s+|meu\s+|minha\s+)?([a-z0-9_]+)/i);
+    if(matchSubject&&!/(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|fatura|cartao|saldo|livre|divida|meta|reserva|mim|voce|tudo|nada)/i.test(matchSubject[1])){
+      const subject=matchSubject[1].trim();
       const mems=state.sophy?.memories||[];
       const matching=mems.filter(m=>sophyNormalize(m.content).includes(subject));
       if(matching.length){
         const list=matching.map(m=>`• *"${m.content}"*`).join('\n');
         return{
-          text:`Sobre **${subject}**, eu guardei isto na memória:\n\n${list}`,
+          text:`Você me disse que **${matching[0].content}**! Já tá guardadinho na minha memória! 📌✨\n\n${list.length>1?list:''}`,
           emotion:'cheerful'
         };
       }
@@ -5125,7 +5271,7 @@ const sophyOfflineCore={
       };
     }
 
-    if(/\b(sono|dormir|cansac[o|ç]o|cansad[oa]|exausto|exausta|acabad[oa]|so o po|morto de cansado|morta de cansada|dia puxado|correria)\b/i.test(clean)||/\b(sono|dormir|cansaco|cansado|cansada|exausto|exausta|acabado|acabada|so o po|dia puxado|correria)\b/i.test(norm)){
+    if(/\b(sono|dormir|cama|cansac[o|ç]o|cansad[oa]|cansativ[oa]|exausto|exausta|acabad[oa]|so o po|morto de cansado|morta de cansada|dia puxado|correria)\b/i.test(clean)||/\b(sono|dormir|cama|cansaco|cansado|cansada|cansativo|cansativa|exausto|exausta|acabado|acabada|so o po|dia puxado|correria)\b/i.test(norm)){
       return{
         text:`Vai descansar um tiquinho! 😴 Suas contas e planejamentos continuam seguros por aqui. Uma boa noite de sono clareia qualquer decisão amanhã.`,
         emotion:'neutral'
@@ -5208,6 +5354,15 @@ const sophyOfflineCore={
 
     // Saudações
     if((/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean)||/^(oi|oie|ola|eai|fala\s+sophy|e\s*ai\s+sumida|opa|bom\s+dia|boa\s+tarde|boa\s+noite|hey|hello)\b/i.test(norm)) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(norm)){
+      if(/bom\s+dia/i.test(norm)){
+        return{text:`Bom diaaa${nameSuffix}! ☀️✨ Que seu dia seja maravilhoso e cheio de energia positiva! O que manda hoje?`,emotion:'cheerful'};
+      }
+      if(/boa\s+tarde/i.test(norm)){
+        return{text:`Boa tarde${nameSuffix}! 🌤️ Espero que seu dia esteja sendo ótimo! Como posso te ajudar hoje?`,emotion:'cheerful'};
+      }
+      if(/boa\s+noite/i.test(norm)){
+        return{text:`Boa noite${nameSuffix}! 🌙 Descanso merecido hoje! Se precisar de algo antes de dormir, tô por aqui.`,emotion:'cheerful'};
+      }
       const greetings=[
         `Oiiii${nameSuffix} 😌 Tô por aqui. Como cê tá?`,
         `Oiee${nameSuffix} ✨ Que bom te ver por aqui! Tudo certinho? O que manda hoje?`,
@@ -5780,10 +5935,19 @@ const sophyRouter={
 
 function sophyAddMemory(type,content,origin='chat'){
   if(!state.sophy)normalize();
-  const mem={id:uid(),type:type||'fact',content:String(content||'').trim(),origin,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-  state.sophy.memories??=[];state.sophy.memories.push(mem);
+  let actualType=type||'fact';
+  let actualContent=content;
+  if(typeof type==='object'&&type!==null){
+    actualContent=type.content||type.text||'';
+    actualType=type.type||'fact';
+    origin=type.origin||type.source||origin;
+  }
+  const mem={id:uid(),type:actualType,content:String(actualContent||'').trim(),origin,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  state.sophy.memories??=[];
+  state.sophy.memories.push(mem);
+  state.sophy.memories=state.sophy.memories.slice(-30);
   save('Salvar memória da Sophy').catch(()=>{});
-  return mem
+  return mem;
 }
 
 async function sophyRemoveMemory(id){
