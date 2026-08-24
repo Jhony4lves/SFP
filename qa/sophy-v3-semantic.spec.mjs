@@ -562,11 +562,106 @@ export async function runCycle4Tests() {
   return { passed, failed };
 }
 
+export async function runCycle5Tests() {
+  console.log('=== TEST MATRIX: CICLO 5 — Decisão de Compra & Categorias Específicas ===');
+  const harness = createSophyHarness();
+
+  let passed = 0;
+  let failed = 0;
+
+  // Caso 1: Decisão de compra que cabe no orçamento
+  console.log('-- Caso 1: Decisão de compra que cabe no orçamento --');
+  {
+    const r1 = await harness.sendMessage('posso comprar um tênis de 300?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/t[eê]nis/i.test(r1.text), 'Deve citar o item');
+      assert(/300/i.test(r1.text), 'Deve citar o valor');
+      assert(/livre projetado|cabe|sobra/i.test(r1.text), 'Deve analisar impacto no livre');
+      console.log(`  ✓ PASS: Compra que cabe -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Compra que cabe -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 2: Decisão de compra que excede o livre projetado
+  console.log('-- Caso 2: Decisão de compra que excede o livre projetado --');
+  {
+    const r1 = await harness.sendMessage('posso comprar um celular de 1500?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/celular/i.test(r1.text), 'Deve citar o item');
+      assert(/1\.500|1500/i.test(r1.text), 'Deve citar o valor');
+      assert(/atenção|cuidado|negativo|vermelho|ultrapassa|adiar/i.test(r1.text), 'Deve alertar que estoura o livre');
+      console.log(`  ✓ PASS: Compra que excede -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Compra que excede -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 3: Consulta de categoria específica com despesa existente
+  console.log('-- Caso 3: Consulta de categoria específica (Lazer) --');
+  {
+    const r1 = await harness.sendMessage('quanto gastei com Lazer esse mês?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/lazer/i.test(r1.text), 'Deve focar na categoria Lazer');
+      assert(/R\$/i.test(r1.text), 'Deve mostrar o valor gasto');
+      console.log(`  ✓ PASS: Categoria específica -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Categoria específica -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 4: Consulta de categoria sem despesas registradas
+  console.log('-- Caso 4: Consulta de categoria zerada (Educação) --');
+  {
+    const r1 = await harness.sendMessage('quanto gastei com Educação esse mês?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/educação|nenhum gasto|R\$\s*0/i.test(r1.text), 'Deve informar que não há gastos nessa categoria');
+      console.log(`  ✓ PASS: Categoria zerada -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Categoria zerada -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 5 (Adversarial): Decisão de compra coloquial com abreviações
+  console.log('-- Caso 5 (Adversarial): Decisão de compra coloquial --');
+  {
+    const r1 = await harness.sendMessage('da pra eu gasta 200 numa pizza hj?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/pizza/i.test(r1.text), 'Deve reconhecer pizza');
+      assert(/200/i.test(r1.text), 'Deve reconhecer 200');
+      assert(/livre projetado|cabe|sobra/i.test(r1.text), 'Deve calcular o livre');
+      console.log(`  ✓ PASS: Decisão coloquial -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Decisão coloquial -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  console.log(`Ciclo 5: ${passed} passados, ${failed} falhas.`);
+  if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 5.`);
+  return { passed, failed };
+}
+
 async function main() {
   await runCycle1Tests();
   await runCycle2Tests();
   await runCycle3Tests();
   await runCycle4Tests();
+  await runCycle5Tests();
 }
 
 main();

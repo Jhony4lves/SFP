@@ -4693,8 +4693,8 @@ const sophyAIProvider={
 function sophyNormalize(text){
   if(!text)return'';
   let s=String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  // Collapse repeated characters for standard words (except laughter k, h, s, r)
-  s=s.replace(/([^khsr\s])\1+/g,'$1');
+  // Collapse repeated characters (3+) for standard words (except laughter k, h, s, r and digits)
+  s=s.replace(/([^khsr\d\s])\1{2,}/gi,'$1');
   s=s.replace(/\b(vc|c[eê]|ce)\b/g,'voce')
      .replace(/\b(blz|bele|bllz)\b/g,'beleza')
      .replace(/\b(vlw|valeu)\b/g,'valeu')
@@ -5131,6 +5131,42 @@ const sophyOfflineCore={
       };
     }
 
+    // Decisão de Compra com Item e Valor Específico
+    const purchasePattern1=/(?:posso|da\s+para(?:\s+eu)?|consigo)\s+(?:comprar?|gastar?|pegar?)\s+(?:um[as]?\s+)?(.+?)\s+(?:de|por|em|custando|no\s+valor\s+de)\s+(?:r\$\s*)?(\d+(?:[.,]\d+)*)/i;
+    const purchasePattern2=/(?:posso|da\s+para(?:\s+eu)?|consigo)\s+(?:comprar?|gastar?|pegar?)\s+(?:r\$\s*)?(\d+(?:[.,]\d+)*)\s+(?:em|num[as]?|com|para|de)\s+(?:um[as]?\s+)?(.+)/i;
+    
+    let purchaseMatch=norm.match(purchasePattern1);
+    let itemName='',itemAmount=0;
+    if(purchaseMatch){
+      itemName=purchaseMatch[1].replace(/[?!.,]/g,'').replace(/\b(hj|hoje|agora|esse\s+mes|neste\s+mes)\b/gi,'').trim();
+      itemAmount=parseMoney(purchaseMatch[2]);
+    }else{
+      purchaseMatch=norm.match(purchasePattern2);
+      if(purchaseMatch){
+        itemAmount=parseMoney(purchaseMatch[1]);
+        itemName=purchaseMatch[2].replace(/[?!.,]/g,'').replace(/\b(hj|hoje|agora|esse\s+mes|neste\s+mes)\b/gi,'').trim();
+      }
+    }
+
+    if(itemName&&itemAmount>0){
+      const currentFree=allAccountBalance()-commitmentUntilNextIncome();
+      const diff=currentFree-itemAmount;
+      state.sophy.context={lastIntent:'purchase_decision',lastAmount:itemAmount,lastEntity:itemName};
+      if(diff>=0){
+        return{
+          text:`Sim! Se você comprar **${itemName}** por **${brl(itemAmount)}**, seu dinheiro livre projetado vai de ${brl(currentFree)} para **${brl(diff)}**. Esse gasto cabe no seu planejamento atual! 🎯`,
+          emotion:'cheerful',
+          structured:{type:'purchase_decision',item:itemName,amount:itemAmount,currentFree,projectedRemaining:diff,fits:true}
+        };
+      }else{
+        return{
+          text:`Atenção: seu dinheiro livre projetado hoje é de **${brl(currentFree)}**. Se você comprar **${itemName}** por **${brl(itemAmount)}**, você ficaria no vermelho em **${brl(diff)}** antes da sua próxima entrada. O mais seguro é adiar ou planejar esse valor! 💡`,
+          emotion:'concerned',
+          structured:{type:'purchase_decision',item:itemName,amount:itemAmount,currentFree,projectedRemaining:diff,fits:false}
+        };
+      }
+    }
+
     // Livre projetado / Sobrando / Margem para gastar
     if(/livre|posso\s+gastar|consigo\s+gastar|sobrando|sobrar|margem\s+para\s+gastar|dinheiro\s+sobrando|vai\s+sobrar|sobra\s+quanto/i.test(norm)||/livre|posso gastar|sobrando|disponivel livre/i.test(clean)){
       const free=allAccountBalance()-commitmentUntilNextIncome();
@@ -5237,9 +5273,34 @@ const sophyOfflineCore={
       };
     }
 
-    // Gastos por categoria
-    if(/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(clean)||/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(norm)){
+    // Gastos por categoria (Específica ou Visão Geral)
+    if(/categoria|onde gastei|maior gasto|despesas por|gastos com|quanto gastei com|quanto eu gastei com/i.test(clean)||/categoria|onde gastei|maior gasto|despesas por|gastos com|quanto gastei com|quanto eu gastei com/i.test(norm)){
       const cats=categoriesSpent(state.mesAtual);
+      const specificMatch=norm.match(/(?:gastos?\s+(?:com|em|de)|quanto\s+(?:eu\s+)?gastei\s+(?:com|em|de|numa?))\s+([a-z0-9_çãáéíóúâêô]+)/i);
+      if(specificMatch){
+        const queryTerm=sophyNormalize(specificMatch[1]).toLowerCase().replace(/\b(esse|este|mes|hoje|hj)\b/g,'').trim();
+        if(queryTerm&&queryTerm!=='categoria'&&queryTerm!=='tudo'&&queryTerm!=='grana'&&queryTerm!=='dinheiro'){
+          const foundKey=Object.keys(cats).find(k=>{
+            const kn=sophyNormalize(k).toLowerCase();
+            return kn===queryTerm||kn.includes(queryTerm)||queryTerm.includes(kn);
+          });
+          if(foundKey){
+            const spent=cats[foundKey];
+            return{
+              text:`Em **${monthName(state.mesAtual)}**, seus gastos na categoria **${foundKey}** somam **${brl(spent)}**.`,
+              emotion:'focused',
+              structured:{type:'category_specific_spent',category:foundKey,amount:spent}
+            };
+          }else{
+            return{
+              text:`Em **${monthName(state.mesAtual)}**, você não tem nenhum gasto registrado na categoria **${specificMatch[1].trim()}** (**${brl(0)}**)! 👏`,
+              emotion:'cheerful',
+              structured:{type:'category_specific_spent',category:specificMatch[1].trim(),amount:0}
+            };
+          }
+        }
+      }
+
       const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
       if(!entries.length){
         return{text:`Ainda não temos despesas registradas para **${monthName(state.mesAtual)}**.`,emotion:'neutral'};
