@@ -6,20 +6,34 @@ import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
+import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 
 public class AndroidBridge {
     private static final String CHANNEL_ID = "sfp_important_alerts";
@@ -120,21 +134,63 @@ public class AndroidBridge {
     }
 
     // ============================================================
-    // SOPHY V3 SECURE KEYSTORE & NATIVE GROQ BRIDGE
+    // SOPHY V3 SECURE ANDROID KEYSTORE & NATIVE GROQ BRIDGE
     // ============================================================
-    private static final String PREF_SECURE_VAULT = "sfp_sophy_secure_vault";
-    private static final String KEY_GROQ_SECRET = "sophy_groq_api_key";
+    private static final String KEYSTORE_PROVIDER = "AndroidKeyStore";
+    private static final String KEY_ALIAS = "sfp_sophy_groq_v3_master_key";
+    private static final String CIPHER_TRANSFORMATION = "AES/GCM/NoPadding";
+    private static final int GCM_TAG_LENGTH_BITS = 128;
 
-    @JavascriptInterface
-    public boolean setSophyApiKey(String key) {
-        try {
-            if (key == null || key.trim().isEmpty()) {
-                clearSophyApiKey();
-                return true;
+    private static final String PREF_SECURE_VAULT = "sfp_sophy_secure_vault";
+    private static final String KEY_CIPHERTEXT = "sophy_groq_ciphertext";
+    private static final String KEY_IV = "sophy_groq_iv";
+    private static final String KEY_VERSION = "sophy_groq_version";
+    private static final String LEGACY_KEY_GROQ_SECRET = "sophy_groq_api_key";
+
+    private SecretKey getOrCreateSecretKey() throws Exception {
+        KeyStore keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER);
+        keyStore.load(null);
+        if (keyStore.containsAlias(KEY_ALIAS)) {
+            KeyStore.Entry entry = keyStore.getEntry(KEY_ALIAS, null);
+            if (entry instanceof KeyStore.SecretKeyEntry) {
+                return ((KeyStore.SecretKeyEntry) entry).getSecretKey();
             }
+        }
+
+        KeyGenerator keyGenerator = KeyGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_PROVIDER);
+        KeyGenParameterSpec keyGenParameterSpec = new KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .setRandomizedEncryptionRequired(true)
+                .build();
+        keyGenerator.init(keyGenParameterSpec);
+        return keyGenerator.generateKey();
+    }
+
+    private boolean encryptAndSaveApiKey(String rawKey) {
+        if (rawKey == null || rawKey.trim().isEmpty()) {
+            return clearSophyApiKey();
+        }
+        try {
+            SecretKey secretKey = getOrCreateSecretKey();
+            Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+            byte[] iv = cipher.getIV();
+            byte[] ciphertext = cipher.doFinal(rawKey.trim().getBytes(StandardCharsets.UTF_8));
+
+            String ciphertextB64 = Base64.encodeToString(ciphertext, Base64.NO_WRAP);
+            String ivB64 = Base64.encodeToString(iv, Base64.NO_WRAP);
+
             context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
                     .edit()
-                    .putString(KEY_GROQ_SECRET, key.trim())
+                    .putString(KEY_CIPHERTEXT, ciphertextB64)
+                    .putString(KEY_IV, ivB64)
+                    .putString(KEY_VERSION, "v3-keystore-gcm")
+                    .remove(LEGACY_KEY_GROQ_SECRET)
                     .apply();
             return true;
         } catch (Exception e) {
@@ -142,12 +198,53 @@ public class AndroidBridge {
         }
     }
 
+    private String getDecryptedApiKeyInternal() {
+        try {
+            SharedPreferences prefs = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE);
+            String ciphertextB64 = prefs.getString(KEY_CIPHERTEXT, null);
+            String ivB64 = prefs.getString(KEY_IV, null);
+
+            // Legacy migration: if ciphertext is absent but legacy plaintext was set, migrate and wipe legacy
+            if (ciphertextB64 == null || ivB64 == null) {
+                String legacyKey = prefs.getString(LEGACY_KEY_GROQ_SECRET, null);
+                if (legacyKey != null && !legacyKey.trim().isEmpty()) {
+                    encryptAndSaveApiKey(legacyKey.trim());
+                    ciphertextB64 = prefs.getString(KEY_CIPHERTEXT, null);
+                    ivB64 = prefs.getString(KEY_IV, null);
+                }
+            }
+
+            if (ciphertextB64 == null || ivB64 == null) {
+                return null;
+            }
+
+            byte[] ciphertext = Base64.decode(ciphertextB64, Base64.NO_WRAP);
+            byte[] iv = Base64.decode(ivB64, Base64.NO_WRAP);
+
+            SecretKey secretKey = getOrCreateSecretKey();
+            Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
+            GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, spec);
+            byte[] decrypted = cipher.doFinal(ciphertext);
+            return new String(decrypted, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @JavascriptInterface
+    public boolean setSophyApiKey(String key) {
+        return encryptAndSaveApiKey(key);
+    }
+
     @JavascriptInterface
     public boolean hasSophyApiKey() {
         try {
-            String key = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
-                    .getString(KEY_GROQ_SECRET, null);
-            return key != null && !key.trim().isEmpty();
+            SharedPreferences prefs = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE);
+            boolean hasCipher = prefs.contains(KEY_CIPHERTEXT) && prefs.contains(KEY_IV);
+            if (hasCipher) return true;
+            String legacy = prefs.getString(LEGACY_KEY_GROQ_SECRET, null);
+            return legacy != null && !legacy.trim().isEmpty();
         } catch (Exception e) {
             return false;
         }
@@ -155,9 +252,9 @@ public class AndroidBridge {
 
     @JavascriptInterface
     public String getSophyApiKeyMasked() {
+        String key = null;
         try {
-            String key = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
-                    .getString(KEY_GROQ_SECRET, null);
+            key = getDecryptedApiKeyInternal();
             if (key == null || key.trim().isEmpty()) return "";
             key = key.trim();
             if (key.length() <= 4) return "••••";
@@ -165,6 +262,19 @@ public class AndroidBridge {
             return "••••••••" + last4;
         } catch (Exception e) {
             return "";
+        } finally {
+            key = null; // discard in-memory reference immediately
+        }
+    }
+
+    @JavascriptInterface
+    public String getSophyKeyStatus() {
+        try {
+            String masked = getSophyApiKeyMasked();
+            boolean configured = masked != null && !masked.isEmpty();
+            return "{\"configured\":" + configured + ",\"masked\":\"" + (masked != null ? masked : "") + "\"}";
+        } catch (Exception e) {
+            return "{\"configured\":false,\"masked\":\"\"}";
         }
     }
 
@@ -173,7 +283,10 @@ public class AndroidBridge {
         try {
             context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
                     .edit()
-                    .remove(KEY_GROQ_SECRET)
+                    .remove(KEY_CIPHERTEXT)
+                    .remove(KEY_IV)
+                    .remove(KEY_VERSION)
+                    .remove(LEGACY_KEY_GROQ_SECRET)
                     .apply();
             return true;
         } catch (Exception e) {
@@ -183,10 +296,10 @@ public class AndroidBridge {
 
     @JavascriptInterface
     public String callSophyGroq(String endpointUrl, String payloadJson) {
-        java.net.HttpURLConnection conn = null;
+        HttpURLConnection conn = null;
+        String key = null;
         try {
-            String key = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
-                    .getString(KEY_GROQ_SECRET, null);
+            key = getDecryptedApiKeyInternal();
             if (key == null || key.trim().isEmpty()) {
                 return "{\"error\":{\"message\":\"AUTH_REQUIRED\",\"status\":401}}";
             }
@@ -195,8 +308,8 @@ public class AndroidBridge {
                     ? endpointUrl.trim()
                     : "https://api.groq.com/openai/v1/chat/completions";
 
-            java.net.URL url = new java.net.URL(targetUrl);
-            conn = (java.net.HttpURLConnection) url.openConnection();
+            URL url = new URL(targetUrl);
+            conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
             conn.setRequestProperty("Authorization", "Bearer " + key.trim());
@@ -212,7 +325,7 @@ public class AndroidBridge {
             }
 
             int responseCode = conn.getResponseCode();
-            java.io.InputStream is = (responseCode >= 200 && responseCode < 300)
+            InputStream is = (responseCode >= 200 && responseCode < 300)
                     ? conn.getInputStream()
                     : conn.getErrorStream();
 
@@ -220,7 +333,7 @@ public class AndroidBridge {
                 return "{\"error\":{\"message\":\"HTTP " + responseCode + " - No response stream\",\"status\":" + responseCode + "}}";
             }
 
-            java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             byte[] buf = new byte[4096];
             int n;
             while ((n = is.read(buf)) != -1) {
@@ -233,11 +346,12 @@ public class AndroidBridge {
             } else {
                 return "{\"error\":{\"message\":\"HTTP " + responseCode + "\",\"status\":" + responseCode + ",\"body\":" + responseStr + "}}";
             }
-        } catch (java.net.SocketTimeoutException te) {
+        } catch (SocketTimeoutException te) {
             return "{\"error\":{\"message\":\"Timeout\",\"status\":408}}";
         } catch (Exception e) {
             return "{\"error\":{\"message\":\"" + e.getMessage() + "\",\"status\":500}}";
         } finally {
+            key = null; // discard in-memory secret immediately
             if (conn != null) {
                 try { conn.disconnect(); } catch (Exception ignored) {}
             }

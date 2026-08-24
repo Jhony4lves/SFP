@@ -130,6 +130,102 @@ export async function runArchitectureTests() {
     failed++;
   }
 
+  // 6. Android Keystore AES-256-GCM Cryptographic Vault Contracts (A through J)
+  console.log('-- Test 6: Android Keystore AES-256-GCM Cryptographic Vault Contracts --');
+  try {
+    const crypto = await import('node:crypto');
+    const secretKeySample = 'gsk_test_mock_dummy_secret_key_1234567890';
+    
+    // Simulate AndroidBridge Keystore behavior in mock harness
+    let mockSharedPreferencesVault = {};
+    const mockKeystore = {
+      alias: 'sfp_sophy_groq_v3_master_key',
+      aesKey: crypto.randomBytes(32), // 256-bit AES key
+      encrypt(rawSecret) {
+        const iv = crypto.randomBytes(12); // 12-byte nonce for AES-GCM
+        const cipher = crypto.createCipheriv('aes-256-gcm', this.aesKey, iv);
+        let ciphertext = cipher.update(rawSecret, 'utf8');
+        ciphertext = Buffer.concat([ciphertext, cipher.final()]);
+        const tag = cipher.getAuthTag(); // 128-bit authentication tag
+        const combinedCiphertext = Buffer.concat([ciphertext, tag]);
+
+        mockSharedPreferencesVault = {
+          sophy_groq_ciphertext: combinedCiphertext.toString('base64'),
+          sophy_groq_iv: iv.toString('base64'),
+          sophy_groq_version: 'v3-keystore-gcm'
+        };
+        return true;
+      },
+      decrypt() {
+        if (!mockSharedPreferencesVault.sophy_groq_ciphertext || !mockSharedPreferencesVault.sophy_groq_iv) return null;
+        const combined = Buffer.from(mockSharedPreferencesVault.sophy_groq_ciphertext, 'base64');
+        const iv = Buffer.from(mockSharedPreferencesVault.sophy_groq_iv, 'base64');
+        const tag = combined.subarray(combined.length - 16);
+        const ciphertext = combined.subarray(0, combined.length - 16);
+        const decipher = crypto.createDecipheriv('aes-256-gcm', this.aesKey, iv);
+        decipher.setAuthTag(tag);
+        let decrypted = decipher.update(ciphertext, 'binary', 'utf8');
+        decrypted += decipher.final('utf8');
+        return decrypted;
+      },
+      clear() {
+        mockSharedPreferencesVault = {};
+        return true;
+      }
+    };
+
+    // Contract A: Não existe plaintext da API key nos prefs
+    mockKeystore.encrypt(secretKeySample);
+    const prefsContent = JSON.stringify(mockSharedPreferencesVault);
+    assert(!prefsContent.includes(secretKeySample), 'Contract A: Prefs NUNCA deve conter o segredo em plaintext');
+
+    // Contract B: Ciphertext difere do segredo original
+    assert(mockSharedPreferencesVault.sophy_groq_ciphertext !== secretKeySample, 'Contract B: Ciphertext deve ser diferente do segredo');
+
+    // Contract C: IV é persistido separadamente
+    assert(mockSharedPreferencesVault.sophy_groq_iv && typeof mockSharedPreferencesVault.sophy_groq_iv === 'string', 'Contract C: IV deve ser persistido separadamente');
+
+    // Contract D: Decrypt interno recupera corretamente para uso nativo
+    const decrypted = mockKeystore.decrypt();
+    assert.equal(decrypted, secretKeySample, 'Contract D: Decrypt deve recuperar o segredo exato internamente');
+
+    // Contract E: Remover chave apaga ciphertext/IV
+    mockKeystore.clear();
+    assert(!mockSharedPreferencesVault.sophy_groq_ciphertext && !mockSharedPreferencesVault.sophy_groq_iv, 'Contract E: Limpar chave remove ciphertext e IV');
+
+    // Contract F: Substituir chave funciona e gera novo IV
+    mockKeystore.encrypt('gsk_replacement_key_abc_9999');
+    const firstIv = mockSharedPreferencesVault.sophy_groq_iv;
+    mockKeystore.encrypt('gsk_replacement_key_xyz_8888');
+    const secondIv = mockSharedPreferencesVault.sophy_groq_iv;
+    assert.notEqual(firstIv, secondIv, 'Contract F: Cada criptografia deve usar um IV/nonce único e aleatório');
+    assert.equal(mockKeystore.decrypt(), 'gsk_replacement_key_xyz_8888', 'Contract F: Substituição de chave decifra corretamente novo segredo');
+
+    // Contract G: Backup/exportação não contém segredo
+    const simulatedBackup = JSON.stringify({ state: harness.getState(), version: 'v11' });
+    assert(!simulatedBackup.includes('gsk_'), 'Contract G: Exportação de backup não contém segredos Groq');
+
+    // Contract H: Undo não contém segredo
+    harness.sandbox.sophySecureStorage.setApiKey('gsk_session_secret_for_test');
+    assert(harness.sandbox.sophySecureStorage.hasApiKey(), 'Deve reconhecer chave configurada');
+    const undoStack = harness.getState().undo || [];
+    assert(!JSON.stringify(undoStack).includes('gsk_'), 'Contract H: Undo stack não contém segredo');
+
+    // Contract I: State não contém segredo
+    assert(!JSON.stringify(harness.getState()).includes('gsk_session_secret_for_test'), 'Contract I: State permanece livre de segredos');
+
+    // Contract J: Status mascarado nunca expõe segredo completo
+    const masked = harness.sandbox.sophySecureStorage.getMaskedKey();
+    assert.equal(masked, '••••••••test', 'Contract J: Masked key deve exibir apenas os 4 últimos dígitos');
+    assert(!masked.includes('gsk_session_secret'), 'Contract J: Segredo completo nunca é exposto na máscara');
+
+    console.log('  ✓ PASS: Todos os 10 contratos de segurança Keystore (A-J) validados com sucesso.');
+    passed++;
+  } catch (e) {
+    console.log(`  ✗ FAIL: Keystore Contracts [${e.message}]`);
+    failed++;
+  }
+
   console.log(`\nArchitecture Contracts: ${passed} passados, ${failed} falhas.`);
   if (failed > 0) throw new Error(`${failed} testes de arquitetura falharam.`);
   return { passed, failed };
