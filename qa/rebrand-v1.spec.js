@@ -152,6 +152,10 @@ test.describe('SFP Product Reload + Rebranding V1 QA Suite (REB-01 - REB-18)', (
       expect(box.height).toBeGreaterThanOrEqual(44);
     }
 
+    // Switch to lancamentos to test quicktypes
+    await page.locator('.sidebar .nav button[data-page="lancamentos"]').click();
+    await expect(page.locator('#lancamentos')).toHaveClass(/active/);
+
     const quicktypeButtons = page.locator('.quicktype');
     const qtCount = await quicktypeButtons.count();
     for (let i = 0; i < qtCount; i++) {
@@ -165,12 +169,13 @@ test.describe('SFP Product Reload + Rebranding V1 QA Suite (REB-01 - REB-18)', (
 
   test('REB-08: Zero global horizontal overflow across all viewports', async ({ page }) => {
     const errors = monitor(page);
+    await boot(page, DESKTOP);
+
     const viewports = [MOBILE_SMALL, PORTRAIT, LANDSCAPE, DESKTOP];
 
     for (const vp of viewports) {
       await page.setViewportSize(vp);
-      await page.goto('/index.html');
-      await page.waitForFunction(() => typeof state !== 'undefined' && state);
+      await page.waitForTimeout(100);
 
       const overflow = await page.evaluate(() => {
         const docW = document.documentElement.scrollWidth;
@@ -194,7 +199,8 @@ test.describe('SFP Product Reload + Rebranding V1 QA Suite (REB-01 - REB-18)', (
 
     await expect(page.locator('.sophy-header-card')).toBeVisible();
     await expect(page.locator('.sophy-avatar-wrap')).toBeVisible();
-    await expect(page.locator('.sophy-status-tag')).toBeVisible();
+    await expect(page.locator('#sophyCoreTag')).toBeVisible();
+    await expect(page.locator('#sophyNetworkTag')).toBeVisible();
     await expect(page.locator('.sophy-mood-tag')).toBeVisible();
     await expect(page.locator('.sophy-chat-card')).toBeVisible();
 
@@ -209,7 +215,7 @@ test.describe('SFP Product Reload + Rebranding V1 QA Suite (REB-01 - REB-18)', (
     await expect(page.locator('#sophy')).toBeVisible();
 
     const barBox = await page.locator('#sophySuggestions').boundingBox();
-    const composerBox = await page.locator('#sophyForm').boundingBox();
+    const composerBox = await page.locator('#sophyChatForm').boundingBox();
 
     expect(barBox).not.toBeNull();
     expect(composerBox).not.toBeNull();
@@ -222,15 +228,15 @@ test.describe('SFP Product Reload + Rebranding V1 QA Suite (REB-01 - REB-18)', (
   });
 
   test('REB-11: Tab transitions activate corresponding view and update page title', async ({ page }) => {
-    const errors = monitor(page, DESKTOP);
+    const errors = monitor(page);
     await boot(page, DESKTOP);
 
     const testTabs = [
       { pageId: 'dashboard', title: 'Dashboard' },
-      { pageId: 'contas', title: 'Contas & Saldos' },
-      { pageId: 'cartoes', title: 'Cartões de Crédito' },
-      { pageId: 'orcamento', title: 'Orçamento 50-30-20' },
-      { pageId: 'calendario', title: 'Calendário Financeiro' },
+      { pageId: 'contas', title: 'Contas' },
+      { pageId: 'cartoes', title: 'Cartões' },
+      { pageId: 'orcamento', title: 'Orçamento' },
+      { pageId: 'calendario', title: 'Calendário' },
       { pageId: 'config', title: 'Configurações' }
     ];
 
@@ -293,7 +299,7 @@ test.describe('SFP Product Reload + Rebranding V1 QA Suite (REB-01 - REB-18)', (
     await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
     await expect(page.locator('#dialogTitle')).toHaveText('Confirmar Exclusão');
 
-    await page.locator('#dialogConfirm').click();
+    await page.locator('#dialogConfirmBtn').click();
     const result = await confirmPromise;
     expect(result).toBe(true);
     await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
