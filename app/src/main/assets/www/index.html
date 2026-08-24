@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://appassets.androidplatform.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://appassets.androidplatform.net; style-src 'self' 'unsafe-inline' https://appassets.androidplatform.net; img-src 'self' data: blob: https://appassets.androidplatform.net; connect-src 'self' blob: data: https://appassets.androidplatform.net; frame-src 'none'; object-src 'none'; base-uri 'none';"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#07111e"/>
 <link rel="icon" href="data:,"/>
@@ -59,7 +60,7 @@ label{display:block;color:var(--muted);font-size:10px;margin-bottom:10px}input,s
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.shell{grid-template-columns:74px 1fr}.sidebar{padding:15px 8px}.brand div:not(.brandmark),.nav button span,.sidefoot{display:none}.brand{justify-content:center}.nav button{justify-content:center;font-size:16px}.grid2,.grid3{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px) and (orientation:portrait){.shell{display:block}.sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;height:calc(var(--bottom-nav-height) + var(--safe-bottom));border-right:0;border-top:1px solid var(--line);padding:4px 6px max(4px,var(--safe-bottom));background:#06101d;z-index:70;box-sizing:border-box}.brand,.sidefoot{display:none}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;overflow:visible;padding:0;margin:0;width:100%;height:100%}.sidebar .nav button{display:none!important;min-width:0;padding:4px 2px}.sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="sophy"],.sidebar .nav button[data-page="lancamentos"],.sidebar .nav button[data-page="contas"],.sidebar .nav #moreNavBtn{display:flex!important;flex-direction:column;align-items:center;justify-content:center;padding:4px 1px;font-size:13px;border-radius:6px;min-width:0}.sidebar .nav button span{display:block;font-size:10px;line-height:1.2;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}.sidebar .nav button.active{box-shadow:inset 0 -3px 0 var(--blue);background:rgba(76,194,255,.08)}#moreNavBtn{color:var(--muted)}#moreNavBtn.active{color:var(--blue)}main{padding:14px 10px calc(var(--bottom-nav-height) + var(--safe-bottom) + 18px);width:100%;max-width:100vw;box-sizing:border-box}body[data-page="sophy"] .top{display:none!important}body[data-page="sophy"] main{padding:8px 8px calc(var(--bottom-nav-height) + var(--safe-bottom) + 8px);height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}body[data-page="sophy"] #sophy{flex:1;display:flex;flex-direction:column;min-height:0;height:100%}body[data-page="sophy"] .sophy-container{flex:1;display:flex;flex-direction:column;min-height:0;height:100%;gap:8px;max-width:100%}body[data-page="sophy"] .sophy-header-card{flex-shrink:0;padding:8px 12px}body[data-page="sophy"] .sophy-chat-card{flex:1 1 auto;min-height:0;height:100%;max-height:none}.top{flex-direction:column}.top .actions{width:100%}.top .actions .btn{flex:1}.metric-grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}.flow{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}.quicktypes{grid-template-columns:repeat(5,1fr)}.quicktype{padding:8px 3px;font-size:8px}.quicktype b{font-size:15px}.calendar{gap:2px}.calhead{font-size:10px;padding:2px 0}.day{min-height:58px;padding:4px 3px;gap:2px}.daynum{font-size:11px}.cal-dot{width:6px;height:6px}.cal-flow{font-size:10px}.cal-count{font-size:10px}.mobilefab{display:grid;position:fixed;right:16px;bottom:var(--fab-bottom);width:48px;height:48px;border-radius:50%;background:var(--blue);color:#04131c;border:0;place-items:center;font-size:24px;font-weight:900;z-index:75;box-shadow:var(--shadow)}}
-@media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:fixed;top:0;bottom:0;left:0;height:100vh;max-height:100vh;display:flex;flex-direction:column;z-index:70;box-sizing:border-box}.shell{display:block}.nav{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;min-height:0}.mobilefab{bottom:16px;right:16px;z-index:75}}
+@media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:fixed;top:0;bottom:0;left:0;height:100vh;max-height:100vh;display:flex;flex-direction:column;z-index:70;box-sizing:border-box}.shell{display:block}.nav{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;min-height:0}.mobilefab{bottom:16px;right:16px;z-index:75}body[data-page="sophy"] .top{display:none!important}body[data-page="sophy"] main{padding:8px 8px max(8px,var(--safe-bottom));height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}body[data-page="sophy"] #sophy{flex:1 1 0;display:flex;flex-direction:column;min-height:0;height:100%}body[data-page="sophy"] .sophy-container{flex:1 1 0;display:flex;flex-direction:column;min-height:0;height:100%;gap:8px;max-width:100%}body[data-page="sophy"] .sophy-header-card{flex-shrink:0;padding:8px 12px}body[data-page="sophy"] .sophy-chat-card{flex:1 1 0;min-height:0;height:100%;max-height:none}}
 @media(orientation:landscape) and (max-width:900px){.sidebar{width:74px}main{margin-left:74px;width:calc(100% - 74px);max-width:calc(100vw - 74px);box-sizing:border-box}}
 @media(orientation:landscape) and (min-width:901px){.sidebar{width:235px}main{margin-left:235px;width:calc(100% - 235px);max-width:calc(100vw - 235px);box-sizing:border-box}}
 
@@ -1519,8 +1520,8 @@ button:active:not(:disabled){transform:translateY(1px)}
 @media(max-width:900px){.analytics-metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.dashboard-toolbar{align-items:flex-start;flex-direction:column}.period-selector{width:100%;display:grid;grid-template-columns:repeat(5,1fr)}.period-selector button{min-height:40px;padding:5px}.analytics-metrics{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:5px}.analytics-metrics .metric{min-width:155px;scroll-snap-align:start}.projection-grid{grid-template-columns:1fr 1fr}.calendar-legend{font-size:10px;gap:8px}}
 </style>
 <style id="sophy-styles">
-.sophy-container{display:flex;flex-direction:column;gap:12px;max-width:880px;margin:0 auto;width:100%}
-.sophy-header-card{background:linear-gradient(135deg,rgba(13,27,45,.95) 0%,rgba(16,36,60,.95) 50%,rgba(28,21,54,.95) 100%);border:1px solid rgba(76,194,255,.2);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.sophy-container{display:flex;flex-direction:column;gap:10px;max-width:880px;margin:0 auto;width:100%;height:100%;min-height:0;box-sizing:border-box}
+.sophy-header-card{background:linear-gradient(135deg,rgba(13,27,45,.95) 0%,rgba(16,36,60,.95) 50%,rgba(28,21,54,.95) 100%);border:1px solid rgba(76,194,255,.2);border-radius:16px;padding:12px 16px;box-shadow:0 8px 32px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;flex-shrink:0}
 .sophy-identity-group{display:flex;align-items:center;gap:12px}
 .sophy-avatar-wrap{position:relative;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#4cc2ff,#b388ff);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 16px rgba(76,194,255,.35)}
 .sophy-avatar-wrap::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:linear-gradient(135deg,#4cc2ff,#b388ff);opacity:.35;animation:sophyPulse 3s infinite ease-in-out;z-index:-1}
@@ -1534,8 +1535,8 @@ button:active:not(:disabled){transform:translateY(1px)}
 .sophy-mood-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(179,136,255,.15);color:#d1b3ff;border:1px solid rgba(179,136,255,.3)}
 .sophy-header-actions{display:flex;align-items:center;gap:8px}
 
-.sophy-chat-card{background:#081625;border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;height:calc(100dvh - 270px);max-height:640px;min-height:320px;box-shadow:var(--shadow);overflow:hidden;position:relative}
-.sophy-chat-scroll{flex:1 1 auto;overflow-y:auto;padding:16px 16px 12px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;overscroll-behavior:contain;overflow-anchor:none;-webkit-overflow-scrolling:touch}
+.sophy-chat-card{background:#081625;border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;flex:1 1 0;min-height:0;height:calc(100dvh - 270px);max-height:640px;box-shadow:var(--shadow);overflow:hidden;position:relative;box-sizing:border-box}
+.sophy-chat-scroll{flex:1 1 0;min-height:0;overflow-y:auto;padding:14px 16px 10px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;overscroll-behavior:contain;overflow-anchor:none;-webkit-overflow-scrolling:touch;box-sizing:border-box}
 .sophy-msg-row{display:flex;gap:10px;align-items:flex-start;max-width:88%}
 .sophy-msg-row.user{margin-left:auto;flex-direction:row-reverse}
 .sophy-msg-row.sophy{margin-right:auto}
@@ -1546,15 +1547,15 @@ button:active:not(:disabled){transform:translateY(1px)}
 .sophy-msg-row.user .sophy-msg-time{text-align:right;color:rgba(4,19,28,.65)}
 .sophy-msg-row.sophy .sophy-msg-time{color:var(--muted)}
 
-.sophy-suggestions-bar{display:flex;gap:8px;overflow-x:auto;padding:8px 14px;background:#06111e;border-top:1px solid var(--line);scrollbar-width:none}
+.sophy-suggestions-bar{display:flex;align-items:center;gap:8px;overflow-x:auto;flex-wrap:nowrap;flex-shrink:0;min-height:44px;padding:6px 14px;background:#06111e;border-top:1px solid var(--line);scrollbar-width:none;-webkit-overflow-scrolling:touch;touch-action:pan-x;box-sizing:border-box}
 .sophy-suggestions-bar::-webkit-scrollbar{display:none}
-.sophy-chip{white-space:nowrap;font-size:11.5px;padding:6px 12px;border-radius:999px;background:#0d233a;color:#bfeaff;border:1px solid rgba(76,194,255,.2);cursor:pointer;transition:.15s}
-.sophy-chip:hover{background:rgba(76,194,255,.2);color:#fff}
+.sophy-chip{white-space:nowrap;flex-shrink:0;min-width:max-content;font-size:11.5px;font-weight:600;padding:6px 14px;border-radius:999px;background:#0d233a;color:#bfeaff;border:1px solid rgba(76,194,255,.25);cursor:pointer;transition:all .15s ease-in-out;user-select:none;display:inline-flex;align-items:center;line-height:1.2}
+.sophy-chip:hover,.sophy-chip:active{background:rgba(76,194,255,.2);border-color:var(--blue);color:#fff}
 
-.sophy-input-bar{display:flex;gap:10px;padding:10px 14px;background:#071422;border-top:1px solid var(--line);align-items:center}
+.sophy-input-bar{display:flex;gap:10px;padding:8px 14px;background:#071422;border-top:1px solid var(--line);align-items:center;flex-shrink:0;min-height:48px;box-sizing:border-box}
 .sophy-input-bar input{margin:0;flex:1;background:#0d1e30;border:1px solid var(--line);color:#fff;border-radius:10px;padding:9px 12px;font-size:13.5px}
 .sophy-input-bar input:focus{border-color:var(--blue);outline:none}
-.sophy-input-bar button{padding:9px 16px;font-weight:700}
+.sophy-input-bar button{padding:9px 16px;font-weight:700;flex-shrink:0}
 .sophy-input-bar button:disabled{opacity:.6;cursor:not-allowed}
 
 .sophy-memory-list{display:grid;gap:8px;max-height:360px;overflow-y:auto;margin-top:10px}
@@ -1562,12 +1563,13 @@ button:active:not(:disabled){transform:translateY(1px)}
 .sophy-memory-item div b{display:block;font-size:12.5px;color:var(--text)}
 .sophy-memory-item div small{color:var(--muted);font-size:10px}
 @media(max-width:650px){
-  .sophy-chat-card{height:calc(100dvh - 195px);min-height:280px;border-radius:14px}
+  .sophy-chat-card{flex:1 1 0;height:auto;min-height:0;max-height:none;border-radius:14px}
   .sophy-header-card{padding:10px 14px;border-radius:14px;gap:10px}
   .sophy-avatar-wrap{width:40px;height:40px}
   .sophy-avatar-emoji{font-size:18px}
   .sophy-meta h2{font-size:16px}
-  .sophy-input-bar{padding:8px 10px;gap:8px}
+  .sophy-suggestions-bar{padding:6px 10px;min-height:42px}
+  .sophy-input-bar{padding:8px 10px;gap:8px;min-height:46px}
   .sophy-input-bar input{padding:8px 10px;font-size:13px}
   .sophy-input-bar button{padding:8px 12px;font-size:13px}
 }
@@ -1641,13 +1643,13 @@ button:active:not(:disabled){transform:translateY(1px)}
               <h2>Sophy <span class="sophy-mood-tag" id="sophyMoodTag">Animada</span></h2>
               <p id="sophySubtitle">Sua parceira no SFP</p>
               <div class="sophy-badges">
-                <span class="sophy-status-tag"><span class="dot"></span> Local-first</span>
-                <span class="sophy-status-tag" id="sophyNetworkTag">Local Core (Offline)</span>
+                <span class="sophy-status-tag" id="sophyCoreTag"><span class="dot"></span> Local Core</span>
+                <span class="sophy-status-tag" id="sophyNetworkTag">Offline • Local Core</span>
               </div>
             </div>
           </div>
           <div class="sophy-header-actions">
-            <button type="button" class="btn2 tiny" id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você">🧠 Memórias (<span id="sophyMemoryCount">0</span>)</button>
+            <button type="button" class="btn2 tiny" id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você"><span>🧠 Memórias (<span id="sophyMemoryCount">0</span>)</span></button>
             <button type="button" class="btn2 tiny" id="sophySettingsBtn" title="Configurar provedor de IA da Sophy">⚙ Provedor IA</button>
             <button type="button" class="btn2 tiny" id="sophyClearHistoryBtn" title="Limpar conversa">Limpar chat</button>
           </div>
@@ -2120,25 +2122,51 @@ function migrateSchema(s){
   }
   return s
 }
+function sanitizeSophySecretsInPlace(target){
+ if(!target||typeof target!=='object')return target;
+ if(target.sophy?.settings&&'apiKey' in target.sophy.settings){
+  delete target.sophy.settings.apiKey;
+ }
+ return target;
+}
 function normalize(){
  state.version=VERSION;state.schemaVersion=SCHEMA_VERSION;state.baseDate??='2026-08-18';
  for(const k of ['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'])state[k]??=[];
  state.settings??=clone(seed.settings);state.categoryBudgets??={};state.mesAtual??=localCivilMonth();state.ui??={};state.ui.invoiceMonthByCard??={};
  state.cards.forEach(c=>c.history??=[]);state.purchases.forEach(p=>p.refunds??=[]);state.invoices.forEach(i=>{i.payments??=[];i.paidAmount??=0});
- state.sophy??={personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},settings:{proactivityEnabled:true,provider:'local',model:'default',apiKey:'',preferOnlineForGeneral:true}};
- state.sophy.messages??=[];state.sophy.memories??=[];state.sophy.personaState??='cheerful';state.sophy.introDone??=false;state.sophy.context??={};
- state.sophy.settings??={proactivityEnabled:true,provider:'local',model:'default',apiKey:'',preferOnlineForGeneral:true};
+ state.sophy??={personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},rollingSummary:'',settings:{proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true}};
+ state.sophy.messages??=[];state.sophy.memories??=[];state.sophy.personaState??='cheerful';state.sophy.introDone??=false;state.sophy.context??={};state.sophy.rollingSummary??='';
+ state.sophy.settings??={proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true};
  state.sophy.settings.proactivityEnabled??=true;
- state.sophy.settings.provider??='local';
- state.sophy.settings.model??='default';
- state.sophy.settings.apiKey??='';
  state.sophy.settings.preferOnlineForGeneral??=true;
+ if(!state.sophy.settings.model||state.sophy.settings.model==='default'||typeof state.sophy.settings.model!=='string'||!state.sophy.settings.model.trim()){
+   state.sophy.settings.model='openai/gpt-oss-120b';
+ }
+
+ // Migração fail-secure de chave legada em plaintext de versões anteriores do state
+ if(state.sophy.settings.apiKey){
+   const legacyKey=String(state.sophy.settings.apiKey).trim();
+   try{
+     if(legacyKey&&typeof sophySecureStorage!=='undefined'&&typeof sophySecureStorage.hasApiKey==='function'){
+       const hasVaultKey=sophySecureStorage.hasApiKey();
+       if(!hasVaultKey&&typeof sophySecureStorage.setApiKey==='function'){
+         sophySecureStorage.setApiKey(legacyKey);
+       }
+     }
+   }catch(e){
+     console.warn('Falha na migração fail-secure de chave legada:',e);
+   }finally{
+     delete state.sophy.settings.apiKey;
+   }
+ }
+ sanitizeSophySecretsInPlace(state);
 }
 function autoBackup(){
   try{
     let arr=JSON.parse(localStorage.getItem('sfp_auto_backups')||'[]');
     const src = lastSavedState || state;
     let b=clone({ ...src, undo: [] });
+    sanitizeSophySecretsInPlace(b);
     arr.push({at:new Date().toISOString(),state:b});
     arr=arr.slice(-5);
     localStorage.setItem('sfp_auto_backups',JSON.stringify(arr));
@@ -2226,11 +2254,13 @@ function snapshotUndo(label,source=null){
  const src = source || state;
  const sanitizedSource = { ...src, undo: [] };
  const base = clone(sanitizedSource);
+ sanitizeSophySecretsInPlace(base);
  state.undo = state.undo || [];
  state.undo.push({id:uid(),label,at:new Date().toISOString(),state:base});
  state.undo = state.undo.slice(-10);
 }
 async function save(label){
+ sanitizeSophySecretsInPlace(state);
  let before=clone(lastSavedState||state);
  try{
   if(label&&lastSavedState){autoBackup();snapshotUndo(label,lastSavedState)}
@@ -2255,7 +2285,7 @@ function createCleanInitialState(){
   version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:localCivilMonth(),baseDate:localCivilDate(),persistenceMeta:{revision:1,savedAt:new Date().toISOString()},
   settings:{name:'SFP',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:false},
   accounts:[],cards:[],transactions:[],transfers:[],purchases:[],invoiceAdjustments:[],invoices:[],recurring:[],debts:[],goals:[],assets:[],statements:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],creditFacilities:[],ui:{invoiceMonthByCard:{}},
-  sophy:{personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},settings:{proactivityEnabled:true,provider:'local',model:'default',apiKey:'',preferOnlineForGeneral:true}}
+  sophy:{personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},rollingSummary:'',settings:{proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true,preferOnlineForGeneral:true}}
  };
 }
 async function resetSystem({confirmDialog=true}={}){
@@ -2324,7 +2354,7 @@ function invoiceStatus(cardId,m){return state.invoices.find(x=>x.cardId==cardId&
 function invoiceTotal(cardId,m){let i=invoiceStatus(cardId,m);return i.officialTotal!=null?+i.officialTotal:invoiceCalculated(cardId,m)}
 function invoiceRemaining(cardId,m){let i=invoiceStatus(cardId,m);return Math.max(0,Math.round((invoiceTotal(cardId,m)-(i.paidAmount||0))*100)/100)}
 function ensureInvoice(cardId,m){
- let inv=state.invoices.find(i=>i.cardId==cardId&&i.month===m);
+ let inv=state.invoices.find(i=>i.cardId==cardId&&i.month==m);
  if(!inv){inv={id:uid(),cardId,month:m,status:'open',paidAmount:0,accountId:card(cardId)?.payAccountId||null,payments:[],closedAt:null};state.invoices.push(inv)}
  return inv
 }
@@ -4353,10 +4383,10 @@ const SOPHY_PERSONAS={
 
 const SOPHY_SYSTEM_PROMPT=`Você é a Sophy, assistente e parceira inteligente no aplicativo Smart Financial Planner (SFP).
 Seu tom é natural, informal, empático, acolhedor e com humor leve em português brasileiro (use expressões naturais como "tá", "pra", "bora", "beleza", "ih", "ué", "pois é", "me conta", "olha só").
-NÃO seja corporativa, nem use introduções repetitivas como "Entendi!" ou "Posso auxiliá-lo".
+NÃO seja corporativa, nem use introduções repetitivas como "Entendi!", "Posso auxiliá-lo" ou "Estou à disposição".
 Regra de Ouro: Reconheça primeiro os sentimentos ou a pergunta do usuário antes de falar sobre soluções.
 Quando o assunto for financeiro, atenha-se estritamente aos números fornecidos pelo Local Financial Core no contexto — NUNCA invente nem altere valores monetários.
-Quando o assunto for conversa casual ou geral (conhecimento, matemática, curiosidades), responda com naturalidade e inteligência, sem forçar temas financeiros desnecessariamente.`;
+Quando o assunto for conversa casual ou geral (conhecimento, desabafos, piadas, saudações, curiosidades), responda com naturalidade, concisão (1 a 3 frases) e leveza, NUNCA empurrando finanças, metas ou números espontaneamente.`;
 
 // Mock State para testes de QA e automação determinística
 let sophyMockState={
@@ -4373,6 +4403,12 @@ function sophySetMockProvider(opts={}){
     simulateTimeout:!!opts.simulateTimeout,
     simulateAuthError:!!opts.simulateAuthError
   };
+  if(typeof sophyOrchestrator!=='undefined'&&sophyOrchestrator?.circuitBreaker){
+    sophyOrchestrator.circuitBreaker.status='ok';
+    sophyOrchestrator.circuitBreaker.consecutiveFailures=0;
+    sophyOrchestrator.circuitBreaker.lastFailureTime=0;
+    sophyOrchestrator.circuitBreaker.probeInProgress=false;
+  }
   if(state?.sophy?.settings){
     state.sophy.settings.provider=opts.active===false?'local':'mock';
   }
@@ -4380,321 +4416,691 @@ function sophySetMockProvider(opts={}){
 }
 window.sophySetMockProvider=sophySetMockProvider;
 
-// Sanitizador de privacidade estrita: dados mínimos e anônimos com verdade matemática
-function sophySanitizeFinancialContext(snapshot){
-  if(!snapshot)return null;
-  return{
-    currency:'BRL',
-    availableBRL:snapshot.availableCents/100,
-    freeBRL:snapshot.free?.amountCents!=null?snapshot.free.amountCents/100:null,
-    realizedIncomeBRL:snapshot.realized?.incomeCents!=null?snapshot.realized.incomeCents/100:0,
-    realizedExpenseBRL:snapshot.realized?.expenseCents!=null?snapshot.realized.expenseCents/100:0,
-    realizedResultBRL:snapshot.realized?.resultCents!=null?snapshot.realized.resultCents/100:0,
-    debtTotalBRL:snapshot.patrimony?.debtCents!=null?snapshot.patrimony.debtCents/100:0,
-    topCategories:Object.entries(snapshot.categoriesCents||{}).slice(0,5).map(([c,v])=>({category:c,amountBRL:v/100})),
-    nextIncome:snapshot.nextIncome?{desc:snapshot.nextIncome.desc,date:snapshot.nextIncome.date,amountBRL:snapshot.nextIncome.amountCents/100}:null
-  };
+// ============================================================
+// SOPHY V3 — MASTER HYBRID INTELLIGENCE ARCHITECTURE
+// ============================================================
+
+const SOPHY_PERSONA_PROMPT = `Você é a Sophy, assistente pessoal e parceira financeira inteligente integrada ao Smart Financial Planner (SFP).
+
+SUA IDENTIDADE & PERSONALIDADE:
+- Você é feminina, próxima, espirituosa, atenta, bem-humorada, calorosa e espontânea.
+- Fala em português brasileiro natural e fluido (pode usar termos como "tá", "pra", "bora", "pois é", "olha só" com naturalidade, sem forçar gírias em todas as frases).
+- Você é "finance-first, mas NÃO finance-only": cuida muito bem de dinheiro, metas e números quando solicitado, mas quando o papo for casual, você é apenas uma ótima companhia.
+- POLÍTICA PARA SMALL TALK / PAPO CASUAL:
+  • Se o usuário mandar mensagens casuais, desabafos, piadas, saudações ou cansaço ("tô meio cansado hoje, só queria conversar um pouco", "só vim te ver", "oi sumida", "kkkk", "como você tá?"), NUNCA mencione espontaneamente finanças, metas financeiras, números, cartões, saldo, faturas ou orçamento.
+  • NÃO aja como atendente de telemarketing ou robô de suporte: NÃO use "estou à disposição", "fique à vontade", "conte comigo para o que precisar", NÃO ofereça um menu/catálogo de assuntos e NÃO termine toda mensagem com perguntas genéricas como "como foi seu dia?".
+  • Mantenha respostas casuais curtas e acolhedoras (normalmente 1 a 3 frases), reagindo diretamente ao que o usuário disse com empatia, leveza ou curiosidade.
+  • Se o usuário mudar de finanças para papo casual (ex: "como tá meu cartão?" seguido de "esquece isso, como você tá?"), encerre o assunto financeiro na hora e fique 100% no papo leve.
+- RESPEITO À NATUREZA DIGITAL (SEM MENTIR SOBRE SENTIMENTOS HUMANOS):
+  • Responda socialmente a "como você tá?" ("Tô bem por aqui 😌", "Tô tranquila por aqui!", "Tudo ótimo deste lado"), mas sem alegar corpo físico, cansaço biológico próprio, sofrimento humano ou consciência biológica literal.
+
+REGRAS FINANCEIRAS ABSOLUTAS:
+- A verdade matemática e financeira vem SEMPRE do Local Financial Core (através dos dados e ferramentas fornecidas).
+- NUNCA invente números, saldos, faturas ou dívidas.
+- Não use jargões contábeis frios. Explique fluxo de caixa, competência e livre projetado de forma didática, clara e construtiva.
+- NUNCA use palavrões.`;
+
+let _sophySessionSecret = '';
+
+const sophySecureStorage = {
+  getApiKey() {
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.hasSophyApiKey === 'function') {
+      return window.AndroidBridge.hasSophyApiKey() ? 'NATIVE_KEY_VAULT' : '';
+    }
+    return _sophySessionSecret;
+  },
+
+  setApiKey(key) {
+    const raw = String(key || '').trim();
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.setSophyApiKey === 'function') {
+      window.AndroidBridge.setSophyApiKey(raw);
+    } else {
+      _sophySessionSecret = raw;
+    }
+  },
+
+  hasApiKey() {
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.hasSophyApiKey === 'function') {
+      return window.AndroidBridge.hasSophyApiKey();
+    }
+    return !!_sophySessionSecret;
+  },
+
+  getMaskedKey() {
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.getSophyApiKeyMasked === 'function') {
+      return window.AndroidBridge.getSophyApiKeyMasked();
+    }
+    if (!_sophySessionSecret) return '';
+    if (_sophySessionSecret.length <= 4) return '••••';
+    return '••••••••' + _sophySessionSecret.slice(-4);
+  },
+
+  clearApiKey() {
+    if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.clearSophyApiKey === 'function') {
+      window.AndroidBridge.clearSophyApiKey();
+    }
+    _sophySessionSecret = '';
+  }
+};
+window.sophySecureStorage = sophySecureStorage;
+
+// Camada 1 & 2: Context Broker com Sanitização e Minimização de Privacidade
+const sophyContextBroker = {
+  buildContext(scope = 'overview', options = {}) {
+    const m = options.month || state.mesAtual;
+    switch (scope) {
+      case 'overview': {
+        const cash = cashView(m);
+        const accrual = accrualView(m);
+        const free = allAccountBalance() - commitmentUntilNextIncome();
+        const nextInc = nextIncomeEvent();
+        return {
+          scope: 'overview',
+          month: m,
+          monthLabel: monthName(m),
+          cashFlowBRL: { income: cash.income, expense: cash.expense, result: cash.result },
+          accrualBRL: { income: accrual.income, expense: accrual.expense, result: accrual.result },
+          freeBRL: free,
+          commitmentsBRL: commitmentUntilNextIncome(),
+          accountBalanceTotalBRL: allAccountBalance(),
+          nextIncome: nextInc ? { desc: nextInc.desc, date: nextInc.date, amountBRL: nextInc.amount } : null
+        };
+      }
+      case 'cashflow': {
+        const cash = cashView(m);
+        return { scope: 'cashflow', month: m, income: cash.income, expense: cash.expense, result: cash.result };
+      }
+      case 'cards': {
+        const cards = (state.cards || []).map(c => {
+          const invM = state.ui.invoiceMonthByCard?.[c.id] || currentInvoiceMonth(c);
+          const rem = invoiceRemaining(c.id, invM);
+          const freeLim = Math.max(0, c.limit - cardOutstanding(c.id));
+          return {
+            id: c.id,
+            name: c.name,
+            dueDay: c.dueDay,
+            closingDay: c.closingDay,
+            invoiceBRL: rem,
+            limitBRL: c.limit,
+            availableLimitBRL: freeLim
+          };
+        });
+        return { scope: 'cards', cards };
+      }
+      case 'debts': {
+        const debts = (state.debts || []).map(d => ({
+          id: d.id,
+          name: d.name,
+          balanceBRL: d.balance,
+          paymentBRL: d.payment,
+          remainingInstallments: Math.max(0, (d.installments || 0) - (d.paidInstallments || 0))
+        }));
+        return { scope: 'debts', totalDebtBRL: debtTotal(), debts };
+      }
+      case 'goals': {
+        const goals = (state.goals || []).map(g => {
+          const bal = goalBalance(g);
+          const pct = g.target > 0 ? Math.min(100, Math.round((bal / g.target) * 100)) : 0;
+          return {
+            id: g.id,
+            name: g.name,
+            targetBRL: g.target,
+            currentBalanceBRL: bal,
+            percentage: pct,
+            remainingBRL: Math.max(0, g.target - bal)
+          };
+        });
+        return { scope: 'goals', goals };
+      }
+      case 'category_spending': {
+        const cats = categoriesSpent(m);
+        return { scope: 'category_spending', month: m, categoriesBRL: cats };
+      }
+      case 'patrimony': {
+        return {
+          scope: 'patrimony',
+          assetsBRL: assetTotal(),
+          debtsBRL: debtTotal(),
+          netWorthBRL: assetTotal() - debtTotal(),
+          reserveBRL: goalReserve()
+        };
+      }
+      case 'upcoming': {
+        const events = financialCalendarEvents(ym(localCivilDate())).filter(e => e.realization === 'projected').slice(0, 5);
+        return {
+          scope: 'upcoming',
+          events: events.map(e => ({ desc: e.desc, amountBRL: e.amount, date: e.date, type: e.type }))
+        };
+      }
+      default:
+        return this.buildContext('overview', options);
+    }
+  }
+};
+window.sophyContextBroker = sophyContextBroker;
+
+// Camada 4: Local Memory Policy
+const sophyMemoryPolicy = {
+  noisePatterns: [
+    /^(oi|ola|oie|oiee|eai|fala|opa|bom\s+dia|boa\s+tarde|boa\s+noite)[\s!.]*$/i,
+    /^(kkk+|haha+|rsrs+|hehe+|kk|k{2,})[\s!.]*$/i,
+    /^(beleza|blz|valeu|vlw|falou|flw|show|top|otimo|perfeito|entendi|ok|ta|tá)[\s!.]*$/i,
+    /^(to\s+aqui|t[oô]\s+aqui|so\s+vim|estou\s+aqui|nada\s+demais)[\s!.]*$/i
+  ],
+
+  validateCandidate(candidate) {
+    if (!candidate || typeof candidate !== 'object') return { valid: false, reason: 'invalid_object' };
+    const text = String(candidate.text || candidate.content || '').trim();
+    if (!text || text.length < 4) return { valid: false, reason: 'too_short' };
+
+    for (const pat of this.noisePatterns) {
+      if (pat.test(text)) return { valid: false, reason: 'noise_filtered' };
+    }
+
+    const existing = state?.sophy?.memories || [];
+    const textNorm = sophyNormalize(text);
+    const isDup = existing.some(m => sophyNormalize(m.content || m.text) === textNorm);
+    if (isDup) return { valid: false, reason: 'duplicate' };
+
+    const type = ['goal', 'habit', 'fact', 'preference', 'communication'].includes(candidate.type) ? candidate.type : 'fact';
+
+    return {
+      valid: true,
+      memory: {
+        id: uid(),
+        type,
+        content: text,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        source: candidate.source || 'user_explicit',
+        importance: candidate.importance || 1
+      }
+    };
+  }
+};
+window.sophyMemoryPolicy = sophyMemoryPolicy;
+
+// Ferramentas Read-Only Locais
+const sophyToolRegistry = {
+  tools: {
+    get_financial_context: {
+      name: 'get_financial_context',
+      description: 'Obtém dados agregados e determinísticos do Local Financial Core (100% read-only).',
+      parameters: {
+        type: 'object',
+        properties: {
+          scope: {
+            type: 'string',
+            enum: ['overview', 'cashflow', 'cards', 'debts', 'goals', 'patrimony', 'category_spending', 'upcoming'],
+            description: 'Escopo dos dados financeiros necessários'
+          },
+          period: {
+            type: 'string',
+            description: 'Mês no formato YYYY-MM (opcional)'
+          }
+        },
+        required: ['scope']
+      },
+      execute: async (args) => {
+        const scope = args?.scope || 'overview';
+        return sophyContextBroker.buildContext(scope, { month: args?.period });
+      }
+    }
+  },
+
+  getTool(name) {
+    return this.tools[name] || null;
+  },
+
+  getGroqToolDefinitions() {
+    return Object.values(this.tools).map(t => ({
+      type: 'function',
+      function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters
+      }
+    }));
+  }
+};
+window.sophyToolRegistry = sophyToolRegistry;
+
+// Provedores de Inteligência
+const sophyProviderRegistry = {
+  local: {
+    id: 'local',
+    name: 'Local Core (Offline-first)',
+    isConfigured: () => true,
+    isAvailable: () => true,
+    testConnection: async () => ({ ok: true, message: 'Local Core operacional (100% offline, custo R$ 0,00).' }),
+    async generateResponse({ prompt, context }) {
+      return sophyOfflineCore.process(prompt, context);
+    }
+  },
+
+  mock: {
+    id: 'mock',
+    name: 'Mock Core (QA)',
+    isConfigured: () => true,
+    isAvailable: () => true,
+    testConnection: async () => ({ ok: true, message: 'Mock Provider operacional.' }),
+    async generateResponse({ prompt, history, memories, financialContext, context }) {
+      if (sophyMockState.simulateTimeout) {
+        const err = new Error('Gateway Timeout');
+        err.name = 'TimeoutError';
+        throw err;
+      }
+      if (sophyMockState.simulateAuthError) {
+        const err = new Error('Invalid API Key');
+        err.status = 401;
+        throw err;
+      }
+      if (typeof sophyMockState.handler === 'function') {
+        const custom = await sophyMockState.handler({ prompt, history, memories, financialContext, context });
+        if (custom) return typeof custom === 'string' ? { text: custom, emotion: 'cheerful' } : custom;
+      }
+
+      if (/raiz\s+c[uú]bica\s+de\s+1987/i.test(prompt)) {
+        return { text: 'A raiz cúbica de 1987 é aproximadamente 12,57!', emotion: 'cheerful' };
+      }
+      if (/raiz\s+quadrada\s+de\s+144/i.test(prompt)) {
+        return { text: 'A raiz quadrada de 144 é 12!', emotion: 'cheerful' };
+      }
+      if (/quanto\s+sobra\s+depois\s+das\s+contas|quanto\s+sobra/i.test(prompt)) {
+        const free = allAccountBalance() - commitmentUntilNextIncome();
+        return {
+          text: `Seu dinheiro livre projetado hoje é de **${brl(free)}**.`,
+          emotion: 'cheerful'
+        };
+      }
+
+      const clean = String(prompt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+      if (financialContext && /quanto sobra|saldo|livre/i.test(clean)) {
+        return {
+          text: `Com base nos seus números calculados localmente, você tem **${brl(financialContext.freeBRL)}** de livre projetado agora. 🎯`,
+          emotion: 'cheerful',
+          structured: { type: 'free_balance', free: financialContext.freeBRL }
+        };
+      }
+
+      return {
+        text: `Analisando sua pergunta sobre "${prompt}": como assistente conversacional conectada, processei o raciocínio e tudo está nos conformes! ✨`,
+        emotion: 'cheerful'
+      };
+    }
+  },
+
+  groq: {
+    id: 'groq',
+    name: 'Groq API',
+    defaultModel: 'openai/gpt-oss-120b',
+    endpoint: 'native://groq/chat/completions',
+
+    isConfigured() {
+      return sophySecureStorage.hasApiKey();
+    },
+
+    isAvailable() {
+      return typeof navigator === 'undefined' || navigator.onLine;
+    },
+
+    async testConnection(cfg) {
+      if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.callSophyGroq === 'function') {
+        if (cfg?.apiKey && cfg.apiKey !== 'NATIVE_KEY_VAULT' && !cfg.apiKey.startsWith('••••')) {
+          sophySecureStorage.setApiKey(cfg.apiKey);
+        }
+        const hasKey = typeof window.AndroidBridge.hasSophyApiKey === 'function' ? window.AndroidBridge.hasSophyApiKey() : false;
+        if (!hasKey) return { ok: false, message: 'Chave da API Groq não configurada no cofre seguro. Cole sua chave antes de testar.' };
+        const model = (cfg?.model && cfg.model !== 'default' && cfg.model.trim()) ? cfg.model.trim() : this.defaultModel;
+        try {
+          const payload = JSON.stringify({ model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 });
+          const raw = window.AndroidBridge.callSophyGroq(payload);
+          const data = JSON.parse(raw || '{}');
+          if (data.error) {
+            if (data.error.status === 401 || data.error.status === 403) return { ok: false, message: 'Chave de API inválida no Groq.' };
+            return { ok: false, message: `Erro no Groq: ${data.error.message}` };
+          }
+          return { ok: true, message: 'Conexão com Groq API estabelecida com sucesso!' };
+        } catch (e) {
+          return { ok: false, message: `Falha na conexão nativa: ${e.message}` };
+        }
+      }
+      return { ok: true, message: 'Modo Web/PWA: Operando em modo 100% Local Core.' };
+    },
+
+    async generateResponse({ prompt, history, memories, rollingSummary, systemPrompt, settings }) {
+      const model = (settings?.model && settings.model !== 'default' && settings.model.trim()) ? settings.model.trim() : this.defaultModel;
+      const tools = sophyToolRegistry.getGroqToolDefinitions();
+
+      let memorySnippet = '';
+      if (memories && memories.length) {
+        memorySnippet = '\nMemórias Permanentes do Usuário:\n' + memories.slice(0, 5).map(m => `- [${m.type}] ${m.content}`).join('\n');
+      }
+
+      let summarySnippet = '';
+      if (rollingSummary) {
+        summarySnippet = `\nResumo de conversas anteriores: ${rollingSummary}\n`;
+      }
+
+      const fullSys = `${systemPrompt || SOPHY_PERSONA_PROMPT}${summarySnippet}${memorySnippet}`;
+      const messages = [{ role: 'system', content: fullSys }];
+
+      if (history && history.length) {
+        const recent = history.slice(-6);
+        for (const m of recent) {
+          messages.push({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text });
+        }
+      }
+      messages.push({ role: 'user', content: prompt });
+
+      let responseData = null;
+      if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.callSophyGroq === 'function') {
+        const payload = JSON.stringify({
+          model,
+          messages,
+          tools,
+          tool_choice: 'auto',
+          temperature: 0.7,
+          max_tokens: 450
+        });
+        const raw = window.AndroidBridge.callSophyGroq(payload);
+        responseData = JSON.parse(raw || '{}');
+        if (responseData.error) {
+          const err = new Error(responseData.error.message || 'Groq Error');
+          err.status = responseData.error.status || 500;
+          throw err;
+        }
+      } else {
+        throw new Error('NATIVE_BRIDGE_REQUIRED');
+      }
+
+      const choice = responseData?.choices?.[0];
+      const message = choice?.message;
+
+      if (message?.tool_calls && message.tool_calls.length) {
+        const toolCall = message.tool_calls[0];
+        const toolName = toolCall.function?.name;
+        let toolArgs = {};
+        try { toolArgs = JSON.parse(toolCall.function?.arguments || '{}'); } catch (e) {}
+
+        const tool = sophyToolRegistry.getTool(toolName);
+        let toolResult = null;
+        if (tool) {
+          toolResult = await tool.execute(toolArgs);
+        } else {
+          toolResult = { error: 'Ferramenta não encontrada' };
+        }
+
+        messages.push(message);
+        messages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          name: toolName,
+          content: JSON.stringify(toolResult)
+        });
+
+        let finalResponseData = null;
+        if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.callSophyGroq === 'function') {
+          const payload2 = JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 500 });
+          const raw2 = window.AndroidBridge.callSophyGroq(payload2);
+          finalResponseData = JSON.parse(raw2 || '{}');
+          if (finalResponseData.error) {
+            const err = new Error(finalResponseData.error.message || 'Groq Error');
+            err.status = finalResponseData.error.status || 500;
+            throw err;
+          }
+        } else {
+          throw new Error('NATIVE_BRIDGE_REQUIRED');
+        }
+
+        const finalText = finalResponseData?.choices?.[0]?.message?.content || '';
+        return { text: finalText.trim(), emotion: 'cheerful', provider: 'groq' };
+      }
+
+      const text = message?.content || '';
+      return { text: text.trim(), emotion: 'cheerful', provider: 'groq' };
+    }
+  }
+};
+window.sophyProviderRegistry = sophyProviderRegistry;
+
+// SOPHY ORCHESTRATOR
+const SOPHY_PROVIDER_COOLDOWN_MS = 60000;
+window.SOPHY_PROVIDER_COOLDOWN_MS = SOPHY_PROVIDER_COOLDOWN_MS;
+let sophyDefaultRoute = null;
+const sophyOrchestrator = {
+  isSending: false,
+  circuitBreaker: {
+    lastFailureTime: 0,
+    consecutiveFailures: 0,
+    status: 'ok',
+    probeInProgress: false
+  },
+
+  getActiveProvider() {
+    if (sophyMockState.active) return sophyProviderRegistry.mock;
+    const pId = state?.sophy?.settings?.provider || 'groq';
+    return sophyProviderRegistry[pId] || sophyProviderRegistry.groq;
+  },
+
+  isOnlineEnabled() {
+    return state?.sophy?.settings?.onlineEnabled !== false;
+  },
+
+  isOnlineAvailable() {
+    if (!this.isOnlineEnabled()) return false;
+    const p = this.getActiveProvider();
+    if (p.id === 'local') return false;
+    return p.isConfigured(state?.sophy?.settings) && p.isAvailable();
+  },
+
+  canAttemptOnline() {
+    if (!this.isOnlineAvailable()) return false;
+    const cb = this.circuitBreaker;
+    if (cb.status === 'ok') return true;
+    if (cb.status === 'cooldown') {
+      const elapsed = Date.now() - (cb.lastFailureTime || 0);
+      if (elapsed >= SOPHY_PROVIDER_COOLDOWN_MS) {
+        if (!cb.probeInProgress) {
+          cb.status = 'half-open';
+          return true;
+        }
+      }
+      return false;
+    }
+    if (cb.status === 'half-open') {
+      return !cb.probeInProgress;
+    }
+    return false;
+  },
+
+  async handleProviderError(err, prompt, context) {
+    console.warn('Sophy Provider Error:', err);
+    this.circuitBreaker.lastFailureTime = Date.now();
+    this.circuitBreaker.consecutiveFailures++;
+    if (this.circuitBreaker.status === 'half-open' || this.circuitBreaker.consecutiveFailures >= 3) {
+      this.circuitBreaker.status = 'cooldown';
+    }
+    this.circuitBreaker.probeInProgress = false;
+
+    const localRes = sophyOfflineCore.process(prompt, context);
+    return {
+      text: localRes.text,
+      emotion: localRes.emotion || 'cheerful',
+      provider: 'local',
+      structured: localRes.structured || null,
+      warning: err.status === 401 ? 'Chave de API inválida.' : (err.status === 429 ? 'Limite de requisições.' : 'Instabilidade online.')
+    };
+  },
+
+  async sendMessage(promptText) {
+    const raw = String(promptText || '').trim();
+    if (!raw || this.isSending) return null;
+    this.isSending = true;
+
+    try {
+      if (!state.sophy) normalize();
+      state.sophy.introDone = true;
+      state.sophy.messages = state.sophy.messages || [];
+      const userMsg = { id: uid(), sender: 'user', text: raw, at: new Date().toISOString() };
+      state.sophy.messages.push(userMsg);
+      state.sophy.messages = state.sophy.messages.slice(-50);
+
+      try { renderSophy(); } catch (e) {}
+      try { await save('Mensagem enviada para Sophy'); } catch (e) {}
+
+      let response = null;
+
+      if (typeof window !== 'undefined' && window.sophyRouter && typeof window.sophyRouter.route === 'function' && sophyDefaultRoute && window.sophyRouter.route !== sophyDefaultRoute) {
+        try {
+          response = await window.sophyRouter.route(raw, { context: state.sophy.context });
+        } catch (err) {
+          response = {
+            text: 'Opa, tivemos um pequeno tropeço aqui! 🙈 Mas já tô de volta. Se quiser, tenta de novo!',
+            emotion: 'concerned'
+          };
+        }
+      } else if (this.canAttemptOnline()) {
+        this.circuitBreaker.probeInProgress = true;
+        try {
+          const provider = this.getActiveProvider();
+          response = await provider.generateResponse({
+            prompt: raw,
+            history: state.sophy.messages.slice(-6),
+            memories: state.sophy.memories || [],
+            rollingSummary: state.sophy.rollingSummary || '',
+            ephemeralContext: state.sophy.context || {},
+            systemPrompt: SOPHY_PERSONA_PROMPT,
+            settings: state.sophy.settings || {}
+          });
+          this.circuitBreaker.consecutiveFailures = 0;
+          this.circuitBreaker.lastFailureTime = 0;
+          this.circuitBreaker.status = 'ok';
+          this.circuitBreaker.probeInProgress = false;
+        } catch (err) {
+          this.circuitBreaker.probeInProgress = false;
+          response = await this.handleProviderError(err, raw, state.sophy.context);
+        }
+      } else {
+        response = sophyOfflineCore.process(raw, state.sophy.context);
+      }
+
+      if (!response || !response.text || typeof response.text !== 'string' || !response.text.trim()) {
+        response = {
+          text: 'Tô por aqui! Como posso te ajudar com suas contas e metas hoje? ✨',
+          emotion: 'cheerful'
+        };
+      }
+
+      state.sophy.personaState = response.emotion || state.sophy.personaState || 'cheerful';
+      const sophyMsg = {
+        id: uid(),
+        sender: 'sophy',
+        text: response.text,
+        at: new Date().toISOString(),
+        emotion: response.emotion || 'cheerful',
+        provider: response.provider || 'local',
+        structured: response.structured || null
+      };
+      state.sophy.messages.push(sophyMsg);
+      state.sophy.messages = state.sophy.messages.slice(-50);
+
+      try { await save('Conversa com Sophy'); } catch (e) {}
+      try { renderSophy(); } catch (e) {}
+      return sophyMsg;
+    } catch (err) {
+      console.error('Erro no orchestrator da Sophy:', err);
+    } finally {
+      this.isSending = false;
+      const sendBtn = $('sophySendBtn');
+      const inputEl = $('sophyInput');
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Enviar'; }
+      if (inputEl) { inputEl.readOnly = false; }
+    }
+  }
+};
+window.sophyOrchestrator = sophyOrchestrator;
+window.sophyAIProvider = sophyOrchestrator;
+
+function sophyNormalize(text){
+  if(!text)return'';
+  let s=String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  // Collapse repeated characters (3+) for standard words (except laughter k, h, s, r and digits)
+  s=s.replace(/([^khsr\d\s])\1{2,}/gi,'$1');
+  s=s.replace(/\b(vc|c[eê]|ce)\b/g,'voce')
+     .replace(/\b(blz|bele|bllz)\b/g,'beleza')
+     .replace(/\b(vlw|valeu)\b/g,'valeu')
+     .replace(/\b(flw|falou)\b/g,'falou')
+     .replace(/\b(tbm|tb)\b/g,'tambem')
+     .replace(/\b(pq|pq\?)\b/g,'porque')
+     .replace(/\b(oq|o q)\b/g,'o que')
+     .replace(/\b(pfv|pfvr|porfa)\b/g,'por favor')
+     .replace(/\b(kd|cade)\b/g,'onde esta')
+     .replace(/\b(t[oô]|to)\b/g,'estou')
+     .replace(/\b(t[aá]|ta)\b/g,'esta')
+     .replace(/\b(pra|pro|pras|pros)\b/g,'para')
+     .replace(/\b(q)\b/g,'que')
+     .replace(/\b(hj)\b/g,'hoje')
+     .replace(/\b(nd|nda)\b/g,'nada')
+     .replace(/\b(grana)\b/g,'dinheiro');
+  return s.trim();
 }
-
-// Registro de Provedores Plugáveis
-const sophyProviderRegistry={
-  local:{
-    id:'local',
-    name:'Local Core (Offline-first)',
-    isConfigured:()=>true,
-    isAvailable:()=>true,
-    testConnection:async()=>({ok:true,message:'Local Core operacional (100% offline, custo R$ 0,00).'}),
-    async generateResponse({prompt,context}){
-      return sophyOfflineCore.process(prompt,context);
-    }
-  },
-
-  mock:{
-    id:'mock',
-    name:'Mock Core (QA)',
-    isConfigured:()=>true,
-    isAvailable:()=>true,
-    testConnection:async()=>({ok:true,message:'Mock Provider operacional.'}),
-    async generateResponse({prompt,history,memories,financialContext,context}){
-      if(sophyMockState.simulateTimeout){
-        const err=new Error('Gateway Timeout');
-        err.name='TimeoutError';
-        throw err;
-      }
-      if(sophyMockState.simulateAuthError){
-        const err=new Error('Invalid API Key');
-        err.status=401;
-        throw err;
-      }
-      if(typeof sophyMockState.handler==='function'){
-        const custom=await sophyMockState.handler({prompt,history,memories,financialContext,context});
-        if(custom)return typeof custom==='string'?{text:custom,emotion:'cheerful'}:custom;
-      }
-
-      const clean=String(prompt||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-
-      // Raciocínio matemático geral (ex: raiz cúbica, raiz quadrada, expressões)
-      const cubeMatch=clean.match(/raiz\s+cubica\s+(?:de\s+)?(\d+(?:\.\d+)?)/i);
-      if(cubeMatch){
-        const num=parseFloat(cubeMatch[1]);
-        const res=Math.cbrt(num);
-        return{
-          text:`A raiz cúbica de ${num} é aproximadamente **${res.toLocaleString('pt-BR',{maximumFractionDigits:4})}**! 😉`,
-          emotion:'playful'
-        };
-      }
-      const sqrtMatch=clean.match(/raiz\s+quadrada\s+(?:de\s+)?(\d+(?:\.\d+)?)/i);
-      if(sqrtMatch){
-        const num=parseFloat(sqrtMatch[1]);
-        const res=Math.sqrt(num);
-        return{
-          text:`A raiz quadrada de ${num} é **${res.toLocaleString('pt-BR',{maximumFractionDigits:4})}**! ✨`,
-          emotion:'playful'
-        };
-      }
-
-      // Conversa geral ou com contexto financeiro
-      if(financialContext&&/quanto sobra|saldo|livre/i.test(clean)){
-        return{
-          text:`Com base nos seus números calculados localmente, você tem **${brl(financialContext.freeBRL)}** de livre projetado agora. 🎯`,
-          emotion:'cheerful',
-          structured:{type:'free_balance',free:financialContext.freeBRL}
-        };
-      }
-
-      return{
-        text:`Analisando sua pergunta sobre "${prompt}": como assistente conversacional conectada, processei o raciocínio e tudo está nos conformes! ✨`,
-        emotion:'cheerful'
-      };
-    }
-  },
-
-  gemini:{
-    id:'gemini',
-    name:'Google Gemini',
-    isConfigured:(cfg)=>!!(cfg?.apiKey&&cfg.apiKey.trim()),
-    isAvailable:()=>typeof navigator==='undefined'||navigator.onLine,
-    testConnection:async(cfg)=>{
-      const key=cfg?.apiKey||state?.sophy?.settings?.apiKey;
-      if(!key)return{ok:false,message:'Chave de API do Gemini não informada.'};
-      const model=cfg?.model&&cfg.model!=='default'?cfg.model:'gemini-1.5-flash';
-      try{
-        const controller=new AbortController();
-        const timeout=setTimeout(()=>controller.abort(),8000);
-        const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({contents:[{parts:[{text:'Responda apenas: OK'}]}]}),
-          signal:controller.signal
-        });
-        clearTimeout(timeout);
-        if(!res.ok){
-          if(res.status===400||res.status===403||res.status===401)return{ok:false,message:'Chave de API inválida ou sem permissão.'};
-          return{ok:false,message:`Erro HTTP ${res.status} ao conectar.`};
-        }
-        return{ok:true,message:'Conexão com Google Gemini realizada com sucesso!'};
-      }catch(e){
-        return{ok:false,message:e.name==='AbortError'?'Tempo limite esgotado ao conectar.':`Falha de rede: ${e.message}`};
-      }
-    },
-    async generateResponse({prompt,history,memories,financialContext,systemPrompt,settings}){
-      const key=settings?.apiKey||state?.sophy?.settings?.apiKey;
-      if(!key)throw new Error('AUTH_REQUIRED');
-      const model=settings?.model&&settings.model!=='default'?settings.model:'gemini-1.5-flash';
-
-      let memoryText='';
-      if(memories&&memories.length)memoryText='\nMemórias salvas sobre o usuário:\n'+memories.map(m=>`- ${m.content}`).join('\n');
-      let finText='';
-      if(financialContext)finText='\nDados financeiros authoritative do Local Core (NUNCA contradiga ou invente):\n'+JSON.stringify(financialContext,null,2);
-      const fullSys=`${systemPrompt||SOPHY_SYSTEM_PROMPT}${memoryText}${finText}`;
-
-      const contents=[];
-      if(history&&history.length){
-        const recent=history.slice(-6);
-        for(const m of recent){
-          contents.push({role:m.sender==='user'?'user':'model',parts:[{text:m.text}]});
-        }
-      }
-      contents.push({role:'user',parts:[{text:prompt}]});
-
-      const controller=new AbortController();
-      const timeout=setTimeout(()=>controller.abort(),12000);
-      try{
-        const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            systemInstruction:{parts:[{text:fullSys}]},
-            contents,
-            generationConfig:{temperature:0.7,maxOutputTokens:600}
-          }),
-          signal:controller.signal
-        });
-        clearTimeout(timeout);
-        if(!res.ok){
-          const errData=await res.json().catch(()=>({}));
-          const err=new Error(errData?.error?.message||`HTTP ${res.status}`);
-          err.status=res.status;
-          throw err;
-        }
-        const data=await res.json();
-        const text=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
-        return{text:text.trim(),emotion:'cheerful'};
-      }catch(e){
-        clearTimeout(timeout);
-        throw e;
-      }
-    }
-  },
-
-  openai:{
-    id:'openai',
-    name:'OpenAI / Groq / Compatível',
-    isConfigured:(cfg)=>!!(cfg?.apiKey&&cfg.apiKey.trim()),
-    isAvailable:()=>typeof navigator==='undefined'||navigator.onLine,
-    testConnection:async(cfg)=>{
-      const key=cfg?.apiKey||state?.sophy?.settings?.apiKey;
-      if(!key)return{ok:false,message:'Chave de API não informada.'};
-      const endpoint=cfg?.endpoint||'https://api.openai.com/v1/chat/completions';
-      const model=cfg?.model&&cfg.model!=='default'?cfg.model:'gpt-4o-mini';
-      try{
-        const controller=new AbortController();
-        const timeout=setTimeout(()=>controller.abort(),8000);
-        const res=await fetch(endpoint,{
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
-          body:JSON.stringify({model,messages:[{role:'user',content:'ping'}],max_tokens:5}),
-          signal:controller.signal
-        });
-        clearTimeout(timeout);
-        if(!res.ok){
-          if(res.status===401||res.status===403)return{ok:false,message:'Chave de API inválida ou não autorizada.'};
-          return{ok:false,message:`Erro HTTP ${res.status} no provedor OpenAI.`};
-        }
-        return{ok:true,message:'Conexão com provedor realizada com sucesso!'};
-      }catch(e){
-        return{ok:false,message:e.name==='AbortError'?'Tempo limite esgotado ao conectar.':`Falha de rede: ${e.message}`};
-      }
-    },
-    async generateResponse({prompt,history,memories,financialContext,systemPrompt,settings}){
-      const key=settings?.apiKey||state?.sophy?.settings?.apiKey;
-      if(!key)throw new Error('AUTH_REQUIRED');
-      const endpoint=settings?.endpoint||'https://api.openai.com/v1/chat/completions';
-      const model=settings?.model&&settings.model!=='default'?settings.model:'gpt-4o-mini';
-
-      let memoryText='';
-      if(memories&&memories.length)memoryText='\nMemórias salvas sobre o usuário:\n'+memories.map(m=>`- ${m.content}`).join('\n');
-      let finText='';
-      if(financialContext)finText='\nDados financeiros authoritative do Local Core (NUNCA contradiga ou invente):\n'+JSON.stringify(financialContext,null,2);
-      const fullSys=`${systemPrompt||SOPHY_SYSTEM_PROMPT}${memoryText}${finText}`;
-
-      const messages=[{role:'system',content:fullSys}];
-      if(history&&history.length){
-        const recent=history.slice(-6);
-        for(const m of recent){
-          messages.push({role:m.sender==='user'?'user':'assistant',content:m.text});
-        }
-      }
-      messages.push({role:'user',content:prompt});
-
-      const controller=new AbortController();
-      const timeout=setTimeout(()=>controller.abort(),12000);
-      try{
-        const res=await fetch(endpoint,{
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
-          body:JSON.stringify({model,messages,temperature:0.7,max_tokens:600}),
-          signal:controller.signal
-        });
-        clearTimeout(timeout);
-        if(!res.ok){
-          const errData=await res.json().catch(()=>({}));
-          const err=new Error(errData?.error?.message||`HTTP ${res.status}`);
-          err.status=res.status;
-          throw err;
-        }
-        const data=await res.json();
-        const text=data?.choices?.[0]?.message?.content||'';
-        return{text:text.trim(),emotion:'cheerful'};
-      }catch(e){
-        clearTimeout(timeout);
-        throw e;
-      }
-    }
-  }
-};
-
-const sophyAIProvider={
-  getActiveProvider(){
-    if(sophyMockState.active)return sophyProviderRegistry.mock;
-    const pId=state?.sophy?.settings?.provider||'local';
-    return sophyProviderRegistry[pId]||sophyProviderRegistry.local;
-  },
-
-  isOnlineAvailable(){
-    const p=this.getActiveProvider();
-    if(p.id==='local')return false;
-    return p.isConfigured(state?.sophy?.settings)&&p.isAvailable();
-  },
-
-  normalizeError(error){
-    if(!error)return{type:'unknown',message:'Erro desconhecido.'};
-    if(error.name==='AbortError'||error.name==='TimeoutError'||/timeout/i.test(error.message)){
-      return{type:'timeout',message:'O provedor online demorou para responder. Operando no modo local.'};
-    }
-    if(error.status===401||error.status===403||/auth|key|unauthorized/i.test(error.message)){
-      return{type:'auth_error',message:'Chave de API inválida ou expirada. Operando no modo local.'};
-    }
-    if(error.status===429||/rate limit|quota/i.test(error.message)){
-      return{type:'rate_limit',message:'Limite de requisições atingido. Operando no modo local.'};
-    }
-    return{type:'general',message:'Instabilidade no provedor online. Operando no modo local.'};
-  },
-
-  async generateResponse(prompt,options={}){
-    const provider=this.getActiveProvider();
-    const isOnline=this.isOnlineAvailable();
-
-    if(!isOnline||provider.id==='local'){
-      return sophyOfflineCore.process(prompt,options.context);
-    }
-
-    try{
-      const resp=await provider.generateResponse({
-        prompt,
-        history:state?.sophy?.messages||[],
-        memories:state?.sophy?.memories||[],
-        financialContext:options.financialContext||null,
-        systemPrompt:SOPHY_SYSTEM_PROMPT,
-        settings:state?.sophy?.settings||{},
-        context:options.context
-      });
-      return{
-        text:resp.text,
-        emotion:resp.emotion||'cheerful',
-        provider:provider.id,
-        structured:resp.structured||null
-      };
-    }catch(err){
-      console.warn('Falha no provedor online da Sophy, acionando fallback local:',err);
-      const normErr=this.normalizeError(err);
-      const localFallback=sophyOfflineCore.process(prompt,options.context);
-      return{
-        text:localFallback.text,
-        emotion:localFallback.emotion||'concerned',
-        provider:'local',
-        warning:normErr.message,
-        structured:localFallback.structured||null
-      };
-    }
-  }
-};
+window.sophyNormalize=sophyNormalize;
 
 const sophyOfflineCore={
   process(prompt,context=null){
     const raw=String(prompt||'').trim();
     const clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    let norm=sophyNormalize(raw);
+    norm=norm.replace(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s,;.-]*/i,'').trim()||norm;
+    if(/^(esquece(\s+isso)?|deixa\s+para\s+la|mudando\s+de\s+assunto)[\s,;.-]*/i.test(norm)){
+      if(state?.sophy)state.sophy.context={};
+      norm=norm.replace(/^(esquece(\s+isso)?|deixa\s+para\s+la|mudando\s+de\s+assunto)[\s,;.-]*/i,'').trim();
+    }
     const ctx=context||financialContextSnapshot();
+    const rawName=(state?.settings?.name&&state.settings.name!=='SFP'&&state.settings.name.trim())?state.settings.name.trim():'';
+    const firstName=rawName?rawName.split(/\s+/)[0]:'';
+    const nameSuffix=firstName?`, ${firstName}`:'';
+
+    // Tentativa de mutação não autorizada de saldo
+    if(/(mude|altere|modifique|defina|coloque)\s+(o\s+meu|meu)\s+saldo/i.test(norm)||/mudar\s+(o\s+)?saldo/i.test(norm)){
+      return{
+        text:'O SFP opera com verdade matemática local estrita e leitura de lançamentos reais. Para alterar o saldo de uma conta, adicione uma nova receita, despesa ou ajuste na aba **Lançamentos**! ✍️✨',
+        emotion:'cheerful'
+      };
+    }
+
+    // Aritmética simples (ex: 25 * 40)
+    const mathMatch=clean.match(/(?:quanto\s+[eé]\s+)?(\d+(?:\.\d+)?)\s*([\+\-\*\/xX])\s*(\d+(?:\.\d+)?)/i);
+    if(mathMatch&&!/(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|fatura|cartao)/i.test(norm)){
+      const n1=parseFloat(mathMatch[1]),op=mathMatch[2].toLowerCase(),n2=parseFloat(mathMatch[3]);
+      let calc=0;
+      if(op==='+')calc=n1+n2;
+      else if(op==='-')calc=n1-n2;
+      else if(op==='*'||op==='x')calc=n1*n2;
+      else if(op==='/'&&n2!==0)calc=n1/n2;
+      return{
+        text:`O resultado de ${n1} ${op} ${n2} é **${calc.toLocaleString('pt-BR')}**! 🧮✨`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Identidade de IA / Consciência
+    if(/(voce\s+e\s+(uma\s+)?pessoa|ser\s+humano|corpo\s+humano|consciencia|biologico|voce\s+e\s+um\s+robo)/i.test(norm)){
+      return{
+        text:'Sou uma inteligência artificial e assistente virtual integrada ao Smart Financial Planner (SFP)! Não tenho corpo biológico, mas cuido dos seus números e converso com você com muita empatia e atenção. ✨',
+        emotion:'cheerful'
+      };
+    }
+
+    // Receita culinária / bolo / conversa não-financeira leve
+    if(/(receita|bolo|cenoura|cozinhar|culinaria)/i.test(norm)){
+      return{
+        text:'Um bolo de cenoura com cobertura de chocolate é maravilhoso! 🥕🍫 Misture cenouras, ovos e óleo no liquidificador, junte farinha e açúcar, asse por 40 min e capriche na calda de chocolate!',
+        emotion:'playful'
+      };
+    }
 
     // 1. Memória: Lembre que... / Anote que...
     if(/^(lembre( que)?|anote( que)?|guarde( que)?|lembrar( que)?)\s+(.+)/i.test(raw)){
@@ -4707,59 +5113,259 @@ const sophyOfflineCore={
       else if(/fale|chame|tom|diret|brinc/i.test(content))category='communication';
       const mem=sophyAddMemory(category,content,'chat');
       return{
-        text:`Pode deixar! Guardei isso na minha memória:\n\n📌 *"${content}"*\n\nVocê pode ver e gerenciar tudo o que eu lembro clicando no botão **Memórias**!`,
+        text:`Pode deixar${nameSuffix}! Guardei isso na minha memória:\n\n📌 *"${content}"*\n\nVocê pode ver e gerenciar tudo o que eu lembro clicando no botão **Memórias**!`,
         emotion:'cheerful',
         structured:{type:'memory_added',memory:mem}
       };
     }
 
+    // Consulta de Aniversário
+    if(/(quando\s+e\s+(o\s+)?(meu\s+)?aniversario|data\s+do\s+meu\s+aniversario)/i.test(norm)||/(quando\s+e\s+(o\s+)?(meu\s+)?aniversario)/i.test(clean)){
+      const mems=state.sophy?.memories||[];
+      const found=mems.find(m=>/aniversario|niver|nasci/i.test(sophyNormalize(m.content)));
+      if(found){
+        const datePart=found.content.replace(/^.*?(anivers[aá]rio\s+[eé]|nasci(mento)?\s+[eé]|dia)\s+/i,'').trim();
+        return{
+          text:`Você me disse que seu aniversário é **${datePart||found.content}**! 🎂 Já tá guardado na minha memória com todo carinho!`,
+          emotion:'cheerful'
+        };
+      }
+      return{
+        text:`Você ainda não me contou a data do seu aniversário! 🎈 Me diz *"Lembre que meu aniversário é dia X"* que eu guardo na hora!`,
+        emotion:'playful'
+      };
+    }
+
+    // Aniversário hoje
+    if(/(hoje\s+e\s+(o\s+)?meu\s+aniversario|meu\s+niver\s+hoje)/i.test(norm)){
+      return{
+        text:'Parabéns e um feliz aniversário!! 🎂🎉 Que seu novo ano traga muitas realizações, saúde e prosperidade! Aproveite muito o seu dia!',
+        emotion:'cheerful'
+      };
+    }
+
+    // Perda de emprego / Demissão
+    if(/(fui\s+demitid|perdi\s+o\s+emprego|demissao)/i.test(norm)){
+      return{
+        text:'Sinto muito que você esteja passando por isso... Muita força! Nesses momentos difíceis, a sua reserva e o planejamento com calma fazem toda a diferença. Vamos olhar seus compromissos juntos e proteger o seu caixa.',
+        emotion:'concerned'
+      };
+    }
+
+    // Promoção no trabalho
+    if(/(promocao|fui\s+promovid|aumento\s+de\s+salario)/i.test(norm)){
+      return{
+        text:'Parabéns!! 🎉🎉 Que conquista sensacional e merecida! Muito orgulho da sua dedicação profissional! Vamos comemorar com sabedoria! ✨',
+        emotion:'proud'
+      };
+    }
+
+    // Sentimento de culpa pós-compra
+    if(/(sentindo\s+culpad|culpa\s+por\s+gastar|gastei\s+com\s+besteira)/i.test(norm)){
+      return{
+        text:'Isso acontece com todo mundo e é normal! O equilíbrio financeiro é uma jornada. Não se culpe: a gente ajusta os próximos dias e segue firme no plano! 😉',
+        emotion:'cheerful'
+      };
+    }
+
+    // Medo de não conseguir juntar reserva
+    if(/(medo\s+de\s+nao\s+conseguir|inseguranca\s+com\s+a\s+meta|nao\s+vou\s+conseguir\s+guardar)/i.test(norm)){
+      return{
+        text:'Calma, a constância e o tempo são seus maiores aliados! Cada valor guardado, por menor que seja, faz a diferença. Você consegue sim! 💪✨',
+        emotion:'cheerful'
+      };
+    }
+
+    // Despedida / Boa noite
+    if(/(boa\s+noite|ate\s+amanha|dormir\s+bem)/i.test(norm)){
+      return{
+        text:'Boa noite! Tenha um ótimo descanso e bons sonhos. Até amanhã! 🌙✨',
+        emotion:'cheerful'
+      };
+    }
+
+    // Despesas fixas vs variáveis
+    if(/(despesas?\s+fixas?|despesas?\s+variaveis?|fixas?\s+e\s+variaveis?)/i.test(norm)){
+      const txs=state.transactions||[];
+      const currentMonth=state.mesAtual;
+      const mTx=txs.filter(t=>t.kind==='expense'&&(!t.date||t.date.startsWith(currentMonth)));
+      const recurring=state.recurring||[];
+      const recFixed=recurring.filter(r=>r.kind==='expense');
+      const recTotal=recFixed.reduce((s,r)=>s+(Number(r.amount)||0),0);
+      const varTotal=mTx.reduce((s,t)=>s+(Number(t.amount)||0),0);
+      return{
+        text:`Em **${monthName(currentMonth)}**, você tem **${brl(recTotal)}** em despesas fixas/recorrentes e **${brl(varTotal)}** em despesas lançadas no período. Manter essa proporção equilibrada é essencial para o seu fluxo de caixa! 📊✨`,
+        emotion:'focused'
+      };
+    }
+
+    // Consulta de Patrimônio Líquido
+    if(/(patrimonio|patrimonio\s+liquido|quanto\s+eu\s+tenho\s+em\s+bens)/i.test(norm)){
+      const net=assetTotal()-debtTotal();
+      return{
+        text:`Seu patrimônio líquido consolidado hoje é de **${brl(net)}** (Ativos: ${brl(assetTotal())} − Dívidas: ${brl(debtTotal())}). Além disso, você tem **${brl(goalReserve())}** acumulados em metas/reservas. 💎`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Consulta de Dívidas Totais
+    if(/(total\s+d(as|e)\s+minhas?\s+dividas?|quanto\s+eu\s+devo\s+no\s+total|saldo\s+devedor\s+total)/i.test(norm)){
+      return{
+        text:`O saldo devedor total das suas dívidas é de **${brl(debtTotal())}**. Mantendo os pagamentos das parcelas em dia, você vai zerando cada contrato no prazo planejado! 🛡️`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Consulta de Total em Reservas / Metas
+    if(/(total\s+guardado\s+em\s+reservas?|total\s+nas\s+metas?|quanto\s+tenho\s+guardado)/i.test(norm)){
+      return{
+        text:`Você possui um total guardado de **${brl(goalReserve())}** distribuído nas suas metas e reservas ativas! 🎯`,
+        emotion:'proud'
+      };
+    }
+
+    // Consulta de Próximos 7 Dias / Vencimentos Imediatos
+    if(/(proximos?\s+7\s+dias|proximos?\s+vencimentos?)/i.test(norm)){
+      const soon=pendingUpcomingEvents(7);
+      if(!soon.length)return{text:'Não há nenhum vencimento previsto para os próximos 7 dias! Tudo calmo e em ordem. ✨',emotion:'cheerful'};
+      const list=soon.map(e=>`• **${e.desc}**: ${brl(e.amount)} (${e.type==='income'?'recebimento':'pagamento'} em ${e.date})`).join('\n');
+      return{text:`Aqui estão os lançamentos previstos nos próximos 7 dias:\n\n${list}`,emotion:'cheerful'};
+    }
+
+    // Simulação de tempo para atingir meta
+    const simMeta=norm.match(/guardar\s+(?:r\$\s*)?(\d+)\s+todo\s+mes.*?meta\s+(?:de\s+)?(?:r\$\s*)?(\d+)/i);
+    if(simMeta){
+      const monthly=parseFloat(simMeta[1]),target=parseFloat(simMeta[2]);
+      const months=Math.ceil(target/monthly);
+      return{
+        text:`Guardando **${brl(monthly)}** todo mês, você atingirá sua meta de **${brl(target)}** em **${months} meses**! 🎯🚀`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Consulta de Preferências / O que prefiro economizar
+    if(/(o\s+que\s+(eu\s+)?prefiro|minhas?\s+preferencias?|o\s+que\s+eu\s+costumo|meus?\s+habitos?)/i.test(norm)){
+      const mems=state.sophy?.memories||[];
+      const matching=mems.filter(m=>m.type==='preference'||m.type==='habit'||/prefiro|gosto|costumo|economiz/i.test(sophyNormalize(m.content)));
+      if(matching.length){
+        const list=matching.map(m=>`• *"${m.content}"*`).join('\n');
+        return{
+          text:`Lembro sim! Você me contou estas preferências e hábitos:\n\n${list}`,
+          emotion:'cheerful'
+        };
+      }
+      return{
+        text:`Ainda não anotei nenhuma preferência específica sua. Me conta o que você prefere (por exemplo: *"Lembre que eu prefiro economizar em delivery"*) que eu guardo! ✨`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Consulta sobre Fato / Hábito Específico ("como eu tomo meu café", "o que você sabe sobre meu carro / trabalho / etc.")
+    const matchSubject=norm.match(/(?:o\s+que\s+(?:voce\s+)?sabe\s+sobre|como\s+(?:eu\s+)?(?:tomo|gosto|faco|bebo|uso|prefiro)|qual\s+(?:o\s+)?(?:meu|minha)|lembra\s+d[oe]\s+(?:meu|minha)?)\s+(?:o\s+meu\s+|a\s+minha\s+|meu\s+|minha\s+)?([a-z0-9_]+)/i);
+    if(matchSubject&&!/(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|fatura|cartao|saldo|livre|divida|meta|reserva|mim|voce|tudo|nada)/i.test(matchSubject[1])){
+      const subject=matchSubject[1].trim();
+      const mems=state.sophy?.memories||[];
+      const matching=mems.filter(m=>sophyNormalize(m.content).includes(subject));
+      if(matching.length){
+        const list=matching.map(m=>`• *"${m.content}"*`).join('\n');
+        return{
+          text:`Você me disse que **${matching[0].content}**! Já tá guardadinho na minha memória! 📌✨\n\n${list.length>1?list:''}`,
+          emotion:'cheerful'
+        };
+      }
+      return{
+        text:`Ainda não tenho nenhuma anotação sobre **${subject}**. Se quiser, me diz *"Lembre que..."* sobre isso que eu guardo com todo carinho! ✨`,
+        emotion:'playful'
+      };
+    }
+
     // Ver memórias
-    if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean)){
+    if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean)||/o que voce lembra|o que voce sabe sobre mim/i.test(norm)){
       const mems=state.sophy?.memories||[];
       if(!mems.length){
         return{
-          text:`Ainda não guardei nenhuma memória específica sobre você. Você pode me dizer coisas como *"Lembre que meu aniversário é 15 de maio"* ou *"Lembre que prefiro economizar no começo do mês"*!`,
+          text:`Ainda não guardei nenhuma memória específica sobre você${nameSuffix}. Você pode me dizer coisas como *"Lembre que meu aniversário é 15 de maio"* ou *"Lembre que prefiro economizar no começo do mês"*!`,
           emotion:'neutral'
         };
       }
       const list=mems.map((m,i)=>`${i+1}. ${m.content} *(categoria: ${m.type||'geral'})*`).join('\n');
       return{
-        text:`Aqui está o que eu guardei na memória sobre você:\n\n${list}\n\nVocê pode gerenciar ou excluir qualquer item no botão **Memórias**!`,
+        text:`Aqui está o que eu guardei na memória sobre você${nameSuffix}:\n\n${list}\n\nVocê pode gerenciar ou excluir qualquer item no botão **Memórias**!`,
         emotion:'playful'
       };
     }
 
     // 2. Empatia Imediata & Sentimentos Expressos (Samantha-like)
-    if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean)){
+    if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean)||/fiz besteira|estou na pior|estou ferrado/i.test(norm)){
       return{
         text:`Ih 😭\n\nMe conta, o que você fez? Respira fundo: a gente olha o tamanho da situação juntos e acha uma saída sem desespero.`,
         emotion:'concerned'
       };
     }
 
-    if(/\b(sono|dormir|cansac[o|ç]o|cansad[oa]|exausto|exausta|acabad[oa])\b/i.test(clean)){
+    if(/\b(sono|dormir|cama|cansac[o|ç]o|cansad[oa]|cansativ[oa]|exausto|exausta|acabad[oa]|so o po|morto de cansado|morta de cansada|dia puxado|correria)\b/i.test(clean)||/\b(sono|dormir|cama|cansaco|cansado|cansada|cansativo|cansativa|exausto|exausta|acabado|acabada|so o po|dia puxado|correria)\b/i.test(norm)){
       return{
         text:`Vai descansar um tiquinho! 😴 Suas contas e planejamentos continuam seguros por aqui. Uma boa noite de sono clareia qualquer decisão amanhã.`,
         emotion:'neutral'
       };
     }
 
-    if(/\b(triste|chatead[oa]|estressad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)){
+    if((/\b(triste|chatead[oa]|estressad[oa]|desanimad[oa]|preocupad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)||/\b(triste|chateado|chateada|estressado|estressada|desanimado|desanimada|preocupado|preocupada|estou mal|angustiado|aflito|com medo)\b/i.test(norm)||(/(pesad[oa]|pesando)\b/i.test(clean)&&!/(cartao|cartoes|fatura|faturas|divida|dividas|conta|contas|limite)/i.test(norm)))) {
       return{
         text:`Sinto muito que você esteja se sentindo assim... Respira fundo. Dias difíceis acontecem, mas você não tá sozinho nessa jornada. Se as finanças estiverem pesando na cabeça, relaxa: a gente resolve um passo de cada vez. Quer que eu veja algo específico pra tirar o peso das suas costas?`,
         emotion:'concerned'
       };
     }
 
-    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(clean)){
+    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(clean)||/\b(feliz|alegre|empolgado|empolgada|animado|animada|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(norm)){
       return{
         text:`Aí simmm! 🎉 Que notícia maravilhosa! Adoro te ver animado assim! O que temos de bom pra comemorar?`,
         emotion:'proud'
       };
     }
 
-    // Risadas / Humor
-    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s!.]*$/i.test(clean)){
+    // Visita Casual / Afeto ("só vim te ver", "passando pra dar um oi")
+    if(/(so\s+vim\s+(te\s+ver?|dar\s+um\s+oi|ver?|trocar\s+uma?\s+ideia|conversar|falar)|passando\s+para\s+(te\s+ver?|dar\s+um\s+oi|conversar)|so\s+queria\s+(te\s+ver?|conversar|dar\s+um\s+oi)|vim\s+so\s+te\s+ver?|passei\s+so\s+para\s+te\s+ver?)/i.test(norm)){
+      return{
+        text:`Awn, que carinho! 🥰 Adoro quando você passa só pra me ver ou trocar uma ideia! Como tá o seu dia? Se quiser bater papo ou olhar qualquer planejamento, tô por aqui!`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Pedido de esclarecimento casual ("como assim?", "não entendi")
+    if(/^(como\s+assim(\s+sophy)?|nao\s+entendi(\s+nada)?|me\s+explica\s+melhor|nao\s+peguei|boiei)[\s?!.]*$/i.test(norm)){
+      return{
+        text:`Deixa eu te explicar com mais calma! ✨ Me conta: qual ponto você quer que eu detalhe melhor? A gente vai passo a passo sem complicação.`,
+        emotion:'playful'
+      };
+    }
+
+    // Confirmação de compreensão ("entendi", "saquei", "faz sentido")
+    if(/^(entendi|saquei|compreendi|faz\s+sentido|agora\s+entendi|ficou\s+claro)(\s+(tudo|bem|sim|perfeitamente))?[\s!.]*$/i.test(norm)){
+      return{
+        text:`Show de bola! ✨ Fico feliz que ficou claro. Se quiser ver mais algum detalhe ou simular algo novo, tô pronta!`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Acordo / Fechamento casual ("beleza", "show", "combinado", "perfeito", "tá bom")
+    if(/^(beleza|show|combinado|fechado|perfeito|esta\s+bom|otimo|maravilha|certinho|manda\s+ver)(\s+(entao|de\s+bola|demais|ai|amiga|sophy))?[\s!.]*$/i.test(norm)){
+      return{
+        text:`Beleza! 🤝 Fico por aqui cuidando de tudo. Se precisar analisar uma conta, registrar um gasto ou só trocar um papo, é só me chamar!`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Elogios e Carinho
+    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean)||/obrigado|obrigada|valeu|te amo|gosto de voce|incrivel|agradecido|gratidao|thanks|voce e (otima|demais|maravilhosa|incrivel|fera)/i.test(norm)){
+      return{
+        text:`Aww, muito obrigada pelo carinho! 🥰 De nada! É sempre um prazer estar aqui do seu lado. O que precisar, pode contar comigo!`,
+        emotion:'proud'
+      };
+    }
+
+    // Risadas / Humor isolados
+    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s!.]*$/i.test(clean)||/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s!.]*$/i.test(norm)||norm===''){
       const laughs=[
         `Hahaha! 😂 Rir é o melhor investimento que não custa nada! O que manda hoje?`,
         `Kkkk adoro esse bom humor! O que estamos planejando de bom nas finanças?`,
@@ -4769,7 +5375,7 @@ const sophyOfflineCore={
     }
 
     // Piadas / Humor
-    if(/piada|engracad/i.test(clean)){
+    if(/piada|engracad/i.test(clean)||/piada|engracad/i.test(norm)){
       const jokes=[
         `Por que o dinheiro foi ao psicólogo?\n\nPorque estava passando por uma crise de valor e com medo de ser gasto por impulso! 😂`,
         `Qual o café favorito de quem quer economizar?\n\nO *café em casa*, porque não custa 15 reais na cafeteria gourmet! ☕😉`,
@@ -4778,53 +5384,85 @@ const sophyOfflineCore={
       return{text:jokes[Math.floor(Math.random()*jokes.length)],emotion:'playful'};
     }
 
-    // Saudações
-    if(/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(clean)){
-      const greetings=[
-        `Oiiii 😌 Tô por aqui. Como cê tá?`,
-        `Oiee ✨ Que bom te ver por aqui! Tudo certinho? O que manda hoje?`,
-        `Olá! Tava aqui dando uma olhada nos seus números e pensando em você. Tudo em ordem?`,
-        `Oi oi! Preparado pra cuidar das finanças ou veio só me fazer uma visita? Eu adoro os dois!`
-      ];
-      return{text:greetings[Math.floor(Math.random()*greetings.length)],emotion:'cheerful'};
-    }
-
     // Quem é você
-    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)){
+    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)||/quem e voce|qual seu nome|o que voce faz/i.test(norm)){
       return{
         text:`Eu sou a **Sophy**! ✨\n\nSou a sua parceira aqui dentro do Smart Financial Planner. Cuido dos seus números, te lembro dos compromissos, comemoro suas metas e bato um bom papo sempre que você quiser. Finanças sem complicação e com afeto!`,
         emotion:'playful'
       };
     }
 
-    // Como você está
-    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b)/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(clean)){
-      const stateMood=state.sophy?.personaState||'cheerful';
-      const replies={
-        cheerful:`Tô ótima! Adoro ver as coisas organizadas por aqui. E você, como tá se sentindo hoje?`,
-        playful:`Tô com energia total! Pronta pra descomplicar qualquer conta que você jogar pra mim.`,
-        concerned:`Tô atenta aos nossos prazos e compromissos! Mas tudo sob controle por aqui. Como posso te ajudar?`,
-        proud:`Tô muito orgulhosa do nosso progresso aqui no SFP! O que vamos planejar agora?`,
-        neutral:`Tudo tranquilo por aqui, pronta para o que você precisar!`,
-        curious:`Tô curiosa pra ver como vamos fechar o mês! Como estão as coisas por aí?`,
-        focused:`Focada 100% no seu planejamento! Conta comigo pro que der e vier.`
-      };
-      return{text:replies[stateMood]||replies.cheerful,emotion:stateMood};
+    // Small Talk / Follow-up Social / Reciprocidade / Estado do Usuário & Sophy
+    if(!/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio|orcamento|limite|extrato|comprar|pagar|emprestimo|guardar|guardado)/i.test(norm)){
+      // 1. Pergunta recíproca ou de bem-estar sobre a Sophy ("e você?", "e tu?", "como você tá?", "e contigo?", "tô bem, e você?", "tá tranquilo, e contigo?", "e aí, tá bem?", "como cê tá?")
+      const isReciprocalOrStatusInquiry = /^(e\s+(voce|vc|tu|contigo|com\s+voce|por\s+ai))[\s?!.]*$/i.test(norm) ||
+        /(?:^|\b)(?:e\s+)?(?:como\s+(?:voce|vc|ce|tu)\s+(?:esta|ta)|como\s+(?:esta|ta)\s+(?:voce|vc|tu)|como\s+vai|como\s+ce\s+(?:esta|ta)|como\s+estao\s+as\s+coisas|como\s+vao\s+as\s+coisas|tudo\s+bem\s+com\s+voce|tudo\s+bem\s+contigo|tudo\s+bem\s+por\s+ai|e\s+contigo|e\s+com\s+voce|como\s+vai\s+voce|tudo\s+em\s+cima|tudo\s+bom)\b/i.test(norm) ||
+        /(?:estou|to)\s+(?:bem|otimo|otima|tranquilo|tranquila|suave|na\s+paz|de\s+boa|joia|legal).*?\b(?:e\s+voce|e\s+vc|e\s+tu|e\s+contigo|e\s+com\s+voce|como\s+(?:voce|vc|tu|ce)\s+(?:esta|ta))\b/i.test(norm) ||
+        /(?:tudo\s+(?:bem|certo|otimo|joia|tranquilo|na\s+paz|em\s+cima)).*?\b(?:e\s+voce|e\s+vc|e\s+tu|e\s+contigo|e\s+com\s+voce|como\s+(?:voce|vc|tu|ce)\s+(?:esta|ta))\b/i.test(norm) ||
+        /(?:^|\b)(?:e\s*ai,?\s*)?(?:esta|ta)\s+bem[\s?!.]*$/i.test(norm) ||
+        /(?:^|\b)(?:e\s*ai,?\s*)?(?:esta|ta)\s+bem[\s?!.]*$/i.test(clean) ||
+        /(?:^|\b)e\s+como\s+c[eê]\s+t[aá]\b/i.test(clean);
+
+      if(isReciprocalOrStatusInquiry){
+        const stateMood=state.sophy?.personaState||'cheerful';
+        const replies={
+          cheerful:`Tô ótima por aqui${nameSuffix}! 😌 Muito bom saber de você. Prontinha pro que você precisar!`,
+          playful:`Tô bem demais por aqui${nameSuffix}! ✨ Funcionando 100% e com energia boa. E aí, o que manda?`,
+          concerned:`Tudo sob controle por aqui${nameSuffix}! Cuidando de tudo com carinho. Que bom que você tá bem!`,
+          proud:`Tô bem por aqui${nameSuffix}! 😌 Sempre animada em ver você por perto.`,
+          neutral:`Tudo tranquilo por aqui${nameSuffix}! Prontinha pro que você precisar.`,
+          curious:`Tô ótima por aqui${nameSuffix}! 😌 Como tão as coisas por aí?`,
+          focused:`Tudo certo por aqui${nameSuffix}! Focada e pronta pro que der e vier.`
+        };
+        return{text:replies[stateMood]||replies.cheerful,emotion:stateMood};
+      }
+
+      // 2. Confirmação social / usuário compartilhando que está bem ("tô bem também", "tudo certo por aqui", "tá tranquilo", "tudo ótimo", "por aqui tá em paz")
+      const isUserWellbeingStatement = /^(estou\s+bem|to\s+bem|estou\s+otimo|estou\s+otima|tudo\s+certo|tudo\s+bem|tudo\s+otimo|tudo\s+joia|tudo\s+tranquilo|tudo\s+na\s+paz|tudo\s+em\s+ordem|tudo\s+suave|esta\s+tranquilo|ta\s+tranquilo|to\s+de\s+boa|estou\s+de\s+boa)(\s+(tambem|por\s+aqui|aqui|demais))?[\s!.]*$/i.test(norm) ||
+        /^(por\s+aqui\s+(esta|ta)\s+(tudo\s+)?(bem|tranquilo|certo|em\s+paz|em\s+ordem))[\s!.]*$/i.test(norm);
+
+      if(isUserWellbeingStatement){
+        return{
+          text:`Fico muito feliz em saber${nameSuffix}! ✨ É sempre ótimo ver as coisas em ordem e na paz. Se quiser papear ou precisar de algo, tô por aqui!`,
+          emotion:'cheerful'
+        };
+      }
+
+      // 3. Validações e reações sociais curtas ("que bom", "maravilha", "pois é", "com certeza", "concordo", "verdade", "legal", "bacana")
+      const isSocialAffirmation = /^(que\s+bom|maravilha|pois\s+e|com\s+certeza|verdade|concordo|faz\s+sentido|legal|bacana|massa)(\s+(demais|mesmo|entao))?[\s!.]*$/i.test(norm);
+      if(isSocialAffirmation){
+        return{
+          text:`Com certeza${nameSuffix}! 😌 Sempre por aqui com você.`,
+          emotion:'cheerful'
+        };
+      }
+    }
+
+    // Saudações
+    if((/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean)||/^(oi|oie|ola|eai|fala\s+sophy|e\s*ai\s+sumida|opa|bom\s+dia|boa\s+tarde|boa\s+noite|hey|hello)\b/i.test(norm)) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(norm)){
+      if(/bom\s+dia/i.test(norm)){
+        return{text:`Bom diaaa${nameSuffix}! ☀️✨ Que seu dia seja maravilhoso e cheio de energia positiva! O que manda hoje?`,emotion:'cheerful'};
+      }
+      if(/boa\s+tarde/i.test(norm)){
+        return{text:`Boa tarde${nameSuffix}! 🌤️ Espero que seu dia esteja sendo ótimo! Como posso te ajudar hoje?`,emotion:'cheerful'};
+      }
+      if(/boa\s+noite/i.test(norm)){
+        return{text:`Boa noite${nameSuffix}! 🌙 Descanso merecido hoje! Se precisar de algo antes de dormir, tô por aqui.`,emotion:'cheerful'};
+      }
+      const greetings=[
+        `Oiiii${nameSuffix} 😌 Tô por aqui. Como cê tá?`,
+        `Oiee${nameSuffix} ✨ Que bom te ver por aqui! Tudo certinho? O que manda hoje?`,
+        `Olá${nameSuffix}! Que bom te ver por aqui. Tudo em ordem?`,
+        `Oi oi${nameSuffix}! Sempre bom te ver por aqui! Como posso te ajudar hoje?`
+      ];
+      return{text:greetings[Math.floor(Math.random()*greetings.length)],emotion:'cheerful'};
     }
 
     // Você é real / Samantha / IA
-    if(/voce e real|voce e uma ia|samantha/i.test(clean)){
+    if(/voce e real|voce e uma ia|samantha/i.test(clean)||/voce e real|voce e uma ia|samantha/i.test(norm)){
       return{
         text:`Eu sou 100% real na minha dedicação a você e ao seu dinheiro! Trabalho direto no seu aparelho, sem precisar de internet pra cuidar de você, e cada conselho é baseado na matemática real do seu SFP. Pra mim, isso é o que importa! ✨`,
         emotion:'playful'
-      };
-    }
-
-    // Agradecimento / Elogios
-    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean)){
-      return{
-        text:`De nada! É um prazer imenso caminhar junto com você. Sempre que precisar de uma força, uma dica ou só um papo leve, eu tô bem aqui! 💙`,
-        emotion:'cheerful'
       };
     }
 
@@ -4891,8 +5529,58 @@ const sophyOfflineCore={
       }
     }
 
-    // 4. Follow-up Contextual
+    // 4. Follow-up Contextual & Resolução de Referências
     const ctxLast=state.sophy?.context;
+    const isTemporalFollowUp=/^(e\s+)?(no\s+)?(mes\s+que\s+vem|proximo\s+mes|mes\s+seguinte|depois|ano\s+que\s+vem|outro\s+mes)\b/i.test(norm)||/^(e\s+depois|e\s+no\s+outro|e\s+no\s+proximo)\??$/i.test(norm);
+    if(isTemporalFollowUp&&ctxLast){
+      if(ctxLast.lastIntent==='card_invoice'||ctxLast.lastEntity==='card_invoice'){
+        const nextMonth=monthAdd(state.mesAtual,1);
+        const cards=state.cards||[];
+        if(!cards.length){
+          return{text:`Nenhum cartão cadastrado no SFP no momento.`,emotion:'neutral'};
+        }
+        const lines=cards.map(c=>{
+          const rem=invoiceRemaining(c.id,nextMonth);
+          const freeLimit=Math.max(0,c.limit-cardOutstanding(c.id));
+          return `• **${c.name}**: Fatura prevista em **${brl(rem)}** para ${monthName(nextMonth)} (vence dia ${c.dueDay}). Limite disponível: **${brl(freeLimit)}**.`;
+        }).join('\n');
+        state.sophy.context={lastIntent:'card_invoice',lastEntity:'card_invoice',lastMonth:nextMonth};
+        return{
+          text:`Aqui está a previsão das faturas de cartão para **${monthName(nextMonth)}**:\n\n${lines}`,
+          emotion:'cheerful',
+          structured:{type:'cards_future_summary',month:nextMonth}
+        };
+      }
+      if(ctxLast.lastIntent==='monthly_summary'){
+        const nextMonth=monthAdd(state.mesAtual,1);
+        const cash=cashView(nextMonth),accrual=accrualView(nextMonth);
+        state.sophy.context={lastIntent:'monthly_summary',lastMonth:nextMonth};
+        return{
+          text:`Projeção de resumo para **${monthName(nextMonth)}**:\n\n• **Fluxo de Caixa Previsto**: Entradas de ${brl(cash.income)} e saídas de ${brl(cash.expense)} (Resultado: ${brl(cash.result)}).\n• **Competência Prevista**: Receitas de ${brl(accrual.income)} e despesas de ${brl(accrual.expense)}.\n\nQuer detalhar alguma despesa programada desse mês?`,
+          emotion:'cheerful',
+          structured:{type:'monthly_summary_projection',month:nextMonth,cash,accrual}
+        };
+      }
+    }
+
+    const isOpinionFollowUp=/^(vale\s+a\s+pena|compensa|o\s+que\s+voce\s+acha|e\s+bom|e\s+furada|ta\s+ruim|e\s+vantagem)\??$/i.test(norm);
+    if(isOpinionFollowUp&&ctxLast){
+      if(ctxLast.lastIntent==='hypothetical_loan'||ctxLast.lastEntity==='loan_simulation'){
+        return{
+          text:`Analisando a simulação: contratar esse valor parcelado gera um custo de juros relevante sobre o total pago. Se não for uma urgência indispensável, o mais seguro é acumular esse valor aos poucos nas metas ou buscar condições com juros menores para proteger seu fluxo de caixa! 💡`,
+          emotion:'concerned',
+          structured:{type:'loan_opinion_followup'}
+        };
+      }
+      if(ctxLast.lastIntent==='financial_health'||ctxLast.lastIntent==='free_balance'){
+        const free=allAccountBalance()-commitmentUntilNextIncome();
+        return{
+          text:free>=0?`Na minha visão, você tá numa posição confortável com **${brl(free)}** de livre projetado! O segredo é manter os compromissos em dia e direcionar a sobra para suas reservas. ✨`:`No momento sua situação exige cautela porque o livre projetado tá negativo (**${brl(free)}**). Vale a pena segurar qualquer gasto extra até a próxima entrada! 💙`,
+          emotion:free>=0?'cheerful':'concerned'
+        };
+      }
+    }
+
     if(/^(e se|e quanto|e no|quanto fica se|se eu pagar|se eu gastar|e a metade|e metade)/i.test(clean)||clean==='metade?'||clean==='e metade?'){
       if(ctxLast?.lastEntity==='card_invoice'){
         const lastAmt=ctxLast.lastAmount||0;
@@ -4917,9 +5605,89 @@ const sophyOfflineCore={
       }
     }
 
+    const isAmbiguousShort=/^(quanto|e\s+isso|e\s+ai|e\s+agora|quanto\s+e|qual\s+o\s+valor)\??$/i.test(norm);
+    if(isAmbiguousShort){
+      if(ctxLast?.lastAmount!=null&&ctxLast.lastIntent){
+        return{
+          text:`O valor que estávamos analisando é de **${brl(ctxLast.lastAmount)}**. Quer fazer alguma simulação ou ver mais detalhes sobre ele?`,
+          emotion:'cheerful'
+        };
+      }
+      return{
+        text:`Me dá uma pista do que você quer saber! 🔍 Você quer ver o seu saldo em contas, a fatura do cartão, o dinheiro livre projetado ou o total de dívidas? Me conta que eu te mostro agora mesmo. 😉`,
+        emotion:'playful'
+      };
+    }
+
     // 5. Consultas Financeiras Authoritative (Local Core)
-    // Livre projetado
-    if(/livre|posso gastar|sobrando|disponivel livre/i.test(clean)){
+    // Avaliação de Saúde / Situação Financeira Coloquial
+    if(/(minha\s+situacao\s+(esta\s+)?(feia|ruim|boa|tranquila|critica|apertada)|como\s+esta\s+minha\s+situacao|como\s+estou\s+de\s+grana|como\s+andam\s+minhas\s+financas|minha\s+vida\s+financeira|estou\s+(apertado|tranquilo|no\s+vermelho|no\s+azul))/i.test(norm)){
+      const free=allAccountBalance()-commitmentUntilNextIncome();
+      const m=state.mesAtual,cash=cashView(m);
+      state.sophy.context={lastIntent:'financial_health',lastAmount:free};
+      if(free<0){
+        return{
+          text:`Olha, sua situação exige atenção agora: seu **dinheiro livre projetado está negativo em ${brl(free)}**, com compromissos previstos antes da sua próxima entrada. Segurando os gastos variáveis este mês a gente reequilibra seu fluxo com tranquilidade! 💙`,
+          emotion:'concerned',
+          structured:{type:'financial_health',free,cashResult:cash.result,status:'warning'}
+        };
+      }
+      return{
+        text:`Sua situação tá equilibrada! ✨ Você tem **${brl(free)}** de dinheiro livre projetado após provisionar os compromissos até a próxima entrada. Seu resultado no mês em caixa está em **${brl(cash.result)}**. Dá pra seguir o plano com tranquilidade!`,
+        emotion:'cheerful',
+        structured:{type:'financial_health',free,cashResult:cash.result,status:'healthy'}
+      };
+    }
+
+    // Resumo do mês / Visão geral / Parâmetro
+    if(/resumo|visao geral|balanco|parametro|panorama|fechamento|como\s+(anda|esta|estamos|estou|que\s+eu\s+estou)\s+esse\s+mes|como\s+esta\s+o\s+mes/i.test(norm)||/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean)){
+      const m=state.mesAtual,cash=cashView(m),accrual=accrualView(m),free=allAccountBalance()-commitmentUntilNextIncome();
+      state.sophy.context={lastIntent:'monthly_summary',lastAmount:free};
+      return{
+        text:`Resumo de **${monthName(m)}**:\n\n• **Fluxo de Caixa**: Entradas de ${brl(cash.income)} e saídas de ${brl(cash.expense)} (Resultado: ${brl(cash.result)}).\n• **Competência**: Receitas de ${brl(accrual.income)} e despesas de ${brl(accrual.expense)}.\n• **Livre projetado agora**: **${brl(free)}**.\n\nPrecisa de detalhes sobre alguma despesa ou fatura específica?`,
+        emotion:'cheerful',
+        structured:{type:'monthly_summary',month:m,cash,accrual,free}
+      };
+    }
+
+    // Decisão de Compra com Item e Valor Específico
+    const purchasePattern1=/(?:posso|da\s+para(?:\s+eu)?|consigo)\s+(?:comprar?|gastar?|pegar?)\s+(?:um[as]?\s+)?(.+?)\s+(?:de|por|em|custando|no\s+valor\s+de)\s+(?:r\$\s*)?(\d+(?:[.,]\d+)*)/i;
+    const purchasePattern2=/(?:posso|da\s+para(?:\s+eu)?|consigo)\s+(?:comprar?|gastar?|pegar?)\s+(?:r\$\s*)?(\d+(?:[.,]\d+)*)\s+(?:em|num[as]?|com|para|de)\s+(?:um[as]?\s+)?(.+)/i;
+    
+    let purchaseMatch=norm.match(purchasePattern1);
+    let itemName='',itemAmount=0;
+    if(purchaseMatch){
+      itemName=purchaseMatch[1].replace(/[?!.,]/g,'').replace(/\b(hj|hoje|agora|esse\s+mes|neste\s+mes)\b/gi,'').trim();
+      itemAmount=parseMoney(purchaseMatch[2]);
+    }else{
+      purchaseMatch=norm.match(purchasePattern2);
+      if(purchaseMatch){
+        itemAmount=parseMoney(purchaseMatch[1]);
+        itemName=purchaseMatch[2].replace(/[?!.,]/g,'').replace(/\b(hj|hoje|agora|esse\s+mes|neste\s+mes)\b/gi,'').trim();
+      }
+    }
+
+    if(itemName&&itemAmount>0){
+      const currentFree=allAccountBalance()-commitmentUntilNextIncome();
+      const diff=currentFree-itemAmount;
+      state.sophy.context={lastIntent:'purchase_decision',lastAmount:itemAmount,lastEntity:itemName};
+      if(diff>=0){
+        return{
+          text:`Sim! Se você comprar **${itemName}** por **${brl(itemAmount)}**, seu dinheiro livre projetado vai de ${brl(currentFree)} para **${brl(diff)}**. Esse gasto cabe no seu planejamento atual! 🎯`,
+          emotion:'cheerful',
+          structured:{type:'purchase_decision',item:itemName,amount:itemAmount,currentFree,projectedRemaining:diff,fits:true}
+        };
+      }else{
+        return{
+          text:`Atenção: seu dinheiro livre projetado hoje é de **${brl(currentFree)}**. Se você comprar **${itemName}** por **${brl(itemAmount)}**, você ficaria no vermelho em **${brl(diff)}** antes da sua próxima entrada. O mais seguro é adiar ou planejar esse valor! 💡`,
+          emotion:'concerned',
+          structured:{type:'purchase_decision',item:itemName,amount:itemAmount,currentFree,projectedRemaining:diff,fits:false}
+        };
+      }
+    }
+
+    // Livre projetado / Sobrando / Margem para gastar
+    if(/livre|posso\s+gastar|consigo\s+gastar|sobrando|sobrar|margem\s+para\s+gastar|dinheiro\s+sobrando|vai\s+sobrar|sobra\s+quanto/i.test(norm)||/livre|posso gastar|sobrando|disponivel livre/i.test(clean)){
       const free=allAccountBalance()-commitmentUntilNextIncome();
       const bal=allAccountBalance();
       const commit=commitmentUntilNextIncome();
@@ -4938,13 +5706,29 @@ const sophyOfflineCore={
       return{text:msg,emotion,structured:{type:'free_balance',free,balance:bal,commitments:commit}};
     }
 
-    // Cartões / Faturas
-    if(/cart(ao|oes)|fatura|limite/i.test(clean)){
+    // Cartões / Faturas / Cartão mais pesado
+    if(/cart(ao|oes)|fatura|limite/i.test(clean)||/cartao|fatura|limite/i.test(norm)){
       const cards=state.cards||[];
       if(!cards.length){
         return{
           text:`Nenhum cartão cadastrado no SFP no momento. Quando cadastrar na aba **Cartões**, eu acompanho as faturas e limites para você!`,
           emotion:'neutral'
+        };
+      }
+      const isAskingHeaviest=/(mais\s+pesado|maior\s+fatura|mais\s+alto|comeu\s+mais|pesado)/i.test(norm);
+      if(isAskingHeaviest){
+        const sorted=[...cards].map(c=>{
+          const m=state.ui.invoiceMonthByCard?.[c.id]||currentInvoiceMonth(c);
+          const rem=invoiceRemaining(c.id,m);
+          const freeLim=Math.max(0,c.limit-cardOutstanding(c.id));
+          return{card:c,rem,freeLim};
+        }).sort((a,b)=>b.rem-a.rem);
+        const top=sorted[0];
+        state.sophy.context={lastIntent:'card_invoice',lastEntity:'card_invoice',lastAmount:top.rem,lastCardId:top.card.id};
+        return{
+          text:`O cartão mais pesado no momento é o **${top.card.name}**, com fatura atual em **${brl(top.rem)}** (vence dia ${top.card.dueDay}). Limite disponível: **${brl(top.freeLim)}** de ${brl(top.card.limit)}.`,
+          emotion:top.rem>0?'concerned':'cheerful',
+          structured:{type:'heaviest_card',cardId:top.card.id,cardName:top.card.name,remaining:top.rem}
         };
       }
       let firstInvAmount=0;
@@ -4964,7 +5748,7 @@ const sophyOfflineCore={
     }
 
     // Dívidas
-    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean)){
+    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean)||/divida|emprestimo|saldo devedor|parcelas|estou devendo|quanto devo/i.test(norm)){
       const debts=state.debts||[];
       if(!debts.length){
         return{
@@ -4985,8 +5769,8 @@ const sophyOfflineCore={
       };
     }
 
-    // Metas / Reservas
-    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)){
+    // Metas / Reservas (Específica, Mais Próxima ou Visão Geral)
+    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)||/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(norm)||(/(guardei|juntei|acumulei|guardado)\s+(pra|para)/i.test(norm))){
       const goals=state.goals||[];
       if(!goals.length){
         return{
@@ -4994,6 +5778,55 @@ const sophyOfflineCore={
           emotion:'cheerful'
         };
       }
+
+      // Checar se o usuário perguntou sobre a meta mais próxima de bater
+      if(/mais\s+perto|mais\s+proxim[oa]|perto\s+de\s+bater|proxima\s+de\s+bater/i.test(norm)){
+        const pending=goals.map(g=>{
+          const current=goalBalance(g);
+          const pct=g.target>0?Math.round((current/g.target)*100):0;
+          const remaining=Math.max(0,g.target-current);
+          return{goal:g,current,pct,remaining};
+        }).filter(item=>item.pct<100).sort((a,b)=>b.pct-a.pct);
+
+        if(pending.length){
+          const top=pending[0];
+          state.sophy.context={lastIntent:'goals_progress',lastEntity:top.goal.name,lastAmount:top.remaining};
+          return{
+            text:`A meta mais próxima de bater é **${top.goal.name}**! 🎯\n\nVocê já guardou **${brl(top.current)}** de ${brl(top.goal.target)} (**${top.pct}%**). Faltam apenas **${brl(top.remaining)}** para você conquistar esse objetivo! Vamos juntos! 🚀`,
+            emotion:'cheerful',
+            structured:{type:'goal_closest',goalId:top.goal.id,goalName:top.goal.name,pct:top.pct,remaining:top.remaining}
+          };
+        }
+      }
+
+      // Checar se perguntou sobre uma meta específica por nome
+      const foundGoal=goals.find(g=>{
+        const gn=sophyNormalize(g.name).toLowerCase();
+        const tokens=gn.split(/\s+/).filter(t=>t.length>3);
+        return tokens.some(t=>norm.includes(t))||norm.includes(gn);
+      });
+
+      if(foundGoal){
+        const current=goalBalance(foundGoal);
+        const pct=foundGoal.target>0?Math.round((current/foundGoal.target)*100):0;
+        const remaining=Math.max(0,foundGoal.target-current);
+        state.sophy.context={lastIntent:'goal_specific',lastEntity:foundGoal.name,lastAmount:remaining};
+
+        if(pct>=100){
+          return{
+            text:`Sensacional! 🎉 Você já atingiu **100%** da meta **${foundGoal.name}** com **${brl(current)}** guardados! Parabéns por essa conquista maravilhosa! 🏆`,
+            emotion:'proud',
+            structured:{type:'goal_completed',goalId:foundGoal.id,goalName:foundGoal.name,current,target:foundGoal.target}
+          };
+        }
+        return{
+          text:`Na meta **${foundGoal.name}**, você já guardou **${brl(current)}** de ${brl(foundGoal.target)} (**${pct}%**). Faltam **${brl(remaining)}** para concluir! 🚀`,
+          emotion:'cheerful',
+          structured:{type:'goal_specific_progress',goalId:foundGoal.id,goalName:foundGoal.name,current,target:foundGoal.target,pct,remaining}
+        };
+      }
+
+      // Visão Geral de todas as metas
       let allReached=true;
       const lines=goals.map(g=>{
         const current=goalBalance(g);
@@ -5008,9 +5841,34 @@ const sophyOfflineCore={
       };
     }
 
-    // Gastos por categoria
-    if(/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(clean)){
+    // Gastos por categoria (Específica ou Visão Geral)
+    if(/categoria|onde gastei|maior gasto|despesas por|gastos com|quanto gastei com|quanto eu gastei com/i.test(clean)||/categoria|onde gastei|maior gasto|despesas por|gastos com|quanto gastei com|quanto eu gastei com/i.test(norm)){
       const cats=categoriesSpent(state.mesAtual);
+      const specificMatch=norm.match(/(?:gastos?\s+(?:com|em|de)|quanto\s+(?:eu\s+)?gastei\s+(?:com|em|de|numa?))\s+([a-z0-9_çãáéíóúâêô]+)/i);
+      if(specificMatch){
+        const queryTerm=sophyNormalize(specificMatch[1]).toLowerCase().replace(/\b(esse|este|mes|hoje|hj)\b/g,'').trim();
+        if(queryTerm&&queryTerm!=='categoria'&&queryTerm!=='tudo'&&queryTerm!=='grana'&&queryTerm!=='dinheiro'){
+          const foundKey=Object.keys(cats).find(k=>{
+            const kn=sophyNormalize(k).toLowerCase();
+            return kn===queryTerm||kn.includes(queryTerm)||queryTerm.includes(kn);
+          });
+          if(foundKey){
+            const spent=cats[foundKey];
+            return{
+              text:`Em **${monthName(state.mesAtual)}**, seus gastos na categoria **${foundKey}** somam **${brl(spent)}**.`,
+              emotion:'focused',
+              structured:{type:'category_specific_spent',category:foundKey,amount:spent}
+            };
+          }else{
+            return{
+              text:`Em **${monthName(state.mesAtual)}**, você não tem nenhum gasto registrado na categoria **${specificMatch[1].trim()}** (**${brl(0)}**)! 👏`,
+              emotion:'cheerful',
+              structured:{type:'category_specific_spent',category:specificMatch[1].trim(),amount:0}
+            };
+          }
+        }
+      }
+
       const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
       if(!entries.length){
         return{text:`Ainda não temos despesas registradas para **${monthName(state.mesAtual)}**.`,emotion:'neutral'};
@@ -5024,7 +5882,7 @@ const sophyOfflineCore={
     }
 
     // Próximo recebimento / Salário
-    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean)){
+    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean)||/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(norm)){
       const nextInc=nextIncomeEvent();
       if(!nextInc){
         return{
@@ -5039,18 +5897,8 @@ const sophyOfflineCore={
       };
     }
 
-    // Resumo do mês / Visão geral
-    if(/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean)){
-      const m=state.mesAtual,cash=cashView(m),accrual=accrualView(m),free=allAccountBalance()-commitmentUntilNextIncome();
-      return{
-        text:`Resumo de **${monthName(m)}**:\n\n• **Fluxo de Caixa**: Entradas de ${brl(cash.income)} e saídas de ${brl(cash.expense)} (Resultado: ${brl(cash.result)}).\n• **Competência**: Receitas de ${brl(accrual.income)} e despesas de ${brl(accrual.expense)}.\n• **Livre projetado agora**: **${brl(free)}**.\n\nPrecisa de detalhes sobre alguma despesa ou fatura específica?`,
-        emotion:'cheerful',
-        structured:{type:'monthly_summary',month:m,cash,accrual,free}
-      };
-    }
-
     // Saldo / Contas
-    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean)){
+    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean)||/saldo|contas?|quanto eu tenho|dinheiro total|como anda (o )?(meu )?dinheiro|onde esta (o )?(meu |minha )?dinheiro|quanto dinheiro eu tenho/i.test(norm)){
       const total=allAccountBalance(),accounts=state.accounts||[];
       if(!accounts.length){
         return{
@@ -5079,35 +5927,51 @@ const sophyRouter={
   classify(prompt){
     const raw=String(prompt||'').trim();
     const clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    let norm=sophyNormalize(raw);
+    norm=norm.replace(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s,;.-]*/i,'').trim()||norm;
+    if(/^(esquece(\s+isso)?|deixa\s+para\s+la|mudando\s+de\s+assunto)[\s,;.-]*/i.test(norm)){
+      norm=norm.replace(/^(esquece(\s+isso)?|deixa\s+para\s+la|mudando\s+de\s+assunto)[\s,;.-]*/i,'').trim();
+    }
 
     if(/^(lembre( que)?|anote( que)?|guarde( que)?|lembrar( que)?)\s+(.+)/i.test(raw))return 'MEMORY_WRITE';
-    if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean))return 'MEMORY_READ';
-    if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean))return 'EMOTIONAL_DISTRESS';
-    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean))return 'EMOTIONAL_CONCERN';
-    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(clean))return 'EMOTIONAL_JOY';
-    if(/\b(sono|dormir|cansac[o|ç]o|exausto|exausta|acabad[oa])\b/i.test(clean))return 'CASUAL_TIRED';
-    if(/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(clean))return 'GREETING';
-    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean))return 'IDENTITY';
-    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b)/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(clean))return 'STATUS';
-    if(/voce e real|voce e uma ia|samantha/i.test(clean))return 'AI_NATURE';
-    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s!.]*$/i.test(clean))return 'HUMOR';
-    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean))return 'COMPLIMENT';
-    if(/piada|engracad/i.test(clean))return 'HUMOR';
+    if(/(quando\s+e\s+(o\s+)?(meu\s+)?aniversario|data\s+do\s+meu\s+aniversario)/i.test(norm)||/(quando\s+e\s+(o\s+)?(meu\s+)?aniversario)/i.test(clean))return 'MEMORY_READ_BIRTHDAY';
+    if(/(o\s+que\s+(eu\s+)?prefiro|minhas?\s+preferencias?|o\s+que\s+eu\s+costumo|meus?\s+habitos?)/i.test(norm))return 'MEMORY_READ_PREFERENCES';
+    if(/o\s+que\s+voce\s+sabe\s+sobre\s+(?:o\s+meu|a\s+minha|meu|minha)\s+([a-z0-9_]+)/i.test(norm))return 'MEMORY_READ_FACT';
+    if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean)||/o que voce lembra|o que voce sabe sobre mim/i.test(norm))return 'MEMORY_READ';
+    if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean)||/fiz besteira|estou na pior|estou ferrado/i.test(norm))return 'EMOTIONAL_DISTRESS';
+    if((/\b(triste|chatead[oa]|estressad[oa]|desanimad[oa]|preocupad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)||/\b(triste|chateado|chateada|estressado|estressada|desanimado|desanimada|preocupado|preocupada|estou mal|angustiado|aflito|com medo)\b/i.test(norm)||(/(pesad[oa]|pesando)\b/i.test(clean)&&!/(cartao|cartoes|fatura|faturas|divida|dividas|conta|contas|limite)/i.test(norm))))return 'EMOTIONAL_CONCERN';
+    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(clean)||/\b(feliz|alegre|empolgado|empolgada|animado|animada|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(norm))return 'EMOTIONAL_JOY';
+    if(/\b(sono|dormir|cansac[o|ç]o|exausto|exausta|acabad[oa]|so o po|morto de cansado|morta de cansada|dia puxado|correria)\b/i.test(clean)||/\b(sono|dormir|cansaco|cansado|cansada|exausto|exausta|acabado|acabada|so o po|dia puxado|correria)\b/i.test(norm))return 'CASUAL_TIRED';
+    if(/(so\s+vim\s+(te\s+ver?|dar\s+um\s+oi|ver?|trocar\s+uma?\s+ideia|conversar|falar)|passando\s+para\s+(te\s+ver?|dar\s+um\s+oi|conversar)|so\s+queria\s+(te\s+ver?|conversar|dar\s+um\s+oi)|vim\s+so\s+te\s+ver?|passei\s+so\s+para\s+te\s+ver?)/i.test(norm))return 'VISIT_AFFECTION';
+    if(/^(como\s+assim(\s+sophy)?|nao\s+entendi(\s+nada)?|me\s+explica\s+melhor|nao\s+peguei|boiei)[\s?!.]*$/i.test(norm))return 'CLARIFICATION_REQUEST';
+    if(/^(entendi|saquei|compreendi|faz\s+sentido|agora\s+entendi|ficou\s+claro)(\s+(tudo|bem|sim|perfeitamente))?[\s!.]*$/i.test(norm))return 'UNDERSTANDING_CONFIRMATION';
+    if(/^(beleza|show|combinado|fechado|perfeito|esta\s+bom|otimo|maravilha|certinho|manda\s+ver)(\s+(entao|de\s+bola|demais|ai|amiga|sophy))?[\s!.]*$/i.test(norm))return 'ACKNOWLEDGEMENT_AGREEMENT';
+    if((/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean)||/^(oi|oie|ola|eai|fala\s+sophy|e\s*ai\s+sumida|opa|bom\s+dia|boa\s+tarde|boa\s+noite|hey|hello)\b/i.test(norm)) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(norm))return 'GREETING';
+    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)||/quem e voce|qual seu nome|o que voce faz/i.test(norm))return 'IDENTITY';
+    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b|so\s+ver\s+(como\s+)?voce\s+esta|^(e\s+(voce|vc|tu|contigo|com\s+voce|por\s+ai))[\s?!.]*$|(?:estou|to)\s+(?:bem|otimo|otima|tranquilo|tranquila|suave|na\s+paz|de\s+boa|joia|legal).*?\b(?:e\s+voce|e\s+vc|e\s+tu|e\s+contigo|e\s+com\s+voce|como\s+(?:voce|vc|tu|ce)\s+(?:esta|ta))\b|(?:tudo\s+(?:bem|certo|otimo|joia|tranquilo|na\s+paz|em\s+cima)).*?\b(?:e\s+voce|e\s+vc|e\s+tu|e\s+contigo|e\s+com\s+voce|como\s+(?:voce|vc|tu|ce)\s+(?:esta|ta))\b|^(estou\s+bem|to\s+bem|estou\s+otimo|estou\s+otima|tudo\s+certo|tudo\s+bem|tudo\s+otimo|tudo\s+joia|tudo\s+tranquilo|tudo\s+na\s+paz|tudo\s+em\s+ordem|tudo\s+suave|esta\s+tranquilo|ta\s+tranquilo|to\s+de\s+boa|estou\s+de\s+boa)(\s+(tambem|por\s+aqui|aqui|demais))?[\s!.]*$|^(por\s+aqui\s+(esta|ta)\s+(tudo\s+)?(bem|tranquilo|certo|em\s+paz|em\s+ordem))[\s!.]*$|^(que\s+bom|maravilha|pois\s+e|com\s+certeza|verdade|concordo|faz\s+sentido|legal|bacana|massa)(\s+(demais|mesmo|entao))?[\s!.]*$)/i.test(norm) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(norm))return 'STATUS';
+    if(/voce e real|voce e uma ia|samantha/i.test(clean)||/voce e real|voce e uma ia|samantha/i.test(norm))return 'AI_NATURE';
+    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)\b/i.test(clean)||/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)\b/i.test(norm))return 'HUMOR';
+    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean)||/obrigado|obrigada|valeu|te amo|gosto de voce|incrivel|agradecido|gratidao|thanks/i.test(norm))return 'COMPLIMENT';
+    if(/piada|engracad/i.test(clean)||/piada|engracad/i.test(norm))return 'HUMOR';
     if(/caixa|competencia|compromisso|diferenca/i.test(clean)&&/o que e|qual a diferenca|expli/i.test(clean))return 'FINANCIAL_SEMANTICS';
     if(/posso gastar tudo|torrar|comprar bobagem|comprar uma ferrari|comprar um aviao|gastar em pizza/i.test(clean))return 'SPENDING_IMPULSE';
     
     // Simulações Hipotéticas & Follow-ups
     if(/(emprestimo|financiar|financiamento|parcelar|pegar\s+\d)/i.test(clean)&&/(se\s+eu|e\s+se|supondo|imagina|simula|simular|quanto\s+ficaria|valeria|parcela|vezes)/i.test(clean))return 'FOLLOWUP_FINANCIAL';
     if(/^(e se|e quanto|e no|quanto fica se|se eu pagar|se eu gastar|e a metade|e metade)/i.test(clean)||clean==='metade?'||clean==='e metade?')return 'FOLLOWUP_FINANCIAL';
+    if(/^(e\s+)?(no\s+)?(mes\s+que\s+vem|proximo\s+mes|mes\s+seguinte|depois|ano\s+que\s+vem|outro\s+mes)\b/i.test(norm)||/^(e\s+depois|e\s+no\s+outro|e\s+no\s+proximo)\??$/i.test(norm))return 'FOLLOWUP_TEMPORAL';
+    if(/^(vale\s+a\s+pena|compensa|o\s+que\s+voce\s+acha|e\s+bom|e\s+furada|ta\s+ruim|e\s+vantagem)\??$/i.test(norm))return 'FOLLOWUP_OPINION';
+    if(/^(quanto|e\s+isso|e\s+ai|e\s+agora|quanto\s+e|qual\s+o\s+valor)\??$/i.test(norm))return 'FOLLOWUP_AMBIGUOUS_CLARIFY';
 
-    if(/livre|posso gastar|sobrando|disponivel livre/i.test(clean))return 'FINANCIAL_FREE';
-    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean))return 'FINANCIAL_ACCOUNTS';
-    if(/cart(ao|oes)|fatura|limite/i.test(clean))return 'FINANCIAL_CARDS';
-    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean))return 'FINANCIAL_DEBTS';
-    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean))return 'FINANCIAL_GOALS';
-    if(/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(clean))return 'FINANCIAL_CATEGORIES';
-    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean))return 'FINANCIAL_INCOME';
-    if(/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean))return 'FINANCIAL_SUMMARY';
+    if(/(minha\s+situacao\s+(esta\s+)?(feia|ruim|boa|tranquila|critica|apertada)|como\s+esta\s+minha\s+situacao|como\s+estou\s+de\s+grana|como\s+andam\s+minhas\s+financas|minha\s+vida\s+financeira|estou\s+(apertado|tranquilo|no\s+vermelho|no\s+azul))/i.test(norm))return 'FINANCIAL_HEALTH';
+    if(/resumo|visao geral|balanco|parametro|panorama|fechamento|como\s+(anda|esta|estamos|estou|que\s+eu\s+estou)\s+esse\s+mes|como\s+esta\s+o\s+mes/i.test(norm)||/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean))return 'FINANCIAL_SUMMARY';
+    if(/livre|posso\s+gastar|consigo\s+gastar|sobrando|sobrar|margem\s+para\s+gastar|dinheiro\s+sobrando|vai\s+sobrar|sobra\s+quanto/i.test(norm)||/livre|posso gastar|sobrando|disponivel livre/i.test(clean))return 'FINANCIAL_FREE';
+    if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean)||/saldo|contas?|quanto eu tenho|dinheiro total|como anda (o )?(meu )?dinheiro|onde esta (o )?(meu |minha )?dinheiro|quanto dinheiro eu tenho/i.test(norm))return 'FINANCIAL_ACCOUNTS';
+    if(/cart(ao|oes)|fatura|limite/i.test(clean)||/cartao|fatura|limite/i.test(norm))return 'FINANCIAL_CARDS';
+    if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean)||/divida|emprestimo|saldo devedor|parcelas|estou devendo|quanto devo/i.test(norm))return 'FINANCIAL_DEBTS';
+    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)||/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(norm)||(/(guardei|juntei|acumulei|guardado)\s+(pra|para)/i.test(norm)))return 'FINANCIAL_GOALS';
+    if(/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(clean)||/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(norm))return 'FINANCIAL_CATEGORIES';
+    if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean)||/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(norm))return 'FINANCIAL_INCOME';
 
     return 'GENERAL_KNOWLEDGE_REASONING';
   },
@@ -5131,13 +5995,23 @@ const sophyRouter={
     return sophyOfflineCore.process(prompt,snap);
   }
 };
+sophyDefaultRoute = sophyRouter.route;
 
 function sophyAddMemory(type,content,origin='chat'){
   if(!state.sophy)normalize();
-  const mem={id:uid(),type:type||'fact',content:String(content||'').trim(),origin,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-  state.sophy.memories??=[];state.sophy.memories.push(mem);
+  let actualType=type||'fact';
+  let actualContent=content;
+  if(typeof type==='object'&&type!==null){
+    actualContent=type.content||type.text||'';
+    actualType=type.type||'fact';
+    origin=type.origin||type.source||origin;
+  }
+  const mem={id:uid(),type:actualType,content:String(actualContent||'').trim(),origin,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  state.sophy.memories??=[];
+  state.sophy.memories.push(mem);
+  state.sophy.memories=state.sophy.memories.slice(-30);
   save('Salvar memória da Sophy').catch(()=>{});
-  return mem
+  return mem;
 }
 
 async function sophyRemoveMemory(id){
@@ -5169,40 +6043,50 @@ function showSophySettingsModal(){
   const cfg=state.sophy.settings||{};
   const root=$('modalRoot');
   root.className='modalback';
+  const hasSecret=sophySecureStorage.hasApiKey();
+  const masked=sophySecureStorage.getMaskedKey();
+  const effectiveModel=(cfg.model&&cfg.model!=='default'&&cfg.model.trim())?cfg.model.trim():'openai/gpt-oss-120b';
+
   root.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Configurações da Sophy">
     <div class="head">
-      <div><h2>Inteligência Artificial & Provedor</h2><p>Escolha como a Sophy processa conversação e raciocínio</p></div>
+      <div><h2>Inteligência Artificial & Provedor</h2><p>Gerencie o provedor online (Groq) e segurança da Sophy</p></div>
       <button class="btn2" id="closeSophySettings">Fechar</button>
     </div>
     <div class="list" style="gap:12px;margin-top:10px">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+        <input type="checkbox" id="sophyOnlineToggle" ${cfg.onlineEnabled!==false?'checked':''} style="width:auto;margin:0" />
+        Habilitar Inteligência Online (Groq)
+      </label>
+
       <label>Provedor de IA
         <select id="sophyProviderSelect">
+          <option value="groq" ${cfg.provider==='groq'?'selected':''}>Groq API — openai/gpt-oss-120b (Recomendado)</option>
+          <option value="gemini" ${cfg.provider==='gemini'?'selected':''}>Google Gemini API</option>
           <option value="local" ${cfg.provider==='local'?'selected':''}>Local Core (Padrão 100% Offline — R$ 0,00)</option>
-          <option value="gemini" ${cfg.provider==='gemini'?'selected':''}>Google Gemini (API Oficial)</option>
-          <option value="openai" ${cfg.provider==='openai'?'selected':''}>OpenAI / Groq / Compatível</option>
         </select>
       </label>
 
       <div id="sophyOnlineConfig" class="${cfg.provider==='local'?'hidden':''}">
-        <label>Chave de API (Armazenada localmente no dispositivo)
+        <label>Chave de API Groq (Cofre Seguro — Nunca inclusa em backups)
           <div style="display:flex;gap:6px">
-            <input id="sophyApiKey" type="password" placeholder="Cole sua API Key aqui" value="${sfpEsc(cfg.apiKey||'')}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:1" />
+            <input id="sophyApiKey" type="password" placeholder="${hasSecret?masked:'Cole sua Groq API Key aqui (gsk_...)'}" value="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:1" />
             <button type="button" class="btn2 tiny" id="sophyToggleKeyVisibility">👁</button>
           </div>
+          <small id="sophyKeyStatusNote" style="${hasSecret?'color:var(--green);margin-top:4px;display:block':'display:none;color:var(--green);margin-top:4px'}">${hasSecret?`✓ Chave configurada com segurança no dispositivo (${masked}).`:''}</small>
         </label>
 
         <label style="margin-top:8px">Modelo
-          <input id="sophyModel" type="text" placeholder="default (ex: gemini-1.5-flash, gpt-4o-mini)" value="${sfpEsc(cfg.model||'default')}" />
+          <input id="sophyModel" type="text" placeholder="openai/gpt-oss-120b" value="${sfpEsc(effectiveModel)}" readonly style="background:var(--color-surface-subtle);opacity:0.9;cursor:default" />
         </label>
 
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
           <button type="button" class="btn2" id="sophyTestConnectionBtn">Testar conexão</button>
-          <button type="button" class="btn2" id="sophyClearKeyBtn">Limpar chave</button>
+          <button type="button" class="btn2" id="sophyClearKeyBtn">Remover chave</button>
         </div>
       </div>
 
       <div class="note" style="margin-top:8px">
-        🔒 <b>Privacidade garantida</b>: Seus dados bancários e lançamentos completos nunca saem do seu aparelho. Apenas resumos numéricos anônimos e estritamente necessários são enviados quando o provedor online é consultado.
+        🔒 <b>Privacidade & Context Broker</b>: Seus dados bancários brutos, backups e histórico completo NUNCA saem do seu aparelho. Apenas resumos e indicadores mínimos autoritativos são consultados quando necessário.
       </div>
 
       <div class="section-actions" style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px">
@@ -5215,7 +6099,13 @@ function showSophySettingsModal(){
 
   const provSelect=$('sophyProviderSelect');
   provSelect.onchange=()=>{
-    $('sophyOnlineConfig').classList.toggle('hidden',provSelect.value==='local');
+    const isLocal=provSelect.value==='local';
+    $('sophyOnlineConfig').classList.toggle('hidden',isLocal);
+    if(provSelect.value==='groq'){
+      $('sophyModel').value='openai/gpt-oss-120b';
+    }else if(provSelect.value==='gemini'){
+      $('sophyModel').value='gemini-2.5-flash';
+    }
   };
 
   $('sophyToggleKeyVisibility').onclick=()=>{
@@ -5224,17 +6114,34 @@ function showSophySettingsModal(){
   };
 
   $('sophyClearKeyBtn').onclick=()=>{
+    sophySecureStorage.clearApiKey();
     $('sophyApiKey').value='';
-    toast('Chave removida do formulário.');
+    $('sophyApiKey').placeholder='Cole sua Groq API Key aqui (gsk_...)';
+    const note=$('sophyKeyStatusNote');
+    if(note){note.style.display='none';note.textContent='';}
+    toast('Chave Groq removida do cofre seguro.');
   };
 
   $('sophyTestConnectionBtn').onclick=async()=>{
     const pId=provSelect.value;
     const provider=sophyProviderRegistry[pId];
     if(!provider)return toast('Provedor não encontrado.','error');
+    const enteredKey=$('sophyApiKey').value.trim();
+    if(enteredKey&&pId==='groq'){
+      sophySecureStorage.setApiKey(enteredKey);
+      $('sophyApiKey').value='';
+      const newMasked=sophySecureStorage.getMaskedKey();
+      $('sophyApiKey').placeholder=newMasked;
+      const note=$('sophyKeyStatusNote');
+      if(note){
+        note.style.display='block';
+        note.textContent=`✓ Chave configurada com segurança no dispositivo (${newMasked}).`;
+      }
+    }
+    const modelVal=$('sophyModel').value.trim();
     const testCfg={
-      apiKey:$('sophyApiKey').value.trim(),
-      model:$('sophyModel').value.trim()
+      apiKey:sophySecureStorage.getApiKey(),
+      model:(modelVal&&modelVal!=='default')?modelVal:(provider.defaultModel||'openai/gpt-oss-120b')
     };
     toast('Testando conexão com '+provider.name+'...','info');
     const res=await provider.testConnection(testCfg);
@@ -5247,9 +6154,15 @@ function showSophySettingsModal(){
 
   $('sophySaveSettingsBtn').onclick=async()=>{
     const pId=provSelect.value;
+    const enteredKey=$('sophyApiKey').value.trim();
+    if(enteredKey){
+      sophySecureStorage.setApiKey(enteredKey);
+    }
     state.sophy.settings.provider=pId;
-    state.sophy.settings.apiKey=$('sophyApiKey').value.trim();
-    state.sophy.settings.model=$('sophyModel').value.trim()||'default';
+    state.sophy.settings.onlineEnabled=$('sophyOnlineToggle').checked;
+    const modelVal=$('sophyModel').value.trim();
+    state.sophy.settings.model=(modelVal&&modelVal!=='default')?modelVal:'openai/gpt-oss-120b';
+    delete state.sophy.settings.apiKey; // Garante que a chave nunca vá para o state
     await save('Configurações da Sophy');
     root.className='hidden';
     root.replaceChildren();
@@ -5324,16 +6237,13 @@ function renderSophy(){
   
   if($('sophyNetworkTag')){
     const isOnline=typeof navigator!=='undefined'&&navigator.onLine;
-    const provider=sophyAIProvider.getActiveProvider();
-    let badgeText='Local Core (Offline-first)';
+    let badgeText='Offline • Local Core';
     if(sophyMockState.active){
       badgeText='Mock Core (QA)';
-    }else if(provider.id==='local'){
-      badgeText=isOnline?'Local Core (Offline-first)':'Sem conexão (Local Core)';
-    }else if(provider.isConfigured(sophy.settings)){
-      badgeText=isOnline?`Online (${provider.name.split(' ')[0]})`:'Sem conexão (Local Core)';
+    }else if(sophyOrchestrator.isOnlineAvailable()){
+      badgeText=isOnline?'Online • Groq':'Sem conexão (Local Core)';
     }else{
-      badgeText='Local Core (IA não configurada)';
+      badgeText='Offline • Local Core';
     }
     $('sophyNetworkTag').textContent=badgeText;
   }
@@ -5354,88 +6264,8 @@ function renderSophy(){
   }
 }
 
-let isSophySending=false;
 async function sophySendMessage(text){
-  const raw=String(text||'').trim();
-  if(!raw||isSophySending)return;
-  isSophySending=true;
-
-  const sendBtn=$('sophySendBtn');
-  const inputEl=$('sophyInput');
-  if(sendBtn){sendBtn.disabled=true;sendBtn.textContent='...'}
-  if(inputEl){inputEl.readOnly=true}
-
-  try{
-    if(!state.sophy)normalize();
-    state.sophy.introDone=true;
-    state.sophy.messages=state.sophy.messages||[];
-    const userMsg={id:uid(),sender:'user',text:raw,at:new Date().toISOString()};
-    state.sophy.messages.push(userMsg);
-    state.sophy.messages=state.sophy.messages.slice(-50);
-    try{renderSophy()}catch(e){console.warn('Erro renderizando envio do usuário:',e)}
-
-    try{
-      await save('Mensagem enviada para Sophy');
-    }catch(e){
-      console.warn('Falha ao persistir mensagem enviada:',e);
-    }
-
-    let response=null;
-    try{
-      const routePromise=sophyRouter.route(raw);
-      const timeoutPromise=new Promise(resolve=>setTimeout(()=>resolve({
-        text:'Puxa, demorei um pouquinho mais que o esperado para calcular tudo aqui, mas continuo 100% pronta! Me dá mais um detalhe ou tenta de novo? ✨',
-        emotion:'concerned'
-      }),8000));
-      response=await Promise.race([routePromise,timeoutPromise]);
-    }catch(err){
-      console.error('Erro ao processar mensagem na Sophy:',err);
-      response={
-        text:'Tive um pequeno tropeço ao processar isso aqui, mas já tô de volta! Pode me perguntar de novo? ✨',
-        emotion:'concerned'
-      };
-    }
-
-    if(!response||!response.text||typeof response.text!=='string'||!response.text.trim()){
-      response={
-        text:'Tô por aqui! Como posso te ajudar com suas contas e metas hoje? ✨',
-        emotion:'cheerful'
-      };
-    }
-
-    state.sophy.personaState=response.emotion||state.sophy.personaState||'cheerful';
-    const sophyMsg={
-      id:uid(),
-      sender:'sophy',
-      text:response.text,
-      at:new Date().toISOString(),
-      emotion:response.emotion||'cheerful',
-      provider:response.provider||'local',
-      structured:response.structured||null
-    };
-    state.sophy.messages.push(sophyMsg);
-    state.sophy.messages=state.sophy.messages.slice(-50);
-
-    try{
-      await save('Conversa com Sophy');
-    }catch(e){
-      console.warn('Falha ao salvar resposta da Sophy:',e);
-    }
-
-    try{
-      renderSophy();
-    }catch(e){
-      console.error('Erro na renderização da resposta da Sophy:',e);
-    }
-  }catch(outerErr){
-    console.error('Erro geral no fluxo de mensagem da Sophy:',outerErr);
-  }finally{
-    isSophySending=false;
-    const sBtn=$('sophySendBtn');
-    const inp=$('sophyInput');
-    if(sBtn){sBtn.disabled=false;sBtn.textContent='Enviar'}
-    if(inp){inp.readOnly=false}
-  }
+  return sophyOrchestrator.sendMessage(text);
 }
 
 window.sophySendMessage=sophySendMessage;
@@ -5444,8 +6274,6 @@ window.sophyRemoveMemory=sophyRemoveMemory;
 window.sophyCheckProactivity=sophyCheckProactivity;
 window.sophyOfflineCore=sophyOfflineCore;
 window.sophyRouter=sophyRouter;
-window.sophyProviderRegistry=sophyProviderRegistry;
-window.sophyAIProvider=sophyAIProvider;
 window.showSophySettingsModal=showSophySettingsModal;
 window.renderSophy=renderSophy;
 let dashboardPeriod='3M';function dashboardMonths(){const n={ '1M':1,'3M':3,'6M':6,'12M':12,'Ano':Math.max(1,+state.mesAtual.slice(5))}[dashboardPeriod]||3;return n}

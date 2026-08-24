@@ -48,6 +48,37 @@ public class MainActivity extends AppCompatActivity {
                     WebView view, android.webkit.WebResourceRequest request) {
                 return assetLoader.shouldInterceptRequest(request.getUrl());
             }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
+                if (request == null || request.getUrl() == null) return true;
+                return handleNavigation(request.getUrl());
+            }
+
+            @SuppressWarnings("deprecation")
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url == null) return true;
+                return handleNavigation(Uri.parse(url));
+            }
+
+            private boolean handleNavigation(Uri uri) {
+                if (uri == null) return true;
+                String scheme = uri.getScheme();
+                String host = uri.getHost();
+                // Allow internal SFP asset origin
+                if ("https".equalsIgnoreCase(scheme) && "appassets.androidplatform.net".equalsIgnoreCase(host)) {
+                    return false; // allow WebView to load internally
+                }
+                // For external http/https or other intents, launch externally via ACTION_VIEW if applicable
+                try {
+                    if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme) || "mailto".equalsIgnoreCase(scheme) || "tel".equalsIgnoreCase(scheme)) {
+                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
+                        startActivity(browserIntent);
+                    }
+                } catch (Exception ignored) {}
+                return true; // block remote URL from loading inside SFP WebView
+            }
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
