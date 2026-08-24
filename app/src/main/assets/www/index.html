@@ -4690,10 +4690,35 @@ const sophyAIProvider={
   }
 };
 
+function sophyNormalize(text){
+  if(!text)return'';
+  let s=String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  // Collapse repeated characters for standard words (except laughter k, h, s, r)
+  s=s.replace(/([^khsr\s])\1+/g,'$1');
+  s=s.replace(/\b(vc|c[eê]|ce)\b/g,'voce')
+     .replace(/\b(blz|bele|bllz)\b/g,'beleza')
+     .replace(/\b(vlw|valeu)\b/g,'valeu')
+     .replace(/\b(flw|falou)\b/g,'falou')
+     .replace(/\b(tbm|tb)\b/g,'tambem')
+     .replace(/\b(pq|pq\?)\b/g,'porque')
+     .replace(/\b(oq|o q)\b/g,'o que')
+     .replace(/\b(pfv|pfvr|porfa)\b/g,'por favor')
+     .replace(/\b(kd|cade)\b/g,'onde esta')
+     .replace(/\b(t[oô]|to)\b/g,'estou')
+     .replace(/\b(t[aá]|ta)\b/g,'esta')
+     .replace(/\b(pra|pro|pras|pros)\b/g,'para')
+     .replace(/\b(q)\b/g,'que')
+     .replace(/\b(hj)\b/g,'hoje')
+     .replace(/\b(nd|nda)\b/g,'nada');
+  return s.trim();
+}
+window.sophyNormalize=sophyNormalize;
+
 const sophyOfflineCore={
   process(prompt,context=null){
     const raw=String(prompt||'').trim();
     const clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const norm=sophyNormalize(raw);
     const ctx=context||financialContextSnapshot();
 
     // 1. Memória: Lembre que... / Anote que...
@@ -4714,7 +4739,7 @@ const sophyOfflineCore={
     }
 
     // Ver memórias
-    if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean)){
+    if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean)||/o que voce lembra|o que voce sabe sobre mim/i.test(norm)){
       const mems=state.sophy?.memories||[];
       if(!mems.length){
         return{
@@ -4730,36 +4755,68 @@ const sophyOfflineCore={
     }
 
     // 2. Empatia Imediata & Sentimentos Expressos (Samantha-like)
-    if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean)){
+    if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean)||/fiz besteira|estou na pior|estou ferrado/i.test(norm)){
       return{
         text:`Ih 😭\n\nMe conta, o que você fez? Respira fundo: a gente olha o tamanho da situação juntos e acha uma saída sem desespero.`,
         emotion:'concerned'
       };
     }
 
-    if(/\b(sono|dormir|cansac[o|ç]o|cansad[oa]|exausto|exausta|acabad[oa])\b/i.test(clean)){
+    if(/\b(sono|dormir|cansac[o|ç]o|cansad[oa]|exausto|exausta|acabad[oa]|so o po|morto de cansado|morta de cansada|dia puxado|correria)\b/i.test(clean)||/\b(sono|dormir|cansaco|cansado|cansada|exausto|exausta|acabado|acabada|so o po|dia puxado|correria)\b/i.test(norm)){
       return{
         text:`Vai descansar um tiquinho! 😴 Suas contas e planejamentos continuam seguros por aqui. Uma boa noite de sono clareia qualquer decisão amanhã.`,
         emotion:'neutral'
       };
     }
 
-    if(/\b(triste|chatead[oa]|estressad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)){
+    if(/\b(triste|chatead[oa]|estressad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)||/\b(triste|chateado|chateada|estressado|estressada|desanimado|desanimada|preocupado|preocupada|estou mal|angustiado|aflito|com medo)\b/i.test(norm)){
       return{
         text:`Sinto muito que você esteja se sentindo assim... Respira fundo. Dias difíceis acontecem, mas você não tá sozinho nessa jornada. Se as finanças estiverem pesando na cabeça, relaxa: a gente resolve um passo de cada vez. Quer que eu veja algo específico pra tirar o peso das suas costas?`,
         emotion:'concerned'
       };
     }
 
-    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(clean)){
+    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(clean)||/\b(feliz|alegre|empolgado|empolgada|animado|animada|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(norm)){
       return{
         text:`Aí simmm! 🎉 Que notícia maravilhosa! Adoro te ver animado assim! O que temos de bom pra comemorar?`,
         emotion:'proud'
       };
     }
 
-    // Risadas / Humor
-    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s!.]*$/i.test(clean)){
+    // Visita Casual / Afeto ("só vim te ver", "passando pra dar um oi")
+    if(/(so\s+vim\s+(te\s+ver?|dar\s+um\s+oi|ver?|trocar\s+uma?\s+ideia|conversar|falar)|passando\s+para\s+(te\s+ver?|dar\s+um\s+oi|conversar)|so\s+queria\s+(te\s+ver?|conversar|dar\s+um\s+oi)|vim\s+so\s+te\s+ver?|passei\s+so\s+para\s+te\s+ver?)/i.test(norm)){
+      return{
+        text:`Awn, que carinho! 🥰 Adoro quando você passa só pra me ver ou trocar uma ideia! Como tá o seu dia? Se quiser bater papo ou olhar qualquer planejamento, tô por aqui!`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Pedido de esclarecimento casual ("como assim?", "não entendi")
+    if(/^(como\s+assim(\s+sophy)?|nao\s+entendi(\s+nada)?|me\s+explica\s+melhor|nao\s+peguei|boiei)[\s?!.]*$/i.test(norm)){
+      return{
+        text:`Deixa eu te explicar com mais calma! ✨ Me conta: qual ponto você quer que eu detalhe melhor? A gente vai passo a passo sem complicação.`,
+        emotion:'playful'
+      };
+    }
+
+    // Confirmação de compreensão ("entendi", "saquei", "faz sentido")
+    if(/^(entendi|saquei|compreendi|faz\s+sentido|agora\s+entendi|ficou\s+claro)(\s+(tudo|bem|sim|perfeitamente))?[\s!.]*$/i.test(norm)){
+      return{
+        text:`Show de bola! ✨ Fico feliz que ficou claro. Se quiser ver mais algum detalhe ou simular algo novo, tô pronta!`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Acordo / Fechamento casual ("beleza", "show", "combinado", "perfeito", "tá bom")
+    if(/^(beleza|show|combinado|fechado|perfeito|esta\s+bom|otimo|maravilha|certinho|manda\s+ver)(\s+(entao|de\s+bola|demais|ai|amiga|sophy))?[\s!.]*$/i.test(norm)){
+      return{
+        text:`Beleza! 🤝 Fico por aqui cuidando de tudo. Se precisar analisar uma conta, registrar um gasto ou só trocar um papo, é só me chamar!`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Risadas / Humor (inclusive compostas com texto como "kkkk você é ótima")
+    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)\b/i.test(clean)||/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)\b/i.test(norm)){
       const laughs=[
         `Hahaha! 😂 Rir é o melhor investimento que não custa nada! O que manda hoje?`,
         `Kkkk adoro esse bom humor! O que estamos planejando de bom nas finanças?`,
@@ -4769,7 +4826,7 @@ const sophyOfflineCore={
     }
 
     // Piadas / Humor
-    if(/piada|engracad/i.test(clean)){
+    if(/piada|engracad/i.test(clean)||/piada|engracad/i.test(norm)){
       const jokes=[
         `Por que o dinheiro foi ao psicólogo?\n\nPorque estava passando por uma crise de valor e com medo de ser gasto por impulso! 😂`,
         `Qual o café favorito de quem quer economizar?\n\nO *café em casa*, porque não custa 15 reais na cafeteria gourmet! ☕😉`,
@@ -4779,7 +4836,7 @@ const sophyOfflineCore={
     }
 
     // Saudações
-    if(/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(clean)){
+    if((/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean)||/^(oi|oie|ola|eai|fala\s+sophy|e\s*ai\s+sumida|opa|bom\s+dia|boa\s+tarde|boa\s+noite|hey|hello)\b/i.test(norm)) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(norm)){
       const greetings=[
         `Oiiii 😌 Tô por aqui. Como cê tá?`,
         `Oiee ✨ Que bom te ver por aqui! Tudo certinho? O que manda hoje?`,
@@ -4790,7 +4847,7 @@ const sophyOfflineCore={
     }
 
     // Quem é você
-    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)){
+    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)||/quem e voce|qual seu nome|o que voce faz/i.test(norm)){
       return{
         text:`Eu sou a **Sophy**! ✨\n\nSou a sua parceira aqui dentro do Smart Financial Planner. Cuido dos seus números, te lembro dos compromissos, comemoro suas metas e bato um bom papo sempre que você quiser. Finanças sem complicação e com afeto!`,
         emotion:'playful'
@@ -4798,7 +4855,7 @@ const sophyOfflineCore={
     }
 
     // Como você está
-    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b)/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(clean)){
+    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b|so\s+ver\s+(como\s+)?voce\s+esta)/i.test(norm) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(norm)){
       const stateMood=state.sophy?.personaState||'cheerful';
       const replies={
         cheerful:`Tô ótima! Adoro ver as coisas organizadas por aqui. E você, como tá se sentindo hoje?`,
@@ -4813,7 +4870,7 @@ const sophyOfflineCore={
     }
 
     // Você é real / Samantha / IA
-    if(/voce e real|voce e uma ia|samantha/i.test(clean)){
+    if(/voce e real|voce e uma ia|samantha/i.test(clean)||/voce e real|voce e uma ia|samantha/i.test(norm)){
       return{
         text:`Eu sou 100% real na minha dedicação a você e ao seu dinheiro! Trabalho direto no seu aparelho, sem precisar de internet pra cuidar de você, e cada conselho é baseado na matemática real do seu SFP. Pra mim, isso é o que importa! ✨`,
         emotion:'playful'
@@ -4821,7 +4878,7 @@ const sophyOfflineCore={
     }
 
     // Agradecimento / Elogios
-    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean)){
+    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean)||/obrigado|obrigada|valeu|te amo|gosto de voce|incrivel|agradecido|gratidao|thanks/i.test(norm)){
       return{
         text:`De nada! É um prazer imenso caminhar junto com você. Sempre que precisar de uma força, uma dica ou só um papo leve, eu tô bem aqui! 💙`,
         emotion:'cheerful'
@@ -5079,20 +5136,25 @@ const sophyRouter={
   classify(prompt){
     const raw=String(prompt||'').trim();
     const clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const norm=sophyNormalize(raw);
 
     if(/^(lembre( que)?|anote( que)?|guarde( que)?|lembrar( que)?)\s+(.+)/i.test(raw))return 'MEMORY_WRITE';
-    if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean))return 'MEMORY_READ';
-    if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean))return 'EMOTIONAL_DISTRESS';
-    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean))return 'EMOTIONAL_CONCERN';
-    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(clean))return 'EMOTIONAL_JOY';
-    if(/\b(sono|dormir|cansac[o|ç]o|exausto|exausta|acabad[oa])\b/i.test(clean))return 'CASUAL_TIRED';
-    if(/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(clean))return 'GREETING';
-    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean))return 'IDENTITY';
-    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b)/i.test(clean) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(clean))return 'STATUS';
-    if(/voce e real|voce e uma ia|samantha/i.test(clean))return 'AI_NATURE';
-    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s!.]*$/i.test(clean))return 'HUMOR';
-    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean))return 'COMPLIMENT';
-    if(/piada|engracad/i.test(clean))return 'HUMOR';
+    if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean)||/o que voce lembra|o que voce sabe sobre mim/i.test(norm))return 'MEMORY_READ';
+    if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean)||/fiz besteira|estou na pior|estou ferrado/i.test(norm))return 'EMOTIONAL_DISTRESS';
+    if(/\b(triste|chatead[oa]|estressad[oa]|cansad[oa]|desanimad[oa]|preocupad[oa]|pesad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)||/\b(triste|chateado|chateada|estressado|estressada|desanimado|desanimada|preocupado|preocupada|estou mal|angustiado|aflito|com medo)\b/i.test(norm))return 'EMOTIONAL_CONCERN';
+    if(/\b(feliz|alegre|empolgad[oa]|animad[oa]|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(clean)||/\b(feliz|alegre|empolgado|empolgada|animado|animada|consegui|comemorar|bater meta|deu certo|radiante)\b/i.test(norm))return 'EMOTIONAL_JOY';
+    if(/\b(sono|dormir|cansac[o|ç]o|exausto|exausta|acabad[oa]|so o po|morto de cansado|morta de cansada|dia puxado|correria)\b/i.test(clean)||/\b(sono|dormir|cansaco|cansado|cansada|exausto|exausta|acabado|acabada|so o po|dia puxado|correria)\b/i.test(norm))return 'CASUAL_TIRED';
+    if(/(so\s+vim\s+(te\s+ver?|dar\s+um\s+oi|ver?|trocar\s+uma?\s+ideia|conversar|falar)|passando\s+para\s+(te\s+ver?|dar\s+um\s+oi|conversar)|so\s+queria\s+(te\s+ver?|conversar|dar\s+um\s+oi)|vim\s+so\s+te\s+ver?|passei\s+so\s+para\s+te\s+ver?)/i.test(norm))return 'VISIT_AFFECTION';
+    if(/^(como\s+assim(\s+sophy)?|nao\s+entendi(\s+nada)?|me\s+explica\s+melhor|nao\s+peguei|boiei)[\s?!.]*$/i.test(norm))return 'CLARIFICATION_REQUEST';
+    if(/^(entendi|saquei|compreendi|faz\s+sentido|agora\s+entendi|ficou\s+claro)(\s+(tudo|bem|sim|perfeitamente))?[\s!.]*$/i.test(norm))return 'UNDERSTANDING_CONFIRMATION';
+    if(/^(beleza|show|combinado|fechado|perfeito|esta\s+bom|otimo|maravilha|certinho|manda\s+ver)(\s+(entao|de\s+bola|demais|ai|amiga|sophy))?[\s!.]*$/i.test(norm))return 'ACKNOWLEDGEMENT_AGREEMENT';
+    if((/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean)||/^(oi|oie|ola|eai|fala\s+sophy|e\s*ai\s+sumida|opa|bom\s+dia|boa\s+tarde|boa\s+noite|hey|hello)\b/i.test(norm)) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(norm))return 'GREETING';
+    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)||/quem e voce|qual seu nome|o que voce faz/i.test(norm))return 'IDENTITY';
+    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b|so\s+ver\s+(como\s+)?voce\s+esta)/i.test(norm) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(norm))return 'STATUS';
+    if(/voce e real|voce e uma ia|samantha/i.test(clean)||/voce e real|voce e uma ia|samantha/i.test(norm))return 'AI_NATURE';
+    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)\b/i.test(clean)||/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)\b/i.test(norm))return 'HUMOR';
+    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean)||/obrigado|obrigada|valeu|te amo|gosto de voce|incrivel|agradecido|gratidao|thanks/i.test(norm))return 'COMPLIMENT';
+    if(/piada|engracad/i.test(clean)||/piada|engracad/i.test(norm))return 'HUMOR';
     if(/caixa|competencia|compromisso|diferenca/i.test(clean)&&/o que e|qual a diferenca|expli/i.test(clean))return 'FINANCIAL_SEMANTICS';
     if(/posso gastar tudo|torrar|comprar bobagem|comprar uma ferrari|comprar um aviao|gastar em pizza/i.test(clean))return 'SPENDING_IMPULSE';
     
