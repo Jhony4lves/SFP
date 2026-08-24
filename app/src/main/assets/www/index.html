@@ -2122,6 +2122,13 @@ function migrateSchema(s){
   }
   return s
 }
+function sanitizeSophySecretsInPlace(target){
+ if(!target||typeof target!=='object')return target;
+ if(target.sophy?.settings&&'apiKey' in target.sophy.settings){
+  delete target.sophy.settings.apiKey;
+ }
+ return target;
+}
 function normalize(){
  state.version=VERSION;state.schemaVersion=SCHEMA_VERSION;state.baseDate??='2026-08-18';
  for(const k of ['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'])state[k]??=[];
@@ -2135,12 +2142,31 @@ function normalize(){
  if(!state.sophy.settings.model||state.sophy.settings.model==='default'||typeof state.sophy.settings.model!=='string'||!state.sophy.settings.model.trim()){
    state.sophy.settings.model='openai/gpt-oss-120b';
  }
+
+ // Migração fail-secure de chave legada em plaintext de versões anteriores do state
+ if(state.sophy.settings.apiKey){
+   const legacyKey=String(state.sophy.settings.apiKey).trim();
+   try{
+     if(legacyKey&&typeof sophySecureStorage!=='undefined'&&typeof sophySecureStorage.hasApiKey==='function'){
+       const hasVaultKey=sophySecureStorage.hasApiKey();
+       if(!hasVaultKey&&typeof sophySecureStorage.setApiKey==='function'){
+         sophySecureStorage.setApiKey(legacyKey);
+       }
+     }
+   }catch(e){
+     console.warn('Falha na migração fail-secure de chave legada:',e);
+   }finally{
+     delete state.sophy.settings.apiKey;
+   }
+ }
+ sanitizeSophySecretsInPlace(state);
 }
 function autoBackup(){
   try{
     let arr=JSON.parse(localStorage.getItem('sfp_auto_backups')||'[]');
     const src = lastSavedState || state;
     let b=clone({ ...src, undo: [] });
+    sanitizeSophySecretsInPlace(b);
     arr.push({at:new Date().toISOString(),state:b});
     arr=arr.slice(-5);
     localStorage.setItem('sfp_auto_backups',JSON.stringify(arr));
@@ -2228,11 +2254,13 @@ function snapshotUndo(label,source=null){
  const src = source || state;
  const sanitizedSource = { ...src, undo: [] };
  const base = clone(sanitizedSource);
+ sanitizeSophySecretsInPlace(base);
  state.undo = state.undo || [];
  state.undo.push({id:uid(),label,at:new Date().toISOString(),state:base});
  state.undo = state.undo.slice(-10);
 }
 async function save(label){
+ sanitizeSophySecretsInPlace(state);
  let before=clone(lastSavedState||state);
  try{
   if(label&&lastSavedState){autoBackup();snapshotUndo(label,lastSavedState)}
@@ -2257,7 +2285,7 @@ function createCleanInitialState(){
   version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:localCivilMonth(),baseDate:localCivilDate(),persistenceMeta:{revision:1,savedAt:new Date().toISOString()},
   settings:{name:'SFP',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:false},
   accounts:[],cards:[],transactions:[],transfers:[],purchases:[],invoiceAdjustments:[],invoices:[],recurring:[],debts:[],goals:[],assets:[],statements:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],creditFacilities:[],ui:{invoiceMonthByCard:{}},
-  sophy:{personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},settings:{proactivityEnabled:true,provider:'local',model:'default',apiKey:'',preferOnlineForGeneral:true}}
+  sophy:{personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},rollingSummary:'',settings:{proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true,preferOnlineForGeneral:true}}
  };
 }
 async function resetSystem({confirmDialog=true}={}){
@@ -4378,6 +4406,8 @@ function sophySetMockProvider(opts={}){
   if(typeof sophyOrchestrator!=='undefined'&&sophyOrchestrator?.circuitBreaker){
     sophyOrchestrator.circuitBreaker.status='ok';
     sophyOrchestrator.circuitBreaker.consecutiveFailures=0;
+    sophyOrchestrator.circuitBreaker.lastFailureTime=0;
+    sophyOrchestrator.circuitBreaker.probeInProgress=false;
   }
   if(state?.sophy?.settings){
     state.sophy.settings.provider=opts.active===false?'local':'mock';
@@ -4836,13 +4866,16 @@ const sophyProviderRegistry = {
 window.sophyProviderRegistry = sophyProviderRegistry;
 
 // SOPHY ORCHESTRATOR
+const SOPHY_PROVIDER_COOLDOWN_MS = 60000;
+window.SOPHY_PROVIDER_COOLDOWN_MS = SOPHY_PROVIDER_COOLDOWN_MS;
 let sophyDefaultRoute = null;
 const sophyOrchestrator = {
   isSending: false,
   circuitBreaker: {
     lastFailureTime: 0,
     consecutiveFailures: 0,
-    status: 'ok'
+    status: 'ok',
+    probeInProgress: false
   },
 
   getActiveProvider() {
@@ -4862,13 +4895,34 @@ const sophyOrchestrator = {
     return p.isConfigured(state?.sophy?.settings) && p.isAvailable();
   },
 
+  canAttemptOnline() {
+    if (!this.isOnlineAvailable()) return false;
+    const cb = this.circuitBreaker;
+    if (cb.status === 'ok') return true;
+    if (cb.status === 'cooldown') {
+      const elapsed = Date.now() - (cb.lastFailureTime || 0);
+      if (elapsed >= SOPHY_PROVIDER_COOLDOWN_MS) {
+        if (!cb.probeInProgress) {
+          cb.status = 'half-open';
+          return true;
+        }
+      }
+      return false;
+    }
+    if (cb.status === 'half-open') {
+      return !cb.probeInProgress;
+    }
+    return false;
+  },
+
   async handleProviderError(err, prompt, context) {
     console.warn('Sophy Provider Error:', err);
     this.circuitBreaker.lastFailureTime = Date.now();
     this.circuitBreaker.consecutiveFailures++;
-    if (this.circuitBreaker.consecutiveFailures >= 3) {
+    if (this.circuitBreaker.status === 'half-open' || this.circuitBreaker.consecutiveFailures >= 3) {
       this.circuitBreaker.status = 'cooldown';
     }
+    this.circuitBreaker.probeInProgress = false;
 
     const localRes = sophyOfflineCore.process(prompt, context);
     return {
@@ -4907,7 +4961,8 @@ const sophyOrchestrator = {
             emotion: 'concerned'
           };
         }
-      } else if (this.isOnlineAvailable() && this.circuitBreaker.status !== 'cooldown') {
+      } else if (this.canAttemptOnline()) {
+        this.circuitBreaker.probeInProgress = true;
         try {
           const provider = this.getActiveProvider();
           response = await provider.generateResponse({
@@ -4920,8 +4975,11 @@ const sophyOrchestrator = {
             settings: state.sophy.settings || {}
           });
           this.circuitBreaker.consecutiveFailures = 0;
+          this.circuitBreaker.lastFailureTime = 0;
           this.circuitBreaker.status = 'ok';
+          this.circuitBreaker.probeInProgress = false;
         } catch (err) {
+          this.circuitBreaker.probeInProgress = false;
           response = await this.handleProviderError(err, raw, state.sophy.context);
         }
       } else {

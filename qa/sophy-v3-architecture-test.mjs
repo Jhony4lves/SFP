@@ -409,6 +409,162 @@ export async function runArchitectureTests() {
     failed++;
   }
 
+  // 9. Circuit Breaker Matrix (CB-01 to CB-06)
+  console.log('-- Test 9: Circuit Breaker Matrix (CB-01 to CB-06) --');
+  try {
+    const orch = harness.context.sophyOrchestrator;
+    assert(orch, 'sophyOrchestrator deve estar definido');
+    assert(orch.circuitBreaker, 'circuitBreaker deve estar definido');
+    assert(typeof harness.context.SOPHY_PROVIDER_COOLDOWN_MS === 'number', 'SOPHY_PROVIDER_COOLDOWN_MS deve estar definido');
+    assert.equal(harness.context.SOPHY_PROVIDER_COOLDOWN_MS, 60000, 'Cooldown deve ser de 60s');
+
+    // Setup mock provider that fails
+    let callCount = 0;
+    harness.context.sophySetMockProvider({
+      active: true,
+      handler: async () => {
+        callCount++;
+        const err = new Error('Groq Server Error 500');
+        err.status = 500;
+        throw err;
+      }
+    });
+
+    // CB-01: 3 falhas consecutivas -> status = 'cooldown'
+    assert.equal(orch.circuitBreaker.status, 'ok', 'Status inicial deve ser ok');
+    await orch.sendMessage('Teste falha 1');
+    assert.equal(orch.circuitBreaker.consecutiveFailures, 1, 'CB-01: 1 falha registrada');
+    await orch.sendMessage('Teste falha 2');
+    assert.equal(orch.circuitBreaker.consecutiveFailures, 2, 'CB-01: 2 falhas registradas');
+    await orch.sendMessage('Teste falha 3');
+    assert.equal(orch.circuitBreaker.consecutiveFailures, 3, 'CB-01: 3 falhas registradas');
+    assert.equal(orch.circuitBreaker.status, 'cooldown', 'CB-01: status deve ser cooldown após 3 falhas');
+    assert(orch.circuitBreaker.lastFailureTime > 0, 'CB-01: lastFailureTime deve ser registrado');
+    const initialCallCount = callCount;
+    assert.equal(initialCallCount, 3, 'CB-01: provider foi chamado exatamente 3 vezes');
+
+    // CB-02: Mensagem durante cooldown antes do prazo -> provider NÃO chamado (fallback para local core)
+    const msgCooldown = await orch.sendMessage('Qual o meu saldo?');
+    assert.equal(callCount, initialCallCount, 'CB-02: Provider NÃO deve ser chamado durante cooldown');
+    assert.equal(msgCooldown.provider, 'local', 'CB-02: Resposta deve vir do local core');
+    assert.equal(orch.circuitBreaker.status, 'cooldown', 'CB-02: Status permanece cooldown');
+
+    // CB-03: Após prazo expirar -> provider recebe uma probe (half-open)
+    orch.circuitBreaker.lastFailureTime = Date.now() - 65000; // Simula 65s passados
+    let probeCalled = false;
+    harness.context.sophySetMockProvider({
+      active: true,
+      handler: async () => {
+        probeCalled = true;
+        return { text: 'Recuperado com sucesso!', emotion: 'cheerful', provider: 'groq' };
+      }
+    });
+    // Forçamos status para cooldown e lastFailureTime antigo
+    orch.circuitBreaker.status = 'cooldown';
+    orch.circuitBreaker.lastFailureTime = Date.now() - 65000;
+    orch.circuitBreaker.consecutiveFailures = 3;
+
+    // CB-04: Probe success -> status = 'ok', consecutiveFailures = 0, lastFailureTime = 0
+    const msgSuccess = await orch.sendMessage('Oi sophy');
+    assert(probeCalled, 'CB-03: Provider deve receber tentativa probe após expiração do cooldown');
+    assert.equal(orch.circuitBreaker.status, 'ok', 'CB-04: Status deve retornar para ok após probe bem-sucedida');
+    assert.equal(orch.circuitBreaker.consecutiveFailures, 0, 'CB-04: consecutiveFailures deve resetar para 0');
+    assert.equal(orch.circuitBreaker.lastFailureTime, 0, 'CB-04: lastFailureTime deve resetar para 0');
+
+    // CB-05: Probe failure -> novo cooldown
+    harness.context.sophySetMockProvider({
+      active: true,
+      handler: async () => {
+        const err = new Error('Falha na probe');
+        err.status = 503;
+        throw err;
+      }
+    });
+    orch.circuitBreaker.status = 'cooldown';
+    orch.circuitBreaker.lastFailureTime = Date.now() - 65000;
+    orch.circuitBreaker.consecutiveFailures = 3;
+    const msgProbeFail = await orch.sendMessage('Oi de novo');
+    assert.equal(orch.circuitBreaker.status, 'cooldown', 'CB-05: Falha na probe deve reiniciar cooldown imediatamente');
+    assert(Date.now() - orch.circuitBreaker.lastFailureTime < 2000, 'CB-05: lastFailureTime deve ser atualizado para agora');
+    assert.equal(msgProbeFail.provider, 'local', 'CB-05: Resposta de fallback local enviada');
+
+    // CB-06: Composer sempre desbloqueia (isSending = false)
+    assert.equal(orch.isSending, false, 'CB-06: isSending deve ser false');
+
+    console.log('  ✓ PASS: Todos os 6 contratos do Circuit Breaker (CB-01 a CB-06) validados com sucesso.');
+    passed++;
+  } catch (e) {
+    console.log(`  ✗ FAIL: Circuit Breaker Matrix [${e.message}]`);
+    failed++;
+  }
+
+  // 10. Legacy Key Fail-Secure Migration Matrix (KEY-MIG-01 to KEY-MIG-05)
+  console.log('-- Test 10: Legacy Key Fail-Secure Migration Matrix (KEY-MIG-01 to KEY-MIG-05) --');
+  try {
+    const sec = harness.context.sophySecureStorage;
+    assert(sec, 'sophySecureStorage deve estar definido');
+
+    // KEY-MIG-01: state contém apiKey legacy e vault vazio -> chave migra para secure storage, state.apiKey removida
+    let vaultStore = {};
+    harness.sandbox.window.AndroidBridge = {
+      isAndroidKeystoreReady: () => true,
+      hasSophyApiKey: () => !!vaultStore['apiKey'],
+      getSophyApiKey: () => vaultStore['apiKey'] || '',
+      setSophyApiKey: (k) => { vaultStore['apiKey'] = k; return true; },
+      clearSophyApiKey: () => { delete vaultStore['apiKey']; return true; }
+    };
+    const s1 = harness.getState();
+    s1.sophy.settings.apiKey = 'gsk_synthetic_legacy_01';
+    harness.setState(s1);
+    harness.eval('normalize()');
+    assert.equal(vaultStore['apiKey'], 'gsk_synthetic_legacy_01', 'KEY-MIG-01: Chave deve migrar para vault nativo vazio');
+    assert(!('apiKey' in harness.getState().sophy.settings), 'KEY-MIG-01: state.sophy.settings.apiKey deve ser DELETADA');
+
+    // KEY-MIG-02: state contém apiKey legacy e vault já possui chave -> existente permanece, legacy NÃO sobrescreve, state.apiKey removida
+    vaultStore['apiKey'] = 'gsk_existing_secure_master_key';
+    const s2 = harness.getState();
+    s2.sophy.settings.apiKey = 'gsk_synthetic_legacy_02';
+    harness.setState(s2);
+    harness.eval('normalize()');
+    assert.equal(vaultStore['apiKey'], 'gsk_existing_secure_master_key', 'KEY-MIG-02: Chave existente no cofre seguro NUNCA deve ser sobrescrita');
+    assert(!('apiKey' in harness.getState().sophy.settings), 'KEY-MIG-02: state.sophy.settings.apiKey deve ser DELETADA');
+
+    // KEY-MIG-03: migração falha / lança erro -> state.apiKey ainda assim removida (fail-secure)
+    delete vaultStore['apiKey'];
+    harness.sandbox.window.AndroidBridge.setSophyApiKey = () => { throw new Error('Keystore hardware error'); };
+    const s3 = harness.getState();
+    s3.sophy.settings.apiKey = 'gsk_synthetic_legacy_03';
+    harness.setState(s3);
+    harness.eval('normalize()');
+    assert(!('apiKey' in harness.getState().sophy.settings), 'KEY-MIG-03: state.sophy.settings.apiKey DEVE ser deletada mesmo se migração falhar (fail-secure)');
+
+    // KEY-MIG-04: Web/PWA sem cofre nativo -> plaintext removido, não salvo em localStorage
+    delete harness.sandbox.window.AndroidBridge;
+    const s4 = harness.getState();
+    s4.sophy.settings.apiKey = 'gsk_synthetic_legacy_04';
+    harness.setState(s4);
+    harness.eval('normalize()');
+    assert(!('apiKey' in harness.getState().sophy.settings), 'KEY-MIG-04: state.sophy.settings.apiKey deletada no Web/PWA');
+    assert(!JSON.stringify(harness.sandbox.localStorage.store).includes('gsk_synthetic_legacy_04'), 'KEY-MIG-04: Chave NUNCA deve vazar para localStorage');
+
+    // KEY-MIG-05: save / autoBackup / snapshotUndo / export nunca contém apiKey
+    const s5 = harness.getState();
+    s5.sophy.settings.apiKey = 'gsk_synthetic_leak_attempt';
+    harness.setState(s5);
+    harness.eval('autoBackup()');
+    harness.eval('snapshotUndo("test")');
+    const autoBackupsRaw = harness.sandbox.localStorage.getItem('sfp_auto_backups');
+    assert(!autoBackupsRaw.includes('gsk_synthetic_leak_attempt'), 'KEY-MIG-05: autoBackup nunca contém apiKey');
+    const undoEntry = harness.getState().undo?.[0];
+    assert(!undoEntry?.state?.sophy?.settings?.apiKey, 'KEY-MIG-05: snapshotUndo nunca contém apiKey');
+
+    console.log('  ✓ PASS: Todos os 5 contratos de Migração e Sanitização de Chaves (KEY-MIG-01 a KEY-MIG-05) validados.');
+    passed++;
+  } catch (e) {
+    console.log(`  ✗ FAIL: Key Migration Matrix [${e.message}]`);
+    failed++;
+  }
+
   console.log(`\nArchitecture Contracts: ${passed} passados, ${failed} falhas.`);
   if (failed > 0) throw new Error(`${failed} testes de arquitetura falharam.`);
   return { passed, failed };
