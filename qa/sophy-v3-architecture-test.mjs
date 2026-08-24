@@ -226,11 +226,54 @@ export async function runArchitectureTests() {
     failed++;
   }
 
+  // 7. Native Android Code & Boundary Contracts (Requirement 11)
+  console.log('-- Test 7: Native Android Code & Boundary Contracts --');
+  try {
+    const fs = await import('node:fs');
+    const bridgeJava = fs.readFileSync('app/src/main/java/com/jhony/sfp/AndroidBridge.java', 'utf8');
+    const mainActivityJava = fs.readFileSync('app/src/main/java/com/jhony/sfp/MainActivity.java', 'utf8');
+    const indexHtml = fs.readFileSync('app/src/main/assets/www/index.html', 'utf8');
+
+    // 1. AndroidKeyStore, AES/GCM/NoPadding, 256 bits
+    assert(bridgeJava.includes('"AndroidKeyStore"'), 'AndroidBridge deve usar provedor AndroidKeyStore');
+    assert(bridgeJava.includes('"AES/GCM/NoPadding"'), 'AndroidBridge deve usar transformação AES/GCM/NoPadding');
+    assert(bridgeJava.includes('.setKeySize(256)'), 'AndroidBridge deve gerar chave AES de 256 bits');
+
+    // 2. Zero gravação de plaintext
+    assert(!bridgeJava.includes('putString(LEGACY_KEY_GROQ_SECRET'), 'AndroidBridge NUNCA deve gravar chave em plaintext');
+    assert(!bridgeJava.includes('putString("sophy_groq_api_key"'), 'AndroidBridge NUNCA deve gravar chave em plaintext');
+
+    // 3. Endpoint fixo e assinatura sem URL arbitrária
+    assert(bridgeJava.includes('public String callSophyGroq(String payloadJson)'), 'callSophyGroq deve aceitar apenas payloadJson (sem endpointUrl)');
+    assert(!bridgeJava.includes('callSophyGroq(String endpointUrl'), 'callSophyGroq NUNCA deve aceitar endpointUrl como parâmetro');
+    assert(bridgeJava.includes('https://api.groq.com/openai/v1/chat/completions'), 'Endpoint Groq deve ser constante fixa');
+
+    // 4. Redirects bloqueados
+    assert(bridgeJava.includes('setInstanceFollowRedirects(false)'), 'Redirecionamentos HTTP devem ser proibidos na bridge');
+
+    // 5. WebView Navigation Boundary
+    assert(mainActivityJava.includes('shouldOverrideUrlLoading'), 'MainActivity deve implementar shouldOverrideUrlLoading');
+    assert(mainActivityJava.includes('appassets.androidplatform.net'), 'MainActivity deve restringir origem interna a appassets');
+
+    // 6. CSP presente no index.html
+    assert(indexHtml.includes('Content-Security-Policy'), 'index.html deve conter meta Content-Security-Policy');
+    assert(indexHtml.includes("frame-src 'none'"), 'CSP deve conter frame-src none');
+    assert(indexHtml.includes("object-src 'none'"), 'CSP deve conter object-src none');
+    assert(indexHtml.includes("base-uri 'none'"), 'CSP deve conter base-uri none');
+
+    console.log('  ✓ PASS: Todos os contratos nativos Java, WebView Boundary e CSP validados no código de produção.');
+    passed++;
+  } catch (e) {
+    console.log(`  ✗ FAIL: Contratos nativos de código [${e.message}]`);
+    failed++;
+  }
+
   console.log(`\nArchitecture Contracts: ${passed} passados, ${failed} falhas.`);
   if (failed > 0) throw new Error(`${failed} testes de arquitetura falharam.`);
   return { passed, failed };
 }
 
-if (process.argv[1] && process.argv[1].endsWith('sophy-v3-architecture.spec.mjs')) {
+import { fileURLToPath } from 'node:url';
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   runArchitectureTests();
 }

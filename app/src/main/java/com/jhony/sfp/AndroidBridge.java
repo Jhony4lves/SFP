@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -141,6 +142,8 @@ public class AndroidBridge {
     private static final String CIPHER_TRANSFORMATION = "AES/GCM/NoPadding";
     private static final int GCM_TAG_LENGTH_BITS = 128;
 
+    private static final String GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions";
+
     private static final String PREF_SECURE_VAULT = "sfp_sophy_secure_vault";
     private static final String KEY_CIPHERTEXT = "sophy_groq_ciphertext";
     private static final String KEY_IV = "sophy_groq_iv";
@@ -204,11 +207,16 @@ public class AndroidBridge {
             String ciphertextB64 = prefs.getString(KEY_CIPHERTEXT, null);
             String ivB64 = prefs.getString(KEY_IV, null);
 
-            // Legacy migration: if ciphertext is absent but legacy plaintext was set, migrate and wipe legacy
+            // Fail-secure legacy migration: if ciphertext is absent but legacy plaintext was set
             if (ciphertextB64 == null || ivB64 == null) {
                 String legacyKey = prefs.getString(LEGACY_KEY_GROQ_SECRET, null);
                 if (legacyKey != null && !legacyKey.trim().isEmpty()) {
-                    encryptAndSaveApiKey(legacyKey.trim());
+                    try {
+                        encryptAndSaveApiKey(legacyKey.trim());
+                    } finally {
+                        // Fail-secure: ensure legacy plaintext key is unconditionally purged
+                        prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).apply();
+                    }
                     ciphertextB64 = prefs.getString(KEY_CIPHERTEXT, null);
                     ivB64 = prefs.getString(KEY_IV, null);
                 }
@@ -244,7 +252,10 @@ public class AndroidBridge {
             boolean hasCipher = prefs.contains(KEY_CIPHERTEXT) && prefs.contains(KEY_IV);
             if (hasCipher) return true;
             String legacy = prefs.getString(LEGACY_KEY_GROQ_SECRET, null);
-            return legacy != null && !legacy.trim().isEmpty();
+            if (legacy != null && !legacy.trim().isEmpty()) {
+                return encryptAndSaveApiKey(legacy.trim());
+            }
+            return false;
         } catch (Exception e) {
             return false;
         }
@@ -272,7 +283,10 @@ public class AndroidBridge {
         try {
             String masked = getSophyApiKeyMasked();
             boolean configured = masked != null && !masked.isEmpty();
-            return "{\"configured\":" + configured + ",\"masked\":\"" + (masked != null ? masked : "") + "\"}";
+            JSONObject status = new JSONObject();
+            status.put("configured", configured);
+            status.put("masked", masked != null ? masked : "");
+            return status.toString();
         } catch (Exception e) {
             return "{\"configured\":false,\"masked\":\"\"}";
         }
@@ -295,21 +309,30 @@ public class AndroidBridge {
     }
 
     @JavascriptInterface
-    public String callSophyGroq(String endpointUrl, String payloadJson) {
+    public String callSophyGroq(String payloadJson) {
         HttpURLConnection conn = null;
         String key = null;
         try {
             key = getDecryptedApiKeyInternal();
             if (key == null || key.trim().isEmpty()) {
-                return "{\"error\":{\"message\":\"AUTH_REQUIRED\",\"status\":401}}";
+                JSONObject errEnvelope = new JSONObject();
+                JSONObject errObj = new JSONObject();
+                errObj.put("message", "AUTH_REQUIRED");
+                errObj.put("status", 401);
+                errEnvelope.put("error", errObj);
+                return errEnvelope.toString();
             }
 
-            String targetUrl = (endpointUrl != null && !endpointUrl.trim().isEmpty())
-                    ? endpointUrl.trim()
-                    : "https://api.groq.com/openai/v1/chat/completions";
+            URL url = new URL(GROQ_CHAT_COMPLETIONS_URL);
+            if (!"https".equalsIgnoreCase(url.getProtocol()) ||
+                !"api.groq.com".equalsIgnoreCase(url.getHost()) ||
+                !"/openai/v1/chat/completions".equals(url.getPath()) ||
+                (url.getPort() != -1 && url.getPort() != 443)) {
+                throw new SecurityException("Endpoint Groq inválido ou não autorizado");
+            }
 
-            URL url = new URL(targetUrl);
             conn = (HttpURLConnection) url.openConnection();
+            conn.setInstanceFollowRedirects(false);
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
             conn.setRequestProperty("Authorization", "Bearer " + key.trim());
@@ -318,19 +341,35 @@ public class AndroidBridge {
             conn.setReadTimeout(20000);
             conn.setDoOutput(true);
 
-            byte[] bodyBytes = payloadJson.getBytes(StandardCharsets.UTF_8);
+            byte[] bodyBytes = payloadJson != null ? payloadJson.getBytes(StandardCharsets.UTF_8) : new byte[0];
             try (OutputStream os = conn.getOutputStream()) {
                 os.write(bodyBytes);
                 os.flush();
             }
 
             int responseCode = conn.getResponseCode();
+
+            // Handle prohibited redirects
+            if (responseCode >= 300 && responseCode < 400) {
+                JSONObject errEnvelope = new JSONObject();
+                JSONObject errObj = new JSONObject();
+                errObj.put("message", "HTTP " + responseCode + " - Redirecionamento não permitido.");
+                errObj.put("status", responseCode);
+                errEnvelope.put("error", errObj);
+                return errEnvelope.toString();
+            }
+
             InputStream is = (responseCode >= 200 && responseCode < 300)
                     ? conn.getInputStream()
                     : conn.getErrorStream();
 
             if (is == null) {
-                return "{\"error\":{\"message\":\"HTTP " + responseCode + " - No response stream\",\"status\":" + responseCode + "}}";
+                JSONObject errEnvelope = new JSONObject();
+                JSONObject errObj = new JSONObject();
+                errObj.put("message", "HTTP " + responseCode + " - No response stream");
+                errObj.put("status", responseCode);
+                errEnvelope.put("error", errObj);
+                return errEnvelope.toString();
             }
 
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -344,12 +383,43 @@ public class AndroidBridge {
             if (responseCode >= 200 && responseCode < 300) {
                 return responseStr;
             } else {
-                return "{\"error\":{\"message\":\"HTTP " + responseCode + "\",\"status\":" + responseCode + ",\"body\":" + responseStr + "}}";
+                try {
+                    JSONObject parsedBody = new JSONObject(responseStr);
+                    JSONObject errEnvelope = new JSONObject();
+                    errEnvelope.put("error", parsedBody.optJSONObject("error") != null ? parsedBody.getJSONObject("error") : parsedBody);
+                    return errEnvelope.toString();
+                } catch (Exception parseEx) {
+                    JSONObject errEnvelope = new JSONObject();
+                    JSONObject errObj = new JSONObject();
+                    errObj.put("message", "HTTP " + responseCode);
+                    errObj.put("status", responseCode);
+                    errObj.put("rawBody", responseStr != null && responseStr.length() > 500 ? responseStr.substring(0, 500) : responseStr);
+                    errEnvelope.put("error", errObj);
+                    return errEnvelope.toString();
+                }
             }
         } catch (SocketTimeoutException te) {
-            return "{\"error\":{\"message\":\"Timeout\",\"status\":408}}";
+            try {
+                JSONObject errEnvelope = new JSONObject();
+                JSONObject errObj = new JSONObject();
+                errObj.put("message", "Tempo limite de conexão esgotado");
+                errObj.put("status", 408);
+                errEnvelope.put("error", errObj);
+                return errEnvelope.toString();
+            } catch (Exception ignored) {
+                return "{\"error\":{\"message\":\"Timeout\",\"status\":408}}";
+            }
         } catch (Exception e) {
-            return "{\"error\":{\"message\":\"" + e.getMessage() + "\",\"status\":500}}";
+            try {
+                JSONObject errEnvelope = new JSONObject();
+                JSONObject errObj = new JSONObject();
+                errObj.put("message", e.getMessage() != null ? e.getMessage() : "Erro interno nativo");
+                errObj.put("status", 500);
+                errEnvelope.put("error", errObj);
+                return errEnvelope.toString();
+            } catch (Exception ignored) {
+                return "{\"error\":{\"message\":\"Internal Error\",\"status\":500}}";
+            }
         } finally {
             key = null; // discard in-memory secret immediately
             if (conn != null) {

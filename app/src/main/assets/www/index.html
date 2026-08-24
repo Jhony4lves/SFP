@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://appassets.androidplatform.net; script-src 'self' 'unsafe-inline' https://appassets.androidplatform.net; style-src 'self' 'unsafe-inline' https://appassets.androidplatform.net; img-src 'self' data: blob: https://appassets.androidplatform.net; connect-src 'self' blob: data: https://appassets.androidplatform.net https://api.groq.com; frame-src 'none'; object-src 'none'; base-uri 'none';"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#07111e"/>
 <link rel="icon" href="data:,"/>
@@ -4370,6 +4371,10 @@ function sophySetMockProvider(opts={}){
     simulateTimeout:!!opts.simulateTimeout,
     simulateAuthError:!!opts.simulateAuthError
   };
+  if(typeof sophyOrchestrator!=='undefined'&&sophyOrchestrator?.circuitBreaker){
+    sophyOrchestrator.circuitBreaker.status='ok';
+    sophyOrchestrator.circuitBreaker.consecutiveFailures=0;
+  }
   if(state?.sophy?.settings){
     state.sophy.settings.provider=opts.active===false?'local':'mock';
   }
@@ -4773,7 +4778,7 @@ const sophyProviderRegistry = {
           temperature: 0.7,
           max_tokens: 450
         });
-        const raw = window.AndroidBridge.callSophyGroq(this.endpoint, payload);
+        const raw = window.AndroidBridge.callSophyGroq(payload);
         responseData = JSON.parse(raw || '{}');
         if (responseData.error) {
           const err = new Error(responseData.error.message || 'Groq Error');
@@ -4842,7 +4847,7 @@ const sophyProviderRegistry = {
         let finalResponseData = null;
         if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.callSophyGroq === 'function') {
           const payload2 = JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 500 });
-          const raw2 = window.AndroidBridge.callSophyGroq(this.endpoint, payload2);
+          const raw2 = window.AndroidBridge.callSophyGroq(payload2);
           finalResponseData = JSON.parse(raw2 || '{}');
           if (finalResponseData.error) {
             const err = new Error(finalResponseData.error.message || 'Groq Error');
@@ -5731,7 +5736,7 @@ const sophyOfflineCore={
     }
 
     // Metas / Reservas (Específica, Mais Próxima ou Visão Geral)
-    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)||/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(norm)){
+    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)||/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(norm)||(/(guardei|juntei|acumulei|guardado)\s+(pra|para)/i.test(norm))){
       const goals=state.goals||[];
       if(!goals.length){
         return{
@@ -5930,7 +5935,7 @@ const sophyRouter={
     if(/saldo|contas?|quanto eu tenho|dinheiro total/i.test(clean)||/saldo|contas?|quanto eu tenho|dinheiro total|como anda (o )?(meu )?dinheiro|onde esta (o )?(meu |minha )?dinheiro|quanto dinheiro eu tenho/i.test(norm))return 'FINANCIAL_ACCOUNTS';
     if(/cart(ao|oes)|fatura|limite/i.test(clean)||/cartao|fatura|limite/i.test(norm))return 'FINANCIAL_CARDS';
     if(/d[ií]vida|emprestimo|saldo devedor|parcelas/i.test(clean)||/divida|emprestimo|saldo devedor|parcelas|estou devendo|quanto devo/i.test(norm))return 'FINANCIAL_DEBTS';
-    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)||/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(norm))return 'FINANCIAL_GOALS';
+    if(/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(clean)||/\b(meta|metas|reserva|reservas|investimento|investimentos|poupanca|objetivo|objetivos)\b/i.test(norm)||(/(guardei|juntei|acumulei|guardado)\s+(pra|para)/i.test(norm)))return 'FINANCIAL_GOALS';
     if(/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(clean)||/categoria|onde gastei|maior gasto|despesas por|gastos com/i.test(norm))return 'FINANCIAL_CATEGORIES';
     if(/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(clean)||/recebimento|salario|quando recebo|proxima entrada|pagamento/i.test(norm))return 'FINANCIAL_INCOME';
 

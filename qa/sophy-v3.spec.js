@@ -22,11 +22,45 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
     const bar = page.locator('#sophySuggestions');
     await expect(bar).toBeVisible();
 
-    // Verify chips exist and are clickable
+    // Verify container styles
+    const barStyles = await bar.evaluate((el) => {
+      const s = window.getComputedStyle(el);
+      return {
+        flexWrap: s.flexWrap,
+        overflowX: s.overflowX,
+        display: s.display,
+        scrollWidth: el.scrollWidth,
+        clientWidth: el.clientWidth
+      };
+    });
+    expect(barStyles.flexWrap).toBe('nowrap');
+    expect(['auto', 'scroll']).toContain(barStyles.overflowX);
+
+    // Verify chips exist, have flex-shrink: 0, and readable min-width
     const chips = bar.locator('.sophy-chip');
     await expect(chips.first()).toBeVisible();
     const count = await chips.count();
     expect(count).toBeGreaterThanOrEqual(4);
+
+    for (let i = 0; i < count; i++) {
+      const chip = chips.nth(i);
+      const chipProps = await chip.evaluate((el) => {
+        const s = window.getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        return {
+          flexShrink: s.flexShrink,
+          width: rect.width,
+          whiteSpace: s.whiteSpace
+        };
+      });
+      expect(chipProps.flexShrink).toBe('0');
+      expect(chipProps.width).toBeGreaterThanOrEqual(50); // never collapses to illegible width
+    }
+
+    // Scroll to the last chip in mobile viewport and ensure it is fully reachable
+    const lastChip = chips.last();
+    await lastChip.scrollIntoViewIfNeeded();
+    await expect(lastChip).toBeVisible();
 
     expect(errors).toEqual([]);
   });

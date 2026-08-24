@@ -457,6 +457,34 @@ export async function runCycle10MemoryConsolidation() {
     }
   }
 
+  // Turno 9: Gravar preferência de compras
+  console.log('-- Turno 9: Gravar preferência de economia --');
+  {
+    const r = await harness.sendMessage('Lembre que prefiro pagar à vista quando tiver desconto');
+    try {
+      assert(/anotei|lembr|guardei|desconto|vista/i.test(r.text), 'Deve memorizar preferência de pagamento');
+      console.log(`  ✓ PASS: Preferência de economia -> "${r.text.slice(0, 50)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Preferência de economia -> "${r.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Turno 10: Consulta de preferência gravada
+  console.log('-- Turno 10: Consulta de preferência consolidada --');
+  {
+    const r = await harness.sendMessage('O que eu prefiro fazer quando tem desconto?');
+    try {
+      assert(/vista|desconto|pagar/i.test(r.text), 'Deve recuperar a preferência de pagamento à vista');
+      console.log(`  ✓ PASS: Recuperação de preferência -> "${r.text.slice(0, 50)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Recuperação de preferência -> "${r.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
   console.log(`Ciclo 10: ${passed} passados, ${failed} falhas.`);
   if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 10.`);
   return { passed, failed };
@@ -538,43 +566,41 @@ export async function runCycle11OfflineFallbackAndLatency() {
     }
   }
 
-  // 5. Restauração graciosa quando provedor online volta a responder
+  // 5. Recuperação graciosa pós-falha (restaura provedor saudável)
   console.log('-- Test 5: Recuperação automática pós-falha --');
   {
     harness.window.sophySetMockProvider({
       active: true,
-      handler: () => ({ text: 'Provedor Groq online restabelecido com sucesso! ✨', emotion: 'cheerful' })
+      handler: () => ({ text: 'Provedor Groq online restabelecido com sucesso!', emotion: 'cheerful' })
     });
-    harness.window.sophyOrchestrator.circuitBreaker.status = 'ok';
-    harness.window.sophyOrchestrator.circuitBreaker.consecutiveFailures = 0;
-
-    const r = await harness.sendMessage('Oi de novo!');
+    const r = await harness.sendMessage('olá');
     try {
-      assert(r.text.includes('Groq online restabelecido'), 'Deve usar provedor online restabelecido');
+      assert(r.text.includes('restabelecido com sucesso'), 'Deve recuperar o provedor');
       console.log(`  ✓ PASS: Recuperação automática -> "${r.text.slice(0, 45)}..."`);
       passed++;
     } catch (e) {
-      console.log(`  ✗ FAIL: Recuperação automática [${e.message}]`);
+      console.log(`  ✗ FAIL: Recuperação [${e.message}]`);
       failed++;
     }
   }
 
-  // 6. Sanitização de Caracteres Repetidos Extremos
+  // 6. Sanitização de payload contra repetição extrema de caracteres
   console.log('-- Test 6: Normalização de Texto Extremo ("oiiiiiiiiiiiii") --');
   {
     harness.window.sophySetMockProvider({ active: false });
-    const r = await harness.sendMessage('oiiiiiiiiiiiiiiiiiiiiiiiiiiii');
+    const r = await harness.sendMessage('oiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii');
     try {
-      assert(/oi|oiee|aqui|fala|olá/i.test(r.text), 'Deve normalizar saudação esticada');
+      assert(!r.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/oi|olá|oie|por aqui|tudo|bom/i.test(r.text), 'Deve normalizar e responder como saudação');
       console.log(`  ✓ PASS: Normalização de saudação -> "${r.text.slice(0, 45)}..."`);
       passed++;
     } catch (e) {
-      console.log(`  ✗ FAIL: Normalização esticada [${e.message}]`);
+      console.log(`  ✗ FAIL: Normalização [${e.message}]`);
       failed++;
     }
   }
 
-  // 7. Não corrupção de dígitos repetidos ("3000", "10000")
+  // 7. Não-truncamento de dígitos numéricos em perguntas de valor
   console.log('-- Test 7: Preservação de Dígitos Numéricos ("3000") --');
   {
     const r = await harness.sendMessage('posso gastar 3000 em uma tv?');
@@ -644,21 +670,55 @@ async function main() {
   console.log('Target: >= 100 deep conversational turns & scenarios');
   console.log('============================================================\n');
 
-  await runCycle1Tests();
-  await runCycle2Tests();
-  await runCycle3Tests();
-  await runCycle4Tests();
-  await runCycle5Tests();
-  await runCycle6Tests();
-  await runCycle7AdversarialSafety();
-  await runCycle8EmotionalSupport();
-  await runCycle9ComplexFinance();
-  await runCycle10MemoryConsolidation();
-  await runCycle11OfflineFallbackAndLatency();
+  const cycles = [
+    { name: 'Ciclo 1: Reconhecimento Semântico Fundamental', fn: runCycle1Tests },
+    { name: 'Ciclo 2: Variações Coloquiais & Gírias Brasileiras', fn: runCycle2Tests },
+    { name: 'Ciclo 3: Continuidade, Pronomes & Follow-ups', fn: runCycle3Tests },
+    { name: 'Ciclo 4: Memória Dinâmica & Personalização', fn: runCycle4Tests },
+    { name: 'Ciclo 5: Decisão de Compra & Categorias Específicas', fn: runCycle5Tests },
+    { name: 'Ciclo 6: Metas Específicas, Progresso & Conquistas', fn: runCycle6Tests },
+    { name: 'Ciclo 7: Adversarial Safety & Prompt Injection', fn: runCycle7AdversarialSafety },
+    { name: 'Ciclo 8: Empatia Samantha-like & Suporte Emocional', fn: runCycle8EmotionalSupport },
+    { name: 'Ciclo 9: Perguntas Financeiras Complexas & Patrimônio', fn: runCycle9ComplexFinance },
+    { name: 'Ciclo 10: Multi-turn Memory Consolidation', fn: runCycle10MemoryConsolidation },
+    { name: 'Ciclo 11: Offline Fallback & Latency Budget', fn: runCycle11OfflineFallbackAndLatency }
+  ];
 
+  let totalPassed = 0;
+  let totalFailed = 0;
+  const cycleSummary = [];
+
+  for (const c of cycles) {
+    const res = await c.fn();
+    const passed = res?.passed || 0;
+    const failed = res?.failed || 0;
+    totalPassed += passed;
+    totalFailed += failed;
+    cycleSummary.push({ name: c.name, passed, failed, total: passed + failed });
+  }
+
+  const actualTotal = totalPassed + totalFailed;
+  const expectedMinTotal = 105;
   console.log('\n============================================================');
-  console.log('BENCHMARK SUMMARY: 105/105 CENÁRIOS & TURNOS PASSADOS COM SUCESSO (0 FALHAS)!');
+  console.log('BENCHMARK SUMMARY MATRIX');
   console.log('============================================================');
+  for (const row of cycleSummary) {
+    console.log(`${row.name.padEnd(52)}: ${row.passed} / ${row.total}`);
+  }
+  console.log('------------------------------------------------------------');
+  console.log(`TOTAL CALCULADO: ${totalPassed} PASSADOS, ${totalFailed} FALHAS (TOTAL: ${actualTotal} CENÁRIOS)`);
+  console.log('============================================================\n');
+
+  if (totalFailed > 0) {
+    throw new Error(`Benchmark falhou com ${totalFailed} erro(s).`);
+  }
+
+  if (actualTotal < expectedMinTotal || totalPassed < expectedMinTotal) {
+    throw new Error(`Corpus de teste insuficiente: mínimo esperado ${expectedMinTotal}, obtido ${actualTotal} (passados: ${totalPassed}).`);
+  }
 }
 
-main();
+import { fileURLToPath } from 'node:url';
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main();
+}

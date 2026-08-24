@@ -161,6 +161,7 @@ export async function runCycle1Tests() {
 
   console.log(`Ciclo 1: ${passed} passados, ${failed} falhas.`);
   if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 1.`);
+  return { passed, failed };
 }
 
 export async function runCycle2Tests() {
@@ -311,6 +312,7 @@ export async function runCycle2Tests() {
 
   console.log(`Ciclo 2: ${passed} passados, ${failed} falhas.`);
   if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 2.`);
+  return { passed, failed };
 }
 
 export async function runCycle3Tests() {
@@ -737,6 +739,37 @@ export async function runCycle6Tests() {
     }
   }
 
+  // Caso 5: Consulta de total acumulado em metas
+  console.log('-- Caso 5: Consulta de total alocado em metas --');
+  {
+    const r1 = await harness.sendMessage('quanto eu já guardei em metas no total?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/meta|guardado|R\$/i.test(r1.text), 'Deve informar progresso das metas');
+      console.log(`  ✓ PASS: Total alocado em metas -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Total alocado em metas -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 6: Consulta de meta específica de viagem
+  console.log('-- Caso 6: Consulta de meta de viagem --');
+  {
+    const r1 = await harness.sendMessage('quanto já guardei pra viagem?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/viagem/i.test(r1.text), 'Deve identificar meta da viagem');
+      assert(/4\.500|4500|90%/i.test(r1.text), 'Deve informar valor ou progresso');
+      console.log(`  ✓ PASS: Meta de viagem -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Meta de viagem -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
   console.log(`Ciclo 6: ${passed} passados, ${failed} falhas.`);
   if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 6.`);
   return { passed, failed };
@@ -751,4 +784,7 @@ async function main() {
   await runCycle6Tests();
 }
 
-main();
+import { fileURLToPath } from 'node:url';
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main();
+}
