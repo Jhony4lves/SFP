@@ -4726,6 +4726,9 @@ const sophyOfflineCore={
       norm=norm.replace(/^(esquece(\s+isso)?|deixa\s+para\s+la|mudando\s+de\s+assunto)[\s,;.-]*/i,'').trim();
     }
     const ctx=context||financialContextSnapshot();
+    const rawName=(state?.settings?.name&&state.settings.name!=='SFP'&&state.settings.name.trim())?state.settings.name.trim():'';
+    const firstName=rawName?rawName.split(/\s+/)[0]:'';
+    const nameSuffix=firstName?`, ${firstName}`:'';
 
     // 1. Memória: Lembre que... / Anote que...
     if(/^(lembre( que)?|anote( que)?|guarde( que)?|lembrar( que)?)\s+(.+)/i.test(raw)){
@@ -4738,9 +4741,62 @@ const sophyOfflineCore={
       else if(/fale|chame|tom|diret|brinc/i.test(content))category='communication';
       const mem=sophyAddMemory(category,content,'chat');
       return{
-        text:`Pode deixar! Guardei isso na minha memória:\n\n📌 *"${content}"*\n\nVocê pode ver e gerenciar tudo o que eu lembro clicando no botão **Memórias**!`,
+        text:`Pode deixar${nameSuffix}! Guardei isso na minha memória:\n\n📌 *"${content}"*\n\nVocê pode ver e gerenciar tudo o que eu lembro clicando no botão **Memórias**!`,
         emotion:'cheerful',
         structured:{type:'memory_added',memory:mem}
+      };
+    }
+
+    // Consulta de Aniversário
+    if(/(quando\s+e\s+(o\s+)?(meu\s+)?aniversario|data\s+do\s+meu\s+aniversario)/i.test(norm)||/(quando\s+e\s+(o\s+)?(meu\s+)?aniversario)/i.test(clean)){
+      const mems=state.sophy?.memories||[];
+      const found=mems.find(m=>/aniversario|niver|nasci/i.test(sophyNormalize(m.content)));
+      if(found){
+        const datePart=found.content.replace(/^.*?(anivers[aá]rio\s+[eé]|nasci(mento)?\s+[eé]|dia)\s+/i,'').trim();
+        return{
+          text:`Você me disse que seu aniversário é **${datePart||found.content}**! 🎂 Já tá guardado na minha memória com todo carinho!`,
+          emotion:'cheerful'
+        };
+      }
+      return{
+        text:`Você ainda não me contou a data do seu aniversário! 🎈 Me diz *"Lembre que meu aniversário é dia X"* que eu guardo na hora!`,
+        emotion:'playful'
+      };
+    }
+
+    // Consulta de Preferências / O que prefiro economizar
+    if(/(o\s+que\s+(eu\s+)?prefiro|minhas?\s+preferencias?|o\s+que\s+eu\s+costumo|meus?\s+habitos?)/i.test(norm)){
+      const mems=state.sophy?.memories||[];
+      const matching=mems.filter(m=>m.type==='preference'||m.type==='habit'||/prefiro|gosto|costumo|economiz/i.test(sophyNormalize(m.content)));
+      if(matching.length){
+        const list=matching.map(m=>`• *"${m.content}"*`).join('\n');
+        return{
+          text:`Lembro sim! Você me contou estas preferências e hábitos:\n\n${list}`,
+          emotion:'cheerful'
+        };
+      }
+      return{
+        text:`Ainda não anotei nenhuma preferência específica sua. Me conta o que você prefere (por exemplo: *"Lembre que eu prefiro economizar em delivery"*) que eu guardo! ✨`,
+        emotion:'cheerful'
+      };
+    }
+
+    // Consulta sobre Fato Específico ("o que você sabe sobre meu carro / trabalho / etc.")
+    if(/o\s+que\s+voce\s+sabe\s+sobre\s+(?:o\s+meu|a\s+minha|meu|minha)\s+([a-z0-9_]+)/i.test(norm)){
+      const matchSubject=norm.match(/o\s+que\s+voce\s+sabe\s+sobre\s+(?:o\s+meu|a\s+minha|meu|minha)\s+([a-z0-9_]+)/i);
+      const subject=matchSubject?matchSubject[1].trim():'';
+      const mems=state.sophy?.memories||[];
+      const matching=mems.filter(m=>sophyNormalize(m.content).includes(subject));
+      if(matching.length){
+        const list=matching.map(m=>`• *"${m.content}"*`).join('\n');
+        return{
+          text:`Sobre **${subject}**, eu guardei isto na memória:\n\n${list}`,
+          emotion:'cheerful'
+        };
+      }
+      return{
+        text:`Ainda não tenho nenhuma anotação sobre **${subject}**. Se quiser, me diz *"Lembre que..."* sobre isso que eu guardo com todo carinho! ✨`,
+        emotion:'playful'
       };
     }
 
@@ -4749,13 +4805,13 @@ const sophyOfflineCore={
       const mems=state.sophy?.memories||[];
       if(!mems.length){
         return{
-          text:`Ainda não guardei nenhuma memória específica sobre você. Você pode me dizer coisas como *"Lembre que meu aniversário é 15 de maio"* ou *"Lembre que prefiro economizar no começo do mês"*!`,
+          text:`Ainda não guardei nenhuma memória específica sobre você${nameSuffix}. Você pode me dizer coisas como *"Lembre que meu aniversário é 15 de maio"* ou *"Lembre que prefiro economizar no começo do mês"*!`,
           emotion:'neutral'
         };
       }
       const list=mems.map((m,i)=>`${i+1}. ${m.content} *(categoria: ${m.type||'geral'})*`).join('\n');
       return{
-        text:`Aqui está o que eu guardei na memória sobre você:\n\n${list}\n\nVocê pode gerenciar ou excluir qualquer item no botão **Memórias**!`,
+        text:`Aqui está o que eu guardei na memória sobre você${nameSuffix}:\n\n${list}\n\nVocê pode gerenciar ou excluir qualquer item no botão **Memórias**!`,
         emotion:'playful'
       };
     }
@@ -4852,10 +4908,10 @@ const sophyOfflineCore={
     // Saudações
     if((/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean)||/^(oi|oie|ola|eai|fala\s+sophy|e\s*ai\s+sumida|opa|bom\s+dia|boa\s+tarde|boa\s+noite|hey|hello)\b/i.test(norm)) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(norm)){
       const greetings=[
-        `Oiiii 😌 Tô por aqui. Como cê tá?`,
-        `Oiee ✨ Que bom te ver por aqui! Tudo certinho? O que manda hoje?`,
-        `Olá! Tava aqui dando uma olhada nos seus números e pensando em você. Tudo em ordem?`,
-        `Oi oi! Preparado pra cuidar das finanças ou veio só me fazer uma visita? Eu adoro os dois!`
+        `Oiiii${nameSuffix} 😌 Tô por aqui. Como cê tá?`,
+        `Oiee${nameSuffix} ✨ Que bom te ver por aqui! Tudo certinho? O que manda hoje?`,
+        `Olá${nameSuffix}! Tava aqui dando uma olhada nos seus números e pensando em você. Tudo em ordem?`,
+        `Oi oi${nameSuffix}! Preparado pra cuidar das finanças ou veio só me fazer uma visita? Eu adoro os dois!`
       ];
       return{text:greetings[Math.floor(Math.random()*greetings.length)],emotion:'cheerful'};
     }
@@ -4872,13 +4928,13 @@ const sophyOfflineCore={
     if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b|so\s+ver\s+(como\s+)?voce\s+esta)/i.test(norm) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(norm)){
       const stateMood=state.sophy?.personaState||'cheerful';
       const replies={
-        cheerful:`Tô ótima! Adoro ver as coisas organizadas por aqui. E você, como tá se sentindo hoje?`,
-        playful:`Tô com energia total! Pronta pra descomplicar qualquer conta que você jogar pra mim.`,
-        concerned:`Tô atenta aos nossos prazos e compromissos! Mas tudo sob controle por aqui. Como posso te ajudar?`,
-        proud:`Tô muito orgulhosa do nosso progresso aqui no SFP! O que vamos planejar agora?`,
-        neutral:`Tudo tranquilo por aqui, pronta para o que você precisar!`,
-        curious:`Tô curiosa pra ver como vamos fechar o mês! Como estão as coisas por aí?`,
-        focused:`Focada 100% no seu planejamento! Conta comigo pro que der e vier.`
+        cheerful:`Tô ótima${nameSuffix}! Adoro ver as coisas organizadas por aqui. E você, como tá se sentindo hoje?`,
+        playful:`Tô com energia total${nameSuffix}! Pronta pra descomplicar qualquer conta que você jogar pra mim.`,
+        concerned:`Tô atenta aos nossos prazos e compromissos${nameSuffix}! Mas tudo sob controle por aqui. Como posso te ajudar?`,
+        proud:`Tô muito orgulhosa do nosso progresso aqui no SFP${nameSuffix}! O que vamos planejar agora?`,
+        neutral:`Tudo tranquilo por aqui${nameSuffix}, pronta para o que você precisar!`,
+        curious:`Tô curiosa pra ver como vamos fechar o mês${nameSuffix}! Como estão as coisas por aí?`,
+        focused:`Focada 100% no seu planejamento${nameSuffix}! Conta comigo pro que der e vier.`
       };
       return{text:replies[stateMood]||replies.cheerful,emotion:stateMood};
     }
@@ -5249,6 +5305,9 @@ const sophyRouter={
     }
 
     if(/^(lembre( que)?|anote( que)?|guarde( que)?|lembrar( que)?)\s+(.+)/i.test(raw))return 'MEMORY_WRITE';
+    if(/(quando\s+e\s+(o\s+)?(meu\s+)?aniversario|data\s+do\s+meu\s+aniversario)/i.test(norm)||/(quando\s+e\s+(o\s+)?(meu\s+)?aniversario)/i.test(clean))return 'MEMORY_READ_BIRTHDAY';
+    if(/(o\s+que\s+(eu\s+)?prefiro|minhas?\s+preferencias?|o\s+que\s+eu\s+costumo|meus?\s+habitos?)/i.test(norm))return 'MEMORY_READ_PREFERENCES';
+    if(/o\s+que\s+voce\s+sabe\s+sobre\s+(?:o\s+meu|a\s+minha|meu|minha)\s+([a-z0-9_]+)/i.test(norm))return 'MEMORY_READ_FACT';
     if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean)||/o que voce lembra|o que voce sabe sobre mim/i.test(norm))return 'MEMORY_READ';
     if(/fiz uma merda|deu ruim|t[oô] na merda|burrice|me ferrei|vacilei/i.test(clean)||/fiz besteira|estou na pior|estou ferrado/i.test(norm))return 'EMOTIONAL_DISTRESS';
     if((/\b(triste|chatead[oa]|estressad[oa]|desanimad[oa]|preocupad[oa]|t[oô] mal|angustiad[oa]|aflit[oa]|com medo)\b/i.test(clean)||/\b(triste|chateado|chateada|estressado|estressada|desanimado|desanimada|preocupado|preocupada|estou mal|angustiado|aflito|com medo)\b/i.test(norm)||(/(pesad[oa]|pesando)\b/i.test(clean)&&!/(cartao|cartoes|fatura|faturas|divida|dividas|conta|contas|limite)/i.test(norm))))return 'EMOTIONAL_CONCERN';

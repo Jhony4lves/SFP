@@ -467,10 +467,106 @@ export async function runCycle3Tests() {
   return { passed, failed };
 }
 
+export async function runCycle4Tests() {
+  console.log('=== TEST MATRIX: CICLO 4 — Memória Dinâmica & Personalização ===');
+  const harness = createSophyHarness();
+
+  let passed = 0;
+  let failed = 0;
+
+  // Caso 1: Gravação e Recuperação Específica de Fato (Aniversário)
+  console.log('-- Caso 1: Gravação e Recuperação Específica de Aniversário --');
+  {
+    const r1 = await harness.sendMessage('Lembre que meu aniversário é dia 15 de maio');
+    assert(/guardei|memória/i.test(r1.text), 'Turno 1 deve confirmar que guardou');
+
+    const r2 = await harness.sendMessage('quando é meu aniversário?');
+    try {
+      assert(!r2.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/15 de maio/i.test(r2.text), 'Deve recuperar a data de aniversário da memória');
+      console.log(`  ✓ PASS: Recuperação de aniversário -> "${r2.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Recuperação de aniversário -> "${r2.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 2: Gravação e Recuperação de Preferência
+  console.log('-- Caso 2: Gravação e Recuperação de Preferência --');
+  {
+    await harness.sendMessage('Lembre que eu prefiro economizar em delivery');
+    const r2 = await harness.sendMessage('o que eu prefiro economizar?');
+    try {
+      assert(!r2.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/delivery/i.test(r2.text), 'Deve recuperar a preferência de delivery');
+      console.log(`  ✓ PASS: Recuperação de preferência -> "${r2.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Recuperação de preferência -> "${r2.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 3: Consulta sobre fato não memorizado
+  console.log('-- Caso 3: Consulta sobre fato não memorizado --');
+  {
+    const r1 = await harness.sendMessage('o que você sabe sobre meu carro?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/ainda não|me conta|lembre que/i.test(r1.text), 'Deve acolher e convidar a registrar');
+      console.log(`  ✓ PASS: Fato não memorizado -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Fato não memorizado -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 4: Personalização com Nome do Usuário
+  console.log('-- Caso 4: Saudação personalizada com nome --');
+  {
+    const st = harness.getState();
+    st.settings.name = 'Jhony';
+    harness.setState(st);
+
+    const r1 = await harness.sendMessage('Oi Sophy');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/jhony/i.test(r1.text), 'Deve incluir o nome Jhony na resposta');
+      console.log(`  ✓ PASS: Saudação com nome -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Saudação com nome -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Caso 5 (Adversarial): Pergunta sem acento sobre memória gravada
+  console.log('-- Caso 5 (Adversarial): Pergunta sem acento sobre aniversário --');
+  {
+    const r1 = await harness.sendMessage('quando e meu aniversario?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/15 de maio/i.test(r1.text), 'Deve responder a data do aniversário');
+      console.log(`  ✓ PASS: Pergunta sem acento -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Pergunta sem acento -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  console.log(`Ciclo 4: ${passed} passados, ${failed} falhas.`);
+  if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 4.`);
+  return { passed, failed };
+}
+
 async function main() {
   await runCycle1Tests();
   await runCycle2Tests();
   await runCycle3Tests();
+  await runCycle4Tests();
 }
 
 main();
