@@ -201,22 +201,29 @@ public class AndroidBridge {
         }
     }
 
+    private void migrateLegacyKeyIfNeeded(SharedPreferences prefs) {
+        String legacyKey = prefs.getString(LEGACY_KEY_GROQ_SECRET, null);
+        if (legacyKey == null) {
+            return;
+        }
+        try {
+            String trimmed = legacyKey.trim();
+            if (!trimmed.isEmpty()) {
+                encryptAndSaveApiKey(trimmed);
+            }
+        } catch (Exception ignored) {
+            // Fail-secure: migration failure leaves API key unconfigured
+        } finally {
+            // Unconditional purge: legacy plaintext is ALWAYS removed from disk
+            prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).apply();
+        }
+    }
+
     private String getDecryptedApiKeyInternal() {
         SharedPreferences prefs = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE);
 
-        // Fail-secure legacy migration: if ciphertext is absent but legacy plaintext was set
-        String legacyKey = prefs.getString(LEGACY_KEY_GROQ_SECRET, null);
-        if (legacyKey != null) {
-            try {
-                if (!legacyKey.trim().isEmpty()) {
-                    encryptAndSaveApiKey(legacyKey.trim());
-                }
-            } catch (Exception ignored) {
-            } finally {
-                // Fail-secure: unconditionally purge legacy plaintext key from SharedPreferences
-                prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).apply();
-            }
-        }
+        // Fail-secure centralized legacy migration
+        migrateLegacyKeyIfNeeded(prefs);
 
         String ciphertextB64 = prefs.getString(KEY_CIPHERTEXT, null);
         String ivB64 = prefs.getString(KEY_IV, null);

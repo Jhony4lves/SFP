@@ -319,6 +319,8 @@ export async function runArchitectureTests() {
     assert(bridgeJava.includes('prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).apply()'), 'AndroidBridge deve purgar chave legada incondicionalmente');
 
     // 3. hasSophyApiKey centralizado e fail-secure
+    assert(bridgeJava.includes('private void migrateLegacyKeyIfNeeded('), 'AndroidBridge deve conter método privado centralizado migrateLegacyKeyIfNeeded');
+    assert(bridgeJava.includes('migrateLegacyKeyIfNeeded(prefs)'), 'getDecryptedApiKeyInternal deve invocar migrateLegacyKeyIfNeeded');
     assert(bridgeJava.includes('key = getDecryptedApiKeyInternal()'), 'hasSophyApiKey deve delegar para getDecryptedApiKeyInternal');
     assert(!bridgeJava.includes('hasCipher'), 'hasSophyApiKey não deve usar verificação ingênua hasCipher');
 
