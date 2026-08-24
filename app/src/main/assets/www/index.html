@@ -4719,7 +4719,12 @@ const sophyOfflineCore={
   process(prompt,context=null){
     const raw=String(prompt||'').trim();
     const clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    const norm=sophyNormalize(raw);
+    let norm=sophyNormalize(raw);
+    norm=norm.replace(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s,;.-]*/i,'').trim()||norm;
+    if(/^(esquece(\s+isso)?|deixa\s+para\s+la|mudando\s+de\s+assunto)[\s,;.-]*/i.test(norm)){
+      if(state?.sophy)state.sophy.context={};
+      norm=norm.replace(/^(esquece(\s+isso)?|deixa\s+para\s+la|mudando\s+de\s+assunto)[\s,;.-]*/i,'').trim();
+    }
     const ctx=context||financialContextSnapshot();
 
     // 1. Memória: Lembre que... / Anote que...
@@ -4816,8 +4821,16 @@ const sophyOfflineCore={
       };
     }
 
-    // Risadas / Humor (inclusive compostas com texto como "kkkk você é ótima")
-    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)\b/i.test(clean)||/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)\b/i.test(norm)){
+    // Elogios e Carinho
+    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean)||/obrigado|obrigada|valeu|te amo|gosto de voce|incrivel|agradecido|gratidao|thanks|voce e (otima|demais|maravilhosa|incrivel|fera)/i.test(norm)){
+      return{
+        text:`Aww, muito obrigada pelo carinho! 🥰 Fico muito feliz em estar aqui do seu lado. O que precisar, pode contar comigo!`,
+        emotion:'proud'
+      };
+    }
+
+    // Risadas / Humor isolados
+    if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s!.]*$/i.test(clean)||/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s!.]*$/i.test(norm)||norm===''){
       const laughs=[
         `Hahaha! 😂 Rir é o melhor investimento que não custa nada! O que manda hoje?`,
         `Kkkk adoro esse bom humor! O que estamos planejando de bom nas finanças?`,
@@ -4875,14 +4888,6 @@ const sophyOfflineCore={
       return{
         text:`Eu sou 100% real na minha dedicação a você e ao seu dinheiro! Trabalho direto no seu aparelho, sem precisar de internet pra cuidar de você, e cada conselho é baseado na matemática real do seu SFP. Pra mim, isso é o que importa! ✨`,
         emotion:'playful'
-      };
-    }
-
-    // Agradecimento / Elogios
-    if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean)||/obrigado|obrigada|valeu|te amo|gosto de voce|incrivel|agradecido|gratidao|thanks/i.test(norm)){
-      return{
-        text:`De nada! É um prazer imenso caminhar junto com você. Sempre que precisar de uma força, uma dica ou só um papo leve, eu tô bem aqui! 💙`,
-        emotion:'cheerful'
       };
     }
 
@@ -4949,8 +4954,58 @@ const sophyOfflineCore={
       }
     }
 
-    // 4. Follow-up Contextual
+    // 4. Follow-up Contextual & Resolução de Referências
     const ctxLast=state.sophy?.context;
+    const isTemporalFollowUp=/^(e\s+)?(no\s+)?(mes\s+que\s+vem|proximo\s+mes|mes\s+seguinte|depois|ano\s+que\s+vem|outro\s+mes)\b/i.test(norm)||/^(e\s+depois|e\s+no\s+outro|e\s+no\s+proximo)\??$/i.test(norm);
+    if(isTemporalFollowUp&&ctxLast){
+      if(ctxLast.lastIntent==='card_invoice'||ctxLast.lastEntity==='card_invoice'){
+        const nextMonth=monthAdd(state.mesAtual,1);
+        const cards=state.cards||[];
+        if(!cards.length){
+          return{text:`Nenhum cartão cadastrado no SFP no momento.`,emotion:'neutral'};
+        }
+        const lines=cards.map(c=>{
+          const rem=invoiceRemaining(c.id,nextMonth);
+          const freeLimit=Math.max(0,c.limit-cardOutstanding(c.id));
+          return `• **${c.name}**: Fatura prevista em **${brl(rem)}** para ${monthName(nextMonth)} (vence dia ${c.dueDay}). Limite disponível: **${brl(freeLimit)}**.`;
+        }).join('\n');
+        state.sophy.context={lastIntent:'card_invoice',lastEntity:'card_invoice',lastMonth:nextMonth};
+        return{
+          text:`Aqui está a previsão das faturas de cartão para **${monthName(nextMonth)}**:\n\n${lines}`,
+          emotion:'cheerful',
+          structured:{type:'cards_future_summary',month:nextMonth}
+        };
+      }
+      if(ctxLast.lastIntent==='monthly_summary'){
+        const nextMonth=monthAdd(state.mesAtual,1);
+        const cash=cashView(nextMonth),accrual=accrualView(nextMonth);
+        state.sophy.context={lastIntent:'monthly_summary',lastMonth:nextMonth};
+        return{
+          text:`Projeção de resumo para **${monthName(nextMonth)}**:\n\n• **Fluxo de Caixa Previsto**: Entradas de ${brl(cash.income)} e saídas de ${brl(cash.expense)} (Resultado: ${brl(cash.result)}).\n• **Competência Prevista**: Receitas de ${brl(accrual.income)} e despesas de ${brl(accrual.expense)}.\n\nQuer detalhar alguma despesa programada desse mês?`,
+          emotion:'cheerful',
+          structured:{type:'monthly_summary_projection',month:nextMonth,cash,accrual}
+        };
+      }
+    }
+
+    const isOpinionFollowUp=/^(vale\s+a\s+pena|compensa|o\s+que\s+voce\s+acha|e\s+bom|e\s+furada|ta\s+ruim|e\s+vantagem)\??$/i.test(norm);
+    if(isOpinionFollowUp&&ctxLast){
+      if(ctxLast.lastIntent==='hypothetical_loan'||ctxLast.lastEntity==='loan_simulation'){
+        return{
+          text:`Analisando a simulação: contratar esse valor parcelado gera um custo de juros relevante sobre o total pago. Se não for uma urgência indispensável, o mais seguro é acumular esse valor aos poucos nas metas ou buscar condições com juros menores para proteger seu fluxo de caixa! 💡`,
+          emotion:'concerned',
+          structured:{type:'loan_opinion_followup'}
+        };
+      }
+      if(ctxLast.lastIntent==='financial_health'||ctxLast.lastIntent==='free_balance'){
+        const free=allAccountBalance()-commitmentUntilNextIncome();
+        return{
+          text:free>=0?`Na minha visão, você tá numa posição confortável com **${brl(free)}** de livre projetado! O segredo é manter os compromissos em dia e direcionar a sobra para suas reservas. ✨`:`No momento sua situação exige cautela porque o livre projetado tá negativo (**${brl(free)}**). Vale a pena segurar qualquer gasto extra até a próxima entrada! 💙`,
+          emotion:free>=0?'cheerful':'concerned'
+        };
+      }
+    }
+
     if(/^(e se|e quanto|e no|quanto fica se|se eu pagar|se eu gastar|e a metade|e metade)/i.test(clean)||clean==='metade?'||clean==='e metade?'){
       if(ctxLast?.lastEntity==='card_invoice'){
         const lastAmt=ctxLast.lastAmount||0;
@@ -4973,6 +5028,20 @@ const sophyOfflineCore={
           emotion:diff<0?'concerned':'cheerful'
         };
       }
+    }
+
+    const isAmbiguousShort=/^(quanto|e\s+isso|e\s+ai|e\s+agora|quanto\s+e|qual\s+o\s+valor)\??$/i.test(norm);
+    if(isAmbiguousShort){
+      if(ctxLast?.lastAmount!=null&&ctxLast.lastIntent){
+        return{
+          text:`O valor que estávamos analisando é de **${brl(ctxLast.lastAmount)}**. Quer fazer alguma simulação ou ver mais detalhes sobre ele?`,
+          emotion:'cheerful'
+        };
+      }
+      return{
+        text:`Me dá uma pista do que você quer saber! 🔍 Você quer ver o seu saldo em contas, a fatura do cartão, o dinheiro livre projetado ou o total de dívidas? Me conta que eu te mostro agora mesmo. 😉`,
+        emotion:'playful'
+      };
     }
 
     // 5. Consultas Financeiras Authoritative (Local Core)
@@ -5173,7 +5242,11 @@ const sophyRouter={
   classify(prompt){
     const raw=String(prompt||'').trim();
     const clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    const norm=sophyNormalize(raw);
+    let norm=sophyNormalize(raw);
+    norm=norm.replace(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)[\s,;.-]*/i,'').trim()||norm;
+    if(/^(esquece(\s+isso)?|deixa\s+para\s+la|mudando\s+de\s+assunto)[\s,;.-]*/i.test(norm)){
+      norm=norm.replace(/^(esquece(\s+isso)?|deixa\s+para\s+la|mudando\s+de\s+assunto)[\s,;.-]*/i,'').trim();
+    }
 
     if(/^(lembre( que)?|anote( que)?|guarde( que)?|lembrar( que)?)\s+(.+)/i.test(raw))return 'MEMORY_WRITE';
     if(/memoria|o que voce lembra|o que voce sabe sobre mim|minhas memorias/i.test(clean)||/o que voce lembra|o que voce sabe sobre mim/i.test(norm))return 'MEMORY_READ';
@@ -5198,6 +5271,9 @@ const sophyRouter={
     // Simulações Hipotéticas & Follow-ups
     if(/(emprestimo|financiar|financiamento|parcelar|pegar\s+\d)/i.test(clean)&&/(se\s+eu|e\s+se|supondo|imagina|simula|simular|quanto\s+ficaria|valeria|parcela|vezes)/i.test(clean))return 'FOLLOWUP_FINANCIAL';
     if(/^(e se|e quanto|e no|quanto fica se|se eu pagar|se eu gastar|e a metade|e metade)/i.test(clean)||clean==='metade?'||clean==='e metade?')return 'FOLLOWUP_FINANCIAL';
+    if(/^(e\s+)?(no\s+)?(mes\s+que\s+vem|proximo\s+mes|mes\s+seguinte|depois|ano\s+que\s+vem|outro\s+mes)\b/i.test(norm)||/^(e\s+depois|e\s+no\s+outro|e\s+no\s+proximo)\??$/i.test(norm))return 'FOLLOWUP_TEMPORAL';
+    if(/^(vale\s+a\s+pena|compensa|o\s+que\s+voce\s+acha|e\s+bom|e\s+furada|ta\s+ruim|e\s+vantagem)\??$/i.test(norm))return 'FOLLOWUP_OPINION';
+    if(/^(quanto|e\s+isso|e\s+ai|e\s+agora|quanto\s+e|qual\s+o\s+valor)\??$/i.test(norm))return 'FOLLOWUP_AMBIGUOUS_CLARIFY';
 
     if(/(minha\s+situacao\s+(esta\s+)?(feia|ruim|boa|tranquila|critica|apertada)|como\s+esta\s+minha\s+situacao|como\s+estou\s+de\s+grana|como\s+andam\s+minhas\s+financas|minha\s+vida\s+financeira|estou\s+(apertado|tranquilo|no\s+vermelho|no\s+azul))/i.test(norm))return 'FINANCIAL_HEALTH';
     if(/resumo|visao geral|balanco|parametro|panorama|fechamento|como\s+(anda|esta|estamos|estou|que\s+eu\s+estou)\s+esse\s+mes|como\s+esta\s+o\s+mes/i.test(norm)||/resumo|visao geral|balanco|como ta o mes|como esta o mes/i.test(clean))return 'FINANCIAL_SUMMARY';

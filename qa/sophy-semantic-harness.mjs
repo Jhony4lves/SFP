@@ -38,6 +38,8 @@ export function createSophyHarness(customFixture = null) {
       replaceChildren: () => {},
       querySelectorAll: () => [],
       querySelector: () => null,
+      closest: () => null,
+      getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }),
       addEventListener: () => {},
       removeEventListener: () => {}
     };
@@ -105,7 +107,7 @@ export function createSophyHarness(customFixture = null) {
   
   const seedState = customFixture || fixture();
   sandbox.initFixture = seedState;
-  vm.runInContext('state = initFixture; normalize();', context);
+  vm.runInContext('state = clone(initFixture); lastSavedState = clone(initFixture); normalize();', context);
 
   return {
     context,
@@ -113,12 +115,12 @@ export function createSophyHarness(customFixture = null) {
     getState: () => vm.runInContext('state', context),
     setState: (st) => {
       sandbox.tempState = st;
-      vm.runInContext('state = tempState; normalize();', context);
+      vm.runInContext('state = clone(tempState); lastSavedState = clone(tempState); normalize();', context);
     },
     sendMessage: async (text) => {
       sandbox.tempText = text;
       await vm.runInContext('sophySendMessage(tempText)', context);
-      return vm.runInContext('state.sophy.messages.at(-1)', context);
+      return vm.runInContext('state.sophy.messages[state.sophy.messages.length - 1]', context);
     },
     processOffline: (text) => {
       sandbox.tempText = text;

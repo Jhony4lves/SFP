@@ -298,40 +298,179 @@ export async function runCycle2Tests() {
   let passed = 0;
   let failed = 0;
 
-  console.log('-- Casos Primários Ciclo 2 --');
-  for (const tc of primaryCases) {
+  for (const tc of [...primaryCases, ...adversarialCases]) {
     const res = harness.processOffline(tc.input);
     try {
       tc.check(res);
-      console.log(`  ✓ PASS: "${tc.input}" -> "${res.text.slice(0, 55)}..."`);
       passed++;
     } catch (err) {
-      console.log(`  ✗ FAIL: "${tc.input}" (${tc.desc}) -> "${res.text}" [Error: ${err.message}]`);
+      console.log(`  ✗ FAIL: "${tc.input}" (${tc.desc}) [${err.message}]`);
       failed++;
     }
   }
 
-  console.log('-- Casos Adversariais Ciclo 2 --');
-  for (const tc of adversarialCases) {
-    const res = harness.processOffline(tc.input);
-    try {
-      tc.check(res);
-      console.log(`  ✓ PASS: "${tc.input}" -> "${res.text.slice(0, 55)}..."`);
-      passed++;
-    } catch (err) {
-      console.log(`  ✗ FAIL: "${tc.input}" (${tc.desc}) -> "${res.text}" [Error: ${err.message}]`);
-      failed++;
-    }
-  }
-
-  console.log(`Resultado Ciclo 2 Total: ${passed} passados, ${failed} falhas.`);
+  console.log(`Ciclo 2: ${passed} passados, ${failed} falhas.`);
   if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 2.`);
+}
+
+export async function runCycle3Tests() {
+  console.log('=== TEST MATRIX: CICLO 3 — Follow-ups Contextuais & Transição de Tópico ===');
+  const harness = createSophyHarness();
+
+  let passed = 0;
+  let failed = 0;
+
+  // Diálogo 1: Cartões -> "e mês que vem?"
+  console.log('-- Diálogo 1: Cartões -> Follow-up "e mês que vem?" --');
+  {
+    const r1 = await harness.sendMessage('Como estão minhas faturas de cartão?');
+    assert(/cart|fatura/i.test(r1.text), 'Turno 1 deve falar de cartões');
+    
+    const r2 = await harness.sendMessage('e mês que vem?');
+    try {
+      assert(!r2.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/fatura|cart|mês que vem|próximo/i.test(r2.text), 'Deve reter contexto de fatura/cartão no mês seguinte');
+      console.log(`  ✓ PASS: Follow-up temporal de cartão -> "${r2.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Follow-up temporal de cartão -> "${r2.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Diálogo 2: Resumo do mês -> "e no próximo mês?"
+  console.log('-- Diálogo 2: Resumo do mês -> Follow-up "e no próximo mês?" --');
+  {
+    const r1 = await harness.sendMessage('Me dá um resumo do mês');
+    assert(/resumo|mês/i.test(r1.text), 'Turno 1 deve trazer resumo');
+
+    const r2 = await harness.sendMessage('e no próximo mês?');
+    try {
+      assert(!r2.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/resumo|próximo|mês|projeção|fevereiro/i.test(r2.text), 'Deve trazer projeção/resumo do próximo mês');
+      console.log(`  ✓ PASS: Follow-up temporal de resumo -> "${r2.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Follow-up temporal de resumo -> "${r2.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Diálogo 3: Simulação ativa -> "vale a pena?" / "quanto?"
+  console.log('-- Diálogo 3: Simulação ativa -> Follow-up "vale a pena?" --');
+  {
+    const r1 = await harness.sendMessage('Se eu pegar um empréstimo de 5000 em 10 vezes de 600');
+    assert(/simulação|parcelas/i.test(r1.text), 'Turno 1 deve simular empréstimo');
+
+    const r2 = await harness.sendMessage('vale a pena?');
+    try {
+      assert(!r2.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/juros|custo|parcela|impacto|caixa|cuidado|vale/i.test(r2.text), 'Deve avaliar a simulação ativa');
+      console.log(`  ✓ PASS: Follow-up opinativo com contexto -> "${r2.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Follow-up opinativo com contexto -> "${r2.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Diálogo 4: Pergunta curta sem contexto prévio -> "e isso?" / "quanto?"
+  console.log('-- Diálogo 4: Pergunta ambígua sem contexto --');
+  {
+    // Limpa contexto
+    const st = harness.getState();
+    st.sophy.context = {};
+    harness.setState(st);
+
+    const r1 = await harness.sendMessage('quanto?');
+    try {
+      assert(!r1.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/me conta|saldo|fatura|meta|detalhe|pista/i.test(r1.text), 'Deve pedir clarificação com acolhimento');
+      console.log(`  ✓ PASS: Ambíguo sem contexto -> "${r1.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Ambíguo sem contexto -> "${r1.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Diálogo 5: Mudança de assunto -> "como tá meu dinheiro?" -> "kkkk esquece isso, como você tá?"
+  console.log('-- Diálogo 5: Mudança de assunto --');
+  {
+    const r1 = await harness.sendMessage('Como tá meu dinheiro total?');
+    assert(/saldo total/i.test(r1.text), 'Turno 1 deve responder saldo');
+
+    const r2 = await harness.sendMessage('kkkk esquece isso, como você tá?');
+    try {
+      assert(!r2.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(!r2.text.includes('R$'), 'Não deve injetar saldo');
+      assert(/tô|ótima|tranquila|energia|tudo bem/i.test(r2.text), 'Deve responder status casual sem saldo');
+      console.log(`  ✓ PASS: Mudança de assunto casual -> "${r2.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Mudança de assunto casual -> "${r2.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Diálogo 6 (Adversarial): Variação temporal coloquial "e no mes que vem?"
+  console.log('-- Diálogo 6 (Adversarial): "e no mes que vem?" sem acento --');
+  {
+    await harness.sendMessage('quanto tá o cartão?');
+    const r2 = await harness.sendMessage('e no mes que vem?');
+    try {
+      assert(!r2.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(/fatura|cart|mês|previsão/i.test(r2.text), 'Deve resolver fatura do mês seguinte');
+      console.log(`  ✓ PASS: Variação temporal sem acento -> "${r2.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Variação temporal sem acento -> "${r2.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Diálogo 7 (Adversarial): Mudança expressa para piada "deixa pra lá, me conta uma piada"
+  console.log('-- Diálogo 7 (Adversarial): Mudança expressa de tópico para piada --');
+  {
+    await harness.sendMessage('como tá meu dinheiro?');
+    const r2 = await harness.sendMessage('deixa pra lá, me conta uma piada');
+    try {
+      assert(!r2.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(!r2.text.includes('R$'), 'Não deve injetar saldo');
+      assert(/psicólogo|café|cartão|dinheiro|😂|😆|😉/i.test(r2.text), 'Deve contar uma piada sem saldo');
+      console.log(`  ✓ PASS: Mudança expressa de tópico -> "${r2.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Mudança expressa de tópico -> "${r2.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  // Diálogo 8 (Adversarial): Mudança expressa para pergunta financeira direta "mudando de assunto, qual meu saldo?"
+  console.log('-- Diálogo 8 (Adversarial): Mudança de assunto para nova pergunta financeira --');
+  {
+    await harness.sendMessage('tô com sono hoje');
+    const r2 = await harness.sendMessage('mudando de assunto, qual meu saldo?');
+    try {
+      assert(!r2.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+      assert(r2.text.includes('R$'), 'Deve trazer o saldo financeiro');
+      console.log(`  ✓ PASS: Mudança de assunto para financeiro -> "${r2.text.slice(0, 55)}..."`);
+      passed++;
+    } catch (e) {
+      console.log(`  ✗ FAIL: Mudança de assunto para financeiro -> "${r2.text}" [${e.message}]`);
+      failed++;
+    }
+  }
+
+  console.log(`Ciclo 3: ${passed} passados, ${failed} falhas.`);
+  if (failed > 0) throw new Error(`${failed} testes falharam no Ciclo 3.`);
   return { passed, failed };
 }
 
 async function main() {
   await runCycle1Tests();
   await runCycle2Tests();
+  await runCycle3Tests();
 }
 
 main();
