@@ -350,6 +350,65 @@ export async function runArchitectureTests() {
     failed++;
   }
 
+  // 8. Physical Device Regression Matrix (PHYS-01 to PHYS-10)
+  console.log('-- Test 8: Physical Device Regression Matrix (PHYS-01 to PHYS-10) --');
+  try {
+    const fs = await import('node:fs');
+    const bridgeJava = fs.readFileSync('app/src/main/java/com/jhony/sfp/AndroidBridge.java', 'utf8');
+    const buildGradle = fs.readFileSync('app/build.gradle', 'utf8');
+    const indexHtml = fs.readFileSync('app/src/main/assets/www/index.html', 'utf8');
+
+    // PHYS-01: Offline casual follow-up
+    const rPhys01 = harness.processOffline('Tô bem, e você?');
+    assert(!rPhys01.text.includes('modo local (offline)'), 'PHYS-01: Não deve cair em fallback offline');
+    assert(!rPhys01.text.includes('R$'), 'PHYS-01: Não deve injetar saldo financeiro');
+    assert(/ótima|bem|tranquil|cuidando|pront/i.test(rPhys01.text), 'PHYS-01: Deve responder com reciprocidade e afeto');
+
+    // PHYS-02: Local -> Groq model initialization
+    const groqProv = harness.context.sophyProviderRegistry.groq;
+    assert.equal(groqProv.defaultModel, 'openai/gpt-oss-120b', 'PHYS-02: Modelo default do Groq deve ser openai/gpt-oss-120b');
+
+    // PHYS-03: Groq + model legacy "default" normalization
+    const legacyState = harness.getState();
+    legacyState.sophy.settings.model = 'default';
+    harness.setState(legacyState);
+    harness.eval('normalize()');
+    assert.equal(harness.getState().sophy.settings.model, 'openai/gpt-oss-120b', 'PHYS-03: normalize() deve converter model "default" para openai/gpt-oss-120b');
+
+    // PHYS-04: Casual online without unsolicited finance
+    assert(indexHtml.includes('NUNCA mencione espontaneamente finanças'), 'PHYS-04: Persona prompt deve proibir finanças não solicitadas em papo casual');
+
+    // PHYS-05: Cansaço sem menu de telemarketing
+    const rPhys05 = harness.processOffline('Tô meio cansado hoje, só queria conversar um pouco');
+    assert(!rPhys05.text.includes('modo local (offline)'), 'PHYS-05: Não deve dar fallback offline');
+    assert(!rPhys05.text.includes('R$'), 'PHYS-05: Não deve injetar saldo');
+    assert(!/estou à disposição|fique à vontade|menu|catálogo|posso ajudar com:/i.test(rPhys05.text), 'PHYS-05: Não deve parecer telemarketing');
+
+    // PHYS-06: Memórias (0) sem espaços extras
+    assert(indexHtml.includes('id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você"><span>🧠 Memórias (<span id="sophyMemoryCount">0</span>)</span>'), 'PHYS-06: DOM deve conter wrapper span para prevenir flex gap nos parênteses');
+
+    // PHYS-07 & PHYS-08: CSS Layout flex-shrink e bounds
+    assert(indexHtml.includes('.sophy-suggestions-bar{display:flex;align-items:center;gap:8px;overflow-x:auto;flex-wrap:nowrap;flex-shrink:0;min-height:44px'), 'PHYS-07: suggestions-bar deve ter flex-shrink: 0');
+    assert(indexHtml.includes('.sophy-input-bar{display:flex;gap:10px;padding:8px 14px;background:#071422;border-top:1px solid var(--line);align-items:center;flex-shrink:0;min-height:48px'), 'PHYS-07: input-bar deve ter flex-shrink: 0');
+    assert(indexHtml.includes('body[data-page="sophy"] main{padding:8px 8px max(8px,var(--safe-bottom));height:100dvh'), 'PHYS-08: Landscape layout deve conter flex height: 100dvh');
+
+    // PHYS-09: UX de teste com chave digitada
+    assert(indexHtml.includes('sophySecureStorage.setApiKey(enteredKey)'), 'PHYS-09: Testar conexão deve salvar chave digitada no cofre seguro');
+
+    // PHYS-10: Upgrade compatibility & Keystore contracts
+    assert(bridgeJava.includes('sfp_sophy_secure_vault'), 'PHYS-10: Nome do vault seguro deve ser preservado');
+    assert(bridgeJava.includes('sfp_sophy_groq_v3_master_key'), 'PHYS-10: Alias da master key Keystore deve ser preservado');
+    assert(bridgeJava.includes('sophy_groq_ciphertext'), 'PHYS-10: Chave ciphertext deve ser preservada');
+    assert(bridgeJava.includes('sophy_groq_iv'), 'PHYS-10: Chave IV deve ser preservada');
+    assert(buildGradle.includes('applicationId "com.jhony.sfp"'), 'PHYS-10: ApplicationId deve ser com.jhony.sfp');
+
+    console.log('  ✓ PASS: Todos os 10 contratos da Matriz de Regressão Física (PHYS-01 a PHYS-10) validados.');
+    passed++;
+  } catch (e) {
+    console.log(`  ✗ FAIL: Matriz de Regressão Física [${e.message}]`);
+    failed++;
+  }
+
   console.log(`\nArchitecture Contracts: ${passed} passados, ${failed} falhas.`);
   if (failed > 0) throw new Error(`${failed} testes de arquitetura falharam.`);
   return { passed, failed };

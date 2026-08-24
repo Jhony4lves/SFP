@@ -198,6 +198,16 @@ export async function runCycle8EmotionalSupport() {
       check: (res) => {
         assert(/boa noite|bom descanso|durma|até amanhã|amanhã/i.test(res.text), 'Deve desejar boa noite');
       }
+    },
+    {
+      input: 'Tô meio cansado hoje, só queria conversar um pouco',
+      desc: 'PHYS-05: Desabafo de cansaço com pedido de conversa sem puxar finanças ou menu',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(!res.text.includes('R$') && !/saldo|fatura|cartão|meta financeira|números/i.test(res.text), 'Não deve mencionar finanças');
+        assert(!/estou à disposição|fique à vontade|menu|catálogo|posso ajudar com:/i.test(res.text), 'Não deve parecer telemarketing');
+        assert(/descans|dormir|dia|puxado|pesado|relax|cansaço|conversa/i.test(res.text), 'Deve acolher com afeto e empatia');
+      }
     }
   ];
 

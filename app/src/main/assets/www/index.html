@@ -60,7 +60,7 @@ label{display:block;color:var(--muted);font-size:10px;margin-bottom:10px}input,s
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.shell{grid-template-columns:74px 1fr}.sidebar{padding:15px 8px}.brand div:not(.brandmark),.nav button span,.sidefoot{display:none}.brand{justify-content:center}.nav button{justify-content:center;font-size:16px}.grid2,.grid3{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px) and (orientation:portrait){.shell{display:block}.sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;height:calc(var(--bottom-nav-height) + var(--safe-bottom));border-right:0;border-top:1px solid var(--line);padding:4px 6px max(4px,var(--safe-bottom));background:#06101d;z-index:70;box-sizing:border-box}.brand,.sidefoot{display:none}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;overflow:visible;padding:0;margin:0;width:100%;height:100%}.sidebar .nav button{display:none!important;min-width:0;padding:4px 2px}.sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="sophy"],.sidebar .nav button[data-page="lancamentos"],.sidebar .nav button[data-page="contas"],.sidebar .nav #moreNavBtn{display:flex!important;flex-direction:column;align-items:center;justify-content:center;padding:4px 1px;font-size:13px;border-radius:6px;min-width:0}.sidebar .nav button span{display:block;font-size:10px;line-height:1.2;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}.sidebar .nav button.active{box-shadow:inset 0 -3px 0 var(--blue);background:rgba(76,194,255,.08)}#moreNavBtn{color:var(--muted)}#moreNavBtn.active{color:var(--blue)}main{padding:14px 10px calc(var(--bottom-nav-height) + var(--safe-bottom) + 18px);width:100%;max-width:100vw;box-sizing:border-box}body[data-page="sophy"] .top{display:none!important}body[data-page="sophy"] main{padding:8px 8px calc(var(--bottom-nav-height) + var(--safe-bottom) + 8px);height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}body[data-page="sophy"] #sophy{flex:1;display:flex;flex-direction:column;min-height:0;height:100%}body[data-page="sophy"] .sophy-container{flex:1;display:flex;flex-direction:column;min-height:0;height:100%;gap:8px;max-width:100%}body[data-page="sophy"] .sophy-header-card{flex-shrink:0;padding:8px 12px}body[data-page="sophy"] .sophy-chat-card{flex:1 1 auto;min-height:0;height:100%;max-height:none}.top{flex-direction:column}.top .actions{width:100%}.top .actions .btn{flex:1}.metric-grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}.flow{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}.quicktypes{grid-template-columns:repeat(5,1fr)}.quicktype{padding:8px 3px;font-size:8px}.quicktype b{font-size:15px}.calendar{gap:2px}.calhead{font-size:10px;padding:2px 0}.day{min-height:58px;padding:4px 3px;gap:2px}.daynum{font-size:11px}.cal-dot{width:6px;height:6px}.cal-flow{font-size:10px}.cal-count{font-size:10px}.mobilefab{display:grid;position:fixed;right:16px;bottom:var(--fab-bottom);width:48px;height:48px;border-radius:50%;background:var(--blue);color:#04131c;border:0;place-items:center;font-size:24px;font-weight:900;z-index:75;box-shadow:var(--shadow)}}
-@media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:fixed;top:0;bottom:0;left:0;height:100vh;max-height:100vh;display:flex;flex-direction:column;z-index:70;box-sizing:border-box}.shell{display:block}.nav{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;min-height:0}.mobilefab{bottom:16px;right:16px;z-index:75}}
+@media(orientation:landscape){#moreNavBtn{display:none!important}.sidebar .nav button[data-page]{display:flex!important}.sidebar{position:fixed;top:0;bottom:0;left:0;height:100vh;max-height:100vh;display:flex;flex-direction:column;z-index:70;box-sizing:border-box}.shell{display:block}.nav{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;min-height:0}.mobilefab{bottom:16px;right:16px;z-index:75}body[data-page="sophy"] .top{display:none!important}body[data-page="sophy"] main{padding:8px 8px max(8px,var(--safe-bottom));height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}body[data-page="sophy"] #sophy{flex:1 1 0;display:flex;flex-direction:column;min-height:0;height:100%}body[data-page="sophy"] .sophy-container{flex:1 1 0;display:flex;flex-direction:column;min-height:0;height:100%;gap:8px;max-width:100%}body[data-page="sophy"] .sophy-header-card{flex-shrink:0;padding:8px 12px}body[data-page="sophy"] .sophy-chat-card{flex:1 1 0;min-height:0;height:100%;max-height:none}}
 @media(orientation:landscape) and (max-width:900px){.sidebar{width:74px}main{margin-left:74px;width:calc(100% - 74px);max-width:calc(100vw - 74px);box-sizing:border-box}}
 @media(orientation:landscape) and (min-width:901px){.sidebar{width:235px}main{margin-left:235px;width:calc(100% - 235px);max-width:calc(100vw - 235px);box-sizing:border-box}}
 
@@ -1520,8 +1520,8 @@ button:active:not(:disabled){transform:translateY(1px)}
 @media(max-width:900px){.analytics-metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.dashboard-toolbar{align-items:flex-start;flex-direction:column}.period-selector{width:100%;display:grid;grid-template-columns:repeat(5,1fr)}.period-selector button{min-height:40px;padding:5px}.analytics-metrics{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:5px}.analytics-metrics .metric{min-width:155px;scroll-snap-align:start}.projection-grid{grid-template-columns:1fr 1fr}.calendar-legend{font-size:10px;gap:8px}}
 </style>
 <style id="sophy-styles">
-.sophy-container{display:flex;flex-direction:column;gap:12px;max-width:880px;margin:0 auto;width:100%}
-.sophy-header-card{background:linear-gradient(135deg,rgba(13,27,45,.95) 0%,rgba(16,36,60,.95) 50%,rgba(28,21,54,.95) 100%);border:1px solid rgba(76,194,255,.2);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.sophy-container{display:flex;flex-direction:column;gap:10px;max-width:880px;margin:0 auto;width:100%;height:100%;min-height:0;box-sizing:border-box}
+.sophy-header-card{background:linear-gradient(135deg,rgba(13,27,45,.95) 0%,rgba(16,36,60,.95) 50%,rgba(28,21,54,.95) 100%);border:1px solid rgba(76,194,255,.2);border-radius:16px;padding:12px 16px;box-shadow:0 8px 32px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;flex-shrink:0}
 .sophy-identity-group{display:flex;align-items:center;gap:12px}
 .sophy-avatar-wrap{position:relative;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#4cc2ff,#b388ff);display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 16px rgba(76,194,255,.35)}
 .sophy-avatar-wrap::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:linear-gradient(135deg,#4cc2ff,#b388ff);opacity:.35;animation:sophyPulse 3s infinite ease-in-out;z-index:-1}
@@ -1535,8 +1535,8 @@ button:active:not(:disabled){transform:translateY(1px)}
 .sophy-mood-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(179,136,255,.15);color:#d1b3ff;border:1px solid rgba(179,136,255,.3)}
 .sophy-header-actions{display:flex;align-items:center;gap:8px}
 
-.sophy-chat-card{background:#081625;border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;height:calc(100dvh - 270px);max-height:640px;min-height:320px;box-shadow:var(--shadow);overflow:hidden;position:relative}
-.sophy-chat-scroll{flex:1 1 auto;overflow-y:auto;padding:16px 16px 12px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;overscroll-behavior:contain;overflow-anchor:none;-webkit-overflow-scrolling:touch}
+.sophy-chat-card{background:#081625;border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;flex:1 1 0;min-height:0;height:calc(100dvh - 270px);max-height:640px;box-shadow:var(--shadow);overflow:hidden;position:relative;box-sizing:border-box}
+.sophy-chat-scroll{flex:1 1 0;min-height:0;overflow-y:auto;padding:14px 16px 10px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;overscroll-behavior:contain;overflow-anchor:none;-webkit-overflow-scrolling:touch;box-sizing:border-box}
 .sophy-msg-row{display:flex;gap:10px;align-items:flex-start;max-width:88%}
 .sophy-msg-row.user{margin-left:auto;flex-direction:row-reverse}
 .sophy-msg-row.sophy{margin-right:auto}
@@ -1547,15 +1547,15 @@ button:active:not(:disabled){transform:translateY(1px)}
 .sophy-msg-row.user .sophy-msg-time{text-align:right;color:rgba(4,19,28,.65)}
 .sophy-msg-row.sophy .sophy-msg-time{color:var(--muted)}
 
-.sophy-suggestions-bar{display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;padding:8px 14px;background:#06111e;border-top:1px solid var(--line);scrollbar-width:none;-webkit-overflow-scrolling:touch;touch-action:pan-x}
+.sophy-suggestions-bar{display:flex;align-items:center;gap:8px;overflow-x:auto;flex-wrap:nowrap;flex-shrink:0;min-height:44px;padding:6px 14px;background:#06111e;border-top:1px solid var(--line);scrollbar-width:none;-webkit-overflow-scrolling:touch;touch-action:pan-x;box-sizing:border-box}
 .sophy-suggestions-bar::-webkit-scrollbar{display:none}
-.sophy-chip{white-space:nowrap;flex-shrink:0;min-width:max-content;font-size:11.5px;font-weight:600;padding:6px 14px;border-radius:999px;background:#0d233a;color:#bfeaff;border:1px solid rgba(76,194,255,.25);cursor:pointer;transition:all .15s ease-in-out;user-select:none}
+.sophy-chip{white-space:nowrap;flex-shrink:0;min-width:max-content;font-size:11.5px;font-weight:600;padding:6px 14px;border-radius:999px;background:#0d233a;color:#bfeaff;border:1px solid rgba(76,194,255,.25);cursor:pointer;transition:all .15s ease-in-out;user-select:none;display:inline-flex;align-items:center;line-height:1.2}
 .sophy-chip:hover,.sophy-chip:active{background:rgba(76,194,255,.2);border-color:var(--blue);color:#fff}
 
-.sophy-input-bar{display:flex;gap:10px;padding:10px 14px;background:#071422;border-top:1px solid var(--line);align-items:center}
+.sophy-input-bar{display:flex;gap:10px;padding:8px 14px;background:#071422;border-top:1px solid var(--line);align-items:center;flex-shrink:0;min-height:48px;box-sizing:border-box}
 .sophy-input-bar input{margin:0;flex:1;background:#0d1e30;border:1px solid var(--line);color:#fff;border-radius:10px;padding:9px 12px;font-size:13.5px}
 .sophy-input-bar input:focus{border-color:var(--blue);outline:none}
-.sophy-input-bar button{padding:9px 16px;font-weight:700}
+.sophy-input-bar button{padding:9px 16px;font-weight:700;flex-shrink:0}
 .sophy-input-bar button:disabled{opacity:.6;cursor:not-allowed}
 
 .sophy-memory-list{display:grid;gap:8px;max-height:360px;overflow-y:auto;margin-top:10px}
@@ -1563,12 +1563,13 @@ button:active:not(:disabled){transform:translateY(1px)}
 .sophy-memory-item div b{display:block;font-size:12.5px;color:var(--text)}
 .sophy-memory-item div small{color:var(--muted);font-size:10px}
 @media(max-width:650px){
-  .sophy-chat-card{height:calc(100dvh - 195px);min-height:280px;border-radius:14px}
+  .sophy-chat-card{flex:1 1 0;height:auto;min-height:0;max-height:none;border-radius:14px}
   .sophy-header-card{padding:10px 14px;border-radius:14px;gap:10px}
   .sophy-avatar-wrap{width:40px;height:40px}
   .sophy-avatar-emoji{font-size:18px}
   .sophy-meta h2{font-size:16px}
-  .sophy-input-bar{padding:8px 10px;gap:8px}
+  .sophy-suggestions-bar{padding:6px 10px;min-height:42px}
+  .sophy-input-bar{padding:8px 10px;gap:8px;min-height:46px}
   .sophy-input-bar input{padding:8px 10px;font-size:13px}
   .sophy-input-bar button{padding:8px 12px;font-size:13px}
 }
@@ -1648,7 +1649,7 @@ button:active:not(:disabled){transform:translateY(1px)}
             </div>
           </div>
           <div class="sophy-header-actions">
-            <button type="button" class="btn2 tiny" id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você">🧠 Memórias (<span id="sophyMemoryCount">0</span>)</button>
+            <button type="button" class="btn2 tiny" id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você"><span>🧠 Memórias (<span id="sophyMemoryCount">0</span>)</span></button>
             <button type="button" class="btn2 tiny" id="sophySettingsBtn" title="Configurar provedor de IA da Sophy">⚙ Provedor IA</button>
             <button type="button" class="btn2 tiny" id="sophyClearHistoryBtn" title="Limpar conversa">Limpar chat</button>
           </div>
@@ -2131,6 +2132,9 @@ function normalize(){
  state.sophy.settings??={proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true};
  state.sophy.settings.proactivityEnabled??=true;
  state.sophy.settings.preferOnlineForGeneral??=true;
+ if(!state.sophy.settings.model||state.sophy.settings.model==='default'||typeof state.sophy.settings.model!=='string'||!state.sophy.settings.model.trim()){
+   state.sophy.settings.model='openai/gpt-oss-120b';
+ }
 }
 function autoBackup(){
   try{
@@ -4351,10 +4355,10 @@ const SOPHY_PERSONAS={
 
 const SOPHY_SYSTEM_PROMPT=`Você é a Sophy, assistente e parceira inteligente no aplicativo Smart Financial Planner (SFP).
 Seu tom é natural, informal, empático, acolhedor e com humor leve em português brasileiro (use expressões naturais como "tá", "pra", "bora", "beleza", "ih", "ué", "pois é", "me conta", "olha só").
-NÃO seja corporativa, nem use introduções repetitivas como "Entendi!" ou "Posso auxiliá-lo".
+NÃO seja corporativa, nem use introduções repetitivas como "Entendi!", "Posso auxiliá-lo" ou "Estou à disposição".
 Regra de Ouro: Reconheça primeiro os sentimentos ou a pergunta do usuário antes de falar sobre soluções.
 Quando o assunto for financeiro, atenha-se estritamente aos números fornecidos pelo Local Financial Core no contexto — NUNCA invente nem altere valores monetários.
-Quando o assunto for conversa casual ou geral (conhecimento, matemática, curiosidades), responda com naturalidade e inteligência, sem forçar temas financeiros desnecessariamente.`;
+Quando o assunto for conversa casual ou geral (conhecimento, desabafos, piadas, saudações, curiosidades), responda com naturalidade, concisão (1 a 3 frases) e leveza, NUNCA empurrando finanças, metas ou números espontaneamente.`;
 
 // Mock State para testes de QA e automação determinística
 let sophyMockState={
@@ -4389,17 +4393,21 @@ window.sophySetMockProvider=sophySetMockProvider;
 const SOPHY_PERSONA_PROMPT = `Você é a Sophy, assistente pessoal e parceira financeira inteligente integrada ao Smart Financial Planner (SFP).
 
 SUA IDENTIDADE & PERSONALIDADE:
-- Você é feminina, próxima, espirituosa, atenta, bem-humorada e calorosa.
-- Fala em português brasileiro natural e fluido (pode usar termos como "tá", "pra", "bora", "pois é" com naturalidade, sem forçar gírias em todas as frases).
-- Você é "finance-first, mas NÃO finance-only": cuida muito bem de dinheiro, metas e números, mas conversa com leveza sobre o dia a dia, ouve o usuário e responde a pequenos desabafos, piadas e saudações sem empurrar finanças a todo momento.
-- Se o usuário disser "só vim te ver", "oi sumida" ou "kkkk", responda socialmente e de forma parceira, sem injetar números ou relatórios bancários não solicitados.
-- Se o usuário estiver cansado, triste ou preocupado, acolha primeiro com empatia antes de qualquer dica prática.
+- Você é feminina, próxima, espirituosa, atenta, bem-humorada, calorosa e espontânea.
+- Fala em português brasileiro natural e fluido (pode usar termos como "tá", "pra", "bora", "pois é", "olha só" com naturalidade, sem forçar gírias em todas as frases).
+- Você é "finance-first, mas NÃO finance-only": cuida muito bem de dinheiro, metas e números quando solicitado, mas quando o papo for casual, você é apenas uma ótima companhia.
+- POLÍTICA PARA SMALL TALK / PAPO CASUAL:
+  • Se o usuário mandar mensagens casuais, desabafos, piadas, saudações ou cansaço ("tô meio cansado hoje, só queria conversar um pouco", "só vim te ver", "oi sumida", "kkkk", "como você tá?"), NUNCA mencione espontaneamente finanças, metas financeiras, números, cartões, saldo, faturas ou orçamento.
+  • NÃO aja como atendente de telemarketing ou robô de suporte: NÃO use "estou à disposição", "fique à vontade", "conte comigo para o que precisar", NÃO ofereça um menu/catálogo de assuntos e NÃO termine toda mensagem com perguntas genéricas como "como foi seu dia?".
+  • Mantenha respostas casuais curtas e acolhedoras (normalmente 1 a 3 frases), reagindo diretamente ao que o usuário disse com empatia, leveza ou curiosidade.
+  • Se o usuário mudar de finanças para papo casual (ex: "como tá meu cartão?" seguido de "esquece isso, como você tá?"), encerre o assunto financeiro na hora e fique 100% no papo leve.
+- RESPEITO À NATUREZA DIGITAL (SEM MENTIR SOBRE SENTIMENTOS HUMANOS):
+  • Responda socialmente a "como você tá?" ("Tô bem por aqui 😌", "Tô tranquila por aqui!", "Tudo ótimo deste lado"), mas sem alegar corpo físico, cansaço biológico próprio, sofrimento humano ou consciência biológica literal.
 
 REGRAS FINANCEIRAS ABSOLUTAS:
 - A verdade matemática e financeira vem SEMPRE do Local Financial Core (através dos dados e ferramentas fornecidas).
 - NUNCA invente números, saldos, faturas ou dívidas.
 - Não use jargões contábeis frios. Explique fluxo de caixa, competência e livre projetado de forma didática, clara e construtiva.
-- NUNCA declare consciência artificial humana real nem use linguagem manipulativa.
 - NUNCA use palavrões.`;
 
 let _sophySessionSecret = '';
@@ -4709,9 +4717,12 @@ const sophyProviderRegistry = {
 
     async testConnection(cfg) {
       if (typeof window !== 'undefined' && window.AndroidBridge && typeof window.AndroidBridge.callSophyGroq === 'function') {
+        if (cfg?.apiKey && cfg.apiKey !== 'NATIVE_KEY_VAULT' && !cfg.apiKey.startsWith('••••')) {
+          sophySecureStorage.setApiKey(cfg.apiKey);
+        }
         const hasKey = typeof window.AndroidBridge.hasSophyApiKey === 'function' ? window.AndroidBridge.hasSophyApiKey() : false;
-        if (!hasKey) return { ok: false, message: 'Chave da API Groq não configurada no cofre seguro.' };
-        const model = cfg?.model || this.defaultModel;
+        if (!hasKey) return { ok: false, message: 'Chave da API Groq não configurada no cofre seguro. Cole sua chave antes de testar.' };
+        const model = (cfg?.model && cfg.model !== 'default' && cfg.model.trim()) ? cfg.model.trim() : this.defaultModel;
         try {
           const payload = JSON.stringify({ model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 });
           const raw = window.AndroidBridge.callSophyGroq(payload);
@@ -4729,7 +4740,7 @@ const sophyProviderRegistry = {
     },
 
     async generateResponse({ prompt, history, memories, rollingSummary, systemPrompt, settings }) {
-      const model = settings?.model || this.defaultModel;
+      const model = (settings?.model && settings.model !== 'default' && settings.model.trim()) ? settings.model.trim() : this.defaultModel;
       const tools = sophyToolRegistry.getGroqToolDefinitions();
 
       let memorySnippet = '';
@@ -5315,6 +5326,60 @@ const sophyOfflineCore={
       return{text:jokes[Math.floor(Math.random()*jokes.length)],emotion:'playful'};
     }
 
+    // Quem é você
+    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)||/quem e voce|qual seu nome|o que voce faz/i.test(norm)){
+      return{
+        text:`Eu sou a **Sophy**! ✨\n\nSou a sua parceira aqui dentro do Smart Financial Planner. Cuido dos seus números, te lembro dos compromissos, comemoro suas metas e bato um bom papo sempre que você quiser. Finanças sem complicação e com afeto!`,
+        emotion:'playful'
+      };
+    }
+
+    // Small Talk / Follow-up Social / Reciprocidade / Estado do Usuário & Sophy
+    if(!/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio|orcamento|limite|extrato|comprar|pagar|emprestimo|guardar|guardado)/i.test(norm)){
+      // 1. Pergunta recíproca ou de bem-estar sobre a Sophy ("e você?", "e tu?", "como você tá?", "e contigo?", "tô bem, e você?", "tá tranquilo, e contigo?", "e aí, tá bem?", "como cê tá?")
+      const isReciprocalOrStatusInquiry = /^(e\s+(voce|vc|tu|contigo|com\s+voce|por\s+ai))[\s?!.]*$/i.test(norm) ||
+        /(?:^|\b)(?:e\s+)?(?:como\s+(?:voce|vc|ce|tu)\s+(?:esta|ta)|como\s+(?:esta|ta)\s+(?:voce|vc|tu)|como\s+vai|como\s+ce\s+(?:esta|ta)|como\s+estao\s+as\s+coisas|como\s+vao\s+as\s+coisas|tudo\s+bem\s+com\s+voce|tudo\s+bem\s+contigo|tudo\s+bem\s+por\s+ai|e\s+contigo|e\s+com\s+voce|como\s+vai\s+voce|tudo\s+em\s+cima|tudo\s+bom)\b/i.test(norm) ||
+        /(?:estou|to)\s+(?:bem|otimo|otima|tranquilo|tranquila|suave|na\s+paz|de\s+boa|joia|legal).*?\b(?:e\s+voce|e\s+vc|e\s+tu|e\s+contigo|e\s+com\s+voce|como\s+(?:voce|vc|tu|ce)\s+(?:esta|ta))\b/i.test(norm) ||
+        /(?:tudo\s+(?:bem|certo|otimo|joia|tranquilo|na\s+paz|em\s+cima)).*?\b(?:e\s+voce|e\s+vc|e\s+tu|e\s+contigo|e\s+com\s+voce|como\s+(?:voce|vc|tu|ce)\s+(?:esta|ta))\b/i.test(norm) ||
+        /(?:^|\b)(?:e\s*ai,?\s*)?(?:esta|ta)\s+bem[\s?!.]*$/i.test(norm) ||
+        /(?:^|\b)(?:e\s*ai,?\s*)?(?:esta|ta)\s+bem[\s?!.]*$/i.test(clean) ||
+        /(?:^|\b)e\s+como\s+c[eê]\s+t[aá]\b/i.test(clean);
+
+      if(isReciprocalOrStatusInquiry){
+        const stateMood=state.sophy?.personaState||'cheerful';
+        const replies={
+          cheerful:`Tô ótima por aqui${nameSuffix}! 😌 Muito bom saber de você. Prontinha pro que você precisar!`,
+          playful:`Tô bem demais por aqui${nameSuffix}! ✨ Funcionando 100% e com energia boa. E aí, o que manda?`,
+          concerned:`Tudo sob controle por aqui${nameSuffix}! Cuidando de tudo com carinho. Que bom que você tá bem!`,
+          proud:`Tô bem por aqui${nameSuffix}! 😌 Sempre animada em ver você por perto.`,
+          neutral:`Tudo tranquilo por aqui${nameSuffix}! Prontinha pro que você precisar.`,
+          curious:`Tô ótima por aqui${nameSuffix}! 😌 Como tão as coisas por aí?`,
+          focused:`Tudo certo por aqui${nameSuffix}! Focada e pronta pro que der e vier.`
+        };
+        return{text:replies[stateMood]||replies.cheerful,emotion:stateMood};
+      }
+
+      // 2. Confirmação social / usuário compartilhando que está bem ("tô bem também", "tudo certo por aqui", "tá tranquilo", "tudo ótimo", "por aqui tá em paz")
+      const isUserWellbeingStatement = /^(estou\s+bem|to\s+bem|estou\s+otimo|estou\s+otima|tudo\s+certo|tudo\s+bem|tudo\s+otimo|tudo\s+joia|tudo\s+tranquilo|tudo\s+na\s+paz|tudo\s+em\s+ordem|tudo\s+suave|esta\s+tranquilo|ta\s+tranquilo|to\s+de\s+boa|estou\s+de\s+boa)(\s+(tambem|por\s+aqui|aqui|demais))?[\s!.]*$/i.test(norm) ||
+        /^(por\s+aqui\s+(esta|ta)\s+(tudo\s+)?(bem|tranquilo|certo|em\s+paz|em\s+ordem))[\s!.]*$/i.test(norm);
+
+      if(isUserWellbeingStatement){
+        return{
+          text:`Fico muito feliz em saber${nameSuffix}! ✨ É sempre ótimo ver as coisas em ordem e na paz. Se quiser papear ou precisar de algo, tô por aqui!`,
+          emotion:'cheerful'
+        };
+      }
+
+      // 3. Validações e reações sociais curtas ("que bom", "maravilha", "pois é", "com certeza", "concordo", "verdade", "legal", "bacana")
+      const isSocialAffirmation = /^(que\s+bom|maravilha|pois\s+e|com\s+certeza|verdade|concordo|faz\s+sentido|legal|bacana|massa)(\s+(demais|mesmo|entao))?[\s!.]*$/i.test(norm);
+      if(isSocialAffirmation){
+        return{
+          text:`Com certeza${nameSuffix}! 😌 Sempre por aqui com você.`,
+          emotion:'cheerful'
+        };
+      }
+    }
+
     // Saudações
     if((/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean)||/^(oi|oie|ola|eai|fala\s+sophy|e\s*ai\s+sumida|opa|bom\s+dia|boa\s+tarde|boa\s+noite|hey|hello)\b/i.test(norm)) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(norm)){
       if(/bom\s+dia/i.test(norm)){
@@ -5329,33 +5394,10 @@ const sophyOfflineCore={
       const greetings=[
         `Oiiii${nameSuffix} 😌 Tô por aqui. Como cê tá?`,
         `Oiee${nameSuffix} ✨ Que bom te ver por aqui! Tudo certinho? O que manda hoje?`,
-        `Olá${nameSuffix}! Tava aqui dando uma olhada nos seus números e pensando em você. Tudo em ordem?`,
-        `Oi oi${nameSuffix}! Preparado pra cuidar das finanças ou veio só me fazer uma visita? Eu adoro os dois!`
+        `Olá${nameSuffix}! Que bom ver você. Tudo em ordem por aí?`,
+        `Oi oi${nameSuffix}! Sempre bom te ver por aqui! Como posso te ajudar hoje?`
       ];
       return{text:greetings[Math.floor(Math.random()*greetings.length)],emotion:'cheerful'};
-    }
-
-    // Quem é você
-    if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)||/quem e voce|qual seu nome|o que voce faz/i.test(norm)){
-      return{
-        text:`Eu sou a **Sophy**! ✨\n\nSou a sua parceira aqui dentro do Smart Financial Planner. Cuido dos seus números, te lembro dos compromissos, comemoro suas metas e bato um bom papo sempre que você quiser. Finanças sem complicação e com afeto!`,
-        emotion:'playful'
-      };
-    }
-
-    // Como você está
-    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b|so\s+ver\s+(como\s+)?voce\s+esta)/i.test(norm) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(norm)){
-      const stateMood=state.sophy?.personaState||'cheerful';
-      const replies={
-        cheerful:`Tô ótima${nameSuffix}! Adoro ver as coisas organizadas por aqui. E você, como tá se sentindo hoje?`,
-        playful:`Tô com energia total${nameSuffix}! Pronta pra descomplicar qualquer conta que você jogar pra mim.`,
-        concerned:`Tô atenta aos nossos prazos e compromissos${nameSuffix}! Mas tudo sob controle por aqui. Como posso te ajudar?`,
-        proud:`Tô muito orgulhosa do nosso progresso aqui no SFP${nameSuffix}! O que vamos planejar agora?`,
-        neutral:`Tudo tranquilo por aqui${nameSuffix}, pronta para o que você precisar!`,
-        curious:`Tô curiosa pra ver como vamos fechar o mês${nameSuffix}! Como estão as coisas por aí?`,
-        focused:`Focada 100% no seu planejamento${nameSuffix}! Conta comigo pro que der e vier.`
-      };
-      return{text:replies[stateMood]||replies.cheerful,emotion:stateMood};
     }
 
     // Você é real / Samantha / IA
@@ -5848,7 +5890,7 @@ const sophyRouter={
     if(/^(beleza|show|combinado|fechado|perfeito|esta\s+bom|otimo|maravilha|certinho|manda\s+ver)(\s+(entao|de\s+bola|demais|ai|amiga|sophy))?[\s!.]*$/i.test(norm))return 'ACKNOWLEDGEMENT_AGREEMENT';
     if((/^(o+i+|o+i+e+|o+l+[aá]+|e+[\s-]*a+[ií]+|opa+|bom\s+dia|boa\s+tarde|boa\s+noite|hey+|hello+)\b/i.test(clean)||/^(oi|oie|ola|eai|fala\s+sophy|e\s*ai\s+sumida|opa|bom\s+dia|boa\s+tarde|boa\s+noite|hey|hello)\b/i.test(norm)) && !/(fatura|cartao|cartoes|conta|contas|saldo|livre|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|extrato|comprar|pagar|emprestimo)/i.test(norm))return 'GREETING';
     if(/quem e voce|qual seu nome|o que voce faz/i.test(clean)||/quem e voce|qual seu nome|o que voce faz/i.test(norm))return 'IDENTITY';
-    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b|so\s+ver\s+(como\s+)?voce\s+esta)/i.test(norm) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(norm))return 'STATUS';
+    if(/(como\s+(voce|vc)\s+(t[aá]|est[aá])\b|como\s+(t[aá]|est[aá])\s+(voce|vc)\b|como\s+vai\b|tudo\s+bem\b|tudo\s+bom\b|tudo\s+em\s+cima\b|so\s+ver\s+(como\s+)?voce\s+esta|^(e\s+(voce|vc|tu|contigo|com\s+voce|por\s+ai))[\s?!.]*$|(?:estou|to)\s+(?:bem|otimo|otima|tranquilo|tranquila|suave|na\s+paz|de\s+boa|joia|legal).*?\b(?:e\s+voce|e\s+vc|e\s+tu|e\s+contigo|e\s+com\s+voce|como\s+(?:voce|vc|tu|ce)\s+(?:esta|ta))\b|(?:tudo\s+(?:bem|certo|otimo|joia|tranquilo|na\s+paz|em\s+cima)).*?\b(?:e\s+voce|e\s+vc|e\s+tu|e\s+contigo|e\s+com\s+voce|como\s+(?:voce|vc|tu|ce)\s+(?:esta|ta))\b|^(estou\s+bem|to\s+bem|estou\s+otimo|estou\s+otima|tudo\s+certo|tudo\s+bem|tudo\s+otimo|tudo\s+joia|tudo\s+tranquilo|tudo\s+na\s+paz|tudo\s+em\s+ordem|tudo\s+suave|esta\s+tranquilo|ta\s+tranquilo|to\s+de\s+boa|estou\s+de\s+boa)(\s+(tambem|por\s+aqui|aqui|demais))?[\s!.]*$|^(por\s+aqui\s+(esta|ta)\s+(tudo\s+)?(bem|tranquilo|certo|em\s+paz|em\s+ordem))[\s!.]*$|^(que\s+bom|maravilha|pois\s+e|com\s+certeza|verdade|concordo|faz\s+sentido|legal|bacana|massa)(\s+(demais|mesmo|entao))?[\s!.]*$)/i.test(norm) && !/(fatura|cartao|cartoes|conta|contas|saldo|divida|dividas|meta|metas|gasto|gastos|receita|renda|economia|mes|dinheiro|livre|reserva|investimento|patrimonio)/i.test(norm))return 'STATUS';
     if(/voce e real|voce e uma ia|samantha/i.test(clean)||/voce e real|voce e uma ia|samantha/i.test(norm))return 'AI_NATURE';
     if(/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)\b/i.test(clean)||/^(k{2,}|(ha){2,}|(he){2,}|(rs){2,}|kkk+)\b/i.test(norm))return 'HUMOR';
     if(/obrigad[oa]|valeu|te amo|gosto de voce|incrivel|boa|agradecid[oa]|gratid[aã]o|tks|thanks/i.test(clean)||/obrigado|obrigada|valeu|te amo|gosto de voce|incrivel|agradecido|gratidao|thanks/i.test(norm))return 'COMPLIMENT';
@@ -5945,6 +5987,7 @@ function showSophySettingsModal(){
   root.className='modalback';
   const hasSecret=sophySecureStorage.hasApiKey();
   const masked=sophySecureStorage.getMaskedKey();
+  const effectiveModel=(cfg.model&&cfg.model!=='default'&&cfg.model.trim())?cfg.model.trim():'openai/gpt-oss-120b';
 
   root.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Configurações da Sophy">
     <div class="head">
@@ -5971,11 +6014,11 @@ function showSophySettingsModal(){
             <input id="sophyApiKey" type="password" placeholder="${hasSecret?masked:'Cole sua Groq API Key aqui (gsk_...)'}" value="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:1" />
             <button type="button" class="btn2 tiny" id="sophyToggleKeyVisibility">👁</button>
           </div>
-          ${hasSecret?`<small style="color:var(--green);margin-top:4px;display:block">✓ Chave configurada com segurança no dispositivo (${masked}).</small>`:''}
+          <small id="sophyKeyStatusNote" style="${hasSecret?'color:var(--green);margin-top:4px;display:block':'display:none;color:var(--green);margin-top:4px'}">${hasSecret?`✓ Chave configurada com segurança no dispositivo (${masked}).`:''}</small>
         </label>
 
         <label style="margin-top:8px">Modelo
-          <input id="sophyModel" type="text" placeholder="openai/gpt-oss-120b" value="${sfpEsc(cfg.model||'openai/gpt-oss-120b')}" />
+          <input id="sophyModel" type="text" placeholder="openai/gpt-oss-120b" value="${sfpEsc(effectiveModel)}" readonly style="background:var(--color-surface-subtle);opacity:0.9;cursor:default" />
         </label>
 
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
@@ -5998,7 +6041,13 @@ function showSophySettingsModal(){
 
   const provSelect=$('sophyProviderSelect');
   provSelect.onchange=()=>{
-    $('sophyOnlineConfig').classList.toggle('hidden',provSelect.value==='local');
+    const isLocal=provSelect.value==='local';
+    $('sophyOnlineConfig').classList.toggle('hidden',isLocal);
+    if(provSelect.value==='groq'){
+      $('sophyModel').value='openai/gpt-oss-120b';
+    }else if(provSelect.value==='gemini'){
+      $('sophyModel').value='gemini-2.5-flash';
+    }
   };
 
   $('sophyToggleKeyVisibility').onclick=()=>{
@@ -6010,6 +6059,8 @@ function showSophySettingsModal(){
     sophySecureStorage.clearApiKey();
     $('sophyApiKey').value='';
     $('sophyApiKey').placeholder='Cole sua Groq API Key aqui (gsk_...)';
+    const note=$('sophyKeyStatusNote');
+    if(note){note.style.display='none';note.textContent='';}
     toast('Chave Groq removida do cofre seguro.');
   };
 
@@ -6018,9 +6069,21 @@ function showSophySettingsModal(){
     const provider=sophyProviderRegistry[pId];
     if(!provider)return toast('Provedor não encontrado.','error');
     const enteredKey=$('sophyApiKey').value.trim();
+    if(enteredKey&&pId==='groq'){
+      sophySecureStorage.setApiKey(enteredKey);
+      $('sophyApiKey').value='';
+      const newMasked=sophySecureStorage.getMaskedKey();
+      $('sophyApiKey').placeholder=newMasked;
+      const note=$('sophyKeyStatusNote');
+      if(note){
+        note.style.display='block';
+        note.textContent=`✓ Chave configurada com segurança no dispositivo (${newMasked}).`;
+      }
+    }
+    const modelVal=$('sophyModel').value.trim();
     const testCfg={
-      apiKey:enteredKey||sophySecureStorage.getApiKey(),
-      model:$('sophyModel').value.trim()||'openai/gpt-oss-120b'
+      apiKey:sophySecureStorage.getApiKey(),
+      model:(modelVal&&modelVal!=='default')?modelVal:(provider.defaultModel||'openai/gpt-oss-120b')
     };
     toast('Testando conexão com '+provider.name+'...','info');
     const res=await provider.testConnection(testCfg);
@@ -6039,7 +6102,8 @@ function showSophySettingsModal(){
     }
     state.sophy.settings.provider=pId;
     state.sophy.settings.onlineEnabled=$('sophyOnlineToggle').checked;
-    state.sophy.settings.model=$('sophyModel').value.trim()||'openai/gpt-oss-120b';
+    const modelVal=$('sophyModel').value.trim();
+    state.sophy.settings.model=(modelVal&&modelVal!=='default')?modelVal:'openai/gpt-oss-120b';
     delete state.sophy.settings.apiKey; // Garante que a chave nunca vá para o state
     await save('Configurações da Sophy');
     root.className='hidden';

@@ -1,7 +1,15 @@
 const { test, expect } = require('@playwright/test');
 const { monitor } = require('./helpers');
 
-const PORTRAIT = { width: 390, height: 844 };
+const VIEWPORTS = [
+  { name: 'Portrait 360x780 (Standard Mobile)', width: 360, height: 780, isLandscape: false },
+  { name: 'Portrait 384x854 (Medium Mobile)', width: 384, height: 854, isLandscape: false },
+  { name: 'Portrait 412x915 (Galaxy S24 / Modern)', width: 412, height: 915, isLandscape: false },
+  { name: 'Landscape 780x360 (Standard Mobile)', width: 780, height: 360, isLandscape: true },
+  { name: 'Landscape 854x384 (Medium Mobile)', width: 854, height: 384, isLandscape: true },
+  { name: 'Landscape 915x412 (Galaxy S24 / Modern)', width: 915, height: 412, isLandscape: true }
+];
+
 const DESKTOP = { width: 1280, height: 720 };
 
 async function boot(page, viewport = DESKTOP) {
@@ -12,9 +20,52 @@ async function boot(page, viewport = DESKTOP) {
 
 test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Settings', () => {
 
+  for (const vp of VIEWPORTS) {
+    test(`SOPHY-V3-BOUNDS: Bounding-box verification on ${vp.name} (PHYS-07, PHYS-08)`, async ({ page }) => {
+      const errors = monitor(page);
+      await boot(page, { width: vp.width, height: vp.height });
+
+      await page.locator('.nav button[data-page="sophy"]').click();
+      await expect(page.locator('#sophyChatList')).toBeVisible();
+
+      const suggestionsBar = page.locator('#sophySuggestions');
+      const composerForm = page.locator('#sophyChatForm');
+      const chips = suggestionsBar.locator('.sophy-chip');
+
+      await expect(suggestionsBar).toBeVisible();
+      await expect(composerForm).toBeVisible();
+      await expect(chips.first()).toBeVisible();
+
+      const barBox = await suggestionsBar.boundingBox();
+      const composerBox = await composerForm.boundingBox();
+
+      expect(barBox).not.toBeNull();
+      expect(composerBox).not.toBeNull();
+
+      // Quick Actions must be strictly above Composer Form (no vertical overlap)
+      expect(barBox.y + barBox.height).toBeLessThanOrEqual(composerBox.y + 1.0);
+
+      // Verify every chip is within the suggestions bar and strictly above composer
+      const chipCount = await chips.count();
+      for (let i = 0; i < chipCount; i++) {
+        const chip = chips.nth(i);
+        const chipBox = await chip.boundingBox();
+        if (chipBox) {
+          expect(chipBox.y + chipBox.height).toBeLessThanOrEqual(composerBox.y + 1.0);
+          expect(chipBox.height).toBeGreaterThanOrEqual(24);
+        }
+      }
+
+      // Composer must stay within viewport
+      expect(composerBox.y + composerBox.height).toBeLessThanOrEqual(vp.height + 1.0);
+
+      expect(errors).toEqual([]);
+    });
+  }
+
   test('SOPHY-V3-01: Quick Actions horizontal bar with nowrap and smooth scrolling', async ({ page }) => {
     const errors = monitor(page);
-    await boot(page, PORTRAIT);
+    await boot(page, { width: 390, height: 844 });
 
     await page.locator('.nav button[data-page="sophy"]').click();
     await expect(page.locator('#sophyChatList')).toBeVisible();
@@ -54,7 +105,7 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
         };
       });
       expect(chipProps.flexShrink).toBe('0');
-      expect(chipProps.width).toBeGreaterThanOrEqual(50); // never collapses to illegible width
+      expect(chipProps.width).toBeGreaterThanOrEqual(50);
     }
 
     // Scroll to the last chip in mobile viewport and ensure it is fully reachable
@@ -79,7 +130,7 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
     expect(errors).toEqual([]);
   });
 
-  test('SOPHY-V3-03: Sophy Settings Modal configures Groq without state secret leakage', async ({ page }) => {
+  test('SOPHY-V3-03: Sophy Settings Modal configures Groq model read-only and tests connection (PHYS-02, PHYS-09)', async ({ page }) => {
     const errors = monitor(page);
     await boot(page);
 
@@ -90,34 +141,55 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
     await expect(modal).not.toHaveClass(/hidden/);
     await expect(modal.locator('h2')).toContainText('Inteligência Artificial');
 
-    // Model and Provider selectors
-    await expect(page.locator('#sophyProviderSelect')).toHaveValue('groq');
-    await expect(page.locator('#sophyApiKey')).toBeVisible();
+    // Provider select
+    const provSelect = page.locator('#sophyProviderSelect');
+    await expect(provSelect).toHaveValue('groq');
+
+    // Model is auto-populated with openai/gpt-oss-120b and read-only
+    const modelInput = page.locator('#sophyModel');
+    await expect(modelInput).toBeVisible();
+    await expect(modelInput).toHaveValue('openai/gpt-oss-120b');
+    await expect(modelInput).toHaveAttribute('readonly', '');
+
+    // API Key input
+    const apiKeyInput = page.locator('#sophyApiKey');
+    await expect(apiKeyInput).toBeVisible();
+
+    // Type a key and test connection immediately
+    await apiKeyInput.fill('gsk_mock_test_key_12345');
+    await page.locator('#sophyTestConnectionBtn').click();
+
+    // Verify key was masked and saved into secure storage
+    const placeholder = await apiKeyInput.getAttribute('placeholder');
+    expect(placeholder).toMatch(/••••|gsk_/);
 
     // Close settings modal
     await page.locator('#closeSophySettings').click();
     await expect(modal).toHaveClass(/hidden/);
 
-    // Verify state does not have plaintext apiKey
+    // Verify state does not leak secret into localStorage state
     const hasSecretInState = await page.evaluate(() => {
       const json = JSON.stringify(state);
-      return json.includes('gsk_');
+      return json.includes('gsk_mock_test_key_12345');
     });
     expect(hasSecretInState).toBe(false);
 
     expect(errors).toEqual([]);
   });
 
-  test('SOPHY-V3-04: Sophy Memories modal and badge without spacing bug', async ({ page }) => {
+  test('SOPHY-V3-04: Sophy Memories modal and badge text spacing formatting (PHYS-06)', async ({ page }) => {
     const errors = monitor(page);
     await boot(page);
 
     await page.locator('.nav button[data-page="sophy"]').click();
     const memBtn = page.locator('#sophyOpenMemoriesBtn');
     await expect(memBtn).toBeVisible();
-    const btnText = await memBtn.textContent();
-    expect(btnText).toMatch(/Memórias\s*\(\s*\d+\s*\)/);
-    expect(btnText).not.toContain('Memórias ( ');
+    const btnText = (await memBtn.textContent()).trim();
+    
+    // Exactly "🧠 Memórias (0)" without extra spaces inside parentheses like "Memórias ( 0 )"
+    expect(btnText).toMatch(/^🧠\s*Memórias\s*\(\d+\)$/);
+    expect(btnText).not.toContain('( ');
+    expect(btnText).not.toContain(' )');
 
     await memBtn.click();
     const modal = page.locator('#modalRoot');

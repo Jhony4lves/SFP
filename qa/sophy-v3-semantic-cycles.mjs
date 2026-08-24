@@ -75,10 +75,91 @@ export async function runCycle1Tests() {
         assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
         assert(/explico|detalhe|dúvida|como|passo|calma|simples/i.test(res.text), 'Deve responder prontidão para explicar');
       }
+    },
+    {
+      input: 'Tô bem, e você?',
+      desc: 'PHYS-01: Follow-up social e reciprocidade pós-saudação',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(!res.text.includes('R$'), 'Não deve injetar saldo');
+        assert(/ótima|bem|tranquil|cuidando|pront/i.test(res.text), 'Deve responder com afeto e reciprocidade');
+      }
+    },
+    {
+      input: 'e você?',
+      desc: 'PHYS-01b: Pergunta recíproca curta sobre Sophy',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/ótima|bem|tranquil|cuidando|pront/i.test(res.text), 'Deve responder sobre estado');
+      }
+    },
+    {
+      input: 'como você tá?',
+      desc: 'PHYS-01c: Pergunta direta de bem-estar da assistente',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/ótima|bem|tranquil|cuidando|pront/i.test(res.text), 'Deve responder sobre estado');
+      }
+    },
+    {
+      input: 'tô bem também',
+      desc: 'PHYS-01d: Confirmação de bem-estar do usuário',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/feliz|ótimo|paz|ordem|bom/i.test(res.text), 'Deve acolher confirmação de bem-estar');
+      }
+    },
+    {
+      input: 'tudo certo por aqui',
+      desc: 'PHYS-01e: Confirmação de harmonia local',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/feliz|ótimo|paz|ordem|bom/i.test(res.text), 'Deve acolher estado');
+      }
+    },
+    {
+      input: 'tá tranquilo, e contigo?',
+      desc: 'PHYS-01f: Expressão composta de tranquilidade e pergunta recíproca',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/ótima|bem|tranquil|cuidando|pront/i.test(res.text), 'Deve responder reciprocidade');
+      }
     }
   ];
 
   const adversarialCases = [
+    {
+      input: 'e tu?',
+      desc: 'PHYS-01g: Adversarial: pergunta recíproca com pronome regional "tu"',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/ótima|bem|tranquil|cuidando|pront/i.test(res.text), 'Deve reconhecer pergunta recíproca');
+      }
+    },
+    {
+      input: 'e vc?',
+      desc: 'PHYS-01h: Adversarial: abreviação "vc"',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/ótima|bem|tranquil|cuidando|pront/i.test(res.text), 'Deve reconhecer pergunta recíproca');
+      }
+    },
+    {
+      input: 'e ai, ta bem?',
+      desc: 'PHYS-01i: Adversarial: saudação e pergunta informal sem acento',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/ótima|bem|tranquil|cuidando|pront/i.test(res.text), 'Deve reconhecer pergunta');
+      }
+    },
+    {
+      input: 'e como ce ta?',
+      desc: 'PHYS-01j: Adversarial: contração informal "cê"',
+      check: (res) => {
+        assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
+        assert(/ótima|bem|tranquil|cuidando|pront/i.test(res.text), 'Deve reconhecer pergunta');
+      }
+    },
     {
       input: 'so vim te ve',
       desc: 'Adversarial: abreviação/gíria sem acento',
