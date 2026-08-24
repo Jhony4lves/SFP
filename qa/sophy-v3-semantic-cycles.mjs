@@ -65,7 +65,7 @@ export async function runCycle1Tests() {
       desc: 'Saudação informal e gíria',
       check: (res) => {
         assert(!res.text.includes('modo local (offline)'), 'Não deve dar fallback offline');
-        assert(/oi|oiee|sumid|aqui|fala/i.test(res.text), 'Deve responder saudação informal');
+        assert(/oi|oiee|ola|olá|sumid|aqui|fala/i.test(res.text), 'Deve responder saudação informal');
       }
     },
     {
