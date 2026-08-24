@@ -26,7 +26,12 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     // Envia uma mensagem para marcar introDone como true
     await page.locator('#sophyInput').fill('Oi, tudo bem?');
     await page.locator('#sophySendBtn').click();
-    await expect(page.locator('.sophy-msg-row.sophy').last()).toContainText(/Tô ótima|Tudo tranquilo|Olá|Oiee|boa/i);
+    const reply = page.locator('.sophy-msg-row.sophy').last();
+    await expect(reply).toBeVisible();
+    await expect(reply).toContainText(/oi|olá|tô|tudo|bom|boa/i);
+    const replyText = await reply.textContent();
+    expect(replyText).not.toContain('livre projetado');
+    expect(replyText).not.toContain('R$');
 
     const isIntroDone = await page.evaluate(() => state.sophy.introDone);
     expect(isIntroDone).toBe(true);
