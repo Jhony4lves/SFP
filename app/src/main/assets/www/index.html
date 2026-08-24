@@ -2137,11 +2137,26 @@ function normalize(){
 function autoBackup(){
   try{
     let arr=JSON.parse(localStorage.getItem('sfp_auto_backups')||'[]');
-    let b=clone(lastSavedState||state);b.undo=[];
+    const src = lastSavedState || state;
+    let b=clone({ ...src, undo: [] });
     arr.push({at:new Date().toISOString(),state:b});
     arr=arr.slice(-5);
     localStorage.setItem('sfp_auto_backups',JSON.stringify(arr));
   }catch{}
+}
+function compactUndoHistoryInPlace(target){
+  if(!target || typeof target !== 'object') return;
+  if(!Array.isArray(target.undo)){
+    target.undo = [];
+    return;
+  }
+  target.undo = target.undo.slice(-10);
+  for(let i = 0; i < target.undo.length; i++){
+    const entry = target.undo[i];
+    if(entry && typeof entry === 'object' && entry.state && typeof entry.state === 'object'){
+      entry.state.undo = [];
+    }
+  }
 }
 const FALLBACK_KEY='sfp_final_fallback';
 function validPersistedState(v){
@@ -2195,6 +2210,7 @@ async function load(){
  if(selected)state=migrateSchema(selected.value);
  else if(primary.status==='empty'&&fallback.status==='empty')state=clone(seed);
  else throw Error(`Persistência indisponível ou corrompida (IndexedDB: ${primary.status}; fallback: ${fallback.status}). Nenhum dado foi substituído.`);
+ compactUndoHistoryInPlace(state);
  normalize();
  if(selected?.source==='fallback'&&(primary.status==='ok'||primary.status==='empty')){
    await dbSet(state,{preserveRevision:true});
@@ -2207,8 +2223,12 @@ async function load(){
 }
 function migrateOld(old){let n=clone(seed);n.transactions=[];n.cards=[];n.accounts=clone(seed.accounts); if(old.cartoes)n.cards=old.cartoes.map(c=>({id:c.id||uid(),name:c.nome||'Cartão',limit:+(c.limiteTotal||0),closeDay:+(c.diaFechamento||1),dueDay:+(c.diaVencimento||10),payAccountId:1})); let add=(arr,kind)=>{(arr||[]).forEach(x=>n.transactions.push({id:x.id||uid(),kind,desc:x.desc||'Migrado',amount:+(x.valor||0),date:`${x.mes||'2026-08'}-${String(x.vencimento||1).padStart(2,'0')}`,category:x.categoria||'Outros',accountId:1,status:x.pago?'paid':'pending',dueDay:+(x.vencimento||1),tags:['migrado'],note:'',createdAt:Date.now()}))};add(old.receitas,'income');add(old.despesasFixas,'expense');add(old.despesasVariaveis,'expense');return n}
 function snapshotUndo(label,source=null){
- let base=clone(source||state);base.undo=(base.undo||[]).slice(-8);
- state.undo.push({id:uid(),label,at:new Date().toISOString(),state:base});state.undo=state.undo.slice(-10)
+ const src = source || state;
+ const sanitizedSource = { ...src, undo: [] };
+ const base = clone(sanitizedSource);
+ state.undo = state.undo || [];
+ state.undo.push({id:uid(),label,at:new Date().toISOString(),state:base});
+ state.undo = state.undo.slice(-10);
 }
 async function save(label){
  let before=clone(lastSavedState||state);
@@ -2219,6 +2239,7 @@ async function save(label){
 }
 async function restoreState(candidate){
  if(!validPersistedState(candidate))throw Error('Backup inválido.');
+ compactUndoHistoryInPlace(candidate);
  let before=clone(state),previousSaved=clone(lastSavedState||state),restored=clone(candidate);
  try{state=restored;normalize();await dbSet(state);lastSavedState=clone(state);renderAll()}
  catch(error){state=before;lastSavedState=previousSaved;throw error}
