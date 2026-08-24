@@ -190,16 +190,18 @@ test.describe('Undo Compaction & Anti-Recursion — Prova Isolada e Integração
 
     // Gera fixture inflada simulando formato legado anterior com aninhamento recursivo
     const bloatedFixture = fixture('Bloated Legacy QA');
-    let current = JSON.parse(JSON.stringify(bloatedFixture));
+    let lastSaved = JSON.parse(JSON.stringify(bloatedFixture));
     for (let i = 1; i <= 8; i++) {
-      current.transactions.push({ id: 900 + i, desc: `Legacy ${i}`, amount: 10 });
-      const copy = JSON.parse(JSON.stringify(current));
+      bloatedFixture.transactions.push({ id: 900 + i, desc: `Legacy ${i}`, amount: 10 });
+      const base = JSON.parse(JSON.stringify(lastSaved));
+      base.undo = (base.undo || []).slice(-8);
       bloatedFixture.undo.push({
         id: 8000 + i,
         label: `Legacy ${i}`,
         at: new Date().toISOString(),
-        state: copy // aninhamento recursivo legado com cópias completas
+        state: base
       });
+      lastSaved = JSON.parse(JSON.stringify(bloatedFixture));
     }
 
     const legacyDepth = getUndoDepth(bloatedFixture);
