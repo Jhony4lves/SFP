@@ -62,15 +62,55 @@ test('estados legados iguais sem revisão continuam legíveis', async ({ page })
   expect(errors).toEqual([]);
 });
 
-test('estados legados divergentes são preservados e interrompem escolha ambígua', async ({ page }) => {
-  await prepareSources(page, fixture('Legado IDB'), fixture('Legado fallback'));
-  const fallbackBefore = await page.evaluate(() => localStorage.getItem(FALLBACK_KEY));
+test('[P0-REGRESSAO] upgrade: estado legado com dados -> primeiro boot -> segundo boot -> dados presentes', async ({ page }) => {
+  // Simula cenário real de upgrade: IndexedDB tem dados legados reais do usuário
+  // (sem persistenceMeta.revision). Fallback também tem uma versão legada diferente
+  // (ex: divergiu antes do upgrade ou foi sobrescrito por outra sessão).
+  // Antes da correção: newestPersistedState lançava Error → init() quebrava → tela zerada.
+  // Após correção: IndexedDB (fonte primária) é priorizado → boot OK → estado carimbado
+  // com revision → segundo boot determinístico.
+  const legadoIDB = fixture('Dados Legados Reais');
+  legadoIDB.transactions = [
+    { id: 99, kind: 'income', desc: 'Salário legado', amount: 5000, date: '2026-01-05',
+      category: 'Renda', accountId: 1, status: 'paid', tags: [], note: '', createdAt: 1000 }
+  ];
+  // Fallback divergente: versão diferente, sem revision (estado de antes do upgrade)
+  const legadoFallback = fixture('Fallback Desatualizado');
+  legadoFallback.transactions = [];
+
+  await prepareSources(page, legadoIDB, legadoFallback);
   const errors = monitor(page);
+
+  // PRIMEIRO BOOT após upgrade (ambos legados sem revision, divergentes)
   await page.reload();
-  await expect.poll(() => errors.some(error => error.includes('estados diferentes sem revisão'))).toBe(true);
-  expect(await page.evaluate(() => localStorage.getItem(FALLBACK_KEY))).toBe(fallbackBefore);
-  expect((await page.evaluate(async () => dbGet())).value.settings.name).toBe('Legado IDB');
+  await expectBootComplete(page, expect, 'Dados Legados Reais');
+
+  // Dados do usuário preservados
+  const txCount = await page.evaluate(() => state.transactions.length);
+  expect(txCount).toBe(1);
+  expect(await page.evaluate(() => state.transactions[0].desc)).toBe('Salário legado');
+
+  // Estado foi carimbado com revision no primeiro boot (garantia para segundo boot)
+  const revisionAfterFirstBoot = await page.evaluate(async () => {
+    const idb = await dbGet();
+    return idb.value?.persistenceMeta?.revision ?? null;
+  });
+  expect(revisionAfterFirstBoot).not.toBeNull();
+  expect(typeof revisionAfterFirstBoot).toBe('number');
+
+  // SEGUNDO BOOT: deve ser completamente determinístico
+  await page.reload();
+  await expectBootComplete(page, expect, 'Dados Legados Reais');
+
+  // Dados ainda presentes após segundo boot
+  const txCountAfterReload = await page.evaluate(() => state.transactions.length);
+  expect(txCountAfterReload).toBe(1);
+  expect(await page.evaluate(() => state.transactions[0].desc)).toBe('Salário legado');
+
+  // Nenhum erro de pageerror ou console.error durante o fluxo
+  expect(errors.filter(e => !e.includes('[SFP]'))).toEqual([]);
 });
+
 
 test('falha temporária de escrita usa fallback e recuperação promove estado novo', async ({ page }) => {
   await prepareSources(page, revisioned('Antes da falha', 5000), undefined);

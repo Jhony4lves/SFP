@@ -3652,7 +3652,11 @@ function newestPersistedState(primary,fallback){
    return fr>pr?{source:'fallback',value:fallback.value}:{source:'indexeddb',value:primary.value};
  }
  if(samePersistedState(primary.value,fallback.value))return{source:'indexeddb',value:primary.value};
- throw Error('IndexedDB e fallback legados contêm estados diferentes sem revisão; nenhum deles foi sobrescrito.');
+ // Estados legados divergentes sem revisão: prioriza IndexedDB (fonte primária/canônica).
+ // O fallback legado desatualizado não deve bloquear o boot. O estado carregado será
+ // estampado com revision em load(), tornando o segundo boot determinístico.
+ console.warn('[SFP] Estados legados divergentes sem revisão: priorizando IndexedDB (fonte primária). Fallback legado ignorado.');
+ return{source:'indexeddb',value:primary.value};
 }
 function safeLocalSet(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}
 function fallbackGet(){
@@ -3684,9 +3688,11 @@ async function load(){
  compactUndoHistoryInPlace(state);
  normalize();
  if(selected?.source==='fallback'&&(primary.status==='ok'||primary.status==='empty')){
-   await dbSet(state,{preserveRevision:true});
+   // Fallback promovido ao IndexedDB: preserva revision do fallback se ja existir, senao stampa.
+   await dbSet(state,{preserveRevision:!!persistenceRevision(selected.value)});
  }else if(selected?.source==='indexeddb'||(primary.status==='empty'&&fallback.status==='empty')){
-   await dbSet(state,{preserveRevision:!!selected});
+   // IndexedDB carregado: preserva revision existente; estados legados (sem revision) recebem stamp agora.
+   await dbSet(state,{preserveRevision:!!persistenceRevision(selected?.value)});
  }
  if(primary.status==='empty'&&fallback.status==='empty')safeLocalSet('sfp_last_migration_notice','SFP 2.0 iniciado em uma base nova. Data-base: 18/08/2026. Nenhum cálculo das versões anteriores foi reaproveitado.');
  safeLocalSet(key,'1');
