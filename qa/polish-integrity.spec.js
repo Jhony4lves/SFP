@@ -423,10 +423,28 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
     await page.locator('.nav button[data-page="relatorios"]').click();
     await expect(page.locator('#relatorios')).toHaveClass(/active/);
 
-    const incomeDots = page.locator('.chart-legend-dot.income');
-    const expenseDots = page.locator('.chart-legend-dot.expense');
-    expect(await incomeDots.count()).toBeGreaterThan(0);
-    expect(await expenseDots.count()).toBeGreaterThan(0);
+    const legendColors = await page.evaluate(() => {
+      const host = document.createElement('div');
+      host.innerHTML = `
+        <span class="chart-legend-dot income"></span>
+        <span class="chart-legend-dot expense"></span>
+        <span class="chart-legend-dot result"></span>
+      `;
+      document.body.appendChild(host);
+
+      const colors = ['income', 'expense', 'result'].map(cls => {
+        const el = host.querySelector('.' + cls);
+        return getComputedStyle(el).backgroundColor;
+      });
+
+      host.remove();
+      return colors;
+    });
+
+    expect(legendColors[0]).toBeTruthy();
+    expect(legendColors[1]).toBeTruthy();
+    expect(legendColors[2]).toBeTruthy();
+    expect(new Set(legendColors).size).toBe(3);
 
     expect(errors).toEqual([]);
   });

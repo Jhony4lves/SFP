@@ -28,6 +28,18 @@ async function expectBootComplete(page, expect, name) {
   if (await skip.isVisible()) {
     await skip.click();
   }
+  const modal = page.locator('#modalRoot');
+  if (await modal.isVisible().catch(() => false)) {
+    await page.evaluate(() => {
+      if (typeof closeModalRoot === 'function') {
+        closeModalRoot();
+      } else {
+        const el = document.getElementById('modalRoot');
+        if (el) el.remove();
+      }
+    });
+  }
+
   const btn = page.locator('.nav button[data-page="config"]');
   if (await btn.isVisible()) {
     await btn.click();
