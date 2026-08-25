@@ -21,7 +21,11 @@ async function run() {
   await page.goto(baseUrl);
   await page.waitForSelector('#monthLabel');
   await page.evaluate(() => {
-    window.applyTheme('dark');
+    if (window.setThemePreference) {
+      window.setThemePreference('dark', { persist: false });
+    } else {
+      window.applyTheme('dark');
+    }
   });
 
   const darkPages = ['hoje', 'sophy', 'recorrencias', 'calendario', 'config'];
@@ -50,7 +54,11 @@ async function run() {
 
   // 2. 384x854 LIGHT
   await page.evaluate(() => {
-    window.applyTheme('light');
+    if (window.setThemePreference) {
+      window.setThemePreference('light', { persist: false });
+    } else {
+      window.applyTheme('light');
+    }
   });
 
   const lightPages = ['hoje', 'sophy', 'lancamentos', 'recorrencias', 'contas', 'calendario', 'config'];

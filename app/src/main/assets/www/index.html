@@ -3343,6 +3343,7 @@ async function setThemePreference(theme, { persist = true } = {}){
   if(!['dark','light','system'].includes(theme))theme='dark';
   if(!state.settings)state.settings=clone(seed.settings);
   state.settings.theme=theme;
+  try{if(typeof $ === 'function' && $('cfgTheme')) $('cfgTheme').value=theme;}catch(e){}
   applyTheme(theme);
   if(persist && typeof dbSet === 'function'){
     try{

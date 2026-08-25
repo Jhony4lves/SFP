@@ -24,6 +24,10 @@ function monitor(page) {
 async function expectBootComplete(page, expect, name) {
   await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
   await expect(page.locator('#pageTitle')).toHaveText('Hoje');
+  const skip = page.locator('#skipOnboard');
+  if (await skip.isVisible()) {
+    await skip.click();
+  }
   const btn = page.locator('.nav button[data-page="config"]');
   if (await btn.isVisible()) {
     await btn.click();
