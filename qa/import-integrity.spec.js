@@ -66,6 +66,12 @@ test('pagamento de fatura é consumido uma vez e não vira despesa comum após r
   await boot(page, value);
   await importRows(page, [{ date: '2026-02-10', desc: 'PAGAMENTO FATURA CARTAO', amount: -100, fitid: 'PAY-1' }], 'bank.ofx');
   await page.reload();
+  await page.waitForFunction(() =>
+    typeof state !== 'undefined' &&
+    state &&
+    typeof lastSavedState !== 'undefined' &&
+    lastSavedState
+  );
   expect(await page.evaluate(() => ({ tx: state.transactions.length, key: state.invoices[0].payments[0].statementKey, expense: cashView('2026-02').expense }))).toEqual({ tx: 0, key: '1|fit:PAY-1', expense: 100 });
   await importRows(page, [{ date: '2026-02-10', desc: 'PAGAMENTO FATURA CARTAO', amount: -100, fitid: 'PAY-1' }], 'bank.ofx');
   expect(await page.evaluate(() => state.transactions.length)).toBe(0);

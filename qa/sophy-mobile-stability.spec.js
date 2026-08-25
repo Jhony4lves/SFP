@@ -188,9 +188,10 @@ test.describe('SFP Hotfix — Estabilidade Mobile & Sophy', () => {
     await page.locator('.sidebar .nav button[data-page="sophy"]').click();
     await expect(fab).toBeHidden();
 
-    // Navegar de volta para 'Lançamentos': FAB deve reaparecer
+    // Em 'Lançamentos' o FAB permanece oculto para não duplicar
+    // a própria ação principal de novo lançamento.
     await page.locator('.sidebar .nav button[data-page="lancamentos"]').click();
-    await expect(fab).toBeVisible();
+    await expect(fab).toBeHidden();
 
     expect(errors).toEqual([]);
   });

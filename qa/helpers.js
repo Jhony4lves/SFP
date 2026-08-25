@@ -24,12 +24,24 @@ function monitor(page) {
 async function expectBootComplete(page, expect, name) {
   await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
   await expect(page.locator('#pageTitle')).toHaveText('Hoje');
-  const btn = page.locator('.nav button[data-page="config"]');
-  if (await btn.isVisible()) {
-    await btn.click();
-  } else {
-    await page.evaluate(() => setPage('config'));
+  const skip = page.locator('#skipOnboard');
+  if (await skip.isVisible()) {
+    await skip.click();
   }
+  await page.evaluate(() => {
+    if (typeof closeProgressive === 'function') {
+      closeProgressive(false);
+    }
+    if (typeof onboardingShowing !== 'undefined') {
+      onboardingShowing = false;
+    }
+    const modal = document.getElementById('modalRoot');
+    if (modal) {
+      modal.className = 'hidden';
+      modal.replaceChildren();
+    }
+    setPage('config');
+  });
   await expect(page.locator('#config')).toHaveClass(/active/);
   await expect(page.locator('#cfgName')).toHaveValue(name);
 }

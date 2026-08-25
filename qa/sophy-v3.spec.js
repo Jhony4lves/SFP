@@ -186,8 +186,8 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
     await expect(memBtn).toBeVisible();
     const btnText = (await memBtn.textContent()).trim();
     
-    // Exactly "🧠 Memórias (0)" without extra spaces inside parentheses like "Memórias ( 0 )"
-    expect(btnText).toMatch(/^🧠\s*Memórias\s*\(\d+\)$/);
+    // Exactly "Memórias (0)" without extra spaces inside parentheses like "Memórias ( 0 )"
+    expect(btnText).toMatch(/^(?:🧠\s*)?Memórias\s*\(\d+\)$/);
     expect(btnText).not.toContain('( ');
     expect(btnText).not.toContain(' )');
 

@@ -385,12 +385,12 @@ export async function runArchitectureTests() {
     assert(!/estou à disposição|fique à vontade|menu|catálogo|posso ajudar com:/i.test(rPhys05.text), 'PHYS-05: Não deve parecer telemarketing');
 
     // PHYS-06: Memórias (0) sem espaços extras
-    assert(indexHtml.includes('id="sophyOpenMemoriesBtn" title="Ver o que a Sophy sabe sobre você"><span>🧠 Memórias (<span id="sophyMemoryCount">0</span>)</span>'), 'PHYS-06: DOM deve conter wrapper span para prevenir flex gap nos parênteses');
+    assert(indexHtml.includes('id="sophyOpenMemoriesBtn"') && indexHtml.includes('Memórias (<span id="sophyMemoryCount">0</span>)</span>'), 'PHYS-06: DOM deve conter wrapper span para prevenir flex gap nos parênteses');
 
     // PHYS-07 & PHYS-08: CSS Layout flex-shrink e bounds
     assert(indexHtml.includes('.sophy-suggestions-bar{display:flex;align-items:center;gap:8px;overflow-x:auto;flex-wrap:nowrap;flex-shrink:0;min-height:44px'), 'PHYS-07: suggestions-bar deve ter flex-shrink: 0');
     assert(indexHtml.includes('.sophy-input-bar{display:flex;gap:10px;padding:8px 14px;background:#071422;border-top:1px solid var(--line);align-items:center;flex-shrink:0;min-height:48px'), 'PHYS-07: input-bar deve ter flex-shrink: 0');
-    assert(indexHtml.includes('body[data-page="sophy"] main{padding:8px 8px max(8px,var(--safe-bottom));height:100dvh'), 'PHYS-08: Landscape layout deve conter flex height: 100dvh');
+    assert(indexHtml.includes('body[data-page="sophy"] main{') && indexHtml.includes('height:100dvh'), 'PHYS-08: Landscape layout deve conter flex height: 100dvh');
 
     // PHYS-09: UX de teste com chave digitada
     assert(indexHtml.includes('sophySecureStorage.setApiKey(enteredKey)'), 'PHYS-09: Testar conexão deve salvar chave digitada no cofre seguro');

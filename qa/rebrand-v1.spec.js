@@ -37,7 +37,7 @@ test.describe('SFP Product Reload + Rebranding V1 QA Suite (REB-01 - REB-18)', (
       };
     });
 
-    expect(tokens.brand).toBe('#00d2c4');
+    expect(tokens.brand).toBe('#00bba7');
     expect(tokens.bgBase).toBe('#050b14');
     expect(tokens.surface1).toBe('#0c1a2d');
     expect(tokens.border).toBe('#1a3452');
