@@ -28,24 +28,20 @@ async function expectBootComplete(page, expect, name) {
   if (await skip.isVisible()) {
     await skip.click();
   }
-  const modal = page.locator('#modalRoot');
-  if (await modal.isVisible().catch(() => false)) {
-    await page.evaluate(() => {
-      if (typeof closeModalRoot === 'function') {
-        closeModalRoot();
-      } else {
-        const el = document.getElementById('modalRoot');
-        if (el) el.remove();
-      }
-    });
-  }
-
-  const btn = page.locator('.nav button[data-page="config"]');
-  if (await btn.isVisible()) {
-    await btn.click();
-  } else {
-    await page.evaluate(() => setPage('config'));
-  }
+  await page.evaluate(() => {
+    if (typeof closeProgressive === 'function') {
+      closeProgressive(false);
+    }
+    if (typeof onboardingShowing !== 'undefined') {
+      onboardingShowing = false;
+    }
+    const modal = document.getElementById('modalRoot');
+    if (modal) {
+      modal.className = 'hidden';
+      modal.replaceChildren();
+    }
+    setPage('config');
+  });
   await expect(page.locator('#config')).toHaveClass(/active/);
   await expect(page.locator('#cfgName')).toHaveValue(name);
 }
