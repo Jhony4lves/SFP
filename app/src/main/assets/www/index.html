@@ -3152,7 +3152,23 @@ button:active:not(:disabled){transform:translateY(1px)}
       </div>
       <article class="panel hidden" id="stmtReview">
         <div class="head"><div><h2>Conciliação</h2><p>Revise antes de confirmar</p></div><div class="actions"><button class="btn2" id="stmtCancel">Cancelar</button><button class="btn" id="stmtImport">Importar selecionados</button></div></div>
-        <div class="flow"><div><small>Reconhecidos</small><strong id="stmtCount">0</strong></div><div><small>Entradas</small><strong class="positive" id="stmtIn">R$ 0,00</strong></div><div><small>Saídas</small><strong class="negative" id="stmtOut">R$ 0,00</strong></div></div>
+        <div class="flow">
+  <div><small>Reconhecidos</small><strong id="stmtCount">0</strong></div>
+  <div><small>Entradas</small><strong class="positive" id="stmtIn">R$ 0,00</strong></div>
+  <div><small>Saídas</small><strong class="negative" id="stmtOut">R$ 0,00</strong></div>
+  <div><small>Neutras</small><strong id="stmtNeutral">0</strong></div>
+  <div><small>Conciliadas</small><strong id="stmtReconciled">0</strong></div>
+  <div><small>Revisar</small><strong class="warning" id="stmtNeedsReview">0</strong></div>
+</div>
+
+<div class="section-actions" style="margin-top:12px">
+  <button type="button" class="btn" id="stmtShowReview">Revisar pendências</button>
+  <button type="button" class="btn2" id="stmtShowAll">Ver todas</button>
+</div>
+
+<div class="note" id="stmtReviewHint" style="margin-top:10px">
+  O SFP destaca primeiro apenas movimentações que precisam da sua decisão.
+</div>
         <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Ação</th><th>Categoria</th><th>Transferir p/</th><th>Aprender?</th><th>Conciliação</th></tr></thead><tbody id="stmtRows"></tbody></table></div>
       </article>
 
@@ -3253,16 +3269,80 @@ button:active:not(:disabled){transform:translateY(1px)}
         <div class="integrity-card"><small>Último backup</small><strong id="auditBackup">—</strong></div>
       </div>
       <div class="grid2" style="margin-top:12px">
-        <article class="panel"><div class="head"><div><h2>Integridade dos dados</h2><p>Verificações automáticas da base</p></div><button class="btn2 tiny" id="runAudit">Executar novamente</button></div><div id="auditIssues" class="list"></div></article>
+        <article class="panel"><div class="head"><div><h2>Integridade dos dados</h2><p>Verificações automáticas da base</p></div><button class="btn2 tiny" id="runAudit">Executar novamente</button></div><div id="auditIssues" class="list"></div>
+<div class="head" style="margin-top:24px">
+  <div>
+    <h3>Integridade financeira</h3>
+    <p>Movimentações que merecem revisão de classificação, sem alterar seus dados automaticamente.</p>
+  </div>
+  <span class="badge" id="financialAuditCount">0 para revisar</span>
+</div>
+<div id="financialAuditIssues" class="list"></div></article>
         <article class="panel"><div class="head"><div><h2>Ferramentas de manutenção</h2><p>Correções seguras e diagnósticos</p></div></div><div class="list"><button class="btn2 wide" id="repairOrphans">Corrigir referências órfãs seguras</button><button class="btn2 wide" id="removeExactDuplicates">Remover duplicatas exatas</button><button class="btn2 wide" id="exportDiagnostic">Exportar diagnóstico</button></div><div class="note">O Smart Financial Planner nunca corrige valores financeiros automaticamente sem uma regra segura. Ajustes que podem alterar dinheiro continuam exigindo confirmação.</div></article>
       </div>
     </section>
 
 <section class="tab" id="config">
-      <div class="grid2"><article class="panel"><div class="head"><div><h2>Preferências</h2><p>Comportamento do sistema</p></div></div><form id="configForm"><label>Nome do sistema<input id="cfgName"/></label><div class="two"><label>Dia principal 1<input id="cfgDay1" type="number" min="1" max="31"/></label><label>Dia principal 2<input id="cfgDay2" type="number" min="1" max="31"/></label></div><label>Tema<select id="cfgTheme"><option value="dark">Escuro</option><option value="light">Claro</option><option value="system">Sistema</option></select></label><button class="btn wide">Salvar preferências</button></form></article><article class="panel"><div class="head"><div><h2>Dados & segurança</h2><p>Backup, restauração e manutenção</p></div></div><div class="list"><button class="btn2 wide" id="exportBackup">Exportar backup completo</button>
-<label>Senha do backup criptografado<input id="backupPassword" type="password" placeholder="Use uma senha forte"/></label>
-<div class="crypto-row"><button class="btn2 wide" id="exportEncrypted">Exportar backup criptografado</button><label class="btn2 wide" style="text-align:center;cursor:pointer">Importar backup criptografado<input id="importEncrypted" type="file" accept=".sfp,.json" hidden/></label></div><label class="btn2 wide" style="text-align:center;cursor:pointer">Importar backup<input id="importBackup" type="file" accept=".json" hidden/></label><button class="btn2 wide" id="exportCSV">Exportar CSV do mês</button><button class="btn2 wide" id="undoBtn">Desfazer última alteração</button><button class="btn2 wide" id="autoBackupBtn">Restaurar backup automático</button><button class="btn2 wide" id="trashBtn">Abrir lixeira</button></div><div class="danger-zone"><h3>Zona de perigo</h3><p>Operações destrutivas e irreversíveis.</p><button class="danger wide" id="resetBtn">Zerar sistema</button></div><div class="list"></div><div class="note">Os dados ficam no navegador usando IndexedDB quando disponível, com fallback local. Faça backups periódicos para não depender apenas do armazenamento do navegador.</div></article></div>
-      <article class="panel"><div class="head"><div><h2>Regras de classificação</h2><p>Aprendidas a partir dos extratos</p></div></div><div id="rulesList" class="list"></div></article>
+      <div class="grid2"><article class="panel"><div class="head"><div><h2>Preferências</h2><p>Comportamento do sistema</p></div></div><form id="configForm"><label>Nome do sistema<input id="cfgName"/></label><div class="two"><label>Dia principal 1<input id="cfgDay1" type="number" min="1" max="31"/></label><label>Dia principal 2<input id="cfgDay2" type="number" min="1" max="31"/></label></div><label>Tema<select id="cfgTheme"><option value="dark">Escuro</option><option value="light">Claro</option><option value="system">Sistema</option></select></label><button class="btn wide">Salvar preferências</button></form></article><article class="panel">
+  <div class="head">
+    <div>
+      <h2>Dados & segurança</h2>
+      <p>Backup, restauração e manutenção</p>
+    </div>
+  </div>
+
+  <div class="list">
+    <div class="item">
+      <div>
+        <b>Backup completo</b>
+        <small>Protege seus dados em um arquivo criptografado.</small>
+      </div>
+    </div>
+
+    <label>Senha do backup criptografado
+      <input id="backupPassword" type="password" placeholder="Use uma senha forte"/>
+    </label>
+
+    <div class="crypto-row">
+      <button class="btn wide" id="exportEncrypted">Criar backup completo</button>
+      <label class="btn2 wide" style="text-align:center;cursor:pointer">
+        Restaurar backup completo
+        <input id="importEncrypted" type="file" accept=".sfp,.json" hidden/>
+      </label>
+    </div>
+
+    <details style="margin-top:12px">
+      <summary class="btn2 wide" style="list-style:none;cursor:pointer;text-align:center">
+        Mais opções
+      </summary>
+
+      <div class="list" style="margin-top:10px">
+        <label class="btn2 wide" style="text-align:center;cursor:pointer">
+          Importar backup JSON
+          <input id="importBackup" type="file" accept=".json" hidden/>
+        </label>
+
+        <button class="btn2 wide" id="exportBackup">Exportar backup JSON</button>
+        <button class="btn2 wide" id="exportCSV">Exportar CSV do mês</button>
+        <button class="btn2 wide" id="undoBtn">Desfazer última alteração</button>
+        <button class="btn2 wide" id="autoBackupBtn">Restaurar backup automático</button>
+        <button class="btn2 wide" id="trashBtn">Abrir lixeira</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="danger-zone">
+    <h3>Zona de perigo</h3>
+    <p>Operações destrutivas e irreversíveis.</p>
+    <button class="danger wide" id="resetBtn">Zerar sistema</button>
+  </div>
+
+  <div class="note">
+    Os dados ficam no navegador usando IndexedDB quando disponível, com fallback local.
+    O backup completo é a forma recomendada para manter uma cópia externa segura.
+  </div>
+</article>
+<article class="panel"><div class="head"><div><h2>Regras de classificação</h2><p>Aprendidas a partir dos extratos</p></div></div><div id="rulesList" class="list"></div></article>
     </section>
   </main>
 </div>
@@ -3766,8 +3846,9 @@ function debtDueForMonth(m){
 }
 function monthCalc(m=state.mesAtual){
  let tx=[...txInMonth(m),...recurringOccurrences(m)],inst=installments(m),debts=debtDueForMonth(m);
- let inc=tx.filter(t=>t.kind==='income').reduce((s,t)=>s+t.amount,0);
- let expTx=tx.filter(t=>t.kind==='expense').reduce((s,t)=>s+t.amount,0);
+ let economicTx=tx.filter(t=>t.economicImpact!=='neutral');
+ let inc=economicTx.filter(t=>t.kind==='income').reduce((s,t)=>s+t.amount,0);
+ let expTx=economicTx.filter(t=>t.kind==='expense').reduce((s,t)=>s+t.amount,0);
  let cardExp=state.cards.reduce((s,c)=>s+invoiceTotal(c.id,m),0);
  let debtExp=debts.reduce((s,d)=>s+d.amount,0);
  let exp=Math.round((expTx+cardExp+debtExp)*100)/100,result=Math.round((inc-exp)*100)/100;
@@ -3881,6 +3962,7 @@ function accrualView(m=state.mesAtual){
   */
   [...txInMonth(m),...recurringOccurrences(m)].forEach(t=>{
     if(t.kind!=='income' && t.kind!=='expense')return;
+    if(t.economicImpact==='neutral')return;
 
     items.push({
       id:t.virtual?`recurring:${t.recurringId}:${m}`:`tx:${t.id}`,
@@ -8142,6 +8224,122 @@ function renderStatements(){
 }
 function renderRules(){$('rulesList').innerHTML=state.classificationRules.map((r,i)=>`<div class="item"><div><b>${r.pattern}</b><small>${r.action} • ${r.category}</small></div><button class="danger tiny" onclick="removeRule(${i})">Excluir</button></div>`).join('')||'<div class="item"><span>Nenhuma regra aprendida.</span></div>'}
 
+
+function financialAuditData(){
+  const issues=[];
+
+  const add=(level,type,text,item=null)=>issues.push({
+    level,type,text,
+    itemId:item?.id ?? null,
+    date:item?.date ?? null,
+    desc:item?.desc ?? null
+  });
+
+  for(const t of state.transactions||[]){
+    const desc=String(t.desc||'');
+    const semantic=t.semanticClass||null;
+    const impact=t.economicImpact||null;
+
+    /*
+     * 1. Classificação semântica pediu revisão.
+     */
+    if(impact==='review'){
+      add(
+        'warning',
+        'semantic-review',
+        `Revisar classificação: "${desc}". O lançamento ainda não possui impacto econômico definido com segurança.`,
+        t
+      );
+      continue;
+    }
+
+    /*
+     * 2. Movimentos de investimento antigos que provavelmente
+     *    deveriam ser neutros economicamente.
+     */
+    if(
+      !impact &&
+      /\b(resgate|aplica(?:c|ç)[aã]o|aplicacao|investimento|rdb|cdb|tesouro)\b/i.test(desc)
+    ){
+      add(
+        'warning',
+        'legacy-investment',
+        `Possível movimentação patrimonial antiga: "${desc}". Verifique se deve ser neutra em receitas/despesas.`,
+        t
+      );
+    }
+
+    /*
+     * 3. Possível transferência própria importada como
+     *    receita ou despesa comum.
+     */
+    if(
+      !impact &&
+      (t.kind==='income'||t.kind==='expense') &&
+      /\b(transfer[eê]ncia|transferencia|pix)\b/i.test(desc) &&
+      /\b(enviado|recebido|transferido|entre contas|minha conta)\b/i.test(desc)
+    ){
+      add(
+        'warning',
+        'possible-transfer',
+        `Possível transferência entre contas classificada como ${t.kind==='income'?'receita':'despesa'}: "${desc}".`,
+        t
+      );
+    }
+
+    /*
+     * 4. Pagamento de cartão aparecendo como despesa comum.
+     *    Pode significar dupla contagem econômica.
+     */
+    if(
+      t.kind==='expense' &&
+      impact!=='neutral' &&
+      /\b(pagamento|pgto|pagar)\b.*\b(fatura|cart[aã]o)\b|\b(fatura)\b.*\b(pagamento|pago)\b/i.test(desc)
+    ){
+      add(
+        'warning',
+        'possible-card-payment',
+        `Possível pagamento de fatura contabilizado como despesa econômica: "${desc}".`,
+        t
+      );
+    }
+
+    /*
+     * 5. Estorno/reembolso ainda tratado como movimento comum.
+     */
+    if(
+      !impact &&
+      /\b(estorno|reembolso|refund|devolu[cç][aã]o)\b/i.test(desc)
+    ){
+      add(
+        'info',
+        'refund-review',
+        `Estorno/reembolso para conferir: "${desc}". Verifique a qual gasto ele pertence.`,
+        t
+      );
+    }
+
+    /*
+     * 6. Semântica presente mas impacto econômico ausente.
+     *    Indício de dado criado durante transição de schema.
+     */
+    if(semantic && !impact){
+      add(
+        'warning',
+        'semantic-incomplete',
+        `Classificação semântica incompleta em "${desc}".`,
+        t
+      );
+    }
+  }
+
+  return {
+    warnings:issues.filter(x=>x.level==='warning').length,
+    info:issues.filter(x=>x.level==='info').length,
+    issues
+  };
+}
+
 function auditData(){
  let issues=[],dups=0,ids=new Set();
  [['accounts',state.accounts],['cards',state.cards],['transactions',state.transactions],['purchases',state.purchases],['debts',state.debts]].forEach(([name,arr])=>arr.forEach(x=>{let k=name+':'+x.id;if(ids.has(k))issues.push({level:'critical',text:`ID duplicado em ${name}: ${x.id}`});ids.add(k)}));
@@ -8153,6 +8351,50 @@ function auditData(){
  let seen=new Set();state.transactions.forEach(t=>{let k=`${t.date}|${t.kind}|${t.amount.toFixed(2)}|${t.desc.toLowerCase()}`;if(seen.has(k)){dups++;issues.push({level:'warning',text:`Possível duplicata: ${t.desc} em ${t.date}.`})}seen.add(k)});
  return{issues,dups,critical:issues.filter(i=>i.level==='critical').length,warnings:issues.filter(i=>i.level==='warning').length}
 }
+
+function renderFinancialAudit(){
+  const box=$('financialAuditIssues');
+  const count=$('financialAuditCount');
+  if(!box||!count)return;
+
+  const a=financialAuditData();
+  const total=a.issues.length;
+
+  count.textContent=total
+    ? `${total} para revisar`
+    : 'Tudo certo';
+
+  count.className=total?'badge warning':'badge';
+
+  if(!total){
+    box.innerHTML='<div class="alert green">Nenhuma movimentação financeira suspeita detectada.</div>';
+    return;
+  }
+
+  box.innerHTML=a.issues.map(i=>{
+    const cls=i.level==='warning'?'warning':'';
+    const label=i.level==='warning'?'Revisar':'Informação';
+    const meta=[
+      i.date||'',
+      i.type==='semantic-review'?'classificação incerta':
+      i.type==='legacy-investment'?'movimentação patrimonial':
+      i.type==='possible-transfer'?'possível transferência':
+      i.type==='possible-card-payment'?'possível pagamento de fatura':
+      i.type==='refund-review'?'estorno/reembolso':
+      i.type==='semantic-incomplete'?'semântica incompleta':
+      'revisão financeira'
+    ].filter(Boolean).join(' • ');
+
+    return `<div class="item">
+      <div>
+        <b class="${cls}">${label}</b>
+        <small>${sfpEsc(i.text)}</small>
+        <small>${sfpEsc(meta)}</small>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderAudit(){
  if(!$('auditIssues'))return;let a=auditData(),backs=[];try{backs=JSON.parse(localStorage.getItem('sfp_auto_backups')||'[]')}catch{}
  $('auditCritical').textContent=a.critical;$('auditWarnings').textContent=a.warnings;$('auditDuplicates').textContent=a.dups;$('auditBackup').textContent=backs.length?new Date(backs.at(-1).at).toLocaleDateString('pt-BR'):'—';
@@ -8168,7 +8410,7 @@ async function repairOrphans(){
 async function removeExactDuplicates(){
  let seen=new Set(),removed=[];state.transactions=state.transactions.filter(t=>{let k=`${t.date}|${t.kind}|${t.amount.toFixed(2)}|${t.desc.toLowerCase()}|${t.accountId}`;if(seen.has(k)){removed.push(t);return false}seen.add(k);return true});
  if(removed.length){removed.forEach(x=>moveToTrash('transaction',x));await save('Remover duplicatas exatas')}toast(removed.length?`${removed.length} duplicatas movidas para a lixeira.`:'Nenhuma duplicata exata encontrada.')
-}
+renderFinancialAudit();}
 
 
 function renderDataCenter(){
@@ -8967,7 +9209,106 @@ function parseCSV(txt){let lines=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter
 function tag(block,n){let m=block.match(new RegExp('<'+n+'>([^<\\r\\n]+)','i'));return m?m[1].trim():''}
 function parseOFX(txt){let blocks=txt.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/gi)||txt.split(/<STMTTRN>/i).slice(1);return blocks.map(b=>({date:parseDate(tag(b,'DTPOSTED')),desc:tag(b,'MEMO')||tag(b,'NAME')||'Movimentação',amount:parseMoney(tag(b,'TRNAMT')),fitid:tag(b,'FITID')})).filter(x=>x.date&&x.amount)}
 function ruleFor(desc){let d=desc.toLowerCase();return state.classificationRules.find(r=>d.includes(r.pattern.toLowerCase()))}
-function guess(desc,amount){let r=ruleFor(desc);if(r)return r;if(/uber|99|taxi|onibus|metr[oô]|combust/.test(desc.toLowerCase()))return{action:'expense',category:'Transporte'};if(/mercado|supermerc|ifood|restaur|padaria/.test(desc.toLowerCase()))return{action:'expense',category:'Alimentação'};if(/salario|salário|folha/.test(desc.toLowerCase()))return{action:'income',category:'Trabalho'};if(/pix|transfer|ted/.test(desc.toLowerCase()))return{action:'ignore',category:'Outros'};return{action:amount>0?'income':'expense',category:amount>0?'Trabalho':'Outros'}}
+
+function semanticClassify(desc,amount){
+  const raw=String(desc||'').trim();
+  const d=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const learned=ruleFor(raw);
+
+  if(learned){
+    return{
+      action:learned.action,
+      category:learned.category,
+      semanticClass:'learned_rule',
+      economicImpact:'economic',
+      confidence:'high',
+      reason:`Regra aprendida: ${learned.pattern}`
+    };
+  }
+
+  if(/resgate.*rdb|resgate.*invest|resgate.*aplic|resgate.*cdb|resgate.*tesouro|resgate.*fundo/.test(d)){
+    return{
+      action:'income',
+      category:'Investimentos',
+      semanticClass:'investment_redemption',
+      economicImpact:'neutral',
+      confidence:'high',
+      reason:'Resgate de investimento: entrada de caixa sem nova receita econômica.'
+    };
+  }
+
+  if(/aplicacao.*rdb|aplicacao.*invest|aplicacao.*cdb|aplicacao.*tesouro|aplicacao.*fundo/.test(d)){
+    return{
+      action:'expense',
+      category:'Investimentos',
+      semanticClass:'investment_application',
+      economicImpact:'neutral',
+      confidence:'high',
+      reason:'Aplicação financeira: saída de caixa sem despesa econômica.'
+    };
+  }
+
+  if(/pagamento.*fatura|fatura.*cartao|pagamento.*cartao|credit card payment/.test(d)){
+    return{
+      action:'expense',
+      category:'Cartão',
+      semanticClass:'invoice_payment',
+      economicImpact:'neutral',
+      confidence:'medium',
+      reason:'Possível pagamento de fatura; deve ser conciliado para evitar dupla despesa.'
+    };
+  }
+
+  if(/estorno|reembolso|devolucao|chargeback/.test(d)){
+    return{
+      action:amount>0?'income':'expense',
+      category:'Outros',
+      semanticClass:'refund_or_reversal',
+      economicImpact:'review',
+      confidence:'medium',
+      reason:'Possível estorno/reembolso; requer conciliação com a movimentação original.'
+    };
+  }
+
+  if(/pix|transfer|ted|doc/.test(d)){
+    return{
+      action:'ignore',
+      category:'Transferência',
+      semanticClass:'possible_transfer',
+      economicImpact:'review',
+      confidence:'medium',
+      reason:'Possível transferência; precisa identificar contraparte/conta de destino.'
+    };
+  }
+
+  if(/uber|99|taxi|onibus|metro|combust/.test(d))return{
+    action:'expense',category:'Transporte',semanticClass:'expense',
+    economicImpact:'economic',confidence:'medium',reason:'Padrão de transporte.'
+  };
+
+  if(/mercado|supermerc|ifood|restaur|padaria/.test(d))return{
+    action:'expense',category:'Alimentação',semanticClass:'expense',
+    economicImpact:'economic',confidence:'medium',reason:'Padrão de alimentação.'
+  };
+
+  if(/salario|folha|pagamento salario/.test(d))return{
+    action:'income',category:'Trabalho',semanticClass:'income',
+    economicImpact:'economic',confidence:'high',reason:'Padrão de salário/renda.'
+  };
+
+  return{
+    action:amount>0?'income':'expense',
+    category:amount>0?'Outros':'Outros',
+    semanticClass:'unclassified',
+    economicImpact:'review',
+    confidence:'low',
+    reason:'Classificação inferida apenas pelo sinal do valor; revisão recomendada.'
+  };
+}
+
+function guess(desc,amount){
+  return semanticClassify(desc,amount);
+}
 function existingStmtKeys(){let keys=state.transactions.filter(t=>t.statementKey).map(t=>t.statementKey);state.transfers.filter(t=>t.statementKey).forEach(t=>keys.push(t.statementKey));state.invoices.forEach(i=>(i.payments||[]).forEach(p=>{if(p.statementKey)keys.push(p.statementKey)}));return new Set(keys)}
 function matchingWords(value){return new Set(String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\b(pagamento|compra|debito|credito|pix|ted|doc)\b/g,' ').match(/[a-z0-9]{3,}/g)||[])}
 function descriptionAffinity(a,b){let aa=matchingWords(a),bb=matchingWords(b);if(!aa.size||!bb.size)return 0;return [...aa].filter(x=>bb.has(x)).length/Math.max(aa.size,bb.size)}
@@ -8984,12 +9325,209 @@ function reconcileCandidate(r,accountId,reserved=new Set()){
 }
 function statementHash(rows){let value=rows.map(r=>`${r.date}|${Math.round(Number(r.amount)*100)}|${String(r.desc||'').trim().toLowerCase()}|${String(r.fitid||'').trim()}`).join('\n'),hash=2166136261;for(let i=0;i<value.length;i++){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619)}return(hash>>>0).toString(36)}
 function prepareStatement(rows,file){
- let accountId=+$('stmtAccount').value,ex=existingStmtKeys(),seen=new Set(ex),reserved=new Set(),occurrences=new Map(),sourceHash=statementHash(rows);statementDraft=rows.map((r,i)=>{let fitid=String(r.fitid||'').trim(),fingerprint=`${r.date}|${Math.round(Number(r.amount)*100)}|${String(r.desc||'').trim().toLowerCase()}`,occurrence=(occurrences.get(fingerprint)||0)+1;occurrences.set(fingerprint,occurrence);let key=fitid?`${accountId}|fit:${fitid}`:`${accountId}|row:${sourceHash}:${fingerprint}:${occurrence}`,legacyKey=`${accountId}|${r.date}|${Number(r.amount).toFixed(2)}|${String(r.desc||'').toLowerCase().slice(0,80)}`,duplicate=seen.has(key)||(!fitid&&ex.has(legacyKey)),g=guess(r.desc,r.amount),cand=duplicate?null:reconcileCandidate(r,accountId,reserved);if(cand)reserved.add(String(cand.id));seen.add(key);return{...r,fitid:fitid||null,index:i,key,accountId,duplicate,action:duplicate?'ignore':cand?'reconcile':g.action,category:g.category,candidateId:cand?.id||null,transferAccountId:null,learn:false,file}});renderStatementDraft()
+ let accountId=+$('stmtAccount').value,ex=existingStmtKeys(),seen=new Set(ex),reserved=new Set(),occurrences=new Map(),sourceHash=statementHash(rows);statementDraft=rows.map((r,i)=>{let fitid=String(r.fitid||'').trim(),fingerprint=`${r.date}|${Math.round(Number(r.amount)*100)}|${String(r.desc||'').trim().toLowerCase()}`,occurrence=(occurrences.get(fingerprint)||0)+1;occurrences.set(fingerprint,occurrence);let key=fitid?`${accountId}|fit:${fitid}`:`${accountId}|row:${sourceHash}:${fingerprint}:${occurrence}`,legacyKey=`${accountId}|${r.date}|${Number(r.amount).toFixed(2)}|${String(r.desc||'').toLowerCase().slice(0,80)}`,duplicate=seen.has(key)||(!fitid&&ex.has(legacyKey)),g=guess(r.desc,r.amount),cand=duplicate?null:reconcileCandidate(r,accountId,reserved);if(cand)reserved.add(String(cand.id));seen.add(key);return{...r,fitid:fitid||null,index:i,key,accountId,duplicate,action:duplicate?'ignore':cand?'reconcile':g.action,category:g.category,candidateId:cand?.id||null,transferAccountId:null,learn:false,file,semanticClass:g.semanticClass||null,economicImpact:g.economicImpact||'economic',classificationConfidence:g.confidence||null,classificationReason:g.reason||null}});renderStatementDraft()
 }
+let statementReviewMode='review';
+
+function statementNeedsReview(r){
+  if(r.duplicate)return false;
+
+  if(r.economicImpact==='review')return true;
+  if(r.semanticClass==='review')return true;
+
+  if(r.classificationConfidence!=null &&
+     Number(r.classificationConfidence)<0.75)return true;
+
+  if(r.action==='transfer' && !r.transferAccountId)return true;
+
+  if(
+    r.semanticClass==='transfer' ||
+    r.semanticClass==='card_payment' ||
+    r.semanticClass==='refund'
+  )return true;
+
+  return false;
+}
+
 function renderStatementDraft(){
- $('stmtReview').classList.remove('hidden');$('stmtCount').textContent=statementDraft.length;$('stmtIn').textContent=brl(statementDraft.filter(x=>x.amount>0).reduce((s,x)=>s+x.amount,0));$('stmtOut').textContent=brl(Math.abs(statementDraft.filter(x=>x.amount<0).reduce((s,x)=>s+x.amount,0)));
- $('stmtRows').innerHTML=statementDraft.map((r,i)=>`<tr><td>${dateObj(r.date).toLocaleDateString('pt-BR')}</td><td>${r.desc}</td><td class="${r.amount>0?'positive':'negative'}">${brl(r.amount)}</td><td><select data-sa="${i}"><option value="expense" ${r.action==='expense'?'selected':''}>Gasto</option><option value="income" ${r.action==='income'?'selected':''}>Receita</option><option value="transfer" ${r.action==='transfer'?'selected':''}>Transferência</option><option value="reconcile" ${r.action==='reconcile'?'selected':''}>Conciliar</option><option value="ignore" ${r.action==='ignore'?'selected':''}>Ignorar</option></select></td><td><select data-sc="${i}">${CATEGORIES.map(c=>`<option ${r.category===c?'selected':''}>${c}</option>`).join('')}</select></td><td><select data-st="${i}"><option value="">—</option>${state.accounts.filter(a=>a.id!=r.accountId).map(a=>`<option value="${a.id}" ${r.transferAccountId==a.id?'selected':''}>${a.name}</option>`).join('')}</select></td><td style="text-align:center"><input class="learn-check" type="checkbox" data-sl="${i}" ${r.learn?'checked':''}/></td><td>${r.duplicate?'Já importado':r.candidateId?'Possível correspondência':'—'}</td></tr>`).join('');
- document.querySelectorAll('[data-sa]').forEach(e=>e.onchange=()=>statementDraft[+e.dataset.sa].action=e.value);document.querySelectorAll('[data-sc]').forEach(e=>e.onchange=()=>statementDraft[+e.dataset.sc].category=e.value);document.querySelectorAll('[data-st]').forEach(e=>e.onchange=()=>statementDraft[+e.dataset.st].transferAccountId=+e.value||null);document.querySelectorAll('[data-sl]').forEach(e=>e.onchange=()=>statementDraft[+e.dataset.sl].learn=e.checked)
+  $('stmtReview').classList.remove('hidden');
+
+  const total=statementDraft.length;
+
+  const incoming=statementDraft
+    .filter(x=>x.amount>0)
+    .reduce((s,x)=>s+x.amount,0);
+
+  const outgoing=Math.abs(
+    statementDraft
+      .filter(x=>x.amount<0)
+      .reduce((s,x)=>s+x.amount,0)
+  );
+
+  const neutral=statementDraft.filter(x=>
+    x.economicImpact==='neutral' ||
+    x.action==='transfer'
+  ).length;
+
+  const reconciled=statementDraft.filter(x=>
+    x.action==='reconcile' ||
+    x.candidateId
+  ).length;
+
+  const reviewRows=statementDraft.filter(statementNeedsReview);
+
+  $('stmtCount').textContent=total;
+  $('stmtIn').textContent=brl(incoming);
+  $('stmtOut').textContent=brl(outgoing);
+
+  if($('stmtNeutral'))
+    $('stmtNeutral').textContent=neutral;
+
+  if($('stmtReconciled'))
+    $('stmtReconciled').textContent=reconciled;
+
+  if($('stmtNeedsReview'))
+    $('stmtNeedsReview').textContent=reviewRows.length;
+
+  let visibleIndexes=[];
+
+  statementDraft.forEach((r,i)=>{
+    if(statementReviewMode==='all' || statementNeedsReview(r))
+      visibleIndexes.push(i);
+  });
+
+  /*
+   * Se não houver nenhuma exceção, mostramos tudo.
+   * Assim o usuário nunca recebe uma revisão "vazia"
+   * sem conseguir conferir o extrato.
+   */
+  if(statementReviewMode==='review' && !visibleIndexes.length){
+    visibleIndexes=statementDraft.map((_,i)=>i);
+
+    if($('stmtReviewHint'))
+      $('stmtReviewHint').textContent=
+        'Nenhuma pendência detectada automaticamente. Todas as movimentações estão sendo exibidas para conferência.';
+  }else if($('stmtReviewHint')){
+    $('stmtReviewHint').textContent=
+      statementReviewMode==='review'
+        ? `${visibleIndexes.length} movimentação(ões) merecem sua revisão. As demais foram reconhecidas automaticamente.`
+        : `Exibindo todas as ${total} movimentações reconhecidas.`;
+  }
+
+  $('stmtRows').innerHTML=visibleIndexes.map(i=>{
+    const r=statementDraft[i];
+
+    const review=statementNeedsReview(r);
+
+    return `<tr>
+      <td>${dateObj(r.date).toLocaleDateString('pt-BR')}</td>
+
+      <td>
+        ${sfpEsc(r.desc)}
+        ${review
+          ? '<br><small class="warning">Revisar classificação</small>'
+          : ''}
+      </td>
+
+      <td class="${r.amount>0?'positive':'negative'}">
+        ${brl(r.amount)}
+      </td>
+
+      <td>
+        <select data-sa="${i}">
+          <option value="expense" ${r.action==='expense'?'selected':''}>Gasto</option>
+          <option value="income" ${r.action==='income'?'selected':''}>Receita</option>
+          <option value="transfer" ${r.action==='transfer'?'selected':''}>Transferência</option>
+          <option value="reconcile" ${r.action==='reconcile'?'selected':''}>Conciliar</option>
+          <option value="ignore" ${r.action==='ignore'?'selected':''}>Ignorar</option>
+        </select>
+      </td>
+
+      <td>
+        <select data-sc="${i}">
+          ${CATEGORIES.map(c=>
+            `<option ${r.category===c?'selected':''}>${c}</option>`
+          ).join('')}
+        </select>
+      </td>
+
+      <td>
+        <select data-st="${i}">
+          <option value="">—</option>
+          ${state.accounts
+            .filter(a=>a.id!=r.accountId)
+            .map(a=>
+              `<option value="${a.id}" ${r.transferAccountId==a.id?'selected':''}>${sfpEsc(a.name)}</option>`
+            ).join('')}
+        </select>
+      </td>
+
+      <td style="text-align:center">
+        <input
+          class="learn-check"
+          type="checkbox"
+          data-sl="${i}"
+          ${r.learn?'checked':''}
+        />
+      </td>
+
+      <td>
+        ${
+          r.duplicate
+            ? 'Já importado'
+            : r.candidateId
+              ? 'Possível correspondência'
+              : review
+                ? 'Revisar'
+                : 'Reconhecido'
+        }
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.querySelectorAll('[data-sa]').forEach(e=>
+    e.onchange=()=>{
+      statementDraft[+e.dataset.sa].action=e.value;
+      renderStatementDraft();
+    }
+  );
+
+  document.querySelectorAll('[data-sc]').forEach(e=>
+    e.onchange=()=>
+      statementDraft[+e.dataset.sc].category=e.value
+  );
+
+  document.querySelectorAll('[data-st]').forEach(e=>
+    e.onchange=()=>{
+      statementDraft[+e.dataset.st].transferAccountId=+e.value||null;
+      renderStatementDraft();
+    }
+  );
+
+  document.querySelectorAll('[data-sl]').forEach(e=>
+    e.onchange=()=>
+      statementDraft[+e.dataset.sl].learn=e.checked
+  );
+
+  if($('stmtShowReview')){
+    $('stmtShowReview').className=
+      statementReviewMode==='review'?'btn':'btn2';
+
+    $('stmtShowReview').onclick=()=>{
+      statementReviewMode='review';
+      renderStatementDraft();
+    };
+  }
+
+  if($('stmtShowAll')){
+    $('stmtShowAll').className=
+      statementReviewMode==='all'?'btn':'btn2';
+
+    $('stmtShowAll').onclick=()=>{
+      statementReviewMode='all';
+      renderStatementDraft();
+    };
+  }
 }
 async function importStatement(){
  let before=clone(state),draft=clone(statementDraft),persisted=false;try{
@@ -9003,7 +9541,7 @@ async function importStatement(){
     let t=state.transactions.find(x=>String(x.id)===candidateId);if(!t||t.statementKey||t.kind==='transfer')continue;t.status='paid';t.balanceImpact=t.date>state.baseDate;t.statementKey=r.key;t.statementDesc=r.desc;reserved.add(candidateId);used.add(r.key);accepted.push(r);continue
    }
    if(r.action==='transfer'){if(!r.transferAccountId||r.transferAccountId==r.accountId)continue;state.transfers.push({id:uid(),desc:r.desc,amount:Math.abs(r.amount),date:r.date,fromId:r.amount<0?r.accountId:r.transferAccountId,toId:r.amount<0?r.transferAccountId:r.accountId,tags:['extrato','transferência'],statementKey:r.key,balanceImpact:true})}
-   else state.transactions.push({id:uid(),kind:r.action==='income'?'income':'expense',desc:r.desc,amount:Math.abs(r.amount),date:r.date,category:r.category,accountId:r.accountId,status:'paid',dueDay:+r.date.slice(8,10),tags:['extrato'],note:'',statementKey:r.key,balanceImpact:r.date>state.baseDate,createdAt:Date.now()});
+   else state.transactions.push({id:uid(),kind:r.action==='income'?'income':'expense',desc:r.desc,amount:Math.abs(r.amount),date:r.date,category:r.category,accountId:r.accountId,status:'paid',dueDay:+r.date.slice(8,10),tags:['extrato'],note:'',statementKey:r.key,balanceImpact:r.date>state.baseDate,semanticClass:r.semanticClass||null,economicImpact:r.economicImpact||'economic',classificationConfidence:r.classificationConfidence||null,classificationReason:r.classificationReason||null,createdAt:Date.now()});
    used.add(r.key);accepted.push(r);if(r.learn){let pattern=r.desc.split(/\s+/).slice(0,3).join(' ');if(pattern.length>3&&!state.classificationRules.some(x=>x.pattern===pattern))state.classificationRules.push({pattern,action:r.action,category:r.category})}
   }
   if(accepted.length)state.statements.push({id:uid(),file:draft[0]?.file||'Extrato',account:acc?.name||'Conta',count:accepted.length,months:[...new Set(accepted.map(r=>ym(r.date)))],importedAt:new Date().toISOString()});
