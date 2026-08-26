@@ -3630,6 +3630,7 @@ function compactUndoHistoryInPlace(target){
   }
 }
 const FALLBACK_KEY='sfp_final_fallback';
+const LEGACY_QUARANTINE_KEY='sfp_legacy_quarantine';
 function validPersistedState(v){
  if(!v||typeof v!=='object'||Array.isArray(v))return false;
  const arrays=['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'];
@@ -3655,8 +3656,8 @@ function newestPersistedState(primary,fallback){
  // Estados legados divergentes sem revisão: prioriza IndexedDB (fonte primária/canônica).
  // O fallback legado desatualizado não deve bloquear o boot. O estado carregado será
  // estampado com revision em load(), tornando o segundo boot determinístico.
- console.warn('[SFP] Estados legados divergentes sem revisão: priorizando IndexedDB (fonte primária). Fallback legado ignorado.');
- return{source:'indexeddb',value:primary.value};
+  console.warn('[SFP] Estados legados divergentes sem revisão: priorizando IndexedDB (fonte primária). Fallback legado ignorado.');
+  return{source:'indexeddb',value:primary.value,ambiguousLegacyDivergence:true};
 }
 function safeLocalSet(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}
 function fallbackGet(){
@@ -3681,8 +3682,17 @@ async function load(){
  // Estados revisionados são comparados pela revisão gravada em cada fonte.
  // Estados legados iguais continuam legíveis; se divergirem, não há informação
  // suficiente para escolher com segurança e nenhuma fonte é sobrescrita.
- let selected=newestPersistedState(primary,fallback);
- if(selected)state=migrateSchema(selected.value);
+  let selected=newestPersistedState(primary,fallback);
+  if(selected?.ambiguousLegacyDivergence&&fallback.status==='ok'){
+    // Divergência legada sem revisão: preserva o fallback ANTES de qualquer dbSet/sobrescrita.
+    try{
+      if(localStorage.getItem(LEGACY_QUARANTINE_KEY)==null){
+        localStorage.setItem(LEGACY_QUARANTINE_KEY,JSON.stringify(fallback.value));
+        safeLocalSet('sfp_last_migration_notice','Encontramos dados locais divergentes de versões anteriores durante a atualização. Uma cópia de segurança desses dados foi preservada e pode ser recuperada pela Central de Dados.');
+      }
+    }catch(e){console.warn('[SFP] Falha ao preservar quarentena legada:',e)}
+  }
+  if(selected)state=migrateSchema(selected.value);
  else if(primary.status==='empty'&&fallback.status==='empty')state=clone(seed);
  else throw Error(`Persistência indisponível ou corrompida (IndexedDB: ${primary.status}; fallback: ${fallback.status}). Nenhum dado foi substituído.`);
  compactUndoHistoryInPlace(state);
@@ -3744,7 +3754,8 @@ async function resetSystem({confirmDialog=true}={}){
   state=createCleanInitialState();
   normalize();
   await dbSet(state);
-  try{localStorage.removeItem('sfp_auto_backups')}catch{}
+   try{localStorage.removeItem('sfp_auto_backups')}catch{}
+   try{localStorage.removeItem(LEGACY_QUARANTINE_KEY)}catch{}
   safeLocalSet(FALLBACK_KEY,JSON.stringify(state));
   lastSavedState=clone(state);
  }catch(error){
