@@ -3201,7 +3201,8 @@ button:active:not(:disabled){transform:translateY(1px)}
       <div class="management-summary" aria-label="Resumo dos cartões"><div class="metric"><span>Limite total</span><strong id="cardsLimitTotal">R$ 0,00</strong><small>dos cartões cadastrados</small></div><div class="metric"><span>Obrigação atual</span><strong id="cardsOutstandingTotal">R$ 0,00</strong><small>limite comprometido</small></div></div>
       <div class="management-layout"><article class="panel management-list-panel"><div class="head"><div><h2>Seus cartões</h2><p>Limite e obrigação em uma visão rápida</p></div></div><div id="cardsGrid" class="cards"></div></article><article class="panel management-form-panel"><div class="head"><div><h2 id="cardFormTitle">Adicionar cartão</h2><p>Configure limite e ciclo da fatura</p></div><span class="management-mode" id="cardFormMode">Criação</span></div><form id="cardForm" class="management-form"><input id="cardId" type="hidden"/><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Essencial</h3><p class="form-section__description">Identificação e limite disponível.</p></div></div><div class="field-group field-group--two"><label>Nome<input id="cardName" required/></label><label class="money-field">Limite<input id="cardLimit" type="number" inputmode="decimal" step="0.01" required/></label></div></section><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Ciclo da fatura</h3><p class="form-section__description">Datas usadas para organizar as compras.</p></div></div><div class="field-group field-group--two"><label>Fechamento<input id="cardClose" type="number" inputmode="numeric" min="1" max="31" required/><small class="field-help">Compras após este dia entram normalmente na fatura seguinte.</small></label><label>Vencimento<input id="cardDue" type="number" inputmode="numeric" min="1" max="31" required/><small class="field-help">Dia previsto para pagar a fatura.</small></label></div></section><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Pagamento</h3><p class="form-section__description">Conta usada ao registrar o pagamento.</p></div></div><label>Conta pagadora<select id="cardPayAccount"></select></label></section><div class="section-actions"><button class="btn" id="cardSubmit">Salvar cartão</button></div></form></article></div>
       <article class="panel invoice-focus"><div class="head"><div><h2>Fatura atual</h2><p>Total, pagamento e compras da fatura selecionada</p></div><div class="actions"><button class="btn2 tiny" id="closeInvoice">Fechar fatura</button><button class="btn tiny" id="payInvoice">Registrar pagamento</button></div></div><div class="two"><label>Cartão<select id="invoiceCard"></select></label><label>Mês da fatura<input id="invoiceMonth" type="month"/></label></div><div class="invoice-summary"><div><small>Total da fatura</small><strong id="invoiceTotalView">R$ 0,00</strong></div><div><small>Pago</small><strong class="positive" id="invoicePaidView">R$ 0,00</strong></div><div><small>Falta pagar</small><strong class="warning" id="invoiceRemainingView">R$ 0,00</strong></div><div><small>Status</small><strong id="invoiceStatusView">Aberta</strong></div></div><div class="tablewrap desktop-table-mobile"><table><thead><tr><th>Compra</th><th>Parcela</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="invoiceTable"></tbody></table></div><div id="invoiceMobile" class="mobile-card-list"></div></article>
-      <article class="panel secondary-content"><div class="head"><div><h2>Importar fatura</h2><p>CSV simples: data, descrição/título e valor</p></div><span class="badge">evita duplicatas</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv"/></label></div><div class="note">Valores positivos viram compras da fatura. Pagamentos negativos são vinculados à fatura anterior, sem reduzir a fatura aberta. Compras parceladas já existentes são detectadas pelo texto "Parcela X/Y".</div></article>
+      <article class="panel secondary-content"><div class="head"><div><h2>Importar fatura</h2><p>CSV simples: data, descrição/título e valor</p></div><span class="badge">com conferência</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,text/csv"/></label></div><div class="note">Confira a prévia antes de salvar. Valores positivos viram compras; negativos são pagamentos vinculados à fatura anterior, sem reduzir a fatura aberta. Parcelas exigem o texto “Parcela X/Y”.</div></article>
+      <article class="panel secondary-content hidden" id="cardImportReview"><div class="head"><div><h2>Conferir fatura</h2><p id="cardImportSummary"></p></div><div class="actions"><button class="btn2" type="button" id="cardImportCancel">Cancelar</button><button class="btn" type="button" id="cardImportConfirm">Importar fatura</button></div></div><div class="tablewrap"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Destino</th><th>Status</th></tr></thead><tbody id="cardImportRows"></tbody></table></div></article>
       <article class="panel secondary-content"><div class="head"><div><h2>Histórico do cartão</h2><p>Alterações de limite, pagamentos e estornos</p></div></div><label>Cartão<select id="cardHistorySelect"></select></label><div id="cardHistory" class="card-history"></div></article>
     </section>
 
@@ -3420,7 +3421,7 @@ const seed={
  ],
  ui:{invoiceMonthByCard:{1:'2026-09',2:'2026-09'}}
 }
-let state=null,currentKind='expense',statementDraft=[],db=null;
+let state=null,currentKind='expense',statementDraft=[],cardImportDraft=null,db=null;
 Object.defineProperty(window,'state',{get(){return state},set(v){state=v},configurable:true,enumerable:true});
 const $=id=>document.getElementById(id), clone=o=>JSON.parse(JSON.stringify(o));
 const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -9632,7 +9633,7 @@ $('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoice
  if($('sophyOpenMemoriesBtn'))$('sophyOpenMemoriesBtn').onclick=showSophyMemoriesModal;
  if($('sophySettingsBtn'))$('sophySettingsBtn').onclick=showSophySettingsModal;
  if($('sophyClearHistoryBtn'))$('sophyClearHistoryBtn').onclick=async()=>{let ok=await sfpConfirm({title:'Limpar Chat da Sophy',message:'Deseja apagar o histórico de mensagens com a Sophy? As memórias salvas não serão excluídas.',confirmText:'Limpar chat',cancelText:'Cancelar'});if(ok){if(state.sophy)state.sophy.messages=[];await save('Limpar chat da Sophy');renderSophy()}};
- $('stmtFile').onchange=e=>readStmtFile(e.target.files[0]);$('stmtCancel').onclick=()=>{$('stmtReview').classList.add('hidden');statementDraft=[]};$('stmtImport').onclick=importStatement;let drop=$('stmtDrop');drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag')};drop.ondragleave=()=>drop.classList.remove('drag');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag');readStmtFile(e.dataTransfer.files[0])}
+ $('stmtFile').onchange=e=>readStmtFile(e.target.files[0]);$('stmtCancel').onclick=()=>{$('stmtReview').classList.add('hidden');statementDraft=[];$('stmtFile').value=''};$('stmtImport').onclick=importStatement;if($('cardImportConfirm'))$('cardImportConfirm').onclick=confirmCardImport;if($('cardImportCancel'))$('cardImportCancel').onclick=()=>{cardImportDraft=null;$('cardImportReview').classList.add('hidden');$('cardImportFile').value=''};let drop=$('stmtDrop');drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag')};drop.ondragleave=()=>drop.classList.remove('drag');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag');readStmtFile(e.dataTransfer.files[0])}
 }
 async function parseCSVManual(txt){
   let lines=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw Error('CSV vazio');let ds=[';',',','\t'],d=ds.sort((a,b)=>lines[0].split(b).length-lines[0].split(a).length)[0],heads=splitCSV(lines[0],d);
@@ -9650,32 +9651,51 @@ async function parseCSVManual(txt){
   let rows=[];for(let i=1;i<lines.length;i++){let c=splitCSV(lines[i],d),date=parseDate(c[di]),amount=parseMoney(c[vi]);if(date&&amount)rows.push({date,desc:(c[xi]||'Movimentação').trim(),amount,fitid:null})}return rows
 }
 
+function normalizeImportText(value){return String(value||'').trim().toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
 function parseCardCsv(txt){
-  let lines=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw Error('CSV vazio');
-  let d=lines[0].includes(';')?';':',',h=splitCSV(lines[0],d).map(x=>x.toLowerCase()),di=h.findIndex(x=>x.includes('date')||x.includes('data')),ti=h.findIndex(x=>x.includes('title')||x.includes('titulo')||x.includes('descr')),ai=h.findIndex(x=>x.includes('amount')||x.includes('valor'));
+  let lines=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw Error('O CSV está vazio ou contém apenas o cabeçalho.');
+  let d=[';',',','\t'].sort((a,b)=>splitCSV(lines[0],b).length-splitCSV(lines[0],a).length)[0],h=splitCSV(lines[0],d).map(normalizeImportText),di=h.findIndex(x=>x.includes('date')||x.includes('data')),ti=h.findIndex(x=>x.includes('title')||x.includes('titulo')||x.includes('descr')),ai=h.findIndex(x=>x.includes('amount')||x.includes('valor'));
   if(di<0||ti<0||ai<0)throw Error('Preciso das colunas data, título/descrição e valor.');
-  return lines.slice(1).map(l=>{let c=splitCSV(l,d),date=parseDate(c[di]),desc=(c[ti]||'').trim(),amount=parseMoney(c[ai]);return{date,desc,amount}}).filter(x=>x.date&&x.desc&&x.amount)
+  let invalid=0,rows=[];lines.slice(1).forEach(l=>{let c=splitCSV(l,d),date=parseDate(c[di]),desc=(c[ti]||'').trim(),amount=parseMoney(c[ai]);if(date&&desc&&amount)rows.push({date,desc,amount});else invalid++});
+  if(!rows.length)throw Error('Nenhuma linha válida: confira datas, descrições e valores do CSV.');
+  if(invalid)rows.invalid=invalid;
+  return rows
+}
+function cardPurchaseDuplicate(cardId,row){
+  return state.purchases.some(p=>p.cardId===cardId&&p.desc===row.desc&&p.installments===row.installments&&p.firstMonth===row.firstMonth&&p.purchaseDate===row.purchaseDate&&Math.abs(p.total-row.total)<.02);
+}
+function cardPaymentDuplicate(invoice,row){
+  return (invoice.payments||[]).some(p=>p.date===row.date&&normalizeImportText(p.sourceDesc)===normalizeImportText(row.desc)&&Math.abs(p.amount-row.amount)<.01);
+}
+function prepareCardImport(rows,file){
+  let cardId=+$('cardImportCard').value,month=$('cardImportMonth').value||currentInvoiceMonth(card(cardId));
+  if(!card(cardId))throw Error('Selecione um cartão válido antes de importar a fatura.');
+  let futurePurchases=[],futurePayments=[],draft=rows.map(r=>{
+    if(r.amount<0){let targetMonth=monthAdd(month,-1),row={...r,kind:'payment',targetMonth,amount:Math.abs(r.amount)},invoice=state.invoices.find(i=>i.cardId==cardId&&i.month===targetMonth)||{payments:[]},duplicate=cardPaymentDuplicate(invoice,row)||futurePayments.some(x=>x.targetMonth===targetMonth&&x.date===row.date&&x.amount===row.amount&&normalizeImportText(x.desc)===normalizeImportText(row.desc));if(!duplicate)futurePayments.push(row);return {...row,duplicate};}
+    let pm=r.desc.match(/Parcela\s*(\d+)\s*\/\s*(\d+)/i),desc=r.desc.replace(/\s*-?\s*Parcela\s*\d+\s*\/\s*\d+/i,'').trim();
+    let row=pm?{...r,desc,kind:'purchase',installment:+pm[1],installments:+pm[2],firstMonth:monthAdd(month,-(+pm[1]-1)),total:Math.round(r.amount*(+pm[2])*100)/100}:{...r,desc,kind:'purchase',installment:1,installments:1,firstMonth:month,total:r.amount};
+    let duplicate=cardPurchaseDuplicate(cardId,{...row,purchaseDate:row.date})||futurePurchases.some(x=>x.desc===row.desc&&x.installments===row.installments&&x.firstMonth===row.firstMonth&&x.purchaseDate===row.date&&Math.abs(x.total-row.total)<.02);if(!duplicate)futurePurchases.push({...row,purchaseDate:row.date});return {...row,duplicate};
+  });
+  cardImportDraft={cardId,month,file,rows:draft,invalid:rows.invalid||0};renderCardImportDraft();
+}
+function renderCardImportDraft(){
+  let draft=cardImportDraft;if(!draft)return;let fresh=draft.rows.filter(r=>!r.duplicate),purchases=fresh.filter(r=>r.kind==='purchase').length,payments=fresh.filter(r=>r.kind==='payment').length,duplicates=draft.rows.length-fresh.length;
+  $('cardImportReview').classList.remove('hidden');$('cardImportSummary').textContent=`${draft.rows.length} linha(s) lida(s): ${purchases} compra(s), ${payments} pagamento(s) e ${duplicates} já importada(s)${draft.invalid?` e ${draft.invalid} linha(s) inválida(s) ignorada(s)`:''}.`;
+  $('cardImportRows').innerHTML=draft.rows.map(r=>`<tr><td>${dateObj(r.date).toLocaleDateString('pt-BR')}</td><td>${sfpEsc(r.desc)}</td><td class="${r.kind==='payment'?'negative':'positive'}">${brl(r.kind==='payment'?-r.amount:r.amount)}</td><td>${r.kind==='payment'?`Pagamento da fatura ${monthName(r.targetMonth)}`:`Compra${r.installments>1?` • parcela ${r.installment}/${r.installments}`:''}`}</td><td>${r.duplicate?'Já importada':'Pronta para importar'}</td></tr>`).join('');
 }
 async function importCardCsv(file){
-  let cid=+$('cardImportCard').value,m=$('cardImportMonth').value||currentInvoiceMonth(card(cid));if(!file)return;
-  let rd=new FileReader();rd.onload=async()=>{try{
-    let rows=parseCardCsv(rd.result),added=0,credits=0;
-    for(let r of rows){
-      if(r.amount<0){
-        let prev=monthAdd(m,-1),inv=ensureInvoice(cid,prev),amt=Math.abs(r.amount);
-        let dup=(inv.payments||[]).some(p=>p.date===r.date&&Math.abs(p.amount-amt)<.01);
-        if(!dup){inv.payments.push({date:r.date,amount:amt,balanceImpact:false,targetMonth:prev,sourceDesc:r.desc});inv.paidAmount=Math.round(((inv.paidAmount||0)+amt)*100)/100;if(inv.officialTotal==null)inv.officialTotal=inv.paidAmount;credits++}
-        continue
-      }
-      let pm=r.desc.match(/Parcela\s*(\d+)\s*\/\s*(\d+)/i),desc=r.desc.replace(/\s*-\s*Parcela\s*\d+\s*\/\s*\d+/i,'').trim();
-      if(pm){let n=+pm[1],tot=+pm[2],first=monthAdd(m,-(n-1)),total=Math.round(r.amount*tot*100)/100,dup=state.purchases.some(p=>p.cardId===cid&&p.desc===desc&&p.installments===tot&&Math.abs(p.total-total)<.02);if(!dup){state.purchases.push({id:uid(),cardId:cid,desc,total,installments:tot,purchaseDate:r.date,firstMonth:first,category:'Outros',status:'active',note:'Importado de fatura.',tags:['fatura-importada'],refunds:[]});added++}}
-      else{let dup=state.purchases.some(p=>p.cardId===cid&&p.installments===1&&p.purchaseDate===r.date&&p.desc===desc&&Math.abs(p.total-r.amount)<.01);if(!dup){state.purchases.push({id:uid(),cardId:cid,desc,total:r.amount,installments:1,purchaseDate:r.date,firstMonth:m,category:'Outros',status:'active',note:'Importado de fatura.',tags:['fatura-importada'],refunds:[]});added++}}
-    }
-    let inv=ensureInvoice(cid,m);inv.officialTotal=invoiceCalculated(cid,m);state.ui.invoiceMonthByCard[cid]=m;await save('Importar fatura de cartão');toast(`${added} compras e ${credits} créditos importados.`)
-  }catch(e){toast('Erro na fatura: '+e.message)}};rd.readAsText(file,'UTF-8')
+  if(!file)return;
+  if(!/\.csv$/i.test(file.name||'')){toast('Selecione um arquivo CSV de fatura.','warning');$('cardImportFile').value='';return}
+  let rd=new FileReader();rd.onload=()=>{try{prepareCardImport(parseCardCsv(rd.result),file.name)}catch(e){cardImportDraft=null;$('cardImportReview').classList.add('hidden');toast('Não consegui ler a fatura: '+e.message,'error')}finally{$('cardImportFile').value=''}};rd.onerror=()=>{toast('Não consegui abrir o arquivo da fatura. Tente selecionar o CSV novamente.','error');$('cardImportFile').value=''};rd.readAsText(file,'UTF-8')
+}
+async function confirmCardImport(){
+  let draft=cardImportDraft;if(!draft)return;let before=clone(state);try{
+    let added=0,credits=0;for(let r of draft.rows){if(r.duplicate)continue;if(r.kind==='payment'){let inv=ensureInvoice(draft.cardId,r.targetMonth);if(cardPaymentDuplicate(inv,r))continue;inv.payments.push({date:r.date,amount:r.amount,balanceImpact:false,targetMonth:r.targetMonth,sourceDesc:r.desc});inv.paidAmount=Math.round(((inv.paidAmount||0)+r.amount)*100)/100;if(inv.officialTotal==null)inv.officialTotal=inv.paidAmount;credits++;continue}if(cardPurchaseDuplicate(draft.cardId,{...r,purchaseDate:r.date}))continue;state.purchases.push({id:uid(),cardId:draft.cardId,desc:r.desc,total:r.total,installments:r.installments,purchaseDate:r.date,firstMonth:r.firstMonth,category:'Outros',status:'active',note:'Importado de fatura.',tags:['fatura-importada'],refunds:[]});added++;}
+    let inv=ensureInvoice(draft.cardId,draft.month);inv.officialTotal=invoiceCalculated(draft.cardId,draft.month);state.ui.invoiceMonthByCard[draft.cardId]=draft.month;await save('Importar fatura de cartão');cardImportDraft=null;$('cardImportReview').classList.add('hidden');toast(`${added} compras e ${credits} pagamentos importados.`,'success')
+  }catch(e){state=before;lastSavedState=clone(before);renderAll();toast('Não foi possível importar a fatura. Nenhuma alteração foi aplicada.','error');console.error('Falha ao importar fatura:',e)}
 }
 
-function readStmtFile(f){if(!f)return;let rd=new FileReader();rd.onload=async()=>{try{let ext=f.name.split('.').pop().toLowerCase(),rows;if(ext==='ofx')rows=parseOFX(rd.result);else{try{rows=parseCSV(rd.result)}catch{rows=await parseCSVManual(rd.result)}}if(!rows.length)throw Error('Nenhuma movimentação reconhecida');prepareStatement(rows,f.name)}catch(e){toast('Não consegui ler: '+e.message)}};rd.readAsText(f,'UTF-8')}
+function readStmtFile(f){if(!f)return;let rd=new FileReader();rd.onload=async()=>{try{let ext=f.name.split('.').pop().toLowerCase();if(!['csv','ofx'].includes(ext))throw Error('Selecione um arquivo CSV ou OFX.');let rows;if(ext==='ofx')rows=parseOFX(rd.result);else{try{rows=parseCSV(rd.result)}catch{rows=await parseCSVManual(rd.result)}}if(!rows.length)throw Error('Nenhuma movimentação reconhecida. Confira as colunas e os valores.');prepareStatement(rows,f.name)}catch(e){$('stmtFile').value='';toast('Não consegui ler o extrato: '+e.message,'error')}};rd.onerror=()=>{toast('Não consegui abrir o arquivo do extrato. Tente selecionar novamente.','error');$('stmtFile').value=''};rd.readAsText(f,'UTF-8')}
 function renderGlobalSearch(){let q=$('globalSearch').value.trim().toLowerCase();if(q.length<2)return $('globalResults').classList.add('hidden');let res=[];state.transactions.filter(t=>`${t.desc} ${t.category} ${(t.tags||[]).join(' ')}`.toLowerCase().includes(q)).slice(0,8).forEach(t=>res.push({title:t.desc,sub:`${t.date} • ${brl(t.amount)} • ${t.kind}`,page:'lancamentos'}));state.purchases.filter(p=>p.desc.toLowerCase().includes(q)).slice(0,5).forEach(p=>res.push({title:p.desc,sub:`Compra em ${card(p.cardId)?.name||'cartão'} • ${brl(p.total)}`,page:'cartoes'}));state.accounts.filter(a=>a.name.toLowerCase().includes(q)).forEach(a=>res.push({title:a.name,sub:`Conta • ${brl(accountBalance(a.id))}`,page:'contas'}));$('globalResults').innerHTML=res.length?res.map((r,i)=>`<div class="item" data-sr="${i}"><div><b>${r.title}</b><small>${r.sub}</small></div></div>`).join(''):'<div class="item"><span>Nada encontrado.</span></div>';$('globalResults').classList.remove('hidden');document.querySelectorAll('[data-sr]').forEach((el,i)=>el.onclick=()=>{setPage(res[i].page);$('globalResults').classList.add('hidden')})}
 
 function showAutoBackups(){

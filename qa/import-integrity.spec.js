@@ -106,3 +106,32 @@ test('falha de persistência restaura todo o estado sem mutação parcial', asyn
   });
   expect(result).toEqual({ transactions: 0, statements: 0, draft: 2 });
 });
+
+test('prévia de fatura não persiste e confirma compras parceladas distintas com mesma descrição e total', async ({ page }) => {
+  await boot(page, fixture('Prévia de fatura'));
+  const preview = await page.evaluate(() => {
+    document.querySelector('#cardImportCard').value = '1';
+    document.querySelector('#cardImportMonth').value = '2026-03';
+    prepareCardImport(parseCardCsv('Data;Descrição;Valor\n05/03/2026;Curso - Parcela 1/2;50,00\n06/03/2026;Curso - Parcela 2/2;50,00'), 'fatura.csv');
+    return { purchasesBefore: state.purchases.length, visible: !document.querySelector('#cardImportReview').classList.contains('hidden'), ready: cardImportDraft.rows.filter(r => !r.duplicate).length };
+  });
+  expect(preview).toEqual({ purchasesBefore: 0, visible: true, ready: 2 });
+  await page.evaluate(() => confirmCardImport());
+  expect(await page.evaluate(() => state.purchases.map(p => ({ desc: p.desc, firstMonth: p.firstMonth, purchaseDate: p.purchaseDate, total: p.total })))).toEqual([
+    { desc: 'Curso', firstMonth: '2026-03', purchaseDate: '2026-03-05', total: 100 },
+    { desc: 'Curso', firstMonth: '2026-02', purchaseDate: '2026-03-06', total: 100 }
+  ]);
+});
+
+test('reimportação da fatura detecta compra e pagamento pelo detalhe completo sem descartar pagamentos distintos', async ({ page }) => {
+  await boot(page, fixture('Deduplicação de fatura'));
+  const result = await page.evaluate(async () => {
+    document.querySelector('#cardImportCard').value = '1';
+    document.querySelector('#cardImportMonth').value = '2026-03';
+    const csv = 'Data;Descrição;Valor\n05/03/2026;Loja - Parcela 1/2;50,00\n06/03/2026;Pagamento A;-50,00\n06/03/2026;Pagamento B;-50,00';
+    prepareCardImport(parseCardCsv(csv), 'fatura.csv'); await confirmCardImport();
+    prepareCardImport(parseCardCsv(csv), 'fatura.csv');
+    return { duplicates: cardImportDraft.rows.map(r => r.duplicate), purchases: state.purchases.length, payments: state.invoices.find(i => i.month === '2026-02').payments.length };
+  });
+  expect(result).toEqual({ duplicates: [true, true, true], purchases: 1, payments: 2 });
+});
