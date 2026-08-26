@@ -123,6 +123,50 @@ test('prévia de fatura não persiste e confirma compras parceladas distintas co
   ]);
 });
 
+
+test('pagamento manual sem descrição é deduplicado por data e valor sem bloquear descrições distintas completas', async ({ page }) => {
+  const value = fixture('Pagamento manual legado');
+  value.invoices = [{
+    id: 20,
+    cardId: 1,
+    month: '2026-02',
+    paidAmount: 100,
+    accountId: 1,
+    payments: [{ date: '2026-03-06', amount: 100, balanceImpact: true }],
+    status: 'partial'
+  }];
+  await boot(page, value);
+  const result = await page.evaluate(async () => {
+    document.querySelector('#cardImportCard').value = '1';
+    document.querySelector('#cardImportMonth').value = '2026-03';
+    prepareCardImport(parseCardCsv('Data;Descrição;Valor\n06/03/2026;Pagamento legado;-100,00'), 'fatura.csv');
+    const preview = {
+      visible: !document.querySelector('#cardImportReview').classList.contains('hidden'),
+      duplicates: cardImportDraft.rows.map(r => r.duplicate),
+      paidBefore: state.invoices[0].paidAmount,
+      paymentsBefore: state.invoices[0].payments.length
+    };
+    await confirmCardImport();
+    state.invoices[0].payments.push({ date: '2026-03-07', amount: 50, balanceImpact: true, targetMonth: '2026-02', sourceDesc: 'Pagamento A' });
+    state.invoices[0].paidAmount += 50;
+    prepareCardImport(parseCardCsv('Data;Descrição;Valor\n07/03/2026;Pagamento B;-50,00'), 'fatura.csv');
+    const distinctPreview = cardImportDraft.rows.map(r => r.duplicate);
+    await confirmCardImport();
+    return {
+      preview,
+      afterLegacy: { paid: state.invoices[0].paidAmount, payments: state.invoices[0].payments.length },
+      distinctPreview,
+      final: { paid: state.invoices[0].paidAmount, payments: state.invoices[0].payments.map(p => p.sourceDesc || '') }
+    };
+  });
+  expect(result).toEqual({
+    preview: { visible: true, duplicates: [true], paidBefore: 100, paymentsBefore: 1 },
+    afterLegacy: { paid: 100, payments: 1 },
+    distinctPreview: [false],
+    final: { paid: 200, payments: ['', 'Pagamento A', 'Pagamento B'] }
+  });
+});
+
 test('reimportação da fatura detecta compra e pagamento pelo detalhe completo sem descartar pagamentos distintos', async ({ page }) => {
   await boot(page, fixture('Deduplicação de fatura'));
   const result = await page.evaluate(async () => {
