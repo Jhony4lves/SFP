@@ -67,3 +67,63 @@ test('P0 persistência: fallback legado divergente sem revision é preservado em
   // Nenhum erro não tratado durante toda a sequência.
   expect(errors, 'nenhum erro não tratado no console').toEqual([]);
 });
+
+test('P1 persistência: falha ao gravar quarentena aborta migração e preserva fallback B intacto', async ({ page }) => {
+  const errors = monitor(page);
+
+  // Boot de preparação idêntico ao teste anterior: promove B, depois instala legado A no IDB.
+  await page.goto('/index.html');
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
+  await writeIndexedDB(page, legacyStateA());
+  await page.evaluate(keys => { for (const key of keys) localStorage.removeItem(key); }, [QUARANTINE_KEY, 'sfp_last_migration_notice']);
+
+  // Simula quota/setItem quebrado APENAS para sfp_legacy_quarantine a partir do próximo boot.
+  await page.addInitScript(key => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+      if (k === key) throw new DOMException('QuotaExceededError simulado (QA)', 'QuotaExceededError');
+      return original.call(this, k, v);
+    };
+  }, QUARANTINE_KEY);
+
+  // Boot ambíguo com quarentena indisponível: deve abortar com erro explícito.
+  await page.reload();
+  await expect.poll(() => errors.join('\n'), { timeout: 20000 }).toMatch(/quarentena/i);
+  const bootError = errors.find(e => /pageerror|console\.error/.test(e) && /quarentena/i.test(e));
+  expect(bootError, 'erro explícito de quarentena deve ser observável').toBeTruthy();
+
+  // Boot não completou: estado/migração nunca avançaram.
+  expect(await page.evaluate(() => typeof state === 'undefined' || state == null), 'estado não pode ter sido carregado').toBe(true);
+  expect(await page.evaluate(() => typeof lastSavedState === 'undefined' || lastSavedState == null), 'nenhum save pode ter sido consolidado').toBe(true);
+
+  // sfp_legacy_quarantine não foi criada.
+  expect(await page.evaluate(key => localStorage.getItem(key), QUARANTINE_KEY)).toBeNull();
+
+  // IndexedDB A não foi carimbado/migrado: continua sem revision e com o conteúdo original.
+  const idbState = await page.evaluate(async ({ DB_NAME, STORE, DB_KEY }) => {
+    const database = await new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const value = await new Promise((resolve, reject) => {
+      const request = database.transaction(STORE).objectStore(STORE).get(DB_KEY);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    database.close();
+    return value;
+  }, { DB_NAME, STORE, DB_KEY });
+  expect(idbState.transactions.some(t => t.desc === 'ESTADO-A'), 'IndexedDB A intacto').toBe(true);
+  expect(idbState.persistenceMeta?.revision == null, 'IndexedDB A não foi carimbado').toBe(true);
+
+  // Fallback B permanece intacto e recuperável.
+  const fallbackRaw = await page.evaluate(key => localStorage.getItem(key), FALLBACK_KEY);
+  expect(fallbackRaw).toBeTruthy();
+  const fallbackB = JSON.parse(fallbackRaw);
+  expect(fallbackB.transactions.some(t => t.desc === SENTINEL_DESC), 'sentinela de B preservada no fallback').toBe(true);
+  expect(fallbackB.persistenceMeta?.revision == null, 'fallback B segue legado original').toBe(true);
+
+  // Dados recuperáveis: sem quarentena criada e sem sobrescrita em nenhuma fonte,
+  // um boot futuro sem a falha simulada reproduz o caso ambíguo original.
+});

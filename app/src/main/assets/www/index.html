@@ -3660,6 +3660,28 @@ function newestPersistedState(primary,fallback){
   return{source:'indexeddb',value:primary.value,ambiguousLegacyDivergence:true};
 }
 function safeLocalSet(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}
+// Regra: sem quarentena confirmada (grava + relê + confere), nenhuma migração destrutiva pode prosseguir.
+// Qualquer falha aqui lança erro explícito e aborta o boot ANTES de migrateSchema()/dbSet().
+function quarantineLegacyFallbackRequired(fallbackValue){
+  let serialized;
+  try{serialized=JSON.stringify(fallbackValue)}
+  catch(e){throw Error(`Falha ao serializar fallback legado para a quarentena (${e?.message||e}). Migração abortada; nenhum dado foi sobrescrito.`)}
+  let existing=null;
+  try{existing=localStorage.getItem(LEGACY_QUARANTINE_KEY)}
+  catch(e){throw Error(`Quarentena legada ilegível (${e?.message||e}). Migração abortada; nenhum dado foi sobrescrito.`)}
+  if(existing!=null){
+    try{
+      if(!validPersistedState(JSON.parse(existing)))throw Error('conteúdo inválido');
+    }catch(e){throw Error(`Quarentena legada pré-existente não está válida/preservada (${e?.message||e}). Migração abortada; nenhum dado foi sobrescrito.`)}
+    return;
+  }
+  try{localStorage.setItem(LEGACY_QUARANTINE_KEY,serialized)}
+  catch(e){throw Error(`Falha ao gravar a quarentena legada (${e?.message||e}). Migração abortada; nenhum dado foi sobrescrito.`)}
+  let verified=null;
+  try{verified=localStorage.getItem(LEGACY_QUARANTINE_KEY)}
+  catch(e){throw Error(`Falha ao reler a quarentena legada após gravação (${e?.message||e}). Migração abortada; nenhum dado foi sobrescrito.`)}
+  if(verified!==serialized)throw Error('Verificação da quarentena legada falhou: conteúdo persistido não confere com o fallback. Migração abortada; nenhum dado foi sobrescrito.');
+}
 function fallbackGet(){
  let raw;
  try{raw=localStorage.getItem(FALLBACK_KEY)}catch(error){return{status:'unavailable',error}}
@@ -3685,12 +3707,10 @@ async function load(){
   let selected=newestPersistedState(primary,fallback);
   if(selected?.ambiguousLegacyDivergence&&fallback.status==='ok'){
     // Divergência legada sem revisão: preserva o fallback ANTES de qualquer dbSet/sobrescrita.
-    try{
-      if(localStorage.getItem(LEGACY_QUARANTINE_KEY)==null){
-        localStorage.setItem(LEGACY_QUARANTINE_KEY,JSON.stringify(fallback.value));
-        safeLocalSet('sfp_last_migration_notice','Encontramos dados locais divergentes de versões anteriores durante a atualização. Uma cópia de segurança desses dados foi preservada e pode ser recuperada pela Central de Dados.');
-      }
-    }catch(e){console.warn('[SFP] Falha ao preservar quarentena legada:',e)}
+    // Quarentena é OBRIGATÓRIA: gravação ou verificação mal-sucedida aborta o boot com erro
+    // explícito, sem migrar, sem dbSet e sem sobrescrever qualquer fonte.
+    quarantineLegacyFallbackRequired(fallback.value);
+    safeLocalSet('sfp_last_migration_notice','Encontramos dados locais divergentes de versões anteriores durante a atualização. Uma cópia de segurança desses dados foi preservada e pode ser recuperada pela Central de Dados.');
   }
   if(selected)state=migrateSchema(selected.value);
  else if(primary.status==='empty'&&fallback.status==='empty')state=clone(seed);
