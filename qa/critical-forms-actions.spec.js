@@ -51,3 +51,32 @@ test('formulários críticos recusam valores monetários inválidos', async ({ p
   await expect.poll(() => page.evaluate(() => state.goals.some(goal => goal.name === 'Meta inválida'))).toBe(false);
   await expect(page.locator('#toast')).toContainText('valor alvo da meta');
 });
+
+test('dívida valida número de parcelas sem coerção silenciosa', async ({ page }) => {
+  const value = fixture('Parcelas dívida QA');
+  value.debts = [{ id: 88, name: 'Dívida existente', balance: 500, rate: 1, payment: 50, firstDue: '2026-09-10', installments: 5, paidInstallments: 0, paymentMethod: 'bank', history: [] }];
+  await boot(page, value);
+
+  await page.locator('.nav button[data-page="dividas"]').click();
+  for (const invalid of ['', '0', '-2', '1.5']) {
+    await page.locator('#debtName').fill(`Dívida inválida ${invalid}`);
+    await page.locator('#debtBalance').fill('100');
+    await page.locator('#debtPayment').fill('10');
+    await page.locator('#debtRate').fill('0');
+    await page.locator('#debtFirstDue').fill('2026-09-10');
+    await page.locator('#debtInstallments').fill(invalid);
+    await page.locator('#debtForm button').click();
+    await expect(page.locator('#toast')).toContainText('parcelas da dívida');
+    await expect.poll(() => page.evaluate(() => state.debts.length)).toBe(1);
+  }
+
+  await page.evaluate(() => editDebt(88));
+  await page.locator('#debtInstallments').fill('2.5');
+  await page.locator('#debtForm button').click();
+  await expect(page.locator('#toast')).toContainText('parcelas da dívida');
+  await expect.poll(() => page.evaluate(() => state.debts.find(debt => debt.id === 88).installments)).toBe(5);
+
+  await page.locator('#debtInstallments').fill('6');
+  await page.locator('#debtForm button').click();
+  await expect.poll(() => page.evaluate(() => state.debts.find(debt => debt.id === 88).installments)).toBe(6);
+});
