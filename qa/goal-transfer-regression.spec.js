@@ -53,3 +53,21 @@ test('GOAL-TRANSFER-02 aporte sem saldo exige confirmação antes de debitar', a
   expect(await page.evaluate(() => ({ transfers: state.transfers.length, goal: goalBalance(state.goals[0]), balance: accountBalance(1) })))
     .toEqual({ transfers: 0, goal: 0, balance: 100 });
 });
+
+test('GOAL-TRANSFER-03 aporte exige uma conta de origem distinta', async ({ page }) => {
+  const value = fixture('Meta sem origem');
+  value.accounts = [{ id: 2, name: 'Reserva', type: 'Reserva', initial: 100 }];
+  value.goals = [{ id: 3, name: 'Emergência', accountId: '2', target: 2000, initialAllocated: 0, history: [] }];
+  await boot(page, value);
+
+  const contribution = page.evaluate(() => goalTransfer(3));
+  await page.locator('#dialogPromptInput').fill('50');
+  await page.locator('#dialogConfirmBtn').click();
+  await contribution;
+
+  expect(await page.evaluate(() => ({
+    transfers: state.transfers.length,
+    goal: goalBalance(state.goals[0]),
+    balance: accountBalance(2)
+  }))).toEqual({ transfers: 0, goal: 0, balance: 100 });
+});
