@@ -15,7 +15,7 @@ test('GOAL-TRANSFER-01 aporte usa outra conta como origem quando ela existe', as
     { id: 1, name: 'Conta corrente', type: 'Conta corrente', initial: 1000 },
     { id: 2, name: 'Reserva', type: 'Reserva', initial: 0 }
   ];
-  value.goals = [{ id: 3, name: 'Emergência', accountId: 2, target: 2000, initialAllocated: 0, history: [] }];
+  value.goals = [{ id: 3, name: 'Emergência', accountId: '2', target: 2000, initialAllocated: 0, history: [] }];
   await boot(page, value);
 
   const contribution = page.evaluate(() => goalTransfer(3));
@@ -28,8 +28,28 @@ test('GOAL-TRANSFER-01 aporte usa outra conta como origem quando ela existe', as
     goal: goalBalance(state.goals[0]),
     balances: [accountBalance(1), accountBalance(2)]
   }))).toEqual({
-    transfer: expect.objectContaining({ fromId: 1, toId: 2, amount: 250, goalId: 3 }),
+    transfer: expect.objectContaining({ fromId: 1, toId: '2', amount: 250, goalId: 3 }),
     goal: 250,
     balances: [750, 250]
   });
+});
+
+test('GOAL-TRANSFER-02 aporte sem saldo exige confirmação antes de debitar', async ({ page }) => {
+  const value = fixture('Aporte sem saldo');
+  value.accounts = [
+    { id: 1, name: 'Conta corrente', type: 'Conta corrente', initial: 100 },
+    { id: 2, name: 'Reserva', type: 'Reserva', initial: 0 }
+  ];
+  value.goals = [{ id: 3, name: 'Emergência', accountId: 2, target: 2000, initialAllocated: 0, history: [] }];
+  await boot(page, value);
+
+  const contribution = page.evaluate(() => goalTransfer(3));
+  await page.locator('#dialogPromptInput').fill('250');
+  await page.locator('#dialogConfirmBtn').click();
+  await expect(page.getByRole('heading', { name: 'Saldo Negativo' })).toBeVisible();
+  await page.locator('#dialogCancelBtn').click();
+  await contribution;
+
+  expect(await page.evaluate(() => ({ transfers: state.transfers.length, goal: goalBalance(state.goals[0]), balance: accountBalance(1) })))
+    .toEqual({ transfers: 0, goal: 0, balance: 100 });
 });
