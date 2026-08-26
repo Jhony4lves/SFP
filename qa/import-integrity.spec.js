@@ -147,6 +147,7 @@ test('pagamento manual sem descrição é deduplicado por data e valor sem bloqu
       paymentsBefore: state.invoices[0].payments.length
     };
     await confirmCardImport();
+    const afterLegacy = { paid: state.invoices[0].paidAmount, payments: state.invoices[0].payments.length };
     state.invoices[0].payments.push({ date: '2026-03-07', amount: 50, balanceImpact: true, targetMonth: '2026-02', sourceDesc: 'Pagamento A' });
     state.invoices[0].paidAmount += 50;
     prepareCardImport(parseCardCsv('Data;Descrição;Valor\n07/03/2026;Pagamento B;-50,00'), 'fatura.csv');
@@ -154,7 +155,7 @@ test('pagamento manual sem descrição é deduplicado por data e valor sem bloqu
     await confirmCardImport();
     return {
       preview,
-      afterLegacy: { paid: state.invoices[0].paidAmount, payments: state.invoices[0].payments.length },
+      afterLegacy,
       distinctPreview,
       final: { paid: state.invoices[0].paidAmount, payments: state.invoices[0].payments.map(p => p.sourceDesc || '') }
     };
