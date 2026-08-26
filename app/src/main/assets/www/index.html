@@ -3630,6 +3630,7 @@ function compactUndoHistoryInPlace(target){
   }
 }
 const FALLBACK_KEY='sfp_final_fallback';
+const LEGACY_QUARANTINE_KEY='sfp_legacy_quarantine';
 function validPersistedState(v){
  if(!v||typeof v!=='object'||Array.isArray(v))return false;
  const arrays=['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'];
@@ -3652,9 +3653,36 @@ function newestPersistedState(primary,fallback){
    return fr>pr?{source:'fallback',value:fallback.value}:{source:'indexeddb',value:primary.value};
  }
  if(samePersistedState(primary.value,fallback.value))return{source:'indexeddb',value:primary.value};
- throw Error('IndexedDB e fallback legados contêm estados diferentes sem revisão; nenhum deles foi sobrescrito.');
+ // Estados legados divergentes sem revisão: prioriza IndexedDB (fonte primária/canônica).
+ // O fallback legado desatualizado não deve bloquear o boot. O estado carregado será
+ // estampado com revision em load(), tornando o segundo boot determinístico.
+  console.warn('[SFP] Estados legados divergentes sem revisão: priorizando IndexedDB (fonte primária). Fallback legado ignorado.');
+  return{source:'indexeddb',value:primary.value,ambiguousLegacyDivergence:true};
 }
 function safeLocalSet(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}
+// Regra: sem quarentena confirmada (grava + relê + confere), nenhuma migração destrutiva pode prosseguir.
+// Qualquer falha aqui lança erro explícito e aborta o boot ANTES de migrateSchema()/dbSet().
+function quarantineLegacyFallbackRequired(fallbackValue){
+  let serialized;
+  try{serialized=JSON.stringify(fallbackValue)}
+  catch(e){throw Error(`Falha ao serializar fallback legado para a quarentena (${e?.message||e}). Migração abortada; nenhum dado foi sobrescrito.`)}
+  let existing=null;
+  try{existing=localStorage.getItem(LEGACY_QUARANTINE_KEY)}
+  catch(e){throw Error(`Quarentena legada ilegível (${e?.message||e}). Migração abortada; nenhum dado foi sobrescrito.`)}
+  if(existing!=null){
+    try{
+      if(!validPersistedState(JSON.parse(existing)))throw Error('conteúdo inválido');
+    }catch(e){throw Error(`Quarentena legada pré-existente não está válida/preservada (${e?.message||e}). Migração abortada; nenhum dado foi sobrescrito.`)}
+    if(existing!==serialized)throw Error('Quarentena legada pré-existente não corresponde ao fallback divergente atual. Migração abortada; nenhum dado foi sobrescrito.');
+    return;
+  }
+  try{localStorage.setItem(LEGACY_QUARANTINE_KEY,serialized)}
+  catch(e){throw Error(`Falha ao gravar a quarentena legada (${e?.message||e}). Migração abortada; nenhum dado foi sobrescrito.`)}
+  let verified=null;
+  try{verified=localStorage.getItem(LEGACY_QUARANTINE_KEY)}
+  catch(e){throw Error(`Falha ao reler a quarentena legada após gravação (${e?.message||e}). Migração abortada; nenhum dado foi sobrescrito.`)}
+  if(verified!==serialized)throw Error('Verificação da quarentena legada falhou: conteúdo persistido não confere com o fallback. Migração abortada; nenhum dado foi sobrescrito.');
+}
 function fallbackGet(){
  let raw;
  try{raw=localStorage.getItem(FALLBACK_KEY)}catch(error){return{status:'unavailable',error}}
@@ -3677,16 +3705,25 @@ async function load(){
  // Estados revisionados são comparados pela revisão gravada em cada fonte.
  // Estados legados iguais continuam legíveis; se divergirem, não há informação
  // suficiente para escolher com segurança e nenhuma fonte é sobrescrita.
- let selected=newestPersistedState(primary,fallback);
- if(selected)state=migrateSchema(selected.value);
+  let selected=newestPersistedState(primary,fallback);
+  if(selected?.ambiguousLegacyDivergence&&fallback.status==='ok'){
+    // Divergência legada sem revisão: preserva o fallback ANTES de qualquer dbSet/sobrescrita.
+    // Quarentena é OBRIGATÓRIA: gravação ou verificação mal-sucedida aborta o boot com erro
+    // explícito, sem migrar, sem dbSet e sem sobrescrever qualquer fonte.
+    quarantineLegacyFallbackRequired(fallback.value);
+    safeLocalSet('sfp_last_migration_notice','Encontramos dados locais divergentes de versões anteriores durante a atualização. Uma cópia de segurança desses dados foi preservada e pode ser recuperada pela Central de Dados.');
+  }
+  if(selected)state=migrateSchema(selected.value);
  else if(primary.status==='empty'&&fallback.status==='empty')state=clone(seed);
  else throw Error(`Persistência indisponível ou corrompida (IndexedDB: ${primary.status}; fallback: ${fallback.status}). Nenhum dado foi substituído.`);
  compactUndoHistoryInPlace(state);
  normalize();
  if(selected?.source==='fallback'&&(primary.status==='ok'||primary.status==='empty')){
-   await dbSet(state,{preserveRevision:true});
+   // Fallback promovido ao IndexedDB: preserva revision do fallback se ja existir, senao stampa.
+   await dbSet(state,{preserveRevision:!!persistenceRevision(selected.value)});
  }else if(selected?.source==='indexeddb'||(primary.status==='empty'&&fallback.status==='empty')){
-   await dbSet(state,{preserveRevision:!!selected});
+   // IndexedDB carregado: preserva revision existente; estados legados (sem revision) recebem stamp agora.
+   await dbSet(state,{preserveRevision:!!persistenceRevision(selected?.value)});
  }
  if(primary.status==='empty'&&fallback.status==='empty')safeLocalSet('sfp_last_migration_notice','SFP 2.0 iniciado em uma base nova. Data-base: 18/08/2026. Nenhum cálculo das versões anteriores foi reaproveitado.');
  safeLocalSet(key,'1');
@@ -3738,7 +3775,8 @@ async function resetSystem({confirmDialog=true}={}){
   state=createCleanInitialState();
   normalize();
   await dbSet(state);
-  try{localStorage.removeItem('sfp_auto_backups')}catch{}
+   try{localStorage.removeItem('sfp_auto_backups')}catch{}
+   try{localStorage.removeItem(LEGACY_QUARANTINE_KEY)}catch{}
   safeLocalSet(FALLBACK_KEY,JSON.stringify(state));
   lastSavedState=clone(state);
  }catch(error){
