@@ -20,10 +20,9 @@ test('editar dívida legada salva dia/conta e limpa modo de edição', async ({ 
   await boot(page, value);
 
   await page.evaluate(() => editDebt(77));
-  await page.locator('#debtMoreDetails summary').click();
-  await page.locator('#debtDay').fill('25');
-  await page.locator('#debtAccount').selectOption('2');
-  await page.locator('#debtForm button').click();
+  await page.locator('#modalRoot #debtDay').fill('25');
+  await page.locator('#modalRoot #debtAccount').selectOption('2');
+  await page.locator('#modalRoot #debtForm button').click();
 
   await expect.poll(() => page.evaluate(() => state.debts[0].dueDay)).toBe(25);
   await expect.poll(() => page.evaluate(async () => (await dbGet()).value.debts[0].accountId)).toBe(2);
@@ -36,20 +35,41 @@ test('formulários críticos recusam valores monetários inválidos', async ({ p
   await boot(page, value);
 
   await page.locator('.nav button[data-page="cartoes"]').click();
-  await page.locator('#cardName').fill('Cartão inválido');
-  await page.locator('#cardLimit').fill('0');
-  await page.locator('#cardClose').fill('10');
-  await page.locator('#cardDue').fill('20');
-  await page.locator('#cardForm button').click();
+  await page.evaluate(() => openManagementAction('cartoes'));
+  await page.locator('#modalRoot #cardName').fill('Cartão inválido');
+  await page.locator('#modalRoot #cardLimit').fill('0');
+  await page.locator('#modalRoot #cardClose').fill('10');
+  await page.locator('#modalRoot #cardDue').fill('20');
+  await page.locator('#modalRoot #cardForm button').click();
   await expect.poll(() => page.evaluate(() => state.cards.some(card => card.name === 'Cartão inválido'))).toBe(false);
   await expect(page.locator('#toast')).toContainText('limite do cartão');
 
   await page.locator('.nav button[data-page="metas"]').click();
-  await page.locator('#goalName').fill('Meta inválida');
-  await page.locator('#goalTarget').fill('-1');
-  await page.locator('#goalForm button').click();
+  await page.evaluate(() => openManagementAction('metas'));
+  await page.locator('#modalRoot #goalName').fill('Meta inválida');
+  await page.locator('#modalRoot #goalTarget').fill('-1');
+  await page.locator('#modalRoot #goalForm button').click();
   await expect.poll(() => page.evaluate(() => state.goals.some(goal => goal.name === 'Meta inválida'))).toBe(false);
   await expect(page.locator('#toast')).toContainText('valor alvo da meta');
+});
+
+
+test('editar dívida payroll somente no nome preserva campos ausentes', async ({ page }) => {
+  const value = fixture('Payroll preservado QA');
+  value.accounts = [{ id: 1, name: 'Principal', type: 'Conta corrente', initial: 1000 }];
+  value.debts = [{ id: 89, name: 'Consignado', balance: 1000, rate: 2, payment: 100, firstDue: '2026-09-26', installments: 10, paidInstallments: 0, paymentMethod: 'payroll', history: [], metadata: { source: 'qa' } }];
+  await boot(page, value);
+
+  await page.evaluate(() => editDebt(89));
+  await page.locator('#modalRoot #debtName').fill('Consignado renomeado');
+  await page.locator('#modalRoot #debtForm button').click();
+
+  const debt = await page.evaluate(() => structuredClone(state.debts.find(item => item.id === 89)));
+  expect(debt.name).toBe('Consignado renomeado');
+  expect(debt).not.toHaveProperty('dueDay');
+  expect(debt).not.toHaveProperty('accountId');
+  expect(debt.paymentMethod).toBe('payroll');
+  expect(debt.metadata).toEqual({ source: 'qa' });
 });
 
 test('dívida valida número de parcelas sem coerção silenciosa', async ({ page }) => {
@@ -58,25 +78,26 @@ test('dívida valida número de parcelas sem coerção silenciosa', async ({ pag
   await boot(page, value);
 
   await page.locator('.nav button[data-page="dividas"]').click();
+  await page.evaluate(() => openManagementAction('dividas'));
   for (const invalid of ['', '0', '-2', '1.5']) {
-    await page.locator('#debtName').fill(`Dívida inválida ${invalid}`);
-    await page.locator('#debtBalance').fill('100');
-    await page.locator('#debtPayment').fill('10');
-    await page.locator('#debtRate').fill('0');
-    await page.locator('#debtFirstDue').fill('2026-09-10');
-    await page.locator('#debtInstallments').fill(invalid);
-    await page.locator('#debtForm button').click();
+    await page.locator('#modalRoot #debtName').fill(`Dívida inválida ${invalid}`);
+    await page.locator('#modalRoot #debtBalance').fill('100');
+    await page.locator('#modalRoot #debtPayment').fill('10');
+    await page.locator('#modalRoot #debtRate').fill('0');
+    await page.locator('#modalRoot #debtFirstDue').fill('2026-09-10');
+    await page.locator('#modalRoot #debtInstallments').fill(invalid);
+    await page.locator('#modalRoot #debtForm button').click();
     await expect(page.locator('#toast')).toContainText('parcelas da dívida');
     await expect.poll(() => page.evaluate(() => state.debts.length)).toBe(1);
   }
 
   await page.evaluate(() => editDebt(88));
-  await page.locator('#debtInstallments').fill('2.5');
-  await page.locator('#debtForm button').click();
+  await page.locator('#modalRoot #debtInstallments').fill('2.5');
+  await page.locator('#modalRoot #debtForm button').click();
   await expect(page.locator('#toast')).toContainText('parcelas da dívida');
   await expect.poll(() => page.evaluate(() => state.debts.find(debt => debt.id === 88).installments)).toBe(5);
 
-  await page.locator('#debtInstallments').fill('6');
-  await page.locator('#debtForm button').click();
+  await page.locator('#modalRoot #debtInstallments').fill('6');
+  await page.locator('#modalRoot #debtForm button').click();
   await expect.poll(() => page.evaluate(() => state.debts.find(debt => debt.id === 88).installments)).toBe(6);
 });
