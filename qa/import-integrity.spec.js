@@ -106,3 +106,53 @@ test('falha de persistência restaura todo o estado sem mutação parcial', asyn
   });
   expect(result).toEqual({ transactions: 0, statements: 0, draft: 2 });
 });
+
+test('importação de fatura não duplica pagamento manual sem descrição e preserva descrições distintas', async ({ page }) => {
+  const value = fixture('Deduplicação de fatura');
+  value.mesAtual = '2026-02';
+  value.invoices = [{
+    id: 20,
+    cardId: 1,
+    month: '2026-01',
+    paidAmount: 100,
+    accountId: 1,
+    payments: [{ date: '2026-02-17', amount: 100, balanceImpact: true, targetMonth: '2026-01' }]
+  }];
+  await boot(page, value);
+
+  await page.evaluate(async () => {
+    document.querySelector('#cardImportCard').value = '1';
+    document.querySelector('#cardImportMonth').value = '2026-02';
+    const csv = 'Data;Descrição;Valor\n2026-02-17;Pagamento fatura;-100';
+    const file = new File([csv], 'fatura.csv', { type: 'text/csv' });
+    await new Promise(resolve => {
+      const originalSave = save;
+      save = async label => { await originalSave(label); resolve(); };
+      importCardCsv(file);
+    });
+  });
+
+  expect(await page.evaluate(() => ({
+    payments: state.invoices.find(i => i.id === 20).payments.length,
+    paidAmount: state.invoices.find(i => i.id === 20).paidAmount
+  }))).toEqual({ payments: 1, paidAmount: 100 });
+
+  await page.evaluate(async () => {
+    const inv = state.invoices.find(i => i.id === 20);
+    inv.payments = [{ date: '2026-02-17', amount: 100, balanceImpact: true, targetMonth: '2026-01', sourceDesc: 'Pagamento A' }];
+    inv.paidAmount = 100;
+    await save('Preparar descrições distintas');
+    const csv = 'Data;Descrição;Valor\n2026-02-17;Pagamento B;-100';
+    const file = new File([csv], 'fatura-distinta.csv', { type: 'text/csv' });
+    await new Promise(resolve => {
+      const originalSave = save;
+      save = async label => { await originalSave(label); resolve(); };
+      importCardCsv(file);
+    });
+  });
+
+  expect(await page.evaluate(() => {
+    const inv = state.invoices.find(i => i.id === 20);
+    return { payments: inv.payments.map(p => p.sourceDesc), paidAmount: inv.paidAmount };
+  })).toEqual({ payments: ['Pagamento A', 'Pagamento B'], paidAmount: 200 });
+});

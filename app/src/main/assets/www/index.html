@@ -9663,7 +9663,7 @@ async function importCardCsv(file){
     for(let r of rows){
       if(r.amount<0){
         let prev=monthAdd(m,-1),inv=ensureInvoice(cid,prev),amt=Math.abs(r.amount);
-        let dup=(inv.payments||[]).some(p=>p.date===r.date&&Math.abs(p.amount-amt)<.01);
+        let dup=(inv.payments||[]).some(p=>p.date===r.date&&Math.abs(p.amount-amt)<.01&&(!(p.sourceDesc&&r.desc)||p.sourceDesc===r.desc));
         if(!dup){inv.payments.push({date:r.date,amount:amt,balanceImpact:false,targetMonth:prev,sourceDesc:r.desc});inv.paidAmount=Math.round(((inv.paidAmount||0)+amt)*100)/100;if(inv.officialTotal==null)inv.officialTotal=inv.paidAmount;credits++}
         continue
       }
