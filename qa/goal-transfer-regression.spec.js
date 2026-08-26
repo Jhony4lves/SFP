@@ -71,3 +71,24 @@ test('GOAL-TRANSFER-03 aporte exige uma conta de origem distinta', async ({ page
     balance: accountBalance(2)
   }))).toEqual({ transfers: 0, goal: 0, balance: 100 });
 });
+
+test('GOAL-TRANSFER-04 aporte exige conta de destino válida', async ({ page }) => {
+  const value = fixture('Meta restaurada sem conta');
+  value.accounts = [{ id: 1, name: 'Conta corrente', type: 'Conta corrente', initial: 100 }];
+  value.goals = [{ id: 3, name: 'Emergência', accountId: '', target: 2000, initialAllocated: 0, history: [] }];
+  await boot(page, value);
+
+  await page.evaluate(() => goalTransfer(3));
+
+  expect(await page.evaluate(() => ({
+    transfers: state.transfers.length,
+    goal: goalBalance(state.goals[0]),
+    balance: accountBalance(1),
+    warning: $('toast').textContent
+  }))).toEqual({
+    transfers: 0,
+    goal: 0,
+    balance: 100,
+    warning: expect.stringContaining('conta válida')
+  });
+});
