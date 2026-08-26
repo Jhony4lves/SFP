@@ -127,3 +127,31 @@ test('P1 persistência: falha ao gravar quarentena aborta migração e preserva 
   // Dados recuperáveis: sem quarentena criada e sem sobrescrita em nenhuma fonte,
   // um boot futuro sem a falha simulada reproduz o caso ambíguo original.
 });
+
+test('P1 persistência: quarentena existente divergente aborta migração e preserva cada cópia', async ({ page }) => {
+  const errors = monitor(page);
+
+  await page.goto('/index.html');
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
+  await writeIndexedDB(page, legacyStateA());
+  const quarantineC = { ...legacyStateB(), transactions: [{ ...legacyStateB().transactions[0], id: 'sentinel-c', desc: 'SENTINELA-QA-C-888' }] };
+  const quarantineRaw = JSON.stringify(quarantineC);
+  await page.evaluate(({ quarantineKey, quarantineRaw }) => localStorage.setItem(quarantineKey, quarantineRaw), { quarantineKey: QUARANTINE_KEY, quarantineRaw });
+
+  // A quarentena válida pertence a uma divergência anterior (C), não ao fallback atual (B).
+  // O boot deve falhar antes de migrar ou gravar qualquer uma das fontes.
+  await page.reload();
+  await expect.poll(() => errors.join('\n'), { timeout: 20000 }).toMatch(/não corresponde ao fallback/i);
+  expect(await page.evaluate(key => localStorage.getItem(key), QUARANTINE_KEY)).toBe(quarantineRaw);
+
+  const fallbackRaw = await page.evaluate(key => localStorage.getItem(key), FALLBACK_KEY);
+  expect(JSON.parse(fallbackRaw).transactions.some(t => t.desc === SENTINEL_DESC), 'fallback B intacto').toBe(true);
+  const idbState = await page.evaluate(async ({ DB_NAME, STORE, DB_KEY }) => {
+    const database = await new Promise((resolve, reject) => { const request = indexedDB.open(DB_NAME, 1); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const value = await new Promise((resolve, reject) => { const request = database.transaction(STORE).objectStore(STORE).get(DB_KEY); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    database.close();
+    return value;
+  }, { DB_NAME, STORE, DB_KEY });
+  expect(idbState.transactions.some(t => t.desc === 'ESTADO-A'), 'IndexedDB A intacto').toBe(true);
+  expect(idbState.persistenceMeta?.revision == null, 'IndexedDB A não foi carimbado').toBe(true);
+});

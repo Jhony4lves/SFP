@@ -3673,6 +3673,7 @@ function quarantineLegacyFallbackRequired(fallbackValue){
     try{
       if(!validPersistedState(JSON.parse(existing)))throw Error('conteúdo inválido');
     }catch(e){throw Error(`Quarentena legada pré-existente não está válida/preservada (${e?.message||e}). Migração abortada; nenhum dado foi sobrescrito.`)}
+    if(existing!==serialized)throw Error('Quarentena legada pré-existente não corresponde ao fallback divergente atual. Migração abortada; nenhum dado foi sobrescrito.');
     return;
   }
   try{localStorage.setItem(LEGACY_QUARANTINE_KEY,serialized)}
