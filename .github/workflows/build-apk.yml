@@ -67,3 +67,5 @@ jobs:
         with:
           name: SFP-release-apk
           path: app/build/outputs/apk/release/*.apk
+
+# CI trigger after PR #31
