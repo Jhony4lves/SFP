@@ -2,10 +2,11 @@ const { test, expect } = require('@playwright/test');
 const { fixture, writeIndexedDB } = require('./helpers');
 
 async function boot(page, value) {
-  await page.goto('/');
+  await page.goto('/index.html');
   await writeIndexedDB(page, value);
+  await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.waitForFunction(() => window.state && window.lastSavedState);
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
 }
 
 test('ERR-029 tema claro/escuro/sistema não reabre onboarding com base populada', async ({ page }) => {
