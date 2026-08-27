@@ -1,0 +1,89 @@
+name: Report Patch Helper
+on:
+  push:
+    branches:
+      - fix/report-err-001-029
+    paths:
+      - .github/workflows/report-fix-worker-2.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/report-err-001-029
+      - name: Apply scoped fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def rep(text, old, new, label):
+              n=text.count(old)
+              if n != 1:
+                  raise SystemExit(f'{label}: expected 1, found {n}')
+              return text.replace(old,new,1)
+
+          p=Path('app/src/main/assets/www/index.html')
+          s=p.read_text(encoding='utf-8')
+
+          s=rep(s,
+            '<div class="head"><div><h2>Importar fatura</h2><p>CSV simples: data, descrição/título e valor</p></div><span class="badge">com conferência</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,text/csv"/></label></div>',
+            '<div class="head"><div><h2>Importar fatura</h2><p>CSV ou OFX: data, descrição/título e valor</p></div><span class="badge">com conferência</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,.ofx,text/csv,application/csv,text/comma-separated-values,application/x-ofx,application/ofx"/></label></div>',
+            'invoice picker')
+
+          old="""async function importCardCsv(file){
+  if(!file)return;
+  if(!/\\.csv$/i.test(file.name||'')){toast('Selecione um arquivo CSV de fatura.','warning');$('cardImportFile').value='';return}
+  let rd=new FileReader();rd.onload=()=>{try{prepareCardImport(parseCardCsv(rd.result),file.name)}catch(e){cardImportDraft=null;$('cardImportReview').classList.add('hidden');toast('Não consegui ler a fatura: '+e.message,'error')}finally{$('cardImportFile').value=''}};rd.onerror=()=>{toast('Não consegui abrir o arquivo da fatura. Tente selecionar o CSV novamente.','error');$('cardImportFile').value=''};rd.readAsText(file,'UTF-8')
+}"""
+          new="""async function importCardCsv(file){
+  if(!file)return;
+  let ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(!['csv','ofx'].includes(ext)){toast('Selecione um arquivo CSV ou OFX de fatura.','warning');$('cardImportFile').value='';return}
+  let rd=new FileReader();rd.onload=()=>{try{let rows=ext==='ofx'?parseOFX(rd.result):parseCardCsv(rd.result);if(!rows.length)throw Error('Nenhuma movimentação reconhecida no arquivo.');prepareCardImport(rows,file.name)}catch(e){cardImportDraft=null;$('cardImportReview').classList.add('hidden');toast('Não consegui ler a fatura: '+e.message,'error')}finally{$('cardImportFile').value=''}};rd.onerror=()=>{toast('Não consegui abrir o arquivo da fatura. Tente selecionar o CSV ou OFX novamente.','error');$('cardImportFile').value=''};rd.readAsText(file,'UTF-8')
+}"""
+          s=rep(s,old,new,'invoice OFX reader')
+
+          s=rep(s,
+            "toast(message,'success');showFeedback(message,{title:'Conciliação',type:'success'})",
+            "showFeedback(message,{title:'Conciliação',type:'success'})",
+            'single reconciliation feedback')
+
+          s=rep(s,
+            "showFeedback(`${effect}<br><b>Livre projetado agora: ${brl(allAccountBalance()-commitmentUntilNextIncome())}</b>`)",
+            "showFeedback(`${effect} Livre projetado agora: ${brl(allAccountBalance()-commitmentUntilNextIncome())}`)",
+            'plain transaction feedback')
+
+          s=rep(s,
+            "document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>b.dataset.go==='lancamentos'?contextualNew(document.querySelector('.tab.active')?.id):setPage(b.dataset.go));",
+            "document.addEventListener('click',e=>{let b=e.target.closest?.('[data-go]');if(!b)return;b.dataset.go==='lancamentos'?contextualNew(document.querySelector('.tab.active')?.id):setPage(b.dataset.go)});",
+            'dynamic empty action')
+
+          s=rep(s,
+            "else state.accounts.push(obj);resetManagementForm('accountForm',{id:'accountId',titleId:'accountFormTitle',title:'Adicionar conta',modeId:'accountFormMode',submitId:'accountSubmit',submitText:'Salvar conta'});await save('Salvar conta')",
+            "else state.accounts.push(obj);await save('Salvar conta');resetManagementForm('accountForm',{id:'accountId',titleId:'accountFormTitle',title:'Adicionar conta',modeId:'accountFormMode',submitId:'accountSubmit',submitText:'Salvar conta'});closeProgressive(false)",
+            'account close')
+
+          s=rep(s,
+            "else state.recurring.push(obj);resetManagementForm('recForm',{id:'recId'});await save(id?'Editar recorrência':'Nova recorrência')",
+            "else state.recurring.push(obj);await save(id?'Editar recorrência':'Nova recorrência');resetManagementForm('recForm',{id:'recId'});closeProgressive(false)",
+            'recurrence close')
+
+          s=rep(s,
+            "else state.debts.push(obj);resetManagementForm('debtForm',{id:'debtId',titleId:'debtFormTitle',title:'Adicionar dívida',modeId:'debtFormMode',submitId:'debtSubmit',submitText:'Adicionar dívida',detailsId:'debtMoreDetails'});await save(id?'Editar dívida':'Nova dívida')",
+            "else state.debts.push(obj);await save(id?'Editar dívida':'Nova dívida');resetManagementForm('debtForm',{id:'debtId',titleId:'debtFormTitle',title:'Adicionar dívida',modeId:'debtFormMode',submitId:'debtSubmit',submitText:'Adicionar dívida',detailsId:'debtMoreDetails'});closeProgressive(false)",
+            'debt close')
+
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit changes
+        shell: bash
+        run: |
+          git config user.name "SFP Patch Helper"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/src/main/assets/www/index.html
+          git commit -m "fix: close critical report regressions"
+          git push origin HEAD:fix/report-err-001-029
