@@ -8042,17 +8042,20 @@ function sophyCheckProactivity({force=false}={}){
     return text
   }
 
-  const nextInc=nextIncomeEvent(),today=localCivilDate();
-  if(nextInc&&(nextInc.date===today||nextInc.date===monthAdd(today,0))){
-    const isToday=nextInc.date===today;
-    const text=isToday?`Bom dia! Hoje é dia de recebimento: **${nextInc.desc}** (${brl(nextInc.amount)})! 💰 Não esqueça de conferir a entrada na sua conta!`:`Oi! Amanhã tem previsão de recebimento de **${nextInc.desc}** (${brl(nextInc.amount)}). Seu planejamento tá no rumo certo!`;
+  const nextInc=nextIncomeEvent(),today=localCivilDate(),tomorrowRef=new Date();
+  tomorrowRef.setDate(tomorrowRef.getDate()+1);
+  const tomorrow=localCivilDate(tomorrowRef);
+  if(nextInc&&(nextInc.date===today||nextInc.date===tomorrow)){
+    const isToday=nextInc.date===today,hour=new Date().getHours(),greeting=hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';
+    const text=isToday?`${greeting}! Hoje é dia de recebimento: **${nextInc.desc}** (${brl(nextInc.amount)})! 💰 Não esqueça de conferir a entrada na sua conta!`:`Oi! Amanhã tem previsão de recebimento de **${nextInc.desc}** (${brl(nextInc.amount)}). Seu planejamento tá no rumo certo!`;
     sophy.personaState='cheerful';sophy.lastProactiveAt=new Date().toISOString();
     sophy.messages.push({id:uid(),sender:'sophy',text,at:new Date().toISOString(),emotion:'cheerful'});
     sophy.messages=sophy.messages.slice(-50);
     return text
   }
 
-  if(force||hoursSince>=12){
+  const localHour=new Date().getHours();
+  if(force||(hoursSince>=12&&localHour>=8&&localHour<22)){
     const spontaneous=[
       `Oi! Passando por aqui só pra lembrar de tomar uma água e conferir se não ficou nenhum lançamento de hoje pra trás! 😉`,
       `Olá! O SFP tá todo em ordem por aqui. Se precisar tirar alguma dúvida ou simular uma meta, é só me chamar! ✨`,
@@ -8179,6 +8182,44 @@ async function sophySendMessage(text){
   return sophyOrchestrator.sendMessage(text);
 }
 
+
+const SOPHY_HEARTBEAT_INTERVAL_MS=15*60*1000;
+let sophyHeartbeatTimer=null,sophyHeartbeatVisibilityBound=false,sophyHeartbeatInFlight=false;
+async function sophyHeartbeatTick({force=false,notify=true}={}){
+  if(sophyHeartbeatInFlight)return null;
+  if(!force&&typeof document!=='undefined'&&document.visibilityState==='hidden')return null;
+  sophyHeartbeatInFlight=true;
+  const beforeSophy=clone(state?.sophy||{}),beforeStamp=state?.sophy?.lastProactiveAt||null;
+  try{
+    const text=sophyCheckProactivity({force});
+    const afterStamp=state?.sophy?.lastProactiveAt||null,changed=beforeStamp!==afterStamp;
+    if(!text&&!changed)return null;
+    normalize();await dbSet(state);lastSavedState=clone(state);
+    if(text){
+      renderSophy();
+      if(notify&&typeof activePage==='function'&&activePage()!=='sophy')showFeedback('A Sophy deixou uma mensagem nova para você.',{title:'Sophy',type:'info'});
+    }
+    return text||null
+  }catch(error){
+    if(state)state.sophy=beforeSophy;
+    console.error('Falha ao persistir heartbeat da Sophy:',error);
+    return null
+  }finally{sophyHeartbeatInFlight=false}
+}
+function startSophyHeartbeat(){
+  if(typeof setInterval!=='function')return null;
+  if(!sophyHeartbeatTimer){
+    sophyHeartbeatTimer=setInterval(()=>{sophyHeartbeatTick().catch(error=>console.error('Heartbeat da Sophy:',error))},SOPHY_HEARTBEAT_INTERVAL_MS)
+  }
+  if(typeof document!=='undefined'&&!sophyHeartbeatVisibilityBound){
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sophyHeartbeatTick().catch(error=>console.error('Heartbeat da Sophy ao retornar:',error))});
+    sophyHeartbeatVisibilityBound=true
+  }
+  return sophyHeartbeatTimer
+}
+window.sophyHeartbeatTick=sophyHeartbeatTick;
+window.startSophyHeartbeat=startSophyHeartbeat;
+window.SOPHY_HEARTBEAT_INTERVAL_MS=SOPHY_HEARTBEAT_INTERVAL_MS;
 window.sophySendMessage=sophySendMessage;
 window.sophyAddMemory=sophyAddMemory;
 window.sophyRemoveMemory=sophyRemoveMemory;
@@ -9989,7 +10030,8 @@ async function init(){
   if($('invoiceMonth'))$('invoiceMonth').value=defaultInvoiceMonth;
   renderAll();
   runtimeSanityCheck();
-  sophyCheckProactivity();
+  await sophyHeartbeatTick({notify:false});
+  startSophyHeartbeat();
   setTimeout(showOnboarding,250);
 }
 document.addEventListener('DOMContentLoaded',init);
