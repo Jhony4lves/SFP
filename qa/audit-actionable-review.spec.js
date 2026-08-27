@@ -7,7 +7,10 @@ async function boot(page, value) {
   await writeIndexedDB(page, value);
   await page.evaluate(v => localStorage.setItem('sfp_final_fallback', JSON.stringify(v)), value);
   await page.reload();
-  await page.waitForFunction(() => typeof state !== 'undefined' && state?.settings?.name === value.settings.name);
+  await page.waitForFunction(
+    name => typeof state !== 'undefined' && state?.settings?.name === name,
+    value.settings.name
+  );
 }
 
 test('AUDIT-REVIEW-01: Revisar é ação real e permite confirmar Pix como transferência sem mudar valor/data', async ({ page }) => {
