@@ -3355,7 +3355,7 @@ button:active:not(:disabled){transform:translateY(1px)}
     O backup completo é a forma recomendada para manter uma cópia externa segura.
   </div>
 </article>
-<article class="panel"><div class="head"><div><h2>Regras de classificação</h2><p>Aprendidas a partir dos extratos</p></div></div><div id="rulesList" class="list"></div></article>
+<article class="panel"><div class="head"><div><h2>Regras de classificação</h2><p id="rulesSummary">Aprendidas a partir dos extratos. Você pode revisar, editar ou excluir qualquer regra.</p></div></div><div class="note">Cada regra só vale quando a descrição contém o padrão mostrado abaixo. Editar uma regra não altera lançamentos já importados; a mudança vale para novas classificações.</div><div id="rulesList" class="list"></div></article>
     </section>
   </main>
 </div>
@@ -4647,8 +4647,9 @@ function contextualNew(page){
 }
 
 function renderSelects(){
- let acc=state.accounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join(''),cards=state.cards.map(c=>`<option value="${c.id}">${c.name}</option>`).join(''),cats=CATEGORIES.map(c=>`<option>${c}</option>`).join('');
- ['txAccount','txFrom','txTo','stmtAccount','cardPayAccount','recAccount','debtAccount','goalAccount'].forEach(id=>{if($(id))$(id).innerHTML=acc});
+ let acc=state.accounts.map(a=>`<option value="${a.id}">${sfpEsc(a.name)}</option>`).join(''),transferAcc=state.accounts.map(a=>`<option value="${a.id}">${sfpEsc(a.name)} • ${state.settings?.privacy?'••••':brl(accountBalance(a.id))}</option>`).join(''),cards=state.cards.map(c=>`<option value="${c.id}">${sfpEsc(c.name)}</option>`).join(''),cats=CATEGORIES.map(c=>`<option>${sfpEsc(c)}</option>`).join('');
+ ['txAccount','stmtAccount','cardPayAccount','recAccount','debtAccount','goalAccount'].forEach(id=>{if($(id))$(id).innerHTML=acc});
+ ['txFrom','txTo'].forEach(id=>{if($(id))$(id).innerHTML=transferAcc});
  ['txCard','invoiceCard','cardImportCard'].forEach(id=>{if($(id))$(id).innerHTML=cards});
  ['txCategory','recCategory','catBudgetCategory'].forEach(id=>{if($(id))$(id).innerHTML=cats});
 }
@@ -8015,16 +8016,14 @@ function showSophySettingsModal(){
   };
 }
 
-function sophyCheckProactivity({force=false}={}){
+function sophyCheckProactivity({force=false,baselineAt=null}={}){
   if(!state?.sophy)normalize();
   const sophy=state.sophy;
   if(!sophy.settings?.proactivityEnabled&&!force)return null;
-  if(!sophy.lastProactiveAt){
-    sophy.lastProactiveAt=new Date().toISOString();
-    if(!force)return null;
-  }
+  const now=Date.now(),baseline=Number(baselineAt);
+  if(!sophy.lastProactiveAt&&!force&&!Number.isFinite(baseline))return null;
   if(!sophy.introDone&&!force)return null;
-  const now=Date.now(),lastAt=new Date(sophy.lastProactiveAt).getTime(),hoursSince=(now-lastAt)/(1000*60*60);
+  const lastAt=sophy.lastProactiveAt?new Date(sophy.lastProactiveAt).getTime():(Number.isFinite(baseline)?baseline:now),hoursSince=(now-lastAt)/(1000*60*60);
   if(!force&&hoursSince<4)return null;
 
   const free=allAccountBalance()-commitmentUntilNextIncome();
@@ -8045,17 +8044,20 @@ function sophyCheckProactivity({force=false}={}){
     return text
   }
 
-  const nextInc=nextIncomeEvent(),today=localCivilDate();
-  if(nextInc&&(nextInc.date===today||nextInc.date===monthAdd(today,0))){
-    const isToday=nextInc.date===today;
-    const text=isToday?`Bom dia! Hoje é dia de recebimento: **${nextInc.desc}** (${brl(nextInc.amount)})! 💰 Não esqueça de conferir a entrada na sua conta!`:`Oi! Amanhã tem previsão de recebimento de **${nextInc.desc}** (${brl(nextInc.amount)}). Seu planejamento tá no rumo certo!`;
+  const nextInc=nextIncomeEvent(),today=localCivilDate(),tomorrowRef=new Date();
+  tomorrowRef.setDate(tomorrowRef.getDate()+1);
+  const tomorrow=localCivilDate(tomorrowRef);
+  if(nextInc&&(nextInc.date===today||nextInc.date===tomorrow)){
+    const isToday=nextInc.date===today,hour=new Date().getHours(),greeting=hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';
+    const text=isToday?`${greeting}! Hoje é dia de recebimento: **${nextInc.desc}** (${brl(nextInc.amount)})! 💰 Não esqueça de conferir a entrada na sua conta!`:`Oi! Amanhã tem previsão de recebimento de **${nextInc.desc}** (${brl(nextInc.amount)}). Seu planejamento tá no rumo certo!`;
     sophy.personaState='cheerful';sophy.lastProactiveAt=new Date().toISOString();
     sophy.messages.push({id:uid(),sender:'sophy',text,at:new Date().toISOString(),emotion:'cheerful'});
     sophy.messages=sophy.messages.slice(-50);
     return text
   }
 
-  if(force||hoursSince>=12){
+  const localHour=new Date().getHours();
+  if(force||(hoursSince>=12&&localHour>=8&&localHour<22)){
     const spontaneous=[
       `Oi! Passando por aqui só pra lembrar de tomar uma água e conferir se não ficou nenhum lançamento de hoje pra trás! 😉`,
       `Olá! O SFP tá todo em ordem por aqui. Se precisar tirar alguma dúvida ou simular uma meta, é só me chamar! ✨`,
@@ -8181,6 +8183,46 @@ function renderSophy(){
 async function sophySendMessage(text){
   return sophyOrchestrator.sendMessage(text);
 }
+
+const SOPHY_HEARTBEAT_INTERVAL_MS=15*60*1000;
+let sophyHeartbeatTimer=null,sophyHeartbeatVisibilityBound=false,sophyHeartbeatInFlight=false,sophyHeartbeatStartedAt=null;
+async function sophyHeartbeatTick({force=false,notify=true}={}){
+  if(sophyHeartbeatInFlight)return null;
+  if(!force&&typeof document!=='undefined'&&document.visibilityState==='hidden')return null;
+  sophyHeartbeatInFlight=true;
+  const beforeSophy=clone(state?.sophy||{}),beforeStamp=state?.sophy?.lastProactiveAt||null;
+  if(!beforeStamp&&!sophyHeartbeatStartedAt)sophyHeartbeatStartedAt=Date.now();
+  try{
+    const text=sophyCheckProactivity({force,baselineAt:sophyHeartbeatStartedAt});
+    const afterStamp=state?.sophy?.lastProactiveAt||null,changed=beforeStamp!==afterStamp;
+    if(!text&&!changed)return null;
+    if(afterStamp)sophyHeartbeatStartedAt=new Date(afterStamp).getTime();
+    normalize();await dbSet(state);lastSavedState=clone(state);
+    if(text){
+      renderSophy();
+      if(notify&&typeof activePage==='function'&&activePage()!=='sophy')showFeedback('A Sophy deixou uma mensagem nova para você.',{title:'Sophy',type:'info'});
+    }
+    return text||null
+  }catch(error){
+    if(state)state.sophy=beforeSophy;
+    console.error('Falha ao persistir heartbeat da Sophy:',error);
+    return null
+  }finally{sophyHeartbeatInFlight=false}
+}
+function startSophyHeartbeat(){
+  if(typeof setInterval!=='function')return null;
+  if(!sophyHeartbeatTimer){
+    sophyHeartbeatTimer=setInterval(()=>{sophyHeartbeatTick().catch(error=>console.error('Heartbeat da Sophy:',error))},SOPHY_HEARTBEAT_INTERVAL_MS)
+  }
+  if(typeof document!=='undefined'&&!sophyHeartbeatVisibilityBound){
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sophyHeartbeatTick().catch(error=>console.error('Heartbeat da Sophy ao retornar:',error))});
+    sophyHeartbeatVisibilityBound=true
+  }
+  return sophyHeartbeatTimer
+}
+window.sophyHeartbeatTick=sophyHeartbeatTick;
+window.startSophyHeartbeat=startSophyHeartbeat;
+window.SOPHY_HEARTBEAT_INTERVAL_MS=SOPHY_HEARTBEAT_INTERVAL_MS;
 
 window.sophySendMessage=sophySendMessage;
 window.sophyAddMemory=sophyAddMemory;
@@ -8317,7 +8359,19 @@ function renderReconcileCenter(){
 function renderStatements(){
  $('stmtHistory').innerHTML=state.statements.slice().reverse().slice(0,10).map(s=>`<div class="item"><div><b>${s.account}</b><small>${s.file} • ${s.months.map(monthName).join(', ')}</small></div><strong>${s.count} itens</strong></div>`).join('')||'<div class="empty-state"><b>Nenhum extrato importado</b>Importe um CSV ou OFX mensal para conciliar seus lançamentos.<br><button class="btn tiny" data-go="extratos">Importar extrato</button></div>'
 }
-function renderRules(){$('rulesList').innerHTML=state.classificationRules.map((r,i)=>`<div class="item"><div><b>${r.pattern}</b><small>${r.action} • ${r.category}</small></div><button class="danger tiny" onclick="removeRule(${i})">Excluir</button></div>`).join('')||'<div class="item"><span>Nenhuma regra aprendida.</span></div>'}
+function classificationRuleActionLabel(action){return action==='income'?'Receita':action==='transfer'?'Transferência':'Despesa'}
+function renderRules(){
+ const list=$('rulesList'),summary=$('rulesSummary');if(!list)return;
+ const rules=Array.isArray(state.classificationRules)?state.classificationRules:[];
+ if(summary)summary.textContent=rules.length?`${rules.length} ${rules.length===1?'regra ativa':'regras ativas'} • revisáveis, editáveis e removíveis`:'Nenhuma regra aprendida ainda. Elas surgem quando você confirma “aprender” durante uma importação.';
+ list.innerHTML=rules.map((r,i)=>{
+   const origin=r.editedByUser?'Editada por você':r.source==='manual'?'Criada por você':'Aprendida em importação';
+   const when=r.updatedAt||r.learnedAt||r.createdAt;
+   const date=when?` • ${new Date(when).toLocaleDateString('pt-BR')}`:'';
+   const example=r.example?`<small>Exemplo que originou a regra: “${sfpEsc(r.example)}”</small>`:'';
+   return `<div class="item" data-rule-index="${i}"><div><b>“${sfpEsc(r.pattern||'')}”</b><small>Quando a descrição contiver este padrão → ${classificationRuleActionLabel(r.action)}${r.action==='transfer'?'':` • Categoria: ${sfpEsc(r.category||'Outros')}`}</small><small>Origem: ${origin}${date}</small>${example}</div><div class="section-actions"><button class="btn2 tiny" onclick="editRule(${i})">Editar</button><button class="danger tiny" onclick="removeRule(${i})">Excluir</button></div></div>`
+ }).join('')||'<div class="empty-state"><b>Nenhuma regra aprendida</b>Ao confirmar “aprender” numa importação, o SFP mostrará aqui exatamente o padrão e o efeito da regra.</div>'
+}
 
 
 function financialAuditData(){
@@ -9317,7 +9371,32 @@ window.calculateGoalPlan=calculateGoalPlan;window.updateGoalPlanCalculation=upda
 window.removeGoal=async id=>{let g=state.goals.find(x=>x.id===id);if(g)moveToTrash('goal',g);state.goals=state.goals.filter(g=>g.id!==id);await save('Excluir meta')}
 window.editAsset=id=>{let a=state.assets.find(x=>x.id===id);if(!a)return;$('assetId').value=a.id;$('assetName').value=a.name;$('assetValue').value=a.value;setPage('patrimonio')}
 window.removeAsset=async id=>{let a=state.assets.find(x=>x.id===id);if(a)moveToTrash('asset',a);state.assets=state.assets.filter(a=>a.id!==id);await save('Excluir ativo')}
-window.removeRule=async i=>{state.classificationRules.splice(i,1);await save('Excluir regra')}
+window.editRule=i=>{
+ let r=state.classificationRules?.[i];if(!r)return;
+ closeProgressive(false);
+ const root=$('modalRoot');root.className='modalback';
+ const ruleCategories=CATEGORIES.includes(r.category)?CATEGORIES:[...CATEGORIES,r.category].filter(Boolean);
+ root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true" aria-labelledby="ruleEditTitle"><div class="head"><div><h2 id="ruleEditTitle">Editar regra de classificação</h2><p>A mudança vale para novas classificações. Lançamentos anteriores não são reescritos.</p></div><button class="btn2" id="ruleEditClose">Voltar</button></div><label>Padrão de descrição<input id="ruleEditPattern" value="${sfpEsc(r.pattern||'')}" placeholder="Ex.: MERCADO CENTRAL"/></label><div class="two"><label>Classificar como<select id="ruleEditAction"><option value="expense">Despesa</option><option value="income">Receita</option><option value="transfer">Transferência</option></select></label><label>Categoria<select id="ruleEditCategory">${ruleCategories.map(c=>`<option value="${sfpEsc(c)}">${sfpEsc(c)}</option>`).join('')}</select></label></div><div class="note">O padrão é comparado sem diferenciar maiúsculas e minúsculas. Ex.: “MERCADO” também reconhece “Mercado Central”. Transferências não entram como receita ou despesa econômica.</div><div class="section-actions"><button class="btn2" id="ruleEditCancel">Cancelar</button><button class="btn" id="ruleEditSave">Salvar regra</button></div></div>`;
+ $('ruleEditAction').value=['expense','income','transfer'].includes(r.action)?r.action:'expense';
+ $('ruleEditCategory').value=r.category||'Outros';
+ const close=()=>{root.className='hidden';root.replaceChildren()};
+ $('ruleEditClose').onclick=close;$('ruleEditCancel').onclick=close;root.onclick=e=>{if(e.target===root)close()};
+ $('ruleEditSave').onclick=async()=>{
+   const pattern=$('ruleEditPattern').value.trim(),action=$('ruleEditAction').value,category=$('ruleEditCategory').value;
+   if(pattern.length<2)return toast('Informe um padrão de classificação com pelo menos 2 caracteres.','warning');
+   if(state.classificationRules.some((x,j)=>j!==i&&String(x.pattern||'').trim().toLowerCase()===pattern.toLowerCase()))return toast('Já existe uma regra com esse mesmo padrão.','warning');
+   Object.assign(r,{pattern,action,category,editedByUser:true,updatedAt:new Date().toISOString()});
+   await save('Editar regra de classificação');close();renderRules();toast('Regra de classificação atualizada.','success')
+ };
+ $('ruleEditPattern').focus()
+};
+window.removeRule=async i=>{
+ let r=state.classificationRules?.[i];if(!r)return;
+ if(!(await sfpConfirm({title:'Excluir regra de classificação',message:`Excluir a regra “${r.pattern}”?
+
+Ela deixará de ser aplicada em novas importações. Lançamentos anteriores não serão alterados.`,confirmText:'Excluir regra',cancelText:'Cancelar',danger:true})))return;
+ state.classificationRules.splice(i,1);await save('Excluir regra de classificação');toast('Regra removida.','success')
+}
 function resetTxForm(){$('txForm').reset();$('txEditId').value='';$('txDate').value=localCivilDate();$('txMoreDetails').open=false;setKind('expense');setTxFormMode(false)}
 function initForms(){
  $('debtInstallments').oninvalid=()=>toast('O número de parcelas da dívida precisa ser um inteiro maior ou igual a 1.','warning');
@@ -9371,7 +9450,7 @@ function semanticClassify(desc,amount){
       action:learned.action,
       category:learned.category,
       semanticClass:'learned_rule',
-      economicImpact:'economic',
+      economicImpact:learned.action==='transfer'?'neutral':'economic',
       confidence:'high',
       reason:`Regra aprendida: ${learned.pattern}`
     };
@@ -9693,7 +9772,7 @@ async function importStatement(){
    }
    if(r.action==='transfer'){if(!r.transferAccountId||r.transferAccountId==r.accountId)continue;state.transfers.push({id:uid(),desc:r.desc,amount:Math.abs(r.amount),date:r.date,fromId:r.amount<0?r.accountId:r.transferAccountId,toId:r.amount<0?r.transferAccountId:r.accountId,tags:['extrato','transferência'],statementKey:r.key,balanceImpact:true})}
    else state.transactions.push({id:uid(),kind:r.action==='income'?'income':'expense',desc:r.desc,amount:Math.abs(r.amount),date:r.date,category:r.category,accountId:r.accountId,status:'paid',dueDay:+r.date.slice(8,10),tags:['extrato'],note:'',statementKey:r.key,balanceImpact:r.date>state.baseDate,semanticClass:r.semanticClass||null,economicImpact:r.economicImpact||'economic',classificationConfidence:r.classificationConfidence||null,classificationReason:r.classificationReason||null,createdAt:Date.now()});
-   used.add(r.key);accepted.push(r);if(r.learn){let pattern=r.desc.split(/\s+/).slice(0,3).join(' ');if(pattern.length>3&&!state.classificationRules.some(x=>x.pattern===pattern))state.classificationRules.push({pattern,action:r.action,category:r.category})}
+   used.add(r.key);accepted.push(r);if(r.learn){let pattern=r.desc.split(/\s+/).slice(0,3).join(' ');if(pattern.length>3&&!state.classificationRules.some(x=>String(x.pattern||'').toLowerCase()===pattern.toLowerCase()))state.classificationRules.push({pattern,action:r.action,category:r.category,source:'learned',learnedAt:new Date().toISOString(),example:r.desc})}
   }
   if(accepted.length)state.statements.push({id:uid(),file:draft[0]?.file||'Extrato',account:acc?.name||'Conta',count:accepted.length,months:[...new Set(accepted.map(r=>ym(r.date)))],importedAt:new Date().toISOString()});
   if(lastSavedState){autoBackup();snapshotUndo('Importar extrato',lastSavedState)}normalize();await dbSet(state);persisted=true;lastSavedState=clone(state);statementDraft=[];$('stmtReview').classList.add('hidden');$('stmtFile').value='';renderAll();toast(`${accepted.length} movimentações processadas`)
@@ -9704,7 +9783,7 @@ function initOther(){
  updateContextFab();
  if($('cfgTheme')) $('cfgTheme').onchange=async()=>{await setThemePreference($('cfgTheme').value,{persist:true})};
  document.querySelectorAll('.nav button[data-page]').forEach(b=>b.onclick=()=>setPage(b.dataset.page));if($('moreNavBtn'))$('moreNavBtn').onclick=showMoreMenu;document.addEventListener('click',e=>{let b=e.target.closest?.('[data-go]');if(!b)return;b.dataset.go==='lancamentos'?contextualNew(document.querySelector('.tab.active')?.id):setPage(b.dataset.go)});document.querySelectorAll('.quicktype').forEach(b=>b.onclick=()=>setKind(b.dataset.kind));
- if($('privacyToggle'))$('privacyToggle').onclick=async()=>{state.settings.privacy=!state.settings.privacy;await dbSet(state);lastSavedState=clone(state);applyPrivacy()};
+ if($('privacyToggle'))$('privacyToggle').onclick=async()=>{let from=$('txFrom')?.value||'',to=$('txTo')?.value||'';state.settings.privacy=!state.settings.privacy;['txFrom','txTo'].forEach(id=>{let sel=$(id);if(!sel)return;[...sel.options].forEach(opt=>{let a=account(+opt.value);if(a)opt.textContent=`${a.name} • ${state.settings?.privacy?'••••':brl(accountBalance(a.id))}`})});if($('txFrom')&&from)$('txFrom').value=from;if($('txTo')&&to)$('txTo').value=to;applyPrivacy();await dbSet(state);lastSavedState=clone(state)};
  if($('dcBackupNow'))$('dcBackupNow').onclick=()=>download(JSON.stringify(state,null,2),`sfp-backup-${localCivilDate()}.json`,'application/json');
  if($('dcAutoBackups'))$('dcAutoBackups').onclick=showAutoBackups;
  if($('dcAudit'))$('dcAudit').onclick=()=>setPage('auditoria');
@@ -10024,7 +10103,8 @@ async function init(){
   if($('invoiceMonth'))$('invoiceMonth').value=defaultInvoiceMonth;
   renderAll();
   runtimeSanityCheck();
-  sophyCheckProactivity();
+  await sophyHeartbeatTick({notify:false});
+  startSophyHeartbeat();
   setTimeout(showOnboarding,250);
 }
 document.addEventListener('DOMContentLoaded',init);
