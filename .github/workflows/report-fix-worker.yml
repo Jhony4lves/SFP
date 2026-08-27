@@ -1,0 +1,100 @@
+name: Report Fix Worker
+on:
+  push:
+    branches:
+      - fix/report-err-001-029
+    paths:
+      - .github/workflows/report-fix-worker.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/report-err-001-029
+      - name: Apply scoped report fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 occurrence, found {count}')
+              return text.replace(old, new, 1)
+
+          p = Path('app/src/main/assets/www/index.html')
+          s = p.read_text(encoding='utf-8')
+
+          s = replace_once(s,
+              '<div class="head"><div><h2>Importar fatura</h2><p>CSV simples: data, descrição/título e valor</p></div><span class="badge">com conferência</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,text/csv"/></label></div>',
+              '<div class="head"><div><h2>Importar fatura</h2><p>CSV ou OFX: data, descrição/título e valor</p></div><span class="badge">com conferência</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,.ofx,text/csv,application/csv,text/comma-separated-values,application/x-ofx,application/ofx"/></label></div>',
+              'invoice picker')
+
+          s = replace_once(s,
+              "if(extension!=='csv'){e.target.value='';toast('Formato de fatura inválido. Use um arquivo CSV.','warning');return}",
+              "if(!['csv','ofx'].includes(extension)){e.target.value='';toast('Formato de fatura inválido. Use CSV ou OFX.','warning');return}",
+              'invoice extension validation')
+
+          s = replace_once(s,
+              "let rows=parseCardCsv(await f.text());prepareCardImport(rows,f.name)",
+              "let text=await f.text(),rows=extension==='ofx'?parseOFX(text):parseCardCsv(text);if(!rows.length)throw Error('Nenhuma movimentação reconhecida no arquivo.');prepareCardImport(rows,f.name)",
+              'invoice parser selection')
+
+          s = replace_once(s,
+              "toast(message,'success');showFeedback(message,{title:'Conciliação',type:'success'})",
+              "showFeedback(message,{title:'Conciliação',type:'success'})",
+              'single reconciliation feedback')
+
+          s = replace_once(s,
+              "showFeedback(`${effect}<br><b>Livre projetado agora: ${brl(allAccountBalance()-commitmentUntilNextIncome())}</b>`)",
+              "showFeedback(`${effect} Livre projetado agora: ${brl(allAccountBalance()-commitmentUntilNextIncome())}`)",
+              'plain transaction feedback')
+
+          s = replace_once(s,
+              "document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>b.dataset.go==='lancamentos'?contextualNew(document.querySelector('.tab.active')?.id):setPage(b.dataset.go));",
+              "document.addEventListener('click',e=>{let b=e.target.closest?.('[data-go]');if(!b)return;b.dataset.go==='lancamentos'?contextualNew(document.querySelector('.tab.active')?.id):setPage(b.dataset.go)});",
+              'dynamic data-go delegation')
+
+          s = replace_once(s,
+              "else state.accounts.push(obj);resetManagementForm('accountForm',{id:'accountId',titleId:'accountFormTitle',title:'Adicionar conta',modeId:'accountFormMode',submitId:'accountSubmit',submitText:'Salvar conta'});await save('Salvar conta')",
+              "else state.accounts.push(obj);await save('Salvar conta');resetManagementForm('accountForm',{id:'accountId',titleId:'accountFormTitle',title:'Adicionar conta',modeId:'accountFormMode',submitId:'accountSubmit',submitText:'Salvar conta'});closeProgressive(false)",
+              'account close after save')
+
+          s = replace_once(s,
+              "else state.recurring.push(obj);resetManagementForm('recForm',{id:'recId'});await save(id?'Editar recorrência':'Nova recorrência')",
+              "else state.recurring.push(obj);await save(id?'Editar recorrência':'Nova recorrência');resetManagementForm('recForm',{id:'recId'});closeProgressive(false)",
+              'recurrence close after save')
+
+          s = replace_once(s,
+              "else state.debts.push(obj);resetManagementForm('debtForm',{id:'debtId',titleId:'debtFormTitle',title:'Adicionar dívida',modeId:'debtFormMode',submitId:'debtSubmit',submitText:'Adicionar dívida',detailsId:'debtMoreDetails'});await save(id?'Editar dívida':'Nova dívida')",
+              "else state.debts.push(obj);await save(id?'Editar dívida':'Nova dívida');resetManagementForm('debtForm',{id:'debtId',titleId:'debtFormTitle',title:'Adicionar dívida',modeId:'debtFormMode',submitId:'debtSubmit',submitText:'Adicionar dívida',detailsId:'debtMoreDetails'});closeProgressive(false)",
+              'debt close after save')
+
+          p.write_text(s, encoding='utf-8')
+
+          j = Path('app/src/main/java/com/jhony/sfp/MainActivity.java')
+          js = j.read_text(encoding='utf-8')
+          js = replace_once(js,
+              '                        "text/csv",\n                        "application/json",',
+              '                        "text/csv",\n                        "application/csv",\n                        "text/comma-separated-values",\n                        "application/vnd.ms-excel",\n                        "application/json",',
+              'android csv mime aliases')
+          js = replace_once(js,
+              '                        "application/x-ofx",\n                        "text/plain"',
+              '                        "application/x-ofx",\n                        "application/ofx",\n                        "text/plain"',
+              'android ofx mime alias')
+          j.write_text(js, encoding='utf-8')
+          PY
+      - name: Commit scoped patch and remove worker
+        shell: bash
+        run: |
+          git config user.name "SFP Report Worker"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/report-fix-worker.yml
+          git add app/src/main/assets/www/index.html app/src/main/java/com/jhony/sfp/MainActivity.java
+          git commit -m "fix: address critical report flows"
+          git push origin HEAD:fix/report-err-001-029
