@@ -2,6 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { fixture, writeIndexedDB, expectBootComplete } = require('./helpers');
 
 // ERR-014 cobre tanto privacidade no boot quanto ativação durante a sessão.
+// A máscara precisa mudar na UI antes da persistência assíncrona terminar.
 async function boot(page, privacy = false) {
   const value = fixture('ERR-014');
   value.settings.privacy = privacy;
