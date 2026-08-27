@@ -27,11 +27,29 @@ test('ERR-014 seletores de transferência exibem saldo atual das contas', async 
   }
 });
 
-test('ERR-014 modo privacidade não vaza saldos nos seletores de transferência', async ({ page }) => {
+test('ERR-014 modo privacidade no boot não vaza saldos nos seletores de transferência', async ({ page }) => {
   await boot(page, true);
   const labels = await page.evaluate(() => [...document.querySelectorAll('#txFrom option,#txTo option')].map(o => o.textContent));
   expect(labels.some(x => x.includes('1.000,00') || x.includes('250,50'))).toBe(false);
   expect(labels.every(x => x.includes('••••'))).toBe(true);
+});
+
+test('ERR-014 ativar privacidade durante a sessão mascara opções imediatamente e preserva seleção', async ({ page }) => {
+  await boot(page, false);
+  await page.locator('#txFrom').selectOption('2');
+  await page.locator('#txTo').selectOption('1');
+  await page.locator('#privacyToggle').click();
+
+  await expect.poll(() => page.evaluate(() => state.settings.privacy)).toBe(true);
+  const result = await page.evaluate(() => ({
+    from: document.querySelector('#txFrom').value,
+    to: document.querySelector('#txTo').value,
+    labels: [...document.querySelectorAll('#txFrom option,#txTo option')].map(o => o.textContent)
+  }));
+  expect(result.from).toBe('2');
+  expect(result.to).toBe('1');
+  expect(result.labels.some(x => x.includes('1.000,00') || x.includes('250,50'))).toBe(false);
+  expect(result.labels.every(x => x.includes('••••'))).toBe(true);
 });
 
 test('ERR-014 origem e destino iguais continuam bloqueados sem criar transferência', async ({ page }) => {
