@@ -47,6 +47,6 @@ test('MGMT-06/08: ações distintas de dívida e meta continuam disponíveis', a
 
 test('MGMT-11/12: mobile usa cards e Back preserva navegação', async ({ page }) => {
   await boot(page); await page.setViewportSize({ width: 384, height: 854 }); await page.evaluate(()=>setPage('cartoes'));
-  await expect(page.locator('#invoiceMobile')).toHaveCSS('display','grid'); await expect(page.locator('.desktop-table-mobile')).toBeHidden();
+  await expect(page.locator('#invoiceMobile')).toHaveCSS('display','grid'); await expect(page.locator('.invoice-focus .desktop-table-mobile')).toBeHidden();
   expect(await page.evaluate(()=>handleAndroidBack())).toBe(true); await expect(page.locator('#hoje')).toHaveClass(/active/);
 });
