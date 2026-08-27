@@ -1,0 +1,73 @@
+name: Hotfix debt rate percent
+on:
+  push:
+    branches: [hotfix/debt-rate-percent]
+    paths: [.github/workflows/hotfix-debt-rate-percent.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: hotfix/debt-rate-percent
+          fetch-depth: 0
+      - name: Apply percent parser hotfix and regression
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/src/main/assets/www/index.html')
+          s = p.read_text(encoding='utf-8')
+          marker = "function parseMoney(v){"
+          if marker not in s:
+              raise SystemExit('parseMoney marker not found')
+          if 'function parsePercent(v){' not in s:
+              s = s.replace(marker, "function parsePercent(v){let s=String(v??'').trim().replace('%','').replace(',','.');let n=Number.parseFloat(s);return Number.isFinite(n)?n:0}\n" + marker, 1)
+
+          replacements = {
+              "rate:parseMoney($('debtRate')?.value)": "rate:parsePercent($('debtRate')?.value)",
+              "rate:parseMoney($('debtRate').value)": "rate:parsePercent($('debtRate').value)",
+          }
+          changed = 0
+          for old, new in replacements.items():
+              count = s.count(old)
+              if count:
+                  s = s.replace(old, new)
+                  changed += count
+          if changed < 2:
+              raise SystemExit(f'expected at least 2 debt-rate parse replacements, got {changed}')
+          p.write_text(s, encoding='utf-8')
+
+          q = Path('qa/report-money-debt-regression.spec.js')
+          t = q.read_text(encoding='utf-8')
+          test_name = "ERR-011 taxa percentual com ponto e zeros finais não vira milhar"
+          if test_name not in t:
+              t += r'''
+
+test('ERR-011 taxa percentual com ponto e zeros finais não vira milhar', async ({ page }) => {
+  await boot(page, fixture('Taxa percentual QA'));
+  await page.evaluate(() => openManagementAction('dividas'));
+  await page.locator('#debtName').fill('Taxa 1 por cento');
+  await page.locator('#debtBalance').fill('1000');
+  await page.locator('#debtRate').fill('1.000');
+  await page.locator('#debtRatePeriod').selectOption('monthly');
+  await page.locator('#debtInstallments').fill('12');
+  await expect.poll(() => page.locator('#debtPayment').inputValue()).toBe('88.85');
+  await page.locator('#debtFirstDue').fill('2026-09-10');
+  await page.locator('#debtForm').evaluate(form => form.requestSubmit());
+  const saved = await page.evaluate(() => state.debts.find(d => d.name === 'Taxa 1 por cento'));
+  expect(saved.rate).toBe(1);
+  expect(saved.payment).toBe(88.85);
+});
+'''
+              q.write_text(t, encoding='utf-8')
+          PY
+      - name: Commit hotfix
+        run: |
+          git config user.name "SFP Hotfix Runner"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/src/main/assets/www/index.html qa/report-money-debt-regression.spec.js
+          git commit -m "fix(debt): parse interest rate as percentage"
+          git push origin HEAD:hotfix/debt-rate-percent
