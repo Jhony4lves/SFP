@@ -10,19 +10,27 @@ async function boot(page, value) {
   await page.waitForFunction(expectedName => typeof state !== 'undefined' && state?.settings?.name === expectedName, value.settings.name);
 }
 
-test('ERR-005 heartbeat inicializa e persiste o relógio entre reinícios do app', async ({ page }) => {
-  const value = fixture('Heartbeat persistente');
+test('ERR-005 heartbeat inicializa cooldown em memória sem reescrever a persistência no bootstrap', async ({ page }) => {
+  const value = fixture('Heartbeat bootstrap seguro');
   value.sophy.introDone = true;
   value.sophy.lastProactiveAt = null;
   await boot(page, value);
 
-  const first = await page.evaluate(() => state.sophy.lastProactiveAt);
-  expect(first).toBeTruthy();
+  const first = await page.evaluate(() => ({
+    last: state.sophy.lastProactiveAt,
+    fallback: JSON.parse(localStorage.getItem('sfp_final_fallback'))
+  }));
+  expect(first.last).toBeNull();
+  expect(first.fallback).toEqual(value);
 
   await page.reload();
-  await page.waitForFunction(() => typeof state !== 'undefined' && state?.settings?.name === 'Heartbeat persistente');
-  const second = await page.evaluate(() => state.sophy.lastProactiveAt);
-  expect(second).toBe(first);
+  await page.waitForFunction(() => typeof state !== 'undefined' && state?.settings?.name === 'Heartbeat bootstrap seguro');
+  const second = await page.evaluate(() => ({
+    last: state.sophy.lastProactiveAt,
+    fallback: JSON.parse(localStorage.getItem('sfp_final_fallback'))
+  }));
+  expect(second.last).toBeNull();
+  expect(second.fallback).toEqual(value);
 });
 
 test('ERR-005 heartbeat periódico gera mensagem relevante sem force e persiste após reload', async ({ page }) => {
