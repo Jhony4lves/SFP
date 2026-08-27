@@ -1,3 +1,4 @@
+// Regressão do fluxo seguro: persistir antes de limpar e fechar formulários.
 const { test, expect } = require('@playwright/test');
 const { fixture, expectBootComplete, writeIndexedDB } = require('./helpers');
 
