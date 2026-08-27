@@ -321,7 +321,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
     const accountInitial = page.locator('#accountInitial');
     await accountInitial.fill('123.4567');
     await accountInitial.blur();
-    expect(await accountInitial.inputValue()).toBe('123.45');
+    expect(await accountInitial.inputValue()).toBe('123,45');
     await page.evaluate(() => closeProgressive());
 
     // Testa que percentual de juros de dívidas (#debtRate) NÃO é truncado para 2 casas
