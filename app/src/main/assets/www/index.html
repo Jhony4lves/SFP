@@ -4565,6 +4565,9 @@ function isMonetaryInput(el){
  if(MONETARY_INPUT_IDS.has(el.id))return true;
  if(el.classList.contains('money-input')||el.dataset.moneyInput==='true')return true;
  if(el.closest('.money-field'))return true;
+ // Copy contextual não pode transformar campos de texto comuns em dinheiro.
+ // O fallback por label só vale para inputs com semântica numérica explícita.
+ if(el.type!=='number'&&el.inputMode!=='decimal')return false;
  let labelTxt=(el.closest('label')?.textContent||'').toLowerCase();
  return /valor|saldo|limite|parcela|meta|aporte|pagamento|receita|despesa/.test(labelTxt)&&!/juros|taxa|%|parcelas|dia|vencimento/.test(labelTxt)
 }
