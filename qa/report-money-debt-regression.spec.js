@@ -78,3 +78,19 @@ test('ERR-011 parcela pode ser ajustada ao contrato real sem recálculo invasivo
   await expect(page.locator('#debtPaymentHint')).toContainText(/contrato real/i);
   await expect(page.locator('#debtPayment')).toHaveValue('95.50');
 });
+
+test('ERR-011 taxa percentual com ponto e zeros finais não vira milhar', async ({ page }) => {
+  await boot(page, fixture('Taxa percentual QA'));
+  await page.evaluate(() => openManagementAction('dividas'));
+  await page.locator('#debtName').fill('Taxa 1 por cento');
+  await page.locator('#debtBalance').fill('1000');
+  await page.locator('#debtRate').fill('1.000');
+  await page.locator('#debtRatePeriod').selectOption('monthly');
+  await page.locator('#debtInstallments').fill('12');
+  await expect.poll(() => page.locator('#debtPayment').inputValue()).toBe('88.85');
+  await page.locator('#debtFirstDue').fill('2026-09-10');
+  await page.locator('#debtForm').evaluate(form => form.requestSubmit());
+  const saved = await page.evaluate(() => state.debts.find(d => d.name === 'Taxa 1 por cento'));
+  expect(saved.rate).toBe(1);
+  expect(saved.payment).toBe(88.85);
+});
