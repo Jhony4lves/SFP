@@ -3,7 +3,7 @@ const { fixture, writeIndexedDB, expectBootComplete } = require('./helpers');
 
 // ERR-014 cobre tanto privacidade no boot quanto ativação durante a sessão.
 // A máscara precisa mudar na UI antes da persistência assíncrona terminar.
-// Este arquivo também força a rodada final de regressão após ajustes de QA da PR.
+// Rodada final também protege o comentário P1 levantado no review automatizado.
 async function boot(page, privacy = false) {
   const value = fixture('ERR-014');
   value.settings.privacy = privacy;
