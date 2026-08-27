@@ -89,3 +89,18 @@ test('ERR-027 regra de transferência aprendida permanece neutra economicamente'
     confidence: 'high'
   });
 });
+
+test('ERR-027 editor preserva categoria aprendida fora da lista padrão', async ({ page }) => {
+  const value = fixture('Categoria aprendida preservada');
+  value.classificationRules = [{ pattern: 'APORTE CDB', action: 'expense', category: 'Investimentos', source: 'learned' }];
+  await boot(page, value);
+
+  const item = page.locator('#rulesList [data-rule-index="0"]');
+  await item.getByRole('button', { name: 'Editar' }).click();
+  await expect(page.locator('#ruleEditCategory')).toHaveValue('Investimentos');
+  await page.locator('#ruleEditPattern').fill('APORTE RENDA FIXA');
+  await page.locator('#ruleEditSave').click();
+
+  const rule = await page.evaluate(() => state.classificationRules[0]);
+  expect(rule).toMatchObject({ pattern: 'APORTE RENDA FIXA', category: 'Investimentos' });
+});
