@@ -2,10 +2,10 @@ from pathlib import Path
 
 path = Path('app/src/main/assets/www/index.html')
 s = path.read_text(encoding='utf-8')
-old = "  if(/parcela\\s*\\d+\\s*\\/\\s*\\d+/.test(d))return 'purchase';"
-new = "  if(/parcela\\s*\\d+\\s*\\/\\s*\\d+/.test(d)||/\\bpix no credito\\b/.test(d))return 'purchase';"
+old = "function renderAll(){renderSelects();renderTop();renderToday();renderDashboard();renderAnalyticsDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderDataCenter();renderConfig();renderFavorites();renderSophy();applyPrivacy();formatMoneyInputs()}"
+new = "function renderAll(){renderSelects();renderTop();renderToday();renderDashboard();renderAnalyticsDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderFinancialAudit();renderDataCenter();renderConfig();renderFavorites();renderSophy();applyPrivacy();formatMoneyInputs()}"
 if s.count(old) != 1:
-    raise SystemExit(f'expected 1 Pix anchor match, got {s.count(old)}')
+    raise SystemExit(f'expected 1 renderAll match, got {s.count(old)}')
 s = s.replace(old, new, 1)
 path.write_text(s, encoding='utf-8')
-print('restored Pix no Crédito as structural card-debit anchor')
+print('financial audit now refreshes in renderAll')
