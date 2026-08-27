@@ -9783,7 +9783,7 @@ function initOther(){
  updateContextFab();
  if($('cfgTheme')) $('cfgTheme').onchange=async()=>{await setThemePreference($('cfgTheme').value,{persist:true})};
  document.querySelectorAll('.nav button[data-page]').forEach(b=>b.onclick=()=>setPage(b.dataset.page));if($('moreNavBtn'))$('moreNavBtn').onclick=showMoreMenu;document.addEventListener('click',e=>{let b=e.target.closest?.('[data-go]');if(!b)return;b.dataset.go==='lancamentos'?contextualNew(document.querySelector('.tab.active')?.id):setPage(b.dataset.go)});document.querySelectorAll('.quicktype').forEach(b=>b.onclick=()=>setKind(b.dataset.kind));
- if($('privacyToggle'))$('privacyToggle').onclick=async()=>{state.settings.privacy=!state.settings.privacy;await dbSet(state);lastSavedState=clone(state);applyPrivacy()};
+ if($('privacyToggle'))$('privacyToggle').onclick=async()=>{let from=$('txFrom')?.value||'',to=$('txTo')?.value||'';state.settings.privacy=!state.settings.privacy;await dbSet(state);lastSavedState=clone(state);renderSelects();if($('txFrom')&&from)$('txFrom').value=from;if($('txTo')&&to)$('txTo').value=to;applyPrivacy()};
  if($('dcBackupNow'))$('dcBackupNow').onclick=()=>download(JSON.stringify(state,null,2),`sfp-backup-${localCivilDate()}.json`,'application/json');
  if($('dcAutoBackups'))$('dcAutoBackups').onclick=showAutoBackups;
  if($('dcAudit'))$('dcAudit').onclick=()=>setPage('auditoria');
