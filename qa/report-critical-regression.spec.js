@@ -14,6 +14,7 @@ async function boot(page, value) {
 test('ERR-001/002 fatura aceita OFX e mantém prévia antes de persistir', async ({ page }) => {
   await boot(page, fixture('Fatura OFX'));
   await page.evaluate(() => {
+    setPage('cartoes');
     document.querySelector('#cardImportCard').value = '1';
     document.querySelector('#cardImportMonth').value = '2026-03';
   });
@@ -119,7 +120,7 @@ test('ERR-019 recorrência fecha o fluxo após salvar e aparece na lista', async
   await page.locator('#recAmount').fill('80');
   await page.locator('#recDay').fill('5');
   await page.locator('#recStart').fill('2026-01');
-  await page.locator('#recForm button[type="submit"]').click();
+  await page.locator('#recForm button').click();
   await expect.poll(() => page.evaluate(() => state.recurring.some(r => r.desc === 'Academia QA'))).toBe(true);
   await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
   await expect(page.locator('#recList')).toContainText('Academia QA');
