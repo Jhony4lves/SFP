@@ -1,0 +1,33 @@
+name: Patch Sophy heartbeat
+
+on:
+  push:
+    branches:
+      - fix-sophy-heartbeat
+    paths:
+      - scripts/patch_sophy_heartbeat.py
+      - .github/workflows/patch-sophy-heartbeat.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix-sophy-heartbeat
+      - name: Apply patch
+        run: python scripts/patch_sophy_heartbeat.py
+      - name: Commit patch
+        run: |
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/index.html
+          git commit -m "fix: run and persist Sophy heartbeat"
+          git push
