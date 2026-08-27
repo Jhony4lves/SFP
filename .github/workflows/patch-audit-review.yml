@@ -1,0 +1,33 @@
+name: Patch audit review
+
+on:
+  push:
+    branches:
+      - fix/audit-review-and-pix
+    paths:
+      - scripts/patch_audit_review.py
+      - .github/workflows/patch-audit-review.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/audit-review-and-pix
+      - name: Apply patch
+        run: python scripts/patch_audit_review.py
+      - name: Commit patch
+        run: |
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/index.html
+          git commit -m "fix: make financial review actionable and separate card debit semantics"
+          git push
