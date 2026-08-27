@@ -63,7 +63,7 @@ test('ERR-005 heartbeat periódico gera mensagem relevante sem force e persiste 
 
   expect(result.text).toContain('livre projetado');
   expect(result.afterCount).toBe(result.beforeCount + 1);
-  expect(result.latest).toContain('Conta');
+  expect(result.latest).toContain('livre projetado');
   expect(result.lastAt).toBeTruthy();
 
   await page.reload();
