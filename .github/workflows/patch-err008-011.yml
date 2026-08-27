@@ -1,0 +1,21 @@
+name: Patch ERR 008 011
+on:
+  push:
+    branches: [fix/report-err-008-011]
+    paths: [.github/workflows/patch-err008-011.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/report-err-008-011
+      - run: python scripts/patch_err008_011.py
+      - run: |
+          git config user.name "SFP Patch Runner"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/src/main/assets/www/index.html
+          git commit -m "fix(finance): localize money input and estimate debt payments"
+          git push origin HEAD:fix/report-err-008-011
