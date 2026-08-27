@@ -9772,7 +9772,7 @@ function invoiceSemanticHint(desc){
   const d=normalizeImportSignalText(desc);
   if(/\b(pagamento recebido|pagamento da fatura|pagamento de fatura|payment received|pagamento cartao|pagamento cartão)\b/.test(d))return 'payment';
   if(/\b(estorno|reembolso|refund|cashback|ajuste credor|credito recebido)\b/.test(d))return 'payment';
-  if(/parcela\s*\d+\s*\/\s*\d+/.test(d))return 'purchase';
+  if(/parcela\s*\d+\s*\/\s*\d+/.test(d)||/\bpix no credito\b/.test(d))return 'purchase';
   return null;
 }
 function sanitizeImportDescription(desc){
