@@ -11,6 +11,15 @@ async function boot(page, value) {
   await page.evaluate(() => setPage('lancamentos'));
 }
 
+test('P1 lançamentos: descrição nunca entra no formatador monetário', async ({ page }) => {
+  const value = fixture('Descrição não monetária P1');
+  await boot(page, value);
+  expect(await page.locator('#txDesc').evaluate(el => ({ monetary: isMonetaryInput(el), moneyAncestor: !!el.closest('.money-field') }))).toEqual({ monetary: false, moneyAncestor: false });
+  await page.locator('#txDesc').fill('Texto preservado');
+  await page.locator('#txAmount').fill('12.34');
+  await expect(page.locator('#txDesc')).toHaveValue('Texto preservado');
+});
+
 test('P1 lançamentos: conta a pagar preserva identidade, vencimento e status ao editar', async ({ page }) => {
   const value = fixture('Conta a pagar P1');
   value.transactions.push({
@@ -78,7 +87,7 @@ test('P1 lançamentos: transferência da tabela pode ser editada sem duplicar e 
 
   let transfers = await page.evaluate(() => structuredClone(state.transfers));
   expect(transfers).toHaveLength(1);
-  expect(transfers[0]).toMatchObject({ id: 880, amount: 75, fromId: 1, toId: 2 });
+  expect(transfers[0]).toMatchObject({ id: 880, desc: 'Mover para reserva', amount: 75, fromId: 1, toId: 2 });
 
   await page.evaluate(() => setPage('lancamentos'));
   const updatedRow = page.locator('#txTable tr').filter({ hasText: 'Mover para reserva' });
@@ -94,27 +103,29 @@ test('P1 lançamentos: não exibe controles que a operação ignora', async ({ p
   await page.locator('[data-kind="card"]').click();
   await expect(page.locator('#cardFields')).toBeVisible();
   await expect(page.locator('#txAccountField')).toBeHidden();
-  await expect(page.locator('#txRecurringField')).toBeHidden();
+  await expect(page.locator('#txRecurringField')).toHaveClass(/hidden/);
   await expect(page.locator('#txFormSubtitle')).toContainText('fatura');
 
   await page.locator('[data-kind="transfer"]').click();
   await expect(page.locator('#transferFields')).toBeVisible();
-  await expect(page.locator('#txRecurringField')).toBeHidden();
+  await expect(page.locator('#txRecurringField')).toHaveClass(/hidden/);
   await expect(page.locator('#txClassificationSection')).toBeHidden();
 
   await page.locator('[data-kind="income"]').click();
   await expect(page.locator('#incomeFields')).toBeVisible();
-  await expect(page.locator('#txRecurringField')).toBeHidden();
+  await expect(page.locator('#txRecurringField')).toHaveClass(/hidden/);
   await expect(page.locator('#txAccountField')).toBeVisible();
   await expect(page.locator('#txAccountLabel')).toContainText('recebimento');
 
   await page.locator('[data-kind="bill"]').click();
-  await expect(page.locator('#txRecurringField')).toBeVisible();
+  await expect(page.locator('#txRecurringField')).not.toHaveClass(/hidden/);
   await expect(page.locator('#billFields')).toBeVisible();
   await expect(page.locator('#txDescLabel')).toContainText('Conta');
+  await page.locator('#txMoreDetails').evaluate(el => { el.open = true; });
+  await expect(page.locator('#txRecurringField')).toBeVisible();
 
   await page.locator('[data-kind="expense"]').click();
-  await expect(page.locator('#txRecurringField')).toBeVisible();
+  await expect(page.locator('#txRecurringField')).not.toHaveClass(/hidden/);
   await expect(page.locator('#txAccountLabel')).toContainText('pagamento');
 });
 
