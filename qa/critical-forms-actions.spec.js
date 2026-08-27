@@ -43,6 +43,8 @@ test('formulários críticos recusam valores monetários inválidos', async ({ p
   await page.locator('#modalRoot #cardForm button').click();
   await expect.poll(() => page.evaluate(() => state.cards.some(card => card.name === 'Cartão inválido'))).toBe(false);
   await expect(page.locator('#toast')).toContainText('limite do cartão');
+  await page.locator('#modalRoot #closeProgressive').click();
+  await expect(page.locator('#modalRoot')).toHaveClass('hidden');
 
   await page.locator('.nav button[data-page="metas"]').click();
   await page.evaluate(() => openManagementAction('metas'));
