@@ -3846,7 +3846,7 @@ function invoiceCalculated(cardId,m){
 }
 function invoiceStatus(cardId,m){return state.invoices.find(x=>x.cardId==cardId&&x.month===m)||{status:'open',paidAmount:0,payments:[]}}
 function invoiceTotal(cardId,m){let i=invoiceStatus(cardId,m);return i.officialTotal!=null?+i.officialTotal:invoiceCalculated(cardId,m)}
-function invoiceEconomicTotal(cardId,m){let rows=installments(m).filter(x=>x.card?.id==cardId);if(!rows.some(x=>x.purchase?.economicImpact==='neutral'))return invoiceTotal(cardId,m);let p=rows.filter(x=>x.purchase?.economicImpact!=='neutral').reduce((sum,x)=>sum+x.amount,0),a=invoiceAdjustments(cardId,m).reduce((sum,x)=>sum+x.amount,0);return Math.round((p+a)*100)/100}
+function invoiceEconomicTotal(cardId,m){let rows=installments(m).filter(x=>x.card?.id==cardId),neutral=rows.filter(x=>x.purchase?.economicImpact==='neutral').reduce((sum,x)=>sum+x.amount,0);return Math.max(0,Math.round((invoiceTotal(cardId,m)-neutral)*100)/100)}
 function invoiceRemaining(cardId,m){let i=invoiceStatus(cardId,m);return Math.max(0,Math.round((invoiceTotal(cardId,m)-(i.paidAmount||0))*100)/100)}
 function ensureInvoice(cardId,m){
  let inv=state.invoices.find(i=>i.cardId==cardId&&i.month==m);
@@ -3855,6 +3855,7 @@ function ensureInvoice(cardId,m){
 }
 function invoiceDisplayStatus(cardId,m){
  let st=invoiceStatus(cardId,m),total=invoiceTotal(cardId,m);
+ if(st.historicalOnly&&(st.paidAmount||0)>0)return'paid';
  if(st.paidAmount>=total-.01&&total>0)return'paid';
  if(st.paidAmount>0)return'partial';
  if(st.closedAt)return'closed';
@@ -8472,17 +8473,22 @@ window.openFinancialReview=(kind,id)=>{
   const options=isPurchase
     ? `<option value="expense">Gasto/compra real</option><option value="transfer">Transferência ou movimentação patrimonial</option>`
     : `<option value="expense">Despesa real</option><option value="income">Receita real</option><option value="transfer">Transferência entre contas / movimentação patrimonial</option><option value="card-payment">Pagamento de fatura</option><option value="neutral">Outro movimento neutro</option>`;
-  root.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Revisar classificação financeira"><div class="head"><div><h2>Revisar classificação</h2><p>${sfpEsc(item.desc||'Movimentação')} · ${sfpEsc(item.date||item.purchaseDate||'')}</p></div><button class="btn2" id="financialReviewCancel">Cancelar</button></div><div class="note">${isPurchase?'Este item continuará como débito/obrigação da fatura. A escolha abaixo altera apenas o impacto econômico nos relatórios e orçamento.':'Escolha o que esta movimentação representa economicamente. O SFP não altera o valor nem a data.'}</div><label>O que isto representa?<select id="financialReviewNature">${options}</select></label><label id="financialReviewCategoryWrap">Categoria<select id="financialReviewCategory">${CATEGORIES.map(c=>`<option ${c===currentCategory?'selected':''}>${sfpEsc(c)}</option>`).join('')}</select></label><div class="section-actions"><button class="btn" id="financialReviewSave">Salvar classificação</button></div></div>`;
-  const sync=()=>{let n=$('financialReviewNature').value;$('financialReviewCategoryWrap').classList.toggle('hidden',['transfer','card-payment','neutral'].includes(n))};
+  root.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Revisar classificação financeira"><div class="head"><div><h2>Revisar classificação</h2><p>${sfpEsc(item.desc||'Movimentação')} · ${sfpEsc(item.date||item.purchaseDate||'')}</p></div><button class="btn2" id="financialReviewCancel">Cancelar</button></div><div class="note">${isPurchase?'Este item continuará como débito/obrigação da fatura. A escolha abaixo altera apenas o impacto econômico nos relatórios e orçamento.':'Escolha o que esta movimentação representa economicamente. O SFP não altera o valor nem a data.'}</div><label>O que isto representa?<select id="financialReviewNature">${options}</select></label><label id="financialReviewCategoryWrap">Categoria<select id="financialReviewCategory">${CATEGORIES.map(c=>`<option ${c===currentCategory?'selected':''}>${sfpEsc(c)}</option>`).join('')}</select></label>${isPurchase?'':`<label id="financialReviewCounterpartWrap" class="hidden">Outra conta da transferência<select id="financialReviewCounterpart">${state.accounts.filter(a=>a.id!=item.accountId).map(a=>`<option value="${a.id}">${sfpEsc(a.name)} • ${brl(accountBalance(a.id))}</option>`).join('')}</select><small>O SFP usará esta conta como a outra ponta da transferência e preservará valor e data.</small></label>`}<div class="section-actions"><button class="btn" id="financialReviewSave">Salvar classificação</button></div></div>`;
+  const sync=()=>{let n=$('financialReviewNature').value;$('financialReviewCategoryWrap').classList.toggle('hidden',['transfer','card-payment','neutral'].includes(n));if(!isPurchase&&$('financialReviewCounterpartWrap'))$('financialReviewCounterpartWrap').classList.toggle('hidden',n!=='transfer')};
   $('financialReviewNature').onchange=sync;sync();$('financialReviewCancel').onclick=()=>{root.className='hidden';root.replaceChildren()};
   $('financialReviewSave').onclick=async()=>{let n=$('financialReviewNature').value,cat=$('financialReviewCategory').value||'Outros';
     if(isPurchase){if(n==='transfer'){item.economicImpact='neutral';item.semanticClass='user_card_transfer';item.category='Transferência'}else{item.economicImpact='economic';item.semanticClass='user_expense';item.category=cat}}
-    else if(n==='transfer'){item.economicImpact='neutral';item.semanticClass='user_transfer';item.category='Transferência'}
+    else if(n==='transfer'){
+      const counterpartId=+$('financialReviewCounterpart')?.value;if(!counterpartId||counterpartId==item.accountId||!account(counterpartId))return toast('Escolha a outra conta da transferência.','warning');
+      const originalKind=item.kind,fromId=originalKind==='income'?counterpartId:item.accountId,toId=originalKind==='income'?item.accountId:counterpartId;
+      state.transfers.push({id:uid(),desc:item.desc,amount:Math.abs(item.amount),date:item.date,fromId,toId,tags:[...new Set([...(item.tags||[]),'auditoria','transferência'])],statementKey:item.statementKey||null,balanceImpact:item.balanceImpact!==false,semanticClass:'user_transfer',classificationConfidence:1,classificationReason:'Convertido em transferência entre contas pelo usuário na Auditoria.',sourceTransactionId:item.id,createdAt:item.createdAt||Date.now()});
+      state.transactions=state.transactions.filter(t=>t.id!==item.id);
+    }
     else if(n==='card-payment'){item.kind='expense';item.economicImpact='neutral';item.semanticClass='invoice_payment';item.category='Cartão'}
     else if(n==='neutral'){item.economicImpact='neutral';item.semanticClass='user_neutral'}
     else{item.kind=n==='income'?'income':'expense';item.economicImpact='economic';item.semanticClass=n==='income'?'user_income':'user_expense';item.category=cat}
-    item.classificationConfidence=1;item.classificationReason='Classificado manualmente pelo usuário na Auditoria.';
-    await save('Revisar classificação financeira');root.className='hidden';root.replaceChildren();renderAll();showFeedback('Classificação salva. A integridade financeira foi recalculada.',{title:'Revisão concluída',type:'success'});
+    if(!(n==='transfer'&&!isPurchase)){item.classificationConfidence=1;item.classificationReason='Classificado manualmente pelo usuário na Auditoria.'}
+    await save('Revisar classificação financeira');root.className='hidden';root.replaceChildren();renderAll();showFeedback(n==='transfer'&&!isPurchase?'Transferência registrada com as duas contas. A integridade financeira foi recalculada.':'Classificação salva. A integridade financeira foi recalculada.',{title:'Revisão concluída',type:'success'});
   };
 };
 function renderFinancialAudit(){
