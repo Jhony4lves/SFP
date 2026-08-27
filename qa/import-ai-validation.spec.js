@@ -19,7 +19,7 @@ const nubankOfx = `<OFX><BANKTRANLIST>
 <STMTTRN><DTPOSTED>20260804<TRNAMT>59.99<FITID>NUB-4<MEMO>Pagamento recebido</STMTTRN>
 </BANKTRANLIST></OFX>`;
 
-test('fatura OFX realista do Nubank: negativos são compras e Pagamento recebido positivo é pagamento', async ({ page }) => {
+test('fatura OFX realista do Nubank: negativos são débitos da fatura e Pagamento recebido positivo é pagamento', async ({ page }) => {
   await boot(page, 'Nubank OFX real');
   const result = await page.evaluate(async (ofx) => {
     const rows = parseOFX(ofx);
@@ -37,7 +37,8 @@ test('fatura OFX realista do Nubank: negativos são compras e Pagamento recebido
       totals: cardImportDraft.rows.filter(r => r.kind === 'purchase').map(r => r.total),
       paymentTarget: cardImportDraft.rows.find(r => r.kind === 'payment')?.targetMonth,
       summary: document.querySelector('#cardImportSummary').textContent,
-      validation: document.querySelector('#cardImportValidation').textContent
+      validation: document.querySelector('#cardImportValidation').textContent,
+      mobileText: document.querySelector('#cardImportMobile').textContent
     };
   }, nubankOfx);
 
@@ -48,8 +49,19 @@ test('fatura OFX realista do Nubank: negativos são compras e Pagamento recebido
   expect(result.amounts).toEqual([8, 8.96, 94.36, 59.99]);
   expect(result.totals).toEqual([8, 8.96, 283.08]);
   expect(result.paymentTarget).toBe('2026-07');
-  expect(result.summary).toContain('3 compra(s), 1 pagamento(s)');
+  expect(result.summary).toContain('3 débito(s) de fatura, 1 pagamento(s)/crédito(s)');
   expect(result.validation).toContain('débitos negativos');
+  expect(result.mobileText).toContain('Pix no crédito • débito na fatura');
+  expect(result.mobileText).not.toContain('Pix no Crédito • Compra');
+});
+
+test('Pix no Crédito é débito estrutural da fatura, mas finalidade econômica continua em revisão', async ({ page }) => {
+  await boot(page, 'Pix não é compra automática');
+  const result = await page.evaluate(() => semanticClassify('Pix no Crédito - Ana Carolina', -8.96));
+  expect(result.semanticClass).toBe('possible_transfer');
+  expect(result.economicImpact).toBe('review');
+  expect(result.action).toBe('ignore');
+  expect(result.reason).toContain('precisa identificar');
 });
 
 test('CSV legado mantém convenção positiva=compra e negativa=pagamento', async ({ page }) => {
@@ -64,7 +76,7 @@ test('CSV legado mantém convenção positiva=compra e negativa=pagamento', asyn
   expect(result.kinds).toEqual(['purchase', 'payment']);
 });
 
-test('Groq recebe somente amostra sanitizada e não pode derrubar âncora semântica forte', async ({ page }) => {
+test('Groq recebe somente amostra sanitizada e não pode derrubar âncora estrutural forte', async ({ page }) => {
   await boot(page, 'Groq sanitizado');
   const result = await page.evaluate(async () => {
     let captured = null;
