@@ -11,13 +11,18 @@ async function boot(page, value) {
   await page.evaluate(() => setPage('lancamentos'));
 }
 
-test('P1 lançamentos: descrição nunca entra no formatador monetário', async ({ page }) => {
+test('P1 lançamentos: descrição nunca entra no formatador monetário, mesmo com copy contextual', async ({ page }) => {
   const value = fixture('Descrição não monetária P1');
   await boot(page, value);
-  expect(await page.locator('#txDesc').evaluate(el => ({ monetary: isMonetaryInput(el), moneyAncestor: !!el.closest('.money-field') }))).toEqual({ monetary: false, moneyAncestor: false });
-  await page.locator('#txDesc').fill('Texto preservado');
-  await page.locator('#txAmount').fill('12.34');
-  await expect(page.locator('#txDesc')).toHaveValue('Texto preservado');
+
+  for (const kind of ['expense', 'bill', 'card', 'income', 'transfer']) {
+    await page.locator(`[data-kind="${kind}"]`).click();
+    const desc = page.locator('#txDesc');
+    expect(await desc.evaluate(el => ({ monetary: isMonetaryInput(el), moneyAncestor: !!el.closest('.money-field') }))).toEqual({ monetary: false, moneyAncestor: false });
+    await desc.fill(`Texto ${kind}`);
+    await page.locator('#txAmount').focus();
+    await expect(desc).toHaveValue(`Texto ${kind}`);
+  }
 });
 
 test('P1 lançamentos: conta a pagar preserva identidade, vencimento e status ao editar', async ({ page }) => {
@@ -90,8 +95,9 @@ test('P1 lançamentos: transferência da tabela pode ser editada sem duplicar e 
   expect(transfers[0]).toMatchObject({ id: 880, desc: 'Mover para reserva', amount: 75, fromId: 1, toId: 2 });
 
   await page.evaluate(() => setPage('lancamentos'));
-  const updatedRow = page.locator('#txTable tr').filter({ hasText: 'Mover para reserva' });
-  await updatedRow.getByRole('button', { name: 'Excluir' }).click();
+  const deleteButton = page.locator('#txTable tr').filter({ hasText: 'Mover para reserva' }).getByRole('button', { name: 'Excluir' });
+  await expect(deleteButton).toHaveAttribute('onclick', 'trashTransfer(880)');
+  await deleteButton.dispatchEvent('click');
   await expect.poll(() => page.evaluate(() => state.transfers.length)).toBe(0);
   expect(await page.evaluate(() => state.trash.some(item => item.type === 'transfer' && item.item?.id === 880))).toBe(true);
 });
