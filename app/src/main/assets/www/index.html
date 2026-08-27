@@ -8012,16 +8012,14 @@ function showSophySettingsModal(){
   };
 }
 
-function sophyCheckProactivity({force=false}={}){
+function sophyCheckProactivity({force=false,baselineAt=null}={}){
   if(!state?.sophy)normalize();
   const sophy=state.sophy;
   if(!sophy.settings?.proactivityEnabled&&!force)return null;
-  if(!sophy.lastProactiveAt){
-    sophy.lastProactiveAt=new Date().toISOString();
-    if(!force)return null;
-  }
+  const now=Date.now(),baseline=Number(baselineAt);
+  if(!sophy.lastProactiveAt&&!force&&!Number.isFinite(baseline))return null;
   if(!sophy.introDone&&!force)return null;
-  const now=Date.now(),lastAt=new Date(sophy.lastProactiveAt).getTime(),hoursSince=(now-lastAt)/(1000*60*60);
+  const lastAt=sophy.lastProactiveAt?new Date(sophy.lastProactiveAt).getTime():(Number.isFinite(baseline)?baseline:now),hoursSince=(now-lastAt)/(1000*60*60);
   if(!force&&hoursSince<4)return null;
 
   const free=allAccountBalance()-commitmentUntilNextIncome();
@@ -8184,16 +8182,18 @@ async function sophySendMessage(text){
 
 
 const SOPHY_HEARTBEAT_INTERVAL_MS=15*60*1000;
-let sophyHeartbeatTimer=null,sophyHeartbeatVisibilityBound=false,sophyHeartbeatInFlight=false;
+let sophyHeartbeatTimer=null,sophyHeartbeatVisibilityBound=false,sophyHeartbeatInFlight=false,sophyHeartbeatStartedAt=null;
 async function sophyHeartbeatTick({force=false,notify=true}={}){
   if(sophyHeartbeatInFlight)return null;
   if(!force&&typeof document!=='undefined'&&document.visibilityState==='hidden')return null;
   sophyHeartbeatInFlight=true;
   const beforeSophy=clone(state?.sophy||{}),beforeStamp=state?.sophy?.lastProactiveAt||null;
+  if(!beforeStamp&&!sophyHeartbeatStartedAt)sophyHeartbeatStartedAt=Date.now();
   try{
-    const text=sophyCheckProactivity({force});
+    const text=sophyCheckProactivity({force,baselineAt:sophyHeartbeatStartedAt});
     const afterStamp=state?.sophy?.lastProactiveAt||null,changed=beforeStamp!==afterStamp;
     if(!text&&!changed)return null;
+    if(afterStamp)sophyHeartbeatStartedAt=new Date(afterStamp).getTime();
     normalize();await dbSet(state);lastSavedState=clone(state);
     if(text){
       renderSophy();
