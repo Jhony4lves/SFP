@@ -97,10 +97,14 @@ test('P1 lançamentos: transferência da tabela pode ser editada sem duplicar e 
 
   await page.evaluate(() => setPage('lancamentos'));
   const deleteButton = page.locator('#txTable tr').filter({ hasText: 'Mover para reserva' }).getByRole('button', { name: 'Excluir' });
+  // Prova o vínculo do controle renderizado; a função é exercitada separadamente para evitar corrida com o rerender da tabela.
   await expect(deleteButton).toHaveAttribute('onclick', 'trashTransfer(880)');
-  await deleteButton.dispatchEvent('click');
+  await page.evaluate(async () => { await trashTransfer(880); });
   await expect.poll(() => page.evaluate(() => state.transfers.length)).toBe(0);
   expect(await page.evaluate(() => state.trash.some(item => item.type === 'transfer' && item.item?.id === 880))).toBe(true);
+  const persisted = await page.evaluate(async () => (await dbGet()).value);
+  expect(persisted.transfers.some(t => t.id === 880)).toBe(false);
+  expect(persisted.trash.some(item => item.type === 'transfer' && item.item?.id === 880)).toBe(true);
 });
 
 test('P1 lançamentos: não exibe controles que a operação ignora', async ({ page }) => {
