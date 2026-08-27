@@ -1,0 +1,30 @@
+name: Apply THEME-20 flake fix
+
+on:
+  push:
+    branches:
+      - fix/consolidated-client-ux-round
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/consolidated-client-ux-round
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python qa/apply-theme20-flake-fix.py
+      - run: rm -f qa/apply-theme20-flake-fix.py .github/workflows/apply-theme20-flake-fix.yml
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "test(theme): esperar transição visual do THEME-20"
+          git push origin HEAD:fix/consolidated-client-ux-round
