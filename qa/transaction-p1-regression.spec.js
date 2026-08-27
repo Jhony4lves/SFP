@@ -15,6 +15,7 @@ test('P1 lançamentos: descrição nunca entra no formatador monetário, mesmo c
   const value = fixture('Descrição não monetária P1');
   await boot(page, value);
 
+  // A copy muda por operação; nenhuma palavra do label pode reclassificar #txDesc como dinheiro.
   for (const kind of ['expense', 'bill', 'card', 'income', 'transfer']) {
     await page.locator(`[data-kind="${kind}"]`).click();
     const desc = page.locator('#txDesc');
