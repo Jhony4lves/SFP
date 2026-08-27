@@ -98,9 +98,13 @@ public class MainActivity extends AppCompatActivity {
                 intent.setType("*/*");
                 intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
                         "text/csv",
+                        "application/csv",
+                        "text/comma-separated-values",
+                        "application/vnd.ms-excel",
                         "application/json",
                         "application/octet-stream",
                         "application/x-ofx",
+                        "application/ofx",
                         "text/plain"
                 });
                 startActivityForResult(intent, FILE_CHOOSER_REQUEST);
