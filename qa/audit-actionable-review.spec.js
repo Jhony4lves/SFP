@@ -13,8 +13,9 @@ async function boot(page, value) {
   );
 }
 
-test('AUDIT-REVIEW-01: Revisar é ação real e permite confirmar Pix como transferência sem mudar valor/data', async ({ page }) => {
+test('AUDIT-REVIEW-01: Revisar transferência exige e registra a contraparte sem alterar valor/data', async ({ page }) => {
   const value = fixture('Auditoria acionável');
+  value.accounts.push({ id: 2, name: 'Reserva', type: 'Conta corrente', initial: 50, reconciled: null, balanceMode: 'snapshot', balanceDate: '2026-01-01' });
   value.transactions.push({
     id: 91,
     kind: 'expense',
@@ -40,24 +41,28 @@ test('AUDIT-REVIEW-01: Revisar é ação real e permite confirmar Pix como trans
 
   await expect(page.getByRole('dialog', { name: 'Revisar classificação financeira' })).toBeVisible();
   await page.locator('#financialReviewNature').selectOption('transfer');
+  await expect(page.locator('#financialReviewCounterpartWrap')).toBeVisible();
+  await page.locator('#financialReviewCounterpart').selectOption('2');
   await page.locator('#financialReviewSave').click();
 
-  await expect.poll(() => page.evaluate(() => state.transactions.find(t => t.id === 91)?.economicImpact)).toBe('neutral');
+  await expect.poll(() => page.evaluate(() => state.transactions.some(t => t.id === 91))).toBe(false);
   const result = await page.evaluate(() => {
-    const t = state.transactions.find(x => x.id === 91);
+    const t = state.transfers.find(x => x.sourceTransactionId === 91);
     return {
-      amount: t.amount,
-      date: t.date,
-      category: t.category,
-      semanticClass: t.semanticClass,
-      confidence: t.classificationConfidence,
+      amount: t?.amount,
+      date: t?.date,
+      fromId: t?.fromId,
+      toId: t?.toId,
+      semanticClass: t?.semanticClass,
+      confidence: t?.classificationConfidence,
       stillNeedsReview: financialAuditData().issues.some(i => i.itemKind === 'transaction' && i.itemId === 91)
     };
   });
   expect(result).toMatchObject({
     amount: 125.40,
     date: '2026-01-08',
-    category: 'Transferência',
+    fromId: 1,
+    toId: 2,
     semanticClass: 'user_transfer',
     confidence: 1,
     stillNeedsReview: false
@@ -119,6 +124,19 @@ test('AUDIT-REVIEW-02: Pix no Crédito pode ser neutro economicamente sem sair d
   });
 });
 
+test('AUDIT-REVIEW-03: total econômico preserva diferença oficial ao neutralizar débito', async ({ page }) => {
+  const value = fixture('Total oficial preservado');
+  value.purchases.push(
+    { id: 71, cardId: 1, desc: 'Compra real', total: 80, installments: 1, purchaseDate: '2026-01-05', firstMonth: '2026-01', category: 'Outros', status: 'active', refunds: [], economicImpact: 'economic' },
+    { id: 72, cardId: 1, desc: 'Pix no Crédito interno', total: 20, installments: 1, purchaseDate: '2026-01-06', firstMonth: '2026-01', category: 'Transferência', status: 'active', refunds: [], economicImpact: 'neutral' }
+  );
+  value.invoices.push({ id: 73, cardId: 1, month: '2026-01', status: 'open', paidAmount: 0, officialTotal: 120, accountId: 1, payments: [] });
+  await boot(page, value);
+
+  const totals = await page.evaluate(() => ({ invoice: invoiceTotal(1, '2026-01'), economic: invoiceEconomicTotal(1, '2026-01') }));
+  expect(totals).toEqual({ invoice: 120, economic: 100 });
+});
+
 test('AUDIT-DATA-01: pagamento histórico sem compras não vira falso crítico e oferece correção segura', async ({ page }) => {
   const value = fixture('Fatura histórica');
   value.invoices.push({
@@ -159,6 +177,7 @@ test('AUDIT-DATA-01: pagamento histórico sem compras não vira falso crítico e
       paidAmount: inv.paidAmount,
       paymentCount: inv.payments.length,
       balanceImpact: inv.payments[0].balanceImpact,
+      displayStatus: invoiceDisplayStatus(1, '2026-01'),
       remainingIssues: auditData().issues.filter(i => i.invoiceId === 81).length
     };
   });
@@ -167,6 +186,7 @@ test('AUDIT-DATA-01: pagamento histórico sem compras não vira falso crítico e
     paidAmount: 8,
     paymentCount: 1,
     balanceImpact: false,
+    displayStatus: 'paid',
     remainingIssues: 0
   });
 });
