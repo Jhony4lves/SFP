@@ -9220,7 +9220,7 @@ function showDetail(title,subtitle,body){
  closeProgressive(false);const root=$('modalRoot');root.className='modalback';root.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="${sfpEsc(title)}"><div class="head"><div><h2>${sfpEsc(title)}</h2><p>${sfpEsc(subtitle)}</p></div><button class="btn2" id="closeDetail">Voltar</button></div>${body}</div>`;$('closeDetail').onclick=closeProgressive;root.onclick=e=>{if(e.target===root)closeProgressive()}
 }
 window.openRecurringForm=()=>{setPage('recorrencias');const form=$('recForm');form.reset();$('recId').value='';$('recStart').value=state.mesAtual;showProgressivePanel(form.closest('.management-form-panel'),'Nova recorrência')};
-window.openAssetForm=()=>{setPage('patrimonio');const form=$('assetForm');form.reset();$('assetId').value='';showProgressivePanel(form,'Adicionar ativo externo')};
+window.openAssetForm=()=>{setPage('patrimonio');const form=$('assetForm');form.reset();$('assetId').value='';const submit=form.querySelector('button[type="submit"],button:not([type])');if(submit)submit.textContent='Adicionar ativo';showProgressivePanel(form,'Adicionar ativo externo')};
 window.openManagementAction=page=>{
  setPage(page);
  const map={contas:['accountForm','Nova conta'],cartoes:['cardForm','Novo cartão'],dividas:['debtForm','Nova dívida'],metas:['goalForm','Nova meta']};
@@ -9369,7 +9369,7 @@ function updateGoalPlanCalculation(){
 window.calculateGoalPlan=calculateGoalPlan;window.updateGoalPlanCalculation=updateGoalPlanCalculation;
 
 window.removeGoal=async id=>{let g=state.goals.find(x=>x.id===id);if(g)moveToTrash('goal',g);state.goals=state.goals.filter(g=>g.id!==id);await save('Excluir meta')}
-window.editAsset=id=>{let a=state.assets.find(x=>x.id===id);if(!a)return;$('assetId').value=a.id;$('assetName').value=a.name;$('assetValue').value=a.value;setPage('patrimonio')}
+window.editAsset=id=>{let a=state.assets.find(x=>x.id===id);if(!a)return;$('assetId').value=a.id;$('assetName').value=a.name;$('assetValue').value=a.value;const form=$('assetForm'),submit=form.querySelector('button[type="submit"],button:not([type])');if(submit)submit.textContent='Salvar alterações';setPage('patrimonio');showProgressivePanel(form,'Editar ativo')}
 window.removeAsset=async id=>{let a=state.assets.find(x=>x.id===id);if(a)moveToTrash('asset',a);state.assets=state.assets.filter(a=>a.id!==id);await save('Excluir ativo')}
 window.editRule=i=>{
  let r=state.classificationRules?.[i];if(!r)return;
@@ -9413,12 +9413,45 @@ function initForms(){
  else{let kind=currentKind==='income'?'income':'expense',status=currentKind==='income'?$('txIncomeStatus').value:(currentKind==='expense'?'paid':$('txStatus').value),dueDay=currentKind==='bill'?+$('txDueDay').value:+date.slice(8,10),old=id?state.transactions.find(t=>t.id===id):null,obj={...(old||{}),id:id||uid(),kind,desc,amount,date,category:$('txCategory').value,accountId:+$('txAccount').value,status,dueDay,note,tags,balanceImpact:status==='paid',createdAt:old?.createdAt||Date.now()};if(id)state.transactions=state.transactions.map(t=>t.id===id?obj:t);else state.transactions.push(obj);if($('txRecurring').checked||(currentKind==='income'&&$('txIncomeRecurring').value==='yes')){let rec={id:uid(),desc,type:kind,amount,day:dueDay,category:obj.category,accountId:obj.accountId,start:ym(date),end:'',active:true,skips:[]};if(isPayrollRecurring(rec)){rec.dateRule='business-day-before-anchor';rec.payrollAnchor=+rec.day||1}state.recurring.push(rec)};await save(id?'Editar lançamento':'Novo lançamento')}
  let effect=currentKind==='income'?`Receita de ${brl(amount)} registrada.`:currentKind==='transfer'?`Transferência de ${brl(amount)} registrada.`:currentKind==='card'?`Compra de ${brl(amount)} adicionada ao cartão.`:`Saída de ${brl(amount)} registrada.`;resetTxForm();setPage('hoje',{mode:'replace'});showFeedback(`${effect} Livre projetado agora: ${brl(allAccountBalance()-commitmentUntilNextIncome())}`)};
  $('accountForm').onsubmit=async e=>{e.preventDefault();let panel=e.currentTarget.closest('.management-form-panel'),id=+$('accountId').value,old=id?account(id):null,patch={id:id||uid(),name:$('accountName').value.trim(),type:$('accountType').value,initial:parseMoney($('accountInitial').value)};if(!patch.name)return toast('Informe o nome da conta.','warning');let obj=old?{...old,...patch}:{...patch,reconciled:null};if(id)state.accounts=state.accounts.map(a=>a.id===id?obj:a);else state.accounts.push(obj);await save('Salvar conta');resetManagementForm('accountForm',{id:'accountId',titleId:'accountFormTitle',title:'Adicionar conta',modeId:'accountFormMode',submitId:'accountSubmit',submitText:'Salvar conta'});if(progressiveRestore?.node===panel)closeProgressive(false)};
- $('cardForm').onsubmit=async e=>{e.preventDefault();let id=+$('cardId').value,old=id?card(id):null,patch={id:id||uid(),name:$('cardName').value.trim(),limit:+$('cardLimit').value,closeDay:+$('cardClose').value,dueDay:+$('cardDue').value,payAccountId:+$('cardPayAccount').value};if(!patch.name)return toast('Informe o nome do cartão.','warning');if(!requirePositiveAmount(patch.limit,'O limite do cartão'))return;let obj=old?{...old,...patch}:{...patch,history:[]};if(old&&old.limit!==obj.limit)obj.history.push({id:uid(),at:new Date().toISOString(),type:'limit',text:`Limite alterado de ${brl(old.limit)} para ${brl(obj.limit)}`,amount:obj.limit});if(id)state.cards=state.cards.map(c=>c.id===id?obj:c);else state.cards.push(obj);resetManagementForm('cardForm',{id:'cardId',titleId:'cardFormTitle',title:'Adicionar cartão',modeId:'cardFormMode',submitId:'cardSubmit',submitText:'Salvar cartão'});await save('Salvar cartão')};
+ $('cardForm').onsubmit=async e=>{
+   e.preventDefault();
+   let panel=e.currentTarget.closest('.management-form-panel'),id=+$('cardId').value,old=id?card(id):null,patch={id:id||uid(),name:$('cardName').value.trim(),limit:+$('cardLimit').value,closeDay:+$('cardClose').value,dueDay:+$('cardDue').value,payAccountId:+$('cardPayAccount').value};
+   if(!patch.name)return toast('Informe o nome do cartão.','warning');
+   if(!requirePositiveAmount(patch.limit,'O limite do cartão'))return;
+   let obj=old?{...old,...patch}:{...patch,history:[]};
+   if(old&&old.limit!==obj.limit)obj.history.push({id:uid(),at:new Date().toISOString(),type:'limit',text:`Limite alterado de ${brl(old.limit)} para ${brl(obj.limit)}`,amount:obj.limit});
+   if(id)state.cards=state.cards.map(c=>c.id===id?obj:c);else state.cards.push(obj);
+   await save(id?'Editar cartão':'Novo cartão');
+   resetManagementForm('cardForm',{id:'cardId',titleId:'cardFormTitle',title:'Adicionar cartão',modeId:'cardFormMode',submitId:'cardSubmit',submitText:'Salvar cartão'});
+   if(progressiveRestore?.node===panel)closeProgressive(false);
+   toast(id?'Cartão atualizado com sucesso.':'Cartão salvo com sucesso.','success')
+ };
  $('recForm').onsubmit=async e=>{e.preventDefault();let panel=e.currentTarget.closest('.management-form-panel'),id=+$('recId').value,old=id?state.recurring.find(r=>r.id===id):null,obj={...(old||{}),id:id||uid(),desc:$('recDesc').value.trim(),type:$('recType').value,amount:+$('recAmount').value,day:+$('recDay').value,category:$('recCategory').value,accountId:+$('recAccount').value,start:$('recStart').value,end:$('recEnd').value,active:id?old?.active!==false:true,skips:id?(old?.skips||[]):[]};if(isPayrollRecurring(obj)){obj.dateRule='business-day-before-anchor';obj.payrollAnchor=+obj.day||1}if(!obj.desc)return toast('Informe a descrição da recorrência.','warning');if(!requirePositiveAmount(obj.amount,'O valor da recorrência'))return;if(obj.end&&obj.end<obj.start)return toast('O término não pode ser anterior ao início.','warning');if(id)state.recurring=state.recurring.map(r=>r.id===id?obj:r);else state.recurring.push(obj);await save(id?'Editar recorrência':'Nova recorrência');resetManagementForm('recForm',{id:'recId'});if(progressiveRestore?.node===panel)closeProgressive(false)};
  $('catBudgetForm').onsubmit=async e=>{e.preventDefault();state.categoryBudgets[$('catBudgetCategory').value]=+$('catBudgetAmount').value;await save('Orçamento de categoria')};
  $('debtForm').onsubmit=async e=>{e.preventDefault();let panel=e.currentTarget.closest('.management-form-panel'),id=+$('debtId').value,old=id?state.debts.find(d=>d.id===id):null,firstDue=$('debtFirstDue').value,installments=Number($('debtInstallments').value);if(!Number.isInteger(installments)||installments<1)return toast('O número de parcelas da dívida precisa ser um inteiro maior ou igual a 1.','warning');let patch={id:id||uid(),name:$('debtName').value.trim(),balance:parseMoney($('debtBalance').value),rate:parsePercent($('debtRate').value),payment:parseMoney($('debtPayment').value),firstDue,installments};if(!old||Object.hasOwn(old,'ratePeriod')||$('debtRatePeriod').dataset.userEdited==='1')patch.ratePeriod=$('debtRatePeriod').value||'monthly';if(!old||Object.hasOwn(old,'amortizationMethod')||$('debtAmortization').dataset.userEdited==='1')patch.amortizationMethod=$('debtAmortization').value||'manual';if(!old||Object.hasOwn(old,'dueDay')||$('debtDay').dataset.userEdited==='1')patch.dueDay=+$('debtDay').value;if(!old||Object.hasOwn(old,'accountId')||$('debtAccount').dataset.userEdited==='1')patch.accountId=+$('debtAccount').value;if(!patch.name)return toast('Informe o credor da dívida.','warning');if(!requirePositiveAmount(patch.balance,'O saldo da dívida'))return;if(!requirePositiveAmount(patch.payment,'A parcela da dívida'))return;let obj=old?{...old,...patch}:{...patch,paidInstallments:0,paymentMethod:'bank',history:[]};if(id)state.debts=state.debts.map(d=>d.id===id?obj:d);else state.debts.push(obj);await save(id?'Editar dívida':'Nova dívida');resetManagementForm('debtForm',{id:'debtId',titleId:'debtFormTitle',title:'Adicionar dívida',modeId:'debtFormMode',submitId:'debtSubmit',submitText:'Adicionar dívida',detailsId:'debtMoreDetails'});if(progressiveRestore?.node===panel)closeProgressive(false)};
- $('goalForm').onsubmit=async e=>{e.preventDefault();let id=+$('goalId').value,old=id?state.goals.find(g=>g.id===id):null,patch={id:id||uid(),name:$('goalName').value.trim(),target:+$('goalTarget').value,accountId:+$('goalAccount').value,plan:+$('goalPlan').value,targetDate:$('goalDate').value};if(!patch.name)return toast('Informe o nome da meta.','warning');if(!requirePositiveAmount(patch.target,'O valor alvo da meta'))return;let obj=old?{...old,...patch}:{...patch,initialAllocated:0,history:[]};if(id)state.goals=state.goals.map(g=>g.id===id?obj:g);else state.goals.push(obj);resetManagementForm('goalForm',{id:'goalId',titleId:'goalFormTitle',title:'Adicionar meta',modeId:'goalFormMode',submitId:'goalSubmit',submitText:'Criar meta',detailsId:'goalMoreDetails'});await save(id?'Editar meta':'Nova meta')};
- $('assetForm').onsubmit=async e=>{e.preventDefault();let id=+$('assetId').value,obj={id:id||uid(),name:$('assetName').value,value:+$('assetValue').value};if(id)state.assets=state.assets.map(a=>a.id===id?obj:a);else state.assets.push(obj);e.target.reset();$('assetId').value='';await save(id?'Editar ativo':'Novo ativo')};
+ $('goalForm').onsubmit=async e=>{
+   e.preventDefault();
+   let panel=e.currentTarget.closest('.management-form-panel'),id=+$('goalId').value,old=id?state.goals.find(g=>g.id===id):null,patch={id:id||uid(),name:$('goalName').value.trim(),target:+$('goalTarget').value,accountId:+$('goalAccount').value,plan:+$('goalPlan').value,targetDate:$('goalDate').value};
+   if(!patch.name)return toast('Informe o nome da meta.','warning');
+   if(!requirePositiveAmount(patch.target,'O valor alvo da meta'))return;
+   let obj=old?{...old,...patch}:{...patch,initialAllocated:0,history:[]};
+   if(id)state.goals=state.goals.map(g=>g.id===id?obj:g);else state.goals.push(obj);
+   await save(id?'Editar meta':'Nova meta');
+   resetManagementForm('goalForm',{id:'goalId',titleId:'goalFormTitle',title:'Adicionar meta',modeId:'goalFormMode',submitId:'goalSubmit',submitText:'Criar meta',detailsId:'goalMoreDetails'});
+   if(progressiveRestore?.node===panel)closeProgressive(false);
+   toast(id?'Meta atualizada com sucesso.':'Meta criada com sucesso.','success')
+ };
+ $('assetForm').onsubmit=async e=>{
+   e.preventDefault();
+   let panel=e.currentTarget,id=+$('assetId').value,obj={id:id||uid(),name:$('assetName').value.trim(),value:+$('assetValue').value};
+   if(!obj.name)return toast('Informe a descrição do ativo.','warning');
+   if(!requirePositiveAmount(obj.value,'O valor do ativo'))return;
+   if(id)state.assets=state.assets.map(a=>a.id===id?obj:a);else state.assets.push(obj);
+   await save(id?'Editar ativo':'Novo ativo');
+   e.target.reset();$('assetId').value='';const submit=e.target.querySelector('button[type="submit"],button:not([type])');if(submit)submit.textContent='Adicionar ativo';
+   if(progressiveRestore?.node===panel)closeProgressive(false);
+   toast(id?'Ativo atualizado com sucesso.':'Ativo adicionado com sucesso.','success')
+ };
  $('configForm').onsubmit=async e=>{
    e.preventDefault();
    state.settings.name=$('cfgName').value;
