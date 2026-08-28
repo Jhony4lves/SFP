@@ -39,4 +39,4 @@ jobs:
             git push origin HEAD:feat/sophy-proactive-brief
           fi
 
-# revalidation: block-aware JavaScript function replacement
+# revalidation: 37 focused scenarios after visible-detail test fix
