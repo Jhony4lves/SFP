@@ -175,6 +175,17 @@
       .sophy-brief-actions{display:flex;gap:5px;flex:0 0 auto}
       .sophy-brief-actions button{min-height:30px;padding:5px 9px;font-size:9.5px}
       @media(max-width:650px){.sophy-proactive-brief{padding:8px 10px;gap:6px}.sophy-brief-head p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.sophy-brief-evidence{overflow-x:auto;flex-wrap:nowrap;padding-bottom:1px}.sophy-brief-foot{align-items:flex-end}.sophy-brief-actions button:first-child{display:none}}
+      @media(orientation:landscape) and (max-height:500px){
+        .sophy-proactive-brief{position:absolute;top:0;left:0;right:0;z-index:4;margin:0;border-radius:12px;padding:5px 8px;display:flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(0,0,0,.38)}
+        .sophy-brief-head{flex:1 1 auto;min-width:0;align-items:center}
+        .sophy-brief-head>div{min-width:0}
+        .sophy-brief-head b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sophy-brief-head p,.sophy-brief-evidence,.sophy-brief-foot details{display:none}
+        .sophy-brief-foot{flex:0 0 auto}
+        .sophy-brief-actions button:first-child{display:none}
+        .sophy-brief-actions button{min-height:28px;padding:4px 8px}
+        body[data-page="sophy"] .sophy-chat-scroll{padding-top:48px}
+      }
     `;
     document.head.appendChild(style);
   }
