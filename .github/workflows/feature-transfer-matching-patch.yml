@@ -30,6 +30,9 @@ jobs:
       - name: Apply transfer matching patch
         run: python tools/patch_transfer_matching.py
 
+      - name: Fix transfer finalization amount contract
+        run: python tools/fix_transfer_finalize_amount.py
+
       - name: Static JavaScript and schema check
         run: node qa/static-check.mjs
 
@@ -59,5 +62,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/src/main/assets/www/index.html qa/static-check.mjs qa/polish-integrity.spec.js
-          git commit -m "feat(import): conciliar transferências entre extratos"
+          git commit -m "fix(import): finalizar casamento de transferências detectadas"
           git push origin HEAD:feat/import-transfer-matching
