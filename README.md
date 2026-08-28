@@ -2,6 +2,10 @@
 
 Este projeto empacota o SFP como um aplicativo Android local-first.
 
+## Roadmap
+
+A direção técnica até o SFP feature-complete está documentada em [`docs/ROADMAP-DEFINITIVO.md`](docs/ROADMAP-DEFINITIVO.md). O roadmap prioriza integridade financeira, Local Financial Core único, inteligência explicável, importação/conciliação, planejamento, automação segura, robustez e uma validação física consolidada no fechamento do ciclo.
+
 ## Por que esta arquitetura
 
 - O HTML/CSS/JS do SFP fica dentro do APK.
