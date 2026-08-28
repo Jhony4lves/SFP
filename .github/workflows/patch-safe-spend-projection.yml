@@ -38,3 +38,5 @@ jobs:
             git commit -m "feat(planning): integrar gasto seguro e projeção na tela Hoje"
             git push origin HEAD:feat/safe-to-spend-projection
           fi
+
+# revalidation: scoped Sophy buttons after adding the safe-spend panel
