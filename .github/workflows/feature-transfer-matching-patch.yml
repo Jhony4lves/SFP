@@ -1,0 +1,48 @@
+name: Feature Transfer Matching Patch
+
+on:
+  push:
+    branches: ["feat/import-transfer-matching"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v5
+        with:
+          ref: feat/import-transfer-matching
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Correct patch escaping
+        run: python tools/fix_transfer_patch_escaping.py
+
+      - name: Apply transfer matching patch
+        run: python tools/patch_transfer_matching.py
+
+      - name: Static JavaScript and schema check
+        run: node qa/static-check.mjs
+
+      - name: Commit generated application changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- app/src/main/assets/www/index.html qa/static-check.mjs qa/polish-integrity.spec.js; then
+            echo "No application changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/index.html qa/static-check.mjs qa/polish-integrity.spec.js
+          git commit -m "feat(import): conciliar transferências entre extratos"
+          git push origin HEAD:feat/import-transfer-matching
