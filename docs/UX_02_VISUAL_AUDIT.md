@@ -41,4 +41,4 @@ Todas as páginas HTML do aplicativo: Hoje, Visão Geral, Lançamentos, Extratos
 
 ## Risco e validação futura
 
-Como a aplicação é distribuída em Android WebView, a revisão manual final deve cobrir Galaxy S24, escala de fonte aumentada, teclado aberto, orientação paisagem e Samsung DeX. A camada usa enhancement CSS e não introduz componentes JavaScript.
+Como a aplicação é distribuída em Android WebView, a revisão manual final deve cobrir Android físico de referência, escala de fonte aumentada, teclado aberto, orientação paisagem e Samsung DeX. A camada usa enhancement CSS e não introduz componentes JavaScript.

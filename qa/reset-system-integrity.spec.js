@@ -141,12 +141,12 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
     expect(autoBackups).toBeNull();
 
     // 23. Anti-regressão do bug original: nenhum dado pessoal ou de demonstração do seed foi reinjetado
-    const seedDescList = ['NUCEL', 'Uber - NuPay', 'ASSB Comércio Varejista', 'Pablo Lanches', 'Amazon', 'Mercado Livre', 'Crédito Consignado CLT', 'Nubank', 'Itaú'];
+    const seedDescList = ['Streaming Demo', 'Transporte App', 'Loja Exemplo', 'Padaria Central', 'Loja Online Demo', 'Marketplace Demo', 'Empréstimo demonstrativo', 'Conta Principal', 'Conta Secundária'];
     const allText = JSON.stringify(freshState);
     for (const seedItem of seedDescList) {
       expect(allText).not.toContain(seedItem);
     }
-    expect(freshState.settings.name).not.toBe('SFP Jhony');
+    expect(freshState.settings.name).not.toBe('SFP Demo');
     expect(freshState.settings.name).toBe('SFP');
     expect(freshState.settings.onboardingDone).toBe(false);
 
