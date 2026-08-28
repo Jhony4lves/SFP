@@ -4,4 +4,10 @@ local.properties
 node_modules/
 playwright-report/
 test-results/
+dist/
 
+# Nunca versionar material de assinatura Android.
+*.jks
+*.keystore
+*.p12
+signing.properties
