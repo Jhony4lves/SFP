@@ -33,6 +33,21 @@ jobs:
       - name: Static JavaScript and schema check
         run: node qa/static-check.mjs
 
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install QA dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run importer regression
+        run: node -r ./qa/env-setup.js ./node_modules/.bin/playwright test qa/import-integrity.spec.js qa/transfer-import-matching.spec.js
+
       - name: Commit generated application changes
         shell: bash
         run: |
