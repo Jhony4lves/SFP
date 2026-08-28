@@ -56,8 +56,8 @@ if (fs.existsSync(logoMasterPath)) {
 }
 
 // 5. Fonte única da versão de schema
-if (!source.includes('SCHEMA_VERSION=11')) {
-  problems.push('SCHEMA_VERSION única fonte de verdade divergente de 11');
+if (!source.includes('SCHEMA_VERSION=12')) {
+  problems.push('SCHEMA_VERSION única fonte de verdade divergente de 12');
 }
 
 // 6. UX-02 design system foundation
@@ -116,5 +116,5 @@ if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);
 }
-console.log('Static QA: Sintaxe JavaScript, IDs estáticos, logo oficial SHA-256, launcher icons, schema v11 e contratos verificados com sucesso.');
+console.log('Static QA: Sintaxe JavaScript, IDs estáticos, logo oficial SHA-256, launcher icons, schema v12 e contratos verificados com sucesso.');
 
