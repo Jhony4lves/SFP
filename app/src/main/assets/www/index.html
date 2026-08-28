@@ -3363,6 +3363,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 <div id="modalRoot" class="hidden"></div>
 <div id="feedbackCard" class="feedback-card"></div><div id="toast" class="toast"></div>
 
+<script src="financial-intelligence.js"></script>
 <script>
 const VERSION=202, SCHEMA_VERSION=12, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
 const CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Saúde','Assinaturas','Dívida','Lazer','Casa','Trabalho','Ajuste','Outros'];
@@ -6222,6 +6223,14 @@ function financialContextSnapshot({reference=new Date(),months=3}={}){
  return{version:1,referenceDate,definitions:FINANCIAL_SEMANTICS,period:{months:monthList},accounts:{items:state.accounts.map(a=>({id:a.id,name:a.name,balanceCents:toCents(accountBalance(a.id))})),totalCents:available},availableCents:available,realized:{incomeCents:income,expenseCents:expense,resultCents:income-expense},patrimony:{accountsCents:available,externalAssetsCents:toCents(state.assets.reduce((s,a)=>s+a.value,0)),debtCents:toCents(debtTotal()),netWorthCents:toCents(netWorth()),snapshots:clone(state.snapshots)},debts:state.debts.map(d=>({id:d.id,name:d.name,balanceCents:toCents(d.balance),paymentCents:toCents(d.payment),remainingInstallments:Math.max(0,(d.installments||0)-(d.paidInstallments||0))})),cards:state.cards.map(c=>({id:c.id,name:c.name,limitCents:toCents(c.limit),committedCents:toCents(cardOutstanding(c.id)),availableCents:toCents(Math.max(0,c.limit-cardOutstanding(c.id))),currentInvoiceCents:toCents(invoiceTotal(c.id,state.mesAtual))})),commitments:{totalCents:toCents(future.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0)),events:future.map(e=>({...e,amountCents:toCents(e.amount)}))},recurring:clone(state.recurring),budget:{categoryLimitsCents:Object.fromEntries(Object.entries(state.categoryBudgets).map(([k,v])=>[k,toCents(v)])),spentCents:categories},goals:clone(state.goals),externalAssets:clone(state.assets),nextIncome:nextIncome?{...nextIncome,amountCents:toCents(nextIncome.amount)}:null,projections,categoriesCents:categories,averages:{monthlyExpenseCents:months?Math.round(expense/months):0},reserved:{status:'known',amountCents:reserved,reasons:reserveEvents.map(e=>({id:`${e.source}:${e.sourceId}`,date:e.date,amountCents:toCents(e.amount),origin:e.source}))},free:{status:'known',amountCents:available-reserved,formula:'AVAILABLE - RESERVED'},negativeRisk:projections.some(p=>p.negativeRisk)};
 }
 function sfpFinancialContextSnapshot(opts){return financialContextSnapshot(opts)}
+function financialIntelligenceSnapshot({reference=new Date(),months=4}={}){
+ const historyMonths=Math.max(2,Math.min(12,Number(months)||4)),currentMonth=localCivilMonth(reference),snapshot=financialContextSnapshot({reference,months:historyMonths});
+ const categoryMonths=Math.min(4,historyMonths),categoryMonthly=Array.from({length:categoryMonths},(_,i)=>monthAdd(currentMonth,i-categoryMonths+1)).map(month=>({month,categoriesCents:Object.fromEntries(Object.entries(categoriesSpent(month)).map(([category,value])=>[category,toCents(value)]))}));
+ const transactions=(state.transactions||[]).map(t=>({id:t.id,accountId:t.accountId,date:t.date,kind:t.kind,amountCents:toCents(t.amount),desc:t.desc||'',statementKey:t.statementKey||null,economicImpact:t.economicImpact||null}));
+ if(!window.SFPFinancialIntelligence||typeof window.SFPFinancialIntelligence.analyze!=='function')return{version:0,generatedFor:snapshot.referenceDate,currentMonth,summary:{total:0,critical:0,warning:0,info:0},metrics:{},insights:[],error:'financial_intelligence_engine_unavailable'};
+ return window.SFPFinancialIntelligence.analyze({snapshot,currentMonth,referenceDate:snapshot.referenceDate,categoryMonthly,transactions});
+}
+window.financialIntelligenceSnapshot=financialIntelligenceSnapshot;window.sfpFinancialIntelligenceSnapshot=financialIntelligenceSnapshot;
 window.financialContextSnapshot=financialContextSnapshot;window.sfpFinancialContextSnapshot=financialContextSnapshot;window.financialCalendarEvents=financialCalendarEvents;window.FINANCIAL_SEMANTICS=FINANCIAL_SEMANTICS;
 
 /* ===== SOPHY FOUNDATION V2: HYBRID AI ROUTER & CONVERSATIONAL ENGINE ===== */
@@ -6431,6 +6440,10 @@ const sophyContextBroker = {
           events: events.map(e => ({ desc: e.desc, amountBRL: e.amount, date: e.date, type: e.type }))
         };
       }
+      case 'insights': {
+        const report = financialIntelligenceSnapshot({ reference: new Date(), months: 4 });
+        return { scope: 'insights', report };
+      }
       default:
         return this.buildContext('overview', options);
     }
@@ -6490,7 +6503,7 @@ const sophyToolRegistry = {
         properties: {
           scope: {
             type: 'string',
-            enum: ['overview', 'cashflow', 'cards', 'debts', 'goals', 'patrimony', 'category_spending', 'upcoming'],
+            enum: ['overview', 'cashflow', 'cards', 'debts', 'goals', 'patrimony', 'category_spending', 'upcoming', 'insights'],
             description: 'Escopo dos dados financeiros necessários'
           },
           period: {
@@ -7081,6 +7094,19 @@ const sophyOfflineCore={
         text:`Você possui um total guardado de **${brl(goalReserve())}** distribuído nas suas metas e reservas ativas! 🎯`,
         emotion:'proud'
       };
+    }
+
+    // Financial Intelligence Foundation — leitura determinística e explicável
+    if(/(o que merece atencao|alertas financeiros|insights financeiros|tem algo preocupante|o que devo observar|algum risco nas minhas financas|como estao meus alertas)/i.test(norm)){
+      const report=financialIntelligenceSnapshot({reference:new Date(),months:4});
+      const top=(report.insights||[]).slice(0,4);
+      state.sophy.context={lastIntent:'financial_insights',lastAmount:null,lastEntity:'financial_insights'};
+      if(!top.length){
+        return{text:'O motor local não encontrou nenhum alerta financeiro relevante com os dados disponíveis agora. Isso não substitui sua conferência dos lançamentos, mas os sinais determinísticos estão tranquilos.',emotion:'cheerful',structured:{type:'financial_insights',report}};
+      }
+      const lines=top.map(i=>`• **${i.title}** — ${i.message}`).join('\n');
+      const critical=report.summary?.critical||0,warning=report.summary?.warning||0;
+      return{text:`Encontrei ${report.summary?.total||top.length} ponto${(report.summary?.total||top.length)===1?'':'s'} de atenção pelo motor local (${critical} crítico${critical===1?'':'s'}, ${warning} aviso${warning===1?'':'s'}):\n\n${lines}\n\nCada sinal vem de regras e valores do próprio SFP; eu não estimei números por conta própria.`,emotion:critical?'concerned':warning?'focused':'cheerful',structured:{type:'financial_insights',report}};
     }
 
     // Consulta de Próximos 7 Dias / Vencimentos Imediatos
