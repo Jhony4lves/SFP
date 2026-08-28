@@ -175,7 +175,6 @@
       .sophy-brief-actions{display:flex;gap:5px;flex:0 0 auto}
       .sophy-brief-actions button{min-height:30px;padding:5px 9px;font-size:9.5px}
       @media(max-width:650px){.sophy-proactive-brief{padding:8px 10px;gap:6px}.sophy-brief-head p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.sophy-brief-evidence{overflow-x:auto;flex-wrap:nowrap;padding-bottom:1px}.sophy-brief-foot{align-items:flex-end}.sophy-brief-actions button:first-child{display:none}}
-      @media(orientation:landscape) and (max-height:500px){body[data-page="sophy"] .sophy-chat-card{height:auto!important;flex:1 1 0!important;min-height:0!important}}
     `;
     document.head.appendChild(style);
   }
@@ -184,14 +183,14 @@
     if(typeof document==='undefined')return null;
     let panel=document.getElementById(PANEL_ID);
     if(panel)return panel;
-    const container=document.querySelector('#sophy .sophy-container');
-    const chat=container?.querySelector('.sophy-chat-card');
-    if(!container||!chat)return null;
+    const chat=document.querySelector('#sophy .sophy-chat-card');
+    const scroll=chat?.querySelector('.sophy-chat-scroll');
+    if(!chat||!scroll)return null;
     panel=document.createElement('section');
     panel.id=PANEL_ID;
     panel.className='sophy-proactive-brief';
     panel.setAttribute('aria-labelledby','sophyBriefTitle');
-    chat.insertAdjacentElement('beforebegin',panel);
+    scroll.insertAdjacentElement('beforebegin',panel);
     return panel;
   }
 
