@@ -38,3 +38,5 @@ jobs:
             git commit -m "feat(sophy): integrar brief financeiro proativo e explicável"
             git push origin HEAD:feat/sophy-proactive-brief
           fi
+
+# revalidation: block-aware JavaScript function replacement
