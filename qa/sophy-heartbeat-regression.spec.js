@@ -76,7 +76,7 @@ test('ERR-005 heartbeat periódico gera mensagem relevante sem force e persiste 
 
   await page.reload();
   await page.waitForFunction(() => typeof state !== 'undefined' && state?.settings?.name === 'Heartbeat real');
-  await expect.poll(expectedText => page.evaluate(text => state.sophy.messages.some(m => m.text === text), expectedText), result.text).toBe(true);
+  await expect.poll(() => page.evaluate(text => state.sophy.messages.some(m => m.text === text), result.text)).toBe(true);
 });
 
 test('ERR-005 startSophyHeartbeat é idempotente e não cria vários timers', async ({ page }) => {
