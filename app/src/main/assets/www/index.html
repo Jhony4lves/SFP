@@ -3367,6 +3367,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 <script src="financial-insights-ui.js"></script>
 <script src="safe-spend.js"></script>
 <script src="safe-spend-ui.js"></script>
+<script src="sophy-proactive-brief.js"></script>
 <script>
 const VERSION=202, SCHEMA_VERSION=12, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
 const CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Saúde','Assinaturas','Dívida','Lazer','Casa','Trabalho','Ajuste','Outros'];
@@ -8069,48 +8070,60 @@ function sophyCheckProactivity({force=false,baselineAt=null}={}){
   const lastAt=sophy.lastProactiveAt?new Date(sophy.lastProactiveAt).getTime():(Number.isFinite(baseline)?baseline:now),hoursSince=(now-lastAt)/(1000*60*60);
   if(!force&&hoursSince<4)return null;
 
-  const free=allAccountBalance()-commitmentUntilNextIncome();
-  if(free<0){
-    const text=`Oi! Passei pra te dar um toque importante: seu livre projetado está em **${brl(free)}**. Temos contas a vencer antes da sua próxima entrada. Vale a pena dar uma segurada nos gastos extras hoje!`;
-    sophy.personaState='concerned';sophy.lastProactiveAt=new Date().toISOString();
-    sophy.messages.push({id:uid(),sender:'sophy',text,at:new Date().toISOString(),emotion:'concerned'});
+  const recentFingerprint=(fingerprint,hours=24)=>{
+    if(!fingerprint)return false;
+    const match=[...(sophy.messages||[])].reverse().find(m=>m?.proactiveFingerprint===fingerprint&&m?.at);
+    if(!match)return false;
+    const at=new Date(match.at).getTime();
+    return Number.isFinite(at)&&(now-at)<hours*60*60*1000;
+  };
+  const pushProactive=(text,{mood='cheerful',fingerprint=null,source='deterministic',priority='info',evidence=[],briefVersion=null}={})=>{
+    if(!text)return null;
+    const at=new Date().toISOString();
+    sophy.personaState=SOPHY_PERSONAS[mood]?mood:'cheerful';
+    sophy.lastProactiveAt=at;
+    sophy.messages=sophy.messages||[];
+    sophy.messages.push({id:uid(),sender:'sophy',text,at,emotion:sophy.personaState,proactive:true,proactiveFingerprint:fingerprint,proactiveSource:source,proactivePriority:priority,proactiveEvidence:clone(evidence||[]),proactiveBriefVersion:briefVersion});
     sophy.messages=sophy.messages.slice(-50);
-    return text
+    return text;
+  };
+
+  let brief=null;
+  try{
+    if(typeof window.sophyProactiveBriefSnapshot==='function')brief=window.sophyProactiveBriefSnapshot({force});
+  }catch(error){
+    console.warn('Brief proativo da Sophy indisponível:',error);
+  }
+
+  if(brief&&(force||brief.shouldNotify)){
+    if(force||!recentFingerprint(brief.fingerprint,24)){
+      return pushProactive(brief.message,{mood:brief.mood,fingerprint:brief.fingerprint,source:brief.source,priority:brief.priority,evidence:brief.evidence,briefVersion:brief.version});
+    }
   }
 
   const completedGoal=(state.goals||[]).find(g=>g.target>0&&goalBalance(g)>=g.target);
-  if(completedGoal&&!sophy.messages.some(m=>m.text?.includes(completedGoal.name))){
-    const text=`🎉 Parabéns! Sua meta **${completedGoal.name}** atingiu 100% da reserva (${brl(goalBalance(completedGoal))})! Que orgulho da sua disciplina financeira!`;
-    sophy.personaState='proud';sophy.lastProactiveAt=new Date().toISOString();
-    sophy.messages.push({id:uid(),sender:'sophy',text,at:new Date().toISOString(),emotion:'proud'});
-    sophy.messages=sophy.messages.slice(-50);
-    return text
+  if(completedGoal){
+    const balance=goalBalance(completedGoal),fingerprint=`goal-complete:${completedGoal.id||completedGoal.name}:${Math.round(balance*100)}`;
+    if(!recentFingerprint(fingerprint,24)){
+      const text=`🎉 Parabéns! Sua meta **${completedGoal.name}** atingiu 100% da reserva (${brl(balance)})!`;
+      return pushProactive(text,{mood:'proud',fingerprint,source:'goal_completed',priority:'info',evidence:[{label:'Meta',value:completedGoal.name},{label:'Reserva',value:brl(balance)}]});
+    }
   }
 
-  const nextInc=nextIncomeEvent(),today=localCivilDate(),tomorrowRef=new Date();
-  tomorrowRef.setDate(tomorrowRef.getDate()+1);
-  const tomorrow=localCivilDate(tomorrowRef);
+  let nextInc=null;
+  try{nextInc=typeof financialContextSnapshot==='function'?financialContextSnapshot({months:3}).nextIncome:null}catch(error){}
+  const today=localCivilDate(new Date()),tomorrowRef=new Date();tomorrowRef.setDate(tomorrowRef.getDate()+1);const tomorrow=localCivilDate(tomorrowRef);
   if(nextInc&&(nextInc.date===today||nextInc.date===tomorrow)){
-    const isToday=nextInc.date===today,hour=new Date().getHours(),greeting=hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';
-    const text=isToday?`${greeting}! Hoje é dia de recebimento: **${nextInc.desc}** (${brl(nextInc.amount)})! 💰 Não esqueça de conferir a entrada na sua conta!`:`Oi! Amanhã tem previsão de recebimento de **${nextInc.desc}** (${brl(nextInc.amount)}). Seu planejamento tá no rumo certo!`;
-    sophy.personaState='cheerful';sophy.lastProactiveAt=new Date().toISOString();
-    sophy.messages.push({id:uid(),sender:'sophy',text,at:new Date().toISOString(),emotion:'cheerful'});
-    sophy.messages=sophy.messages.slice(-50);
-    return text
+    const amount=(Number(nextInc.amountCents)||0)/100,fingerprint=`next-income:${nextInc.date}:${Math.round((Number(nextInc.amountCents)||0))}:${nextInc.id||nextInc.desc||''}`;
+    if(!recentFingerprint(fingerprint,24)){
+      const isToday=nextInc.date===today,hour=new Date().getHours(),greeting=hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';
+      const text=isToday?`${greeting}! Hoje há uma entrada conhecida: **${nextInc.desc||'Recebimento'}** (${brl(amount)}). Vale conferir quando cair na conta.`:`Amanhã há uma entrada conhecida de **${nextInc.desc||'Recebimento'}** (${brl(amount)}). Ela já está considerada pelo Local Financial Core.`;
+      return pushProactive(text,{mood:'cheerful',fingerprint,source:'next_income',priority:'info',evidence:[{label:'Data',value:nextInc.date},{label:'Valor',value:brl(amount)}]});
+    }
   }
 
-  const localHour=new Date().getHours();
-  if(force||(hoursSince>=12&&localHour>=8&&localHour<22)){
-    const spontaneous=[
-      `Oi! Passando por aqui só pra lembrar de tomar uma água e conferir se não ficou nenhum lançamento de hoje pra trás! 😉`,
-      `Olá! O SFP tá todo em ordem por aqui. Se precisar tirar alguma dúvida ou simular uma meta, é só me chamar! ✨`,
-      `Oi! Tá tudo calmo e planejado por aqui hoje. Como tá sendo seu dia? 💬`
-    ];
-    const text=spontaneous[Math.floor(Math.random()*spontaneous.length)];
-    sophy.personaState='playful';sophy.lastProactiveAt=new Date().toISOString();
-    sophy.messages.push({id:uid(),sender:'sophy',text,at:new Date().toISOString(),emotion:'playful'});
-    sophy.messages=sophy.messages.slice(-50);
-    return text
+  if(force){
+    return pushProactive('**Brief financeiro:** os motores determinísticos estão temporariamente indisponíveis. Não vou inventar uma análise até conseguir ler o Local Financial Core.',{mood:'focused',fingerprint:'brief-unavailable',source:'brief_unavailable',priority:'info'});
   }
   return null
 }
@@ -9296,7 +9309,7 @@ function updateContextFab(){
   }
 }
 
-function renderAll(){renderSelects();renderTop();renderToday();if(typeof renderFinancialInsights==='function')renderFinancialInsights();if(typeof renderSafeSpendProjection==='function')renderSafeSpendProjection();renderDashboard();renderAnalyticsDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderFinancialAudit();renderDataCenter();renderConfig();renderFavorites();renderSophy();applyPrivacy();formatMoneyInputs()}
+function renderAll(){renderSelects();renderTop();renderToday();if(typeof renderFinancialInsights==='function')renderFinancialInsights();if(typeof renderSafeSpendProjection==='function')renderSafeSpendProjection();renderDashboard();renderAnalyticsDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderFinancialAudit();renderDataCenter();renderConfig();renderFavorites();renderSophy();if(typeof renderSophyProactiveBrief==='function')renderSophyProactiveBrief();applyPrivacy();formatMoneyInputs()}
 const PAGE_TITLES={hoje:['Hoje','O que importa agora'],sophy:['Sophy','Sua inteligência financeira pessoal e conversacional'],dashboard:['Dashboard','Como está sua vida financeira'],visao:['Visão Geral','Seu mês em números'],lancamentos:['Lançamentos','Registre com o mínimo de atrito'],extratos:['Extratos','Importe e concilie'],contas:['Contas','Onde seu dinheiro está'],cartoes:['Cartões','Faturas, limites e parcelas'],recorrencias:['Recorrências','Regras mensais sem duplicação'],orcamento:['Orçamento','Limites flexíveis'],dividas:['Dívidas','Saldo e amortização'],metas:['Metas','Objetivos e reservas'],patrimonio:['Patrimônio','Ativos menos dívidas'],calendario:['Calendário','Seu fluxo por dia'],relatorios:['Relatórios','Fechamentos e comparação'],simuladores:['Simuladores','Teste cenários'],dados:['Central de Dados','Saúde, backup e integridade da base'],auditoria:['Auditoria','Integridade e manutenção dos dados'],config:['Configurações','Preferências e segurança']};
 let pageStack=['hoje'];
 function activePage(){return document.querySelector('.tab.active')?.id||'hoje'}
@@ -9313,6 +9326,7 @@ function setPage(id,{mode='push'}={}){
  $('pageTitle').textContent=PAGE_TITLES[id][0];$('pageSub').textContent=PAGE_TITLES[id][1];
  document.body.dataset.page=id;
  document.body.classList.toggle('page-sophy',id==='sophy');
+ if(id==='sophy'&&typeof renderSophyProactiveBrief==='function'){renderSophyProactiveBrief();if(typeof applyPrivacy==='function')applyPrivacy()}
  updateContextFab();window.scrollTo({top:0,behavior:'smooth'});return true
 }
 function handleAndroidBack(){
