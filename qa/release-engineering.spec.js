@@ -18,8 +18,10 @@ test.describe('Android release engineering', () => {
   });
 
   test('bridge Android usa a versão gerada pelo BuildConfig', () => {
+    const build = read('app/build.gradle');
     const bridge = read('app/src/main/java/com/jhony/sfp/AndroidBridge.java');
 
+    expect(build).toMatch(/buildFeatures\s*\{[\s\S]*?buildConfig\s+true[\s\S]*?\}/);
     expect(bridge).toContain('return BuildConfig.VERSION_NAME;');
     expect(bridge).not.toContain('return "2.0.2";');
     expect(bridge).toContain('"SmartFinancialPlanner/" + BuildConfig.VERSION_NAME + " Sophy/3.0"');
