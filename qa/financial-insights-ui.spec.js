@@ -98,7 +98,7 @@ test.describe('Financial Insights UI',()=>{
       window.sophySendMessage=async prompt=>{window.__qaSophyPrompt=prompt;};
       window.renderFinancialInsights();
     },reportWith([cashflowRisk]));
-    await page.getByRole('button',{name:'Perguntar à Sophy'}).click();
+    await page.locator('#financialInsightsPanel').getByRole('button',{name:'Perguntar à Sophy'}).click();
     await expect(page.locator('#pageTitle')).toHaveText('Sophy');
     const prompt=await page.evaluate(()=>window.__qaSophyPrompt);
     expect(prompt).toContain('Risco de saldo negativo em até 30 dias');
