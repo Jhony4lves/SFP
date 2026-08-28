@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches: [ "main" ]
+    tags: [ "v*" ]
+
+permissions:
+  contents: read
 
 jobs:
   build-debug:
@@ -28,6 +32,8 @@ jobs:
 
   build-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}
       SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
@@ -48,24 +54,102 @@ jobs:
           gradle-version: "8.11.1"
 
       - run: yes | sdkmanager --licenses >/dev/null || true
-
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Restore signing key
-        run: echo "$SFP_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/sfp-release.jks"
+      - name: Read release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME="$(sed -n 's/^SFP_VERSION_NAME=//p' gradle.properties)"
+          VERSION_CODE="$(sed -n 's/^SFP_VERSION_CODE=//p' gradle.properties)"
+          test -n "$VERSION_NAME"
+          test -n "$VERSION_CODE"
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
-      - name: Build signed release APK
+      - name: Validate signing configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for var in SFP_KEYSTORE_BASE64 SFP_KEYSTORE_PASSWORD SFP_KEY_ALIAS SFP_KEY_PASSWORD; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::$var não está configurado nos GitHub Actions secrets."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Restore signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-release.jks"
+          test -s "$RUNNER_TEMP/sfp-release.jks"
+
+      - name: Build signed release APK and AAB
         env:
           SFP_KEYSTORE_PATH: ${{ runner.temp }}/sfp-release.jks
           SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
           SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
           SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
-        run: gradle :app:assembleRelease
+        run: gradle :app:assembleRelease :app:bundleRelease
 
-      - name: Upload signed release APK
+      - name: Prepare versioned release artifacts
+        id: artifacts
+        shell: bash
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          APK="dist/SFP-${VERSION_NAME}.apk"
+          AAB="dist/SFP-${VERSION_NAME}.aab"
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          cp app/build/outputs/bundle/release/app-release.aab "$AAB"
+
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/SIGNING-CERT.txt
+          jarsigner -verify "$AAB"
+
+          cat > dist/RELEASE-METADATA.txt <<EOF
+          versionName=${VERSION_NAME}
+          versionCode=${VERSION_CODE}
+          commit=${GITHUB_SHA}
+          ref=${GITHUB_REF}
+          workflowRun=${GITHUB_RUN_ID}
+          EOF
+
+          sha256sum "$APK" "$AAB" > dist/SHA256SUMS.txt
+
+      - name: Upload versioned release bundle
         uses: actions/upload-artifact@v6
         with:
-          name: SFP-release-apk
-          path: app/build/outputs/apk/release/*.apk
+          name: SFP-${{ steps.version.outputs.name }}-release
+          path: dist/*
+          if-no-files-found: error
 
-# CI trigger after PR #31
+      - name: Publish GitHub Release for version tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          EXPECTED_TAG="v${VERSION_NAME}"
+          if [ "$GITHUB_REF_NAME" != "$EXPECTED_TAG" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} não corresponde ao versionName ${VERSION_NAME}. Esperado: ${EXPECTED_TAG}."
+            exit 1
+          fi
+
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            FLAGS=(--title "SFP ${VERSION_NAME}" --generate-notes)
+            if [[ "$VERSION_NAME" == *-* ]]; then
+              FLAGS+=(--prerelease)
+            fi
+            gh release create "$GITHUB_REF_NAME" dist/* "${FLAGS[@]}"
+          fi
