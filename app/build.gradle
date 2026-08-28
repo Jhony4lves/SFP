@@ -9,6 +9,10 @@ android {
     namespace 'com.jhony.sfp'
     compileSdk 35
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         applicationId "com.jhony.sfp"
         minSdk 26
