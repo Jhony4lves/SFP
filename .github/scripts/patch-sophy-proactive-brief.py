@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 
 path=Path('app/src/main/assets/www/index.html')
 text=path.read_text(encoding='utf-8')
@@ -78,11 +77,49 @@ new_function=r'''function sophyCheckProactivity({force=false,baselineAt=null}={}
   return null
 }'''
 
-pattern=r"function sophyCheckProactivity\(\{force=false,baselineAt=null\}=\{\}\)\{.*?\n\}\n\nlet sophyHeartbeatTimer="
-match=re.search(pattern,text,flags=re.S)
-if not match:
-    raise SystemExit('Função sophyCheckProactivity não encontrada pelo contrato esperado')
-text=text[:match.start()]+new_function+'\n\nlet sophyHeartbeatTimer='+text[match.end():]
+signature='function sophyCheckProactivity({force=false,baselineAt=null}={}){'
+start=text.find(signature)
+if start<0:
+    raise SystemExit('Assinatura de sophyCheckProactivity não encontrada')
+body_open=start+len(signature)-1
+
+def find_block_end(source,open_index):
+    depth=0
+    state='code'
+    i=open_index
+    while i<len(source):
+        ch=source[i]
+        nxt=source[i+1] if i+1<len(source) else ''
+        if state=='code':
+            if ch=="'": state='single'
+            elif ch=='"': state='double'
+            elif ch=='`': state='template'
+            elif ch=='/' and nxt=='/': state='line'; i+=1
+            elif ch=='/' and nxt=='*': state='block'; i+=1
+            elif ch=='{': depth+=1
+            elif ch=='}':
+                depth-=1
+                if depth==0:return i+1
+        elif state=='single':
+            if ch=='\\': i+=1
+            elif ch=="'": state='code'
+        elif state=='double':
+            if ch=='\\': i+=1
+            elif ch=='"': state='code'
+        elif state=='template':
+            if ch=='\\': i+=1
+            elif ch=='`': state='code'
+        elif state=='line':
+            if ch=='\n': state='code'
+        elif state=='block':
+            if ch=='*' and nxt=='/': state='code'; i+=1
+        i+=1
+    return None
+
+end=find_block_end(text,body_open)
+if end is None:
+    raise SystemExit('Fim de sophyCheckProactivity não encontrado')
+text=text[:start]+new_function+text[end:]
 
 render_old="renderSophy();applyPrivacy();formatMoneyInputs()"
 render_new="renderSophy();if(typeof renderSophyProactiveBrief==='function')renderSophyProactiveBrief();applyPrivacy();formatMoneyInputs()"
