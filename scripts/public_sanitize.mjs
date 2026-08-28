@@ -2,9 +2,27 @@ import fs from 'node:fs';
 
 const INDEX = 'app/src/main/assets/www/index.html';
 const IMPORT_QA = 'qa/import-ai-validation.spec.js';
+const AUDIT_QA = 'qa/audit-actionable-review.spec.js';
+const DEBT_QA = 'qa/debt-integrity.spec.js';
+const RESET_QA = 'qa/reset-system-integrity.spec.js';
 const UX_DOC = 'docs/UX_02_VISUAL_AUDIT.md';
 
-const index = fs.readFileSync(INDEX, 'utf8');
+function read(file) {
+  if (!fs.existsSync(file)) throw new Error(`Arquivo obrigatório não encontrado: ${file}`);
+  return fs.readFileSync(file, 'utf8');
+}
+
+function write(file, text) {
+  fs.writeFileSync(file, text);
+}
+
+function replaceRequired(text, before, after, label) {
+  if (!text.includes(before)) throw new Error(`Sanitização não encontrou: ${label}`);
+  return text.replace(before, after);
+}
+
+/* ===== 1) Seed pública completamente fictícia ===== */
+const index = read(INDEX);
 const seedStart = index.indexOf('const seed={');
 const seedEnd = index.indexOf('\nlet state=null', seedStart);
 if (seedStart < 0 || seedEnd < 0) throw new Error('Bloco seed não encontrado');
@@ -53,7 +71,7 @@ const demoSeed = `const seed={
   {id:404,desc:'Streaming Demo',type:'expense',amount:29.90,day:5,category:'Assinaturas',accountId:1,start:'2026-09',end:'',active:true,skips:[]}
  ],
  debts:[
-  {id:501,name:'Empréstimo demonstrativo',contractTotal:3540,balance:3540,principalReceived:3000,financedAmount:3060,iof:60,rate:2.10,cetMonthly:2.45,cetAnnual:33.80,payment:354,installments:10,paidInstallments:0,firstDue:'2026-09-25',lastDue:'2027-06-25',paymentMethod:'bank_slip',history:[],note:'Contrato totalmente fictício usado apenas para demonstração.'}
+  {id:501,name:'Empréstimo demonstrativo',contractTotal:3540,balance:3540,principalReceived:3000,financedAmount:3060,iof:60,rate:2.10,cetMonthly:2.45,cetAnnual:33.80,payment:354,installments:10,paidInstallments:0,firstDue:'2026-09-25',lastDue:'2027-06-25',paymentMethod:'payroll',history:[],note:'Contrato totalmente fictício usado apenas para demonstração.'}
  ],
  goals:[{id:601,name:'Reserva Demo',accountId:3,target:5000,initialAllocated:75.50,history:[]}],
  assets:[{id:7010,name:'Bem demonstrativo',value:2500}],statements:[],transferEvidence:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],
@@ -65,36 +83,126 @@ const demoSeed = `const seed={
  ui:{invoiceMonthByCard:{1:'2026-09',2:'2026-09'}}
 }`;
 
-let nextIndex = index.slice(0, seedStart) + demoSeed + index.slice(seedEnd);
-fs.writeFileSync(INDEX, nextIndex);
+write(INDEX, index.slice(0, seedStart) + demoSeed + index.slice(seedEnd));
 
-let qa = fs.readFileSync(IMPORT_QA, 'utf8');
+/* ===== 2) Importadores: fixture sintética e não correlacionável ===== */
+let qa = read(IMPORT_QA);
 qa = qa
+  .replace(/\bnubankOfx\b/g, 'demoOfx')
   .replace(/Rei do Sabor/g, 'Loja Alpha')
   .replace(/<TRNAMT>-8\.00<FITID>NUB-1/g, '<TRNAMT>-17.35<FITID>DEMO-1')
   .replace(/<TRNAMT>-8\.96<FITID>NUB-2/g, '<TRNAMT>-26.40<FITID>DEMO-2')
   .replace(/<TRNAMT>-94\.36<FITID>NUB-3/g, '<TRNAMT>-73.25<FITID>DEMO-3')
   .replace(/<TRNAMT>59\.99<FITID>NUB-4/g, '<TRNAMT>91.10<FITID>DEMO-4')
   .replace(/Assb Compra - Parcela 1\/3/g, 'Loja Beta - Parcela 1/3')
-  .replace(/Nubank OFX real/g, 'OFX de demonstração')
   .replace(/fatura OFX realista do Nubank/g, 'fatura OFX de demonstração')
+  .replace(/Nubank OFX real/g, 'OFX de demonstração')
+  .replace(/nubank-fatura\.ofx/g, 'demo-fatura.ofx')
+  .replace(/nubank\.ofx/g, 'demo.ofx')
   .replace(/\[8, 8\.96, 94\.36, 59\.99\]/g, '[17.35, 26.40, 73.25, 91.10]')
   .replace(/\[8, 8\.96, 283\.08\]/g, '[17.35, 26.40, 219.75]')
-  .replace(/Ana Carolina/g, 'Destinatário Demo')
-  .replace(/-8\.96\)\)/g, '-26.40))')
+  .replace(/Pix no Crédito - Ana Carolina/g, 'Pix no Crédito - Destinatário Demo')
+  .replace(/semanticClassify\('Pix no Crédito - Destinatário Demo', -8\.96\)/g, "semanticClassify('Pix no Crédito - Destinatário Demo', -26.40)")
   .replace(/12345678901 usuario@email\.com/g, '123456789012 usuario@example.invalid')
+  .replace(/usuario@email\.com/g, 'usuario@example.invalid')
+  .replace(/12345678901/g, '123456789012')
   .replace(/SECRET-FITID-1/g, 'DEMO-FITID-1')
   .replace(/SECRET-FITID-2/g, 'DEMO-FITID-2')
-  .replace(/SECRET-FITID/g, 'DEMO-FITID')
-  .replace(/12345678901/g, '123456789012')
-  .replace(/nubank-fatura\.ofx/g, 'demo-fatura.ofx')
-  .replace(/nubank\.ofx/g, 'demo.ofx');
-fs.writeFileSync(IMPORT_QA, qa);
+  .replace(/SECRET-FITID/g, 'DEMO-FITID');
+write(IMPORT_QA, qa);
 
+/* ===== 3) Nome de terceiro em auditoria ===== */
+let auditQa = read(AUDIT_QA);
+auditQa = replaceRequired(
+  auditQa,
+  "desc: 'Pix no Crédito - Ana Carolina'",
+  "desc: 'Pix no Crédito - Destinatário Demo'",
+  'destinatário de Pix no teste de auditoria'
+);
+write(AUDIT_QA, auditQa);
+
+/* ===== 4) Dívida de QA: preservar sem reproduzir contrato privado ===== */
+let debtQa = read(DEBT_QA);
+const privateDebt = `    name: 'Crédito Consignado CLT',
+    contractTotal: 4678.30,
+    balance: 4678.30,
+    principalReceived: 3800,
+    financedAmount: 3885.48,
+    iof: 85.48,
+    rate: 2.74,
+    cetMonthly: 3.08,
+    cetAnnual: 43.90,
+    payment: 467.83,
+    installments: 10,
+    paidInstallments: 0,
+    firstDue: '2026-09-26',
+    lastDue: '2027-06-26',`;
+const demoDebt = `    name: 'Empréstimo demonstrativo',
+    contractTotal: 3540,
+    balance: 3540,
+    principalReceived: 3000,
+    financedAmount: 3060,
+    iof: 60,
+    rate: 2.10,
+    cetMonthly: 2.45,
+    cetAnnual: 33.80,
+    payment: 354,
+    installments: 10,
+    paidInstallments: 0,
+    firstDue: '2026-09-25',
+    lastDue: '2027-06-25',`;
+debtQa = replaceRequired(debtQa, privateDebt, demoDebt, 'contrato payroll privado em QA');
+debtQa = debtQa
+  .replace("note: 'Contrato original preservado.'", "note: 'Contrato fictício de QA.'")
+  .replace("expect(beforeName).toBe('Crédito Consignado CLT');", "expect(beforeName).toBe('Empréstimo demonstrativo');");
+write(DEBT_QA, debtQa);
+
+/* ===== 5) Reset: anti-regressão usa somente nomes da seed pública ===== */
+let resetQa = read(RESET_QA);
+resetQa = replaceRequired(
+  resetQa,
+  "const seedDescList = ['NUCEL', 'Uber - NuPay', 'ASSB Comércio Varejista', 'Pablo Lanches', 'Amazon', 'Mercado Livre', 'Crédito Consignado CLT', 'Nubank', 'Itaú'];",
+  "const seedDescList = ['Streaming Demo', 'Transporte App', 'Loja Exemplo', 'Padaria Central', 'Loja Online Demo', 'Marketplace Demo', 'Empréstimo demonstrativo', 'Conta Principal', 'Conta Secundária'];",
+  'lista anti-reinjeção do reset'
+);
+resetQa = resetQa.replace("expect(freshState.settings.name).not.toBe('SFP Jhony');", "expect(freshState.settings.name).not.toBe('SFP Demo');");
+write(RESET_QA, resetQa);
+
+/* ===== 6) Documento de auditoria visual ===== */
 if (fs.existsSync(UX_DOC)) {
   let doc = fs.readFileSync(UX_DOC, 'utf8');
   doc = doc.replace(/Galaxy S24/g, 'Android físico de referência');
-  fs.writeFileSync(UX_DOC, doc);
+  write(UX_DOC, doc);
 }
 
-console.log('Sanitização pública aplicada.');
+/* ===== 7) Auto-verificação dos rastros conhecidos ===== */
+const privateFragments = [
+  'Ana Carolina da Silva Diniz',
+  'Paulo Roberto Muniz de Carvalho',
+  'Pix no Crédito - Ana Carolina',
+  'Crédito Consignado CLT',
+  'ASSB Comércio Varejista',
+  'Pablo Lanches',
+  'Mercat Alimentação',
+  'NUCEL',
+  '00037 SH Niterói Plaza',
+  'Vivo Easy Anual',
+  'SFP Jhony',
+  '1202.49',
+  '681.90',
+  '665.25',
+  '4678.30',
+  '3885.48',
+  '85.48'
+];
+const verifyFiles = [INDEX, IMPORT_QA, AUDIT_QA, DEBT_QA, RESET_QA, UX_DOC].filter(fs.existsSync);
+const leftovers = [];
+for (const file of verifyFiles) {
+  const text = fs.readFileSync(file, 'utf8');
+  for (const fragment of privateFragments) {
+    if (text.includes(fragment)) leftovers.push(`${file}: ${fragment}`);
+  }
+}
+if (leftovers.length) throw new Error(`Rastros privados ainda presentes:\n${leftovers.join('\n')}`);
+
+console.log('Sanitização pública aplicada e verificada nos arquivos-alvo.');
