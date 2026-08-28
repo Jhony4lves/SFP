@@ -1,9 +1,9 @@
 name: Package SFP Beta 3
 
 on:
-  push:
+  pull_request:
     branches:
-      - release/beta3-package
+      - main
 
 permissions:
   contents: read
