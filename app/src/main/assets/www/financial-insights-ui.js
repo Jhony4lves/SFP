@@ -222,26 +222,34 @@
     const button=host.querySelector('.sfp-review-select-button');
     const menu=host.querySelector('.sfp-review-select-menu');
     const selected=select.options[select.selectedIndex];
-    if(button) button.querySelector('.sfp-review-select-label').textContent=selected?.textContent||'Selecione';
-    if(menu){
-      menu.innerHTML='';
-      Array.from(select.options).forEach(option=>{
-        const item=document.createElement('button');
-        item.type='button';
-        item.className='sfp-review-select-option';
-        item.setAttribute('role','option');
-        item.setAttribute('aria-selected',String(option.value===select.value));
-        item.textContent=option.textContent;
-        item.onclick=()=>{
-          select.value=option.value;
-          select.dispatchEvent(new Event('change',{bubbles:true}));
-          menu.hidden=true;
-          button.setAttribute('aria-expanded','false');
-          button.focus();
-        };
-        menu.appendChild(item);
+    const label=button?.querySelector('.sfp-review-select-label');
+    if(label&&label.textContent!==(selected?.textContent||'Selecione')) label.textContent=selected?.textContent||'Selecione';
+    if(!menu) return;
+    const signature=Array.from(select.options).map(option=>`${option.value}:${option.textContent}`).join('|');
+    if(menu.dataset.optionsSignature===signature){
+      menu.querySelectorAll('.sfp-review-select-option').forEach((item,index)=>{
+        const option=select.options[index];
+        if(option) item.setAttribute('aria-selected',String(option.value===select.value));
       });
+      return;
     }
+    menu.dataset.optionsSignature=signature;
+    menu.replaceChildren(...Array.from(select.options).map(option=>{
+      const item=document.createElement('button');
+      item.type='button';
+      item.className='sfp-review-select-option';
+      item.setAttribute('role','option');
+      item.setAttribute('aria-selected',String(option.value===select.value));
+      item.textContent=option.textContent;
+      item.onclick=()=>{
+        select.value=option.value;
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+        menu.hidden=true;
+        button.setAttribute('aria-expanded','false');
+        button.focus();
+      };
+      return item;
+    }));
   }
 
   function enhanceSelect(select){
@@ -274,13 +282,18 @@
   function replaceCategoryOptions(select,categories,preserve){
     if(!select) return;
     const previous=select.value;
-    select.replaceChildren(...categories.map(category=>{
-      const option=document.createElement('option');
-      option.value=category;
-      option.textContent=category;
-      return option;
-    }));
-    select.value=preserve&&categories.includes(previous)?previous:'Outros';
+    const current=Array.from(select.options).map(option=>option.value);
+    const optionsChanged=current.length!==categories.length||current.some((value,index)=>value!==categories[index]);
+    if(optionsChanged){
+      select.replaceChildren(...categories.map(category=>{
+        const option=document.createElement('option');
+        option.value=category;
+        option.textContent=category;
+        return option;
+      }));
+    }
+    const next=preserve&&categories.includes(previous)?previous:'Outros';
+    if(select.value!==next) select.value=next;
     refreshCustom(select);
   }
 
@@ -320,7 +333,15 @@
   const start=()=>{
     ensureReviewStyles();
     enhanceFinancialReview();
-    new MutationObserver(()=>enhanceFinancialReview()).observe(document.body,{childList:true,subtree:true});
+    let scheduled=false;
+    new MutationObserver(()=>{
+      if(scheduled) return;
+      scheduled=true;
+      queueMicrotask(()=>{
+        scheduled=false;
+        enhanceFinancialReview();
+      });
+    }).observe(document.body,{childList:true,subtree:true});
   };
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start,{once:true});
