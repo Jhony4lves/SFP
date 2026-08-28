@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   package:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     env:
       SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}
       SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
@@ -58,7 +58,7 @@ jobs:
           sourceMain=0f3d442bc3c86689fe88fa8066dfef711002a558
           workflowRun=${GITHUB_RUN_ID}
           EOF
-          sha256sum dist/SFP-2.1.0-beta.3.apk dist/SFP-2.1.0-beta.3.aab > dist/SHA256SUMS.txt
+          shasum -a 256 dist/SFP-2.1.0-beta.3.apk dist/SFP-2.1.0-beta.3.aab > dist/SHA256SUMS.txt
       - uses: actions/upload-artifact@v6
         with:
           name: SFP-2.1.0-beta.3-release
