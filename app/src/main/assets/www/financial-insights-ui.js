@@ -178,3 +178,172 @@
 
   global.renderFinancialInsights=renderFinancialInsights;
 })(typeof window!=='undefined'?window:globalThis);
+
+(function(global){
+  'use strict';
+
+  const REVIEW_STYLE_ID='financialReviewSelectStyles';
+  const EXPENSE_CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Saúde','Assinaturas','Dívida','Lazer','Casa','Trabalho','Ajuste','Outros'];
+  const INCOME_CATEGORIES=['Salário','Adiantamento salarial','Hora extra','Benefícios','Freelance / renda extra','Reembolso','Rendimentos','Venda','Presente','Ajuste','Outros'];
+
+  function ensureReviewStyles(){
+    if(document.getElementById(REVIEW_STYLE_ID)) return;
+    const style=document.createElement('style');
+    style.id=REVIEW_STYLE_ID;
+    style.textContent=`
+      .sfp-review-native-select{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;margin:0!important;padding:0!important;border:0!important}
+      .sfp-review-select{position:relative;margin-top:4px}
+      .sfp-review-select-button{width:100%;min-height:var(--control-height);display:flex;align-items:center;justify-content:space-between;gap:12px;background:#071423;border:1px solid var(--color-border);color:var(--color-text);border-radius:10px;padding:10px 12px;font:inherit;font-weight:700;text-align:left;box-shadow:none}
+      .sfp-review-select-button:focus,.sfp-review-select-button[aria-expanded="true"]{outline:none;border-color:var(--color-brand);box-shadow:0 0 0 3px var(--color-brand-glow)}
+      .sfp-review-select-chevron{width:9px;height:9px;flex:0 0 auto;border-right:2px solid var(--color-text-secondary);border-bottom:2px solid var(--color-text-secondary);transform:rotate(45deg) translateY(-2px);transition:transform .15s ease}
+      .sfp-review-select-button[aria-expanded="true"] .sfp-review-select-chevron{transform:rotate(225deg) translate(-2px,-2px)}
+      .sfp-review-select-menu{position:absolute;z-index:10000;left:0;right:0;top:calc(100% + 6px);max-height:min(44vh,330px);overflow:auto;padding:6px;background:linear-gradient(180deg,var(--color-surface-elevated),var(--color-surface-1));border:1px solid var(--color-border-strong);border-radius:12px;box-shadow:var(--shadow-lg)}
+      .sfp-review-select-menu[hidden]{display:none!important}
+      .sfp-review-select-option{width:100%;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:0;border-radius:9px;background:transparent;color:var(--color-text);font:inherit;text-align:left}
+      .sfp-review-select-option:hover,.sfp-review-select-option:focus{outline:none;background:rgba(255,255,255,.055)}
+      .sfp-review-select-option[aria-selected="true"]{background:var(--color-brand-muted);color:var(--color-brand);font-weight:800}
+      .sfp-review-select-option[aria-selected="true"]:after{content:"✓";font-weight:900}
+      @media(max-width:720px){.sfp-review-select-menu{max-height:42vh}.sfp-review-select-button,.sfp-review-select-option{font-size:16px}}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function closeOtherMenus(except){
+    document.querySelectorAll('.sfp-review-select-menu').forEach(menu=>{
+      if(menu!==except) menu.hidden=true;
+      const button=menu.parentElement?.querySelector('.sfp-review-select-button');
+      if(button&&menu!==except) button.setAttribute('aria-expanded','false');
+    });
+  }
+
+  function refreshCustom(select){
+    const host=select?._sfpReviewHost;
+    if(!host) return;
+    const button=host.querySelector('.sfp-review-select-button');
+    const menu=host.querySelector('.sfp-review-select-menu');
+    const selected=select.options[select.selectedIndex];
+    const label=button?.querySelector('.sfp-review-select-label');
+    if(label&&label.textContent!==(selected?.textContent||'Selecione')) label.textContent=selected?.textContent||'Selecione';
+    if(!menu) return;
+    const signature=Array.from(select.options).map(option=>`${option.value}:${option.textContent}`).join('|');
+    if(menu.dataset.optionsSignature===signature){
+      menu.querySelectorAll('.sfp-review-select-option').forEach((item,index)=>{
+        const option=select.options[index];
+        if(option) item.setAttribute('aria-selected',String(option.value===select.value));
+      });
+      return;
+    }
+    menu.dataset.optionsSignature=signature;
+    menu.replaceChildren(...Array.from(select.options).map(option=>{
+      const item=document.createElement('button');
+      item.type='button';
+      item.className='sfp-review-select-option';
+      item.setAttribute('role','option');
+      item.setAttribute('aria-selected',String(option.value===select.value));
+      item.textContent=option.textContent;
+      item.onclick=()=>{
+        select.value=option.value;
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+        menu.hidden=true;
+        button.setAttribute('aria-expanded','false');
+        button.focus();
+      };
+      return item;
+    }));
+  }
+
+  function enhanceSelect(select){
+    if(!select||select.dataset.sfpReviewEnhanced==='1') return;
+    select.dataset.sfpReviewEnhanced='1';
+    select.classList.add('sfp-review-native-select');
+    const host=document.createElement('div');
+    host.className='sfp-review-select';
+    host.innerHTML='<button type="button" class="sfp-review-select-button" aria-haspopup="listbox" aria-expanded="false"><span class="sfp-review-select-label"></span><span class="sfp-review-select-chevron" aria-hidden="true"></span></button><div class="sfp-review-select-menu" role="listbox" hidden></div>';
+    select.insertAdjacentElement('afterend',host);
+    select._sfpReviewHost=host;
+    const button=host.querySelector('.sfp-review-select-button');
+    const menu=host.querySelector('.sfp-review-select-menu');
+    button.onclick=()=>{
+      const opening=menu.hidden;
+      closeOtherMenus(menu);
+      menu.hidden=!opening;
+      button.setAttribute('aria-expanded',String(opening));
+    };
+    button.onkeydown=event=>{
+      if(event.key==='Escape'){
+        menu.hidden=true;
+        button.setAttribute('aria-expanded','false');
+      }
+    };
+    select.addEventListener('change',()=>refreshCustom(select));
+    refreshCustom(select);
+  }
+
+  function replaceCategoryOptions(select,categories,preserve){
+    if(!select) return;
+    const previous=select.value;
+    const current=Array.from(select.options).map(option=>option.value);
+    const optionsChanged=current.length!==categories.length||current.some((value,index)=>value!==categories[index]);
+    if(optionsChanged){
+      select.replaceChildren(...categories.map(category=>{
+        const option=document.createElement('option');
+        option.value=category;
+        option.textContent=category;
+        return option;
+      }));
+    }
+    const next=preserve&&categories.includes(previous)?previous:'Outros';
+    if(select.value!==next) select.value=next;
+    refreshCustom(select);
+  }
+
+  function syncReviewCategories({reset=false}={}){
+    const nature=document.getElementById('financialReviewNature');
+    const category=document.getElementById('financialReviewCategory');
+    if(!nature||!category) return;
+    if(nature.value==='income') replaceCategoryOptions(category,INCOME_CATEGORIES,!reset);
+    else if(nature.value==='expense') replaceCategoryOptions(category,EXPENSE_CATEGORIES,!reset);
+  }
+
+  function enhanceFinancialReview(){
+    const nature=document.getElementById('financialReviewNature');
+    const category=document.getElementById('financialReviewCategory');
+    const counterpart=document.getElementById('financialReviewCounterpart');
+    if(!nature) return;
+    ensureReviewStyles();
+    enhanceSelect(nature);
+    if(category) enhanceSelect(category);
+    if(counterpart) enhanceSelect(counterpart);
+    syncReviewCategories();
+  }
+
+  document.addEventListener('change',event=>{
+    if(event.target?.id==='financialReviewNature'){
+      syncReviewCategories({reset:true});
+      refreshCustom(event.target);
+      const counterpart=document.getElementById('financialReviewCounterpart');
+      if(counterpart) refreshCustom(counterpart);
+    }
+  });
+
+  document.addEventListener('click',event=>{
+    if(!event.target.closest('.sfp-review-select')) closeOtherMenus(null);
+  });
+
+  const start=()=>{
+    ensureReviewStyles();
+    enhanceFinancialReview();
+    let scheduled=false;
+    new MutationObserver(()=>{
+      if(scheduled) return;
+      scheduled=true;
+      queueMicrotask(()=>{
+        scheduled=false;
+        enhanceFinancialReview();
+      });
+    }).observe(document.body,{childList:true,subtree:true});
+  };
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+})(typeof window!=='undefined'?window:globalThis);
