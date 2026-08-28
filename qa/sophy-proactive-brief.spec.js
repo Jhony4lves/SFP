@@ -181,6 +181,8 @@ test.describe('Sophy Proactive Brief',()=>{
       window.applyPrivacy();
     },{insights:duplicateInsights,safe:healthySafe});
     const panel=page.locator('#sophyProactiveBrief');
+    await page.locator('.nav button[data-page="sophy"]').click();
+    await expect(panel).toBeVisible();
     await expect(panel.locator('[data-money]').first()).toHaveClass(/private-value/);
     await panel.getByRole('button',{name:'Detalhar'}).click();
     const prompt=await page.evaluate(()=>window.__qaSophyPrompt);
