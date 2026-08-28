@@ -91,11 +91,19 @@ test('P1 lançamentos: transferência da tabela pode ser editada sem duplicar e 
   await page.locator('#txAmount').fill('75');
   await page.locator('#txSubmit').click();
 
+  // O submit atualiza o estado antes de terminar o save assíncrono e, ao concluir,
+  // navega intencionalmente para Hoje. Esperar essa navegação elimina a corrida
+  // sem esconder a validação real de persistência/controles da transferência.
+  await expect(page.locator('#hoje')).toHaveClass(/active/);
+
   let transfers = await page.evaluate(() => structuredClone(state.transfers));
   expect(transfers).toHaveLength(1);
   expect(transfers[0]).toMatchObject({ id: 880, desc: 'Mover para reserva', amount: 75, fromId: 1, toId: 2 });
+  const persistedAfterEdit = await page.evaluate(async () => (await dbGet()).value.transfers.find(t => t.id === 880));
+  expect(persistedAfterEdit).toMatchObject({ id: 880, amount: 75, fromId: 1, toId: 2 });
 
   await page.evaluate(() => setPage('lancamentos'));
+  await expect(page.locator('#lancamentos')).toHaveClass(/active/);
   const deleteButton = page.locator('#txTable tr').filter({ hasText: 'Mover para reserva' }).getByRole('button', { name: 'Excluir' });
   // Prova o vínculo do controle renderizado; a função é exercitada separadamente para evitar corrida com o rerender da tabela.
   await expect(deleteButton).toHaveAttribute('onclick', 'trashTransfer(880)');
