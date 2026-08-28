@@ -1,0 +1,66 @@
+name: Package SFP Beta 3
+
+on:
+  push:
+    branches:
+      - release/beta3-package
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    env:
+      SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}
+      SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
+      SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
+      SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "8.11.1"
+      - run: yes | sdkmanager --licenses >/dev/null || true
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Validate signing configuration
+        run: |
+          set -euo pipefail
+          for var in SFP_KEYSTORE_BASE64 SFP_KEYSTORE_PASSWORD SFP_KEY_ALIAS SFP_KEY_PASSWORD; do
+            test -n "${!var:-}"
+          done
+      - name: Restore signing key
+        run: |
+          set -euo pipefail
+          printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-release.jks"
+          test -s "$RUNNER_TEMP/sfp-release.jks"
+      - name: Build signed APK and AAB
+        env:
+          SFP_KEYSTORE_PATH: ${{ runner.temp }}/sfp-release.jks
+        run: gradle :app:assembleRelease :app:bundleRelease
+      - name: Prepare Beta 3 bundle
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk dist/SFP-2.1.0-beta.3.apk
+          cp app/build/outputs/bundle/release/app-release.aab dist/SFP-2.1.0-beta.3.aab
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs dist/SFP-2.1.0-beta.3.apk | tee dist/SIGNING-CERT.txt
+          jarsigner -verify dist/SFP-2.1.0-beta.3.aab
+          cat > dist/RELEASE-METADATA.txt <<EOF
+          versionName=2.1.0-beta.3
+          versionCode=4
+          commit=${GITHUB_SHA}
+          sourceMain=0f3d442bc3c86689fe88fa8066dfef711002a558
+          workflowRun=${GITHUB_RUN_ID}
+          EOF
+          sha256sum dist/SFP-2.1.0-beta.3.apk dist/SFP-2.1.0-beta.3.aab > dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v6
+        with:
+          name: SFP-2.1.0-beta.3-release
+          path: dist/*
+          if-no-files-found: error
