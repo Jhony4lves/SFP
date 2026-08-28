@@ -3365,6 +3365,8 @@ button:active:not(:disabled){transform:translateY(1px)}
 
 <script src="financial-intelligence.js"></script>
 <script src="financial-insights-ui.js"></script>
+<script src="safe-spend.js"></script>
+<script src="safe-spend-ui.js"></script>
 <script>
 const VERSION=202, SCHEMA_VERSION=12, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
 const CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Saúde','Assinaturas','Dívida','Lazer','Casa','Trabalho','Ajuste','Outros'];
@@ -9294,7 +9296,7 @@ function updateContextFab(){
   }
 }
 
-function renderAll(){renderSelects();renderTop();renderToday();if(typeof renderFinancialInsights==='function')renderFinancialInsights();renderDashboard();renderAnalyticsDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderFinancialAudit();renderDataCenter();renderConfig();renderFavorites();renderSophy();applyPrivacy();formatMoneyInputs()}
+function renderAll(){renderSelects();renderTop();renderToday();if(typeof renderFinancialInsights==='function')renderFinancialInsights();if(typeof renderSafeSpendProjection==='function')renderSafeSpendProjection();renderDashboard();renderAnalyticsDashboard();renderTx();renderAccounts();renderCreditFacilities();renderCards();renderRecurring();renderBudget();renderDebts();renderGoals();renderPatrimony();renderCalendar();renderReports();renderStatements();renderCsvTemplates();renderReconcileCenter();renderRules();renderAudit();renderFinancialAudit();renderDataCenter();renderConfig();renderFavorites();renderSophy();applyPrivacy();formatMoneyInputs()}
 const PAGE_TITLES={hoje:['Hoje','O que importa agora'],sophy:['Sophy','Sua inteligência financeira pessoal e conversacional'],dashboard:['Dashboard','Como está sua vida financeira'],visao:['Visão Geral','Seu mês em números'],lancamentos:['Lançamentos','Registre com o mínimo de atrito'],extratos:['Extratos','Importe e concilie'],contas:['Contas','Onde seu dinheiro está'],cartoes:['Cartões','Faturas, limites e parcelas'],recorrencias:['Recorrências','Regras mensais sem duplicação'],orcamento:['Orçamento','Limites flexíveis'],dividas:['Dívidas','Saldo e amortização'],metas:['Metas','Objetivos e reservas'],patrimonio:['Patrimônio','Ativos menos dívidas'],calendario:['Calendário','Seu fluxo por dia'],relatorios:['Relatórios','Fechamentos e comparação'],simuladores:['Simuladores','Teste cenários'],dados:['Central de Dados','Saúde, backup e integridade da base'],auditoria:['Auditoria','Integridade e manutenção dos dados'],config:['Configurações','Preferências e segurança']};
 let pageStack=['hoje'];
 function activePage(){return document.querySelector('.tab.active')?.id||'hoje'}
