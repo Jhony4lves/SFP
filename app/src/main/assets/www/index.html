@@ -9692,7 +9692,7 @@ function statementTransferPeer(r){
 }
 function finalizeStatementTransferMatch(r){
  let peer=statementTransferPeer(r);if(!peer)return null;
- let current={source:'current',accountId:r.accountId,date:r.date,desc:r.desc,statementKey:r.key,signedAmount:Number(r.amount)||0,balanceImpact:r.date>state.baseDate,file:r.file||null};
+ let current={source:'current',accountId:r.accountId,date:r.date,desc:r.desc,statementKey:r.key,amount:Number(r.amount)||0,signedAmount:Number(r.amount)||0,balanceImpact:r.date>state.baseDate,file:r.file||null};
  if(!transferCandidateAllowed(current,peer,{semanticClass:r.semanticClass,economicImpact:r.economicImpact}))return null;
  if(peer.source==='evidence')state.transferEvidence=state.transferEvidence.filter(e=>String(e.id)!==String(peer.id));
  else state.transactions=state.transactions.filter(t=>String(t.id)!==String(peer.id));
