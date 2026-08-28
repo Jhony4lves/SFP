@@ -18,27 +18,20 @@ command -v tar >/dev/null 2>&1 || fail 'tar não encontrado.'
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || fail 'Execute este script dentro do checkout do SFP.'
 CURRENT_BRANCH="$(git branch --show-current)"
 [ "$CURRENT_BRANCH" = "$SOURCE_BRANCH" ] || fail "Branch atual: $CURRENT_BRANCH. Use $SOURCE_BRANCH."
-[ -f scripts/public_sanitize.mjs ] || fail 'Sanitizador privado não encontrado na branch de preparação.'
 [ -f qa/public-safety-check.mjs ] || fail 'Gate público de segurança não encontrado.'
+[ ! -f scripts/public_sanitize.mjs ] || fail 'O sanitizador privado ainda está presente; a árvore não está pronta para publicação.'
+[ ! -f .github/workflows/public-sanitize-apply.yml ] || fail 'O workflow one-shot ainda está presente; a árvore não está pronta para publicação.'
 
 gh auth status >/dev/null 2>&1 || fail 'gh não está autenticado.'
 if gh repo view "$PUBLIC_REPO" >/dev/null 2>&1; then
   fail "$PUBLIC_REPO já existe. Nada foi sobrescrito."
 fi
 
-log 'Criando snapshot temporário sem histórico Git'
+log 'Criando snapshot temporário a partir da árvore sanitizada, sem histórico Git'
 rm -rf "$WORK_ROOT"
 mkdir -p "$SNAPSHOT"
 git archive HEAD | tar -x -C "$SNAPSHOT"
-
-log 'Aplicando sanitização determinística na cópia temporária'
-(
-  cd "$SNAPSHOT"
-  node scripts/public_sanitize.mjs
-  rm -f scripts/public_sanitize.mjs
-  rm -f scripts/publish_public_snapshot.sh
-  rm -f .github/workflows/public-sanitize-apply.yml
-)
+rm -f "$SNAPSHOT/scripts/publish_public_snapshot.sh"
 
 log 'Executando gate de secrets, PII e arquivos financeiros'
 (
@@ -73,12 +66,14 @@ log "Criando $PUBLIC_REPO como repositório PÚBLICO"
     --description 'Smart Financial Planner — aplicativo financeiro local-first para Android'
 )
 
-log 'Verificando publicação e commit único'
+log 'Verificando publicação, histórico e autor'
 (
   cd "$SNAPSHOT"
   git fetch origin main --quiet
   COUNT="$(git rev-list --count origin/main)"
   [ "$COUNT" = '1' ] || fail "O repositório público deveria nascer com 1 commit, mas possui $COUNT."
+  AUTHOR_EMAIL="$(git log -1 --format='%ae' origin/main)"
+  [ "$AUTHOR_EMAIL" = "$NOREPLY_EMAIL" ] || fail "Autor público inesperado: $AUTHOR_EMAIL"
   git log -1 --format='Commit público: %H%nAutor: %an <%ae>' origin/main
 )
 
