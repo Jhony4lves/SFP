@@ -63,7 +63,7 @@ public class AndroidBridge {
 
     @JavascriptInterface
     public String getAppVersion() {
-        return "2.0.2";
+        return BuildConfig.VERSION_NAME;
     }
 
     @JavascriptInterface
@@ -381,7 +381,7 @@ public class AndroidBridge {
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
             conn.setRequestProperty("Authorization", "Bearer " + key.trim());
-            conn.setRequestProperty("User-Agent", "SmartFinancialPlanner/2.0 Sophy/3.0");
+            conn.setRequestProperty("User-Agent", "SmartFinancialPlanner/" + BuildConfig.VERSION_NAME + " Sophy/3.0");
             conn.setConnectTimeout(15000);
             conn.setReadTimeout(20000);
             conn.setDoOutput(true);
