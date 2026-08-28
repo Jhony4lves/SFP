@@ -19,5 +19,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Diagnose transfer post-edit race
-        run: npx playwright test qa/tmp-transfer-diagnostic.spec.js --repeat-each=10 --workers=1
+      - name: Static QA
+        run: npm run test:static
+      - name: Repeat fixed transfer edit/delete scenario
+        run: npx playwright test qa/transaction-p1-regression.spec.js -g "transferência da tabela" --repeat-each=20 --workers=1
+      - name: Recheck intelligence foundation
+        run: npx playwright test qa/financial-intelligence.spec.js --workers=1
