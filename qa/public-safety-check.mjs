@@ -40,6 +40,18 @@ const secretPatterns = [
   { name: 'Groq live-looking key', re: /\bgsk_[A-Za-z0-9_-]{24,}\b/g }
 ];
 
+// Valores sintéticos exatos usados pelos testes criptográficos. Qualquer outro token com formato real continua bloqueado.
+const allowedSecretFixtures = new Set([
+  'gsk_test_mock_dummy_secret_key_1234567890',
+  'gsk_replacement_key_abc_9999',
+  'gsk_replacement_key_xyz_8888',
+  'gsk_session_secret_for_test',
+  'gsk_legacy_plain_key_success_123',
+  'gsk_legacy_plain_key_failure_999',
+  'gsk_temporary_unmigrated_key',
+  'gsk_existing_secure_master_key'
+]);
+
 const emailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 const cpfFormatted = /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g;
 const dangerousTrackedFile = /(?:^|\/)(?:local\.properties|signing\.properties|[^/]+\.(?:jks|keystore|p12|ofx|qfx|ofc|xlsx|xls|ods|bak|backup))$/i;
@@ -74,7 +86,11 @@ for (const full of walk(ROOT)) {
   }
   for (const { name, re } of secretPatterns) {
     re.lastIndex = 0;
-    if (re.test(text)) findings.push(`${rel}: padrão sensível detectado (${name})`);
+    for (const match of text.matchAll(re)) {
+      if (allowedSecretFixtures.has(match[0])) continue;
+      findings.push(`${rel}: padrão sensível detectado (${name})`);
+      break;
+    }
   }
   cpfFormatted.lastIndex = 0;
   if (cpfFormatted.test(text)) findings.push(`${rel}: possível CPF formatado detectado`);
