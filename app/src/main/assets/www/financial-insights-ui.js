@@ -25,13 +25,13 @@
       .financial-insights-panel .head{min-width:0}
       .financial-insights-panel .head>div:first-child{min-width:0}
       .financial-insights-summary{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap;min-width:0;max-width:100%}
-      .financial-insights-summary .badge{background:rgba(255,255,255,.025);white-space:nowrap;max-width:100%}
+      .financial-insights-summary .badge{background:var(--color-surface-elevated);white-space:nowrap;max-width:100%}
       .financial-insights-list{display:grid;gap:9px}
-      .financial-insight{border:1px solid var(--color-border);border-radius:var(--radius-md);background:#081626;padding:12px;display:grid;gap:9px}
-      .financial-insight[data-severity="critical"]{border-color:var(--color-negative-border);background:linear-gradient(180deg,rgba(244,63,94,.075),#081626 70%)}
-      .financial-insight[data-severity="warning"]{border-color:var(--color-warning-border);background:linear-gradient(180deg,rgba(245,158,11,.06),#081626 70%)}
+      .financial-insight{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-1);padding:12px;display:grid;gap:9px}
+      .financial-insight[data-severity="critical"]{border-color:var(--color-negative-border);background:linear-gradient(180deg,var(--color-negative-bg),var(--color-surface-1) 70%)}
+      .financial-insight[data-severity="warning"]{border-color:var(--color-warning-border);background:linear-gradient(180deg,var(--color-warning-bg),var(--color-surface-1) 70%)}
       .financial-insight-top{display:flex;gap:10px;align-items:flex-start}
-      .financial-insight-marker{width:30px;height:30px;border-radius:9px;border:1px solid var(--color-border);display:grid;place-items:center;font-weight:850;flex:0 0 auto;color:var(--color-brand);background:#0b1b2e}
+      .financial-insight-marker{width:30px;height:30px;border-radius:9px;border:1px solid var(--color-border);display:grid;place-items:center;font-weight:850;flex:0 0 auto;color:var(--color-brand);background:var(--color-surface-elevated)}
       .financial-insight[data-severity="critical"] .financial-insight-marker{color:var(--color-negative);border-color:var(--color-negative-border);background:var(--color-negative-bg)}
       .financial-insight[data-severity="warning"] .financial-insight-marker{color:var(--color-warning);border-color:var(--color-warning-border);background:var(--color-warning-bg)}
       .financial-insight-copy{min-width:0;flex:1}
@@ -39,14 +39,14 @@
       .financial-insight-copy p{margin:3px 0 0;color:var(--color-text-secondary);font-size:10.5px;line-height:1.45}
       .financial-insight-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:5px}
       .financial-insight-severity{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted)}
-      .financial-insight-evidence{font-size:10px;color:var(--color-text-secondary);padding:8px 9px;border-radius:9px;border:1px dashed var(--color-border);background:rgba(0,0,0,.08)}
-      .financial-insight-details{border-top:1px solid rgba(26,52,82,.55);padding-top:8px}
+      .financial-insight-evidence{font-size:10px;color:var(--color-text-secondary);padding:8px 9px;border-radius:9px;border:1px dashed var(--color-border);background:var(--color-surface-elevated)}
+      .financial-insight-details{border-top:1px solid var(--color-border);padding-top:8px}
       .financial-insight-details summary{cursor:pointer;color:var(--color-text-secondary);font-size:10px;font-weight:700;list-style:none}
       .financial-insight-details summary::-webkit-details-marker{display:none}
       .financial-insight-details p{margin:7px 0 0;font-size:10px;color:var(--color-text-secondary);line-height:1.45}
       .financial-insight-actions{display:flex;gap:7px;flex-wrap:wrap}
       .financial-insight-actions button{min-height:34px;padding:6px 10px;font-size:10px}
-      .financial-insights-empty{display:flex;gap:10px;align-items:center;padding:12px;border:1px solid rgba(34,197,94,.22);border-radius:var(--radius-md);background:rgba(34,197,94,.055)}
+      .financial-insights-empty{display:flex;gap:10px;align-items:center;padding:12px;border:1px solid var(--color-positive-border);border-radius:var(--radius-md);background:var(--color-positive-bg)}
       .financial-insights-empty strong{display:block;font-size:12px;color:var(--color-text)}
       .financial-insights-empty small{display:block;margin-top:2px;color:var(--color-text-secondary);font-size:10px}
       @media(max-width:720px){
@@ -158,16 +158,16 @@
     style.textContent=`
       select.sfp-review-native-select{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;margin:0!important;padding:0!important;border:0!important;clip-path:inset(50%)!important}
       .sfp-select{position:relative;margin-top:4px;min-width:0}
-      .sfp-select-button{width:100%;min-height:var(--control-height);display:flex;align-items:center;justify-content:space-between;gap:12px;background:#071423;border:1px solid var(--color-border);color:var(--color-text);border-radius:10px;padding:10px 12px;font:inherit;font-weight:650;text-align:left;box-shadow:none;min-width:0;cursor:pointer}
+      .sfp-select-button{width:100%;min-height:var(--control-height);display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--color-surface-1);border:1px solid var(--color-border);color:var(--color-text);border-radius:10px;padding:10px 12px;font:inherit;font-weight:650;text-align:left;box-shadow:none;min-width:0;cursor:pointer}
       .sfp-select-button[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
       .sfp-select-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
       .sfp-select-button:focus,.sfp-select-button[aria-expanded="true"]{outline:none;border-color:var(--color-brand);box-shadow:0 0 0 3px var(--color-brand-glow)}
       .sfp-select-chevron{width:9px;height:9px;flex:0 0 auto;border-right:2px solid var(--color-text-secondary);border-bottom:2px solid var(--color-text-secondary);transform:rotate(45deg) translateY(-2px);transition:transform .15s ease}
       .sfp-select-button[aria-expanded="true"] .sfp-select-chevron{transform:rotate(225deg) translate(-2px,-2px)}
-      .sfp-select-menu{position:absolute;z-index:20000;left:0;right:0;top:calc(100% + 6px);max-height:min(44vh,330px);overflow:auto;padding:6px;background:linear-gradient(180deg,var(--color-surface-elevated),var(--color-surface-1));border:1px solid var(--color-border-strong);border-radius:12px;box-shadow:var(--shadow-lg);overscroll-behavior:contain}
+      .sfp-select-menu{position:fixed;z-index:20000;max-height:min(44vh,330px);overflow:auto;padding:6px;background:var(--color-surface-elevated);border:1px solid var(--color-border-strong);border-radius:12px;box-shadow:var(--shadow-lg);overscroll-behavior:contain}
       .sfp-select-menu[hidden]{display:none!important}
       .sfp-select-option{width:100%;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:0;border-radius:9px;background:transparent;color:var(--color-text);font:inherit;text-align:left;cursor:pointer}
-      .sfp-select-option:hover,.sfp-select-option:focus{outline:none;background:rgba(255,255,255,.055)}
+      .sfp-select-option:hover,.sfp-select-option:focus{outline:none;background:var(--color-brand-muted)}
       .sfp-select-option[aria-selected="true"]{background:var(--color-brand-muted);color:var(--color-brand);font-weight:800}
       .sfp-select-option[aria-selected="true"]:after{content:"✓";font-weight:900}
       .sfp-select-option[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
@@ -175,7 +175,7 @@
       .head,.management-form-panel .head{overflow:visible!important}
       .head h2,.management-form-panel .head h2{line-height:1.35!important;padding-top:1px;overflow:visible!important}
       .form-section{min-width:0}.management-form,.management-form-panel form{min-width:0}
-      @media(max-width:720px){.sfp-select-menu{position:fixed;left:12px;right:12px;top:auto;bottom:calc(var(--bottom-nav-height,62px) + env(safe-area-inset-bottom,0px) + 12px);max-height:58vh;border-radius:16px;padding:8px;box-shadow:0 20px 70px rgba(0,0,0,.72)}.sfp-select-button,.sfp-select-option{font-size:16px}.form-section,.management-form-panel,.panel{scroll-margin-top:12px}.field-group--two,.two,.three{gap:10px}}
+      @media(max-width:720px){.sfp-select-menu{padding:8px;border-radius:16px}.sfp-select-button,.sfp-select-option{font-size:16px}.form-section,.management-form-panel,.panel{scroll-margin-top:12px}.field-group--two,.two,.three{gap:10px}}
       @media(orientation:landscape) and (max-height:600px){main{padding:10px 14px 78px!important}.top{margin-bottom:12px!important}.grid2,.grid3,.management-layout,.field-group--two,.two,.three{grid-template-columns:1fr!important}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.panel{padding:13px!important}.sidebar{padding-top:8px!important;padding-bottom:8px!important}}
     `;
     document.head.appendChild(style);
@@ -183,6 +183,29 @@
 
   function closeOtherMenus(except){
     document.querySelectorAll('.sfp-select-menu').forEach(menu=>{if(menu===except)return;menu.hidden=true;menu.parentElement?.querySelector('.sfp-select-button')?.setAttribute('aria-expanded','false');});
+  }
+
+  function positionMenu(host){
+    const button=host?.querySelector('.sfp-select-button'),menu=host?.querySelector('.sfp-select-menu');
+    if(!button||!menu||menu.hidden)return;
+    const rect=button.getBoundingClientRect(),margin=8,gap=6,vw=document.documentElement.clientWidth,vh=global.innerHeight||document.documentElement.clientHeight;
+    if(rect.bottom<0||rect.top>vh||rect.right<0||rect.left>vw){menu.hidden=true;button.setAttribute('aria-expanded','false');return;}
+    const left=Math.max(margin,Math.min(rect.left,vw-margin-Math.max(rect.width,180)));
+    const width=Math.min(Math.max(rect.width,180),vw-margin*2);
+    menu.style.left=`${left}px`;menu.style.width=`${width}px`;
+    menu.style.right='auto';menu.style.bottom='auto';
+    const desired=Math.min(menu.scrollHeight||330,330,Math.max(120,vh*0.58));
+    const below=Math.max(0,vh-rect.bottom-gap-margin),above=Math.max(0,rect.top-gap-margin);
+    const openBelow=below>=Math.min(desired,180)||below>=above;
+    const available=Math.max(96,openBelow?below:above);
+    menu.style.maxHeight=`${Math.min(desired,available)}px`;
+    const measured=Math.min(menu.scrollHeight||desired,parseFloat(menu.style.maxHeight)||desired);
+    const top=openBelow?rect.bottom+gap:Math.max(margin,rect.top-gap-measured);
+    menu.style.top=`${Math.max(margin,Math.min(top,vh-margin-measured))}px`;
+  }
+
+  function repositionOpenMenus(){
+    document.querySelectorAll('.sfp-select').forEach(host=>positionMenu(host));
   }
 
   function optionSignature(select){return Array.from(select.options).map(option=>`${option.value}:${option.textContent}:${option.disabled?'1':'0'}`).join('|');}
@@ -213,6 +236,7 @@
       }));
     }
     menu.querySelectorAll('.sfp-select-option').forEach(item=>item.setAttribute('aria-selected',String(item.dataset.value===select.value)));
+    positionMenu(host);
   }
 
   function focusOption(menu,direction){
@@ -229,7 +253,7 @@
     host.innerHTML=`<div role="button" tabindex="0" class="sfp-select-button${isReview?' sfp-review-select-button':''}" aria-haspopup="listbox" aria-expanded="false"><span class="sfp-select-label"></span><span class="sfp-select-chevron" aria-hidden="true"></span></div><div class="sfp-select-menu${isReview?' sfp-review-select-menu':''}" role="listbox" hidden></div>`;
     select.insertAdjacentElement('afterend',host);select._sfpReviewHost=host;
     const button=host.querySelector('.sfp-select-button'),menu=host.querySelector('.sfp-select-menu');
-    button.onclick=()=>{if(select.disabled)return;const opening=menu.hidden;closeOtherMenus(menu);menu.hidden=!opening;button.setAttribute('aria-expanded',String(opening));if(opening)requestAnimationFrame(()=>menu.querySelector('[aria-selected="true"]')?.focus());};
+    button.onclick=()=>{if(select.disabled)return;const opening=menu.hidden;closeOtherMenus(menu);menu.hidden=!opening;button.setAttribute('aria-expanded',String(opening));if(opening)requestAnimationFrame(()=>{positionMenu(host);menu.querySelector('[aria-selected="true"]')?.focus();});};
     button.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();button.click();}else if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();if(menu.hidden)button.click();requestAnimationFrame(()=>focusOption(menu,event.key==='ArrowDown'?1:-1));}else if(event.key==='Escape'){menu.hidden=true;button.setAttribute('aria-expanded','false');}};
     menu.onkeydown=event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();focusOption(menu,event.key==='ArrowDown'?1:-1);}else if(event.key==='Enter'||event.key===' '){event.preventDefault();document.activeElement?.click();}else if(event.key==='Escape'){menu.hidden=true;button.setAttribute('aria-expanded','false');button.focus();}};
     select.addEventListener('change',()=>refreshCustom(select));refreshCustom(select);
@@ -275,6 +299,10 @@
 
   document.addEventListener('change',event=>{const target=event.target;if(!(target instanceof HTMLSelectElement))return;syncSemanticCategories();refreshCustom(target);});
   document.addEventListener('click',event=>{if(!event.target.closest('.sfp-select'))closeOtherMenus(null);});
+  document.addEventListener('scroll',repositionOpenMenus,true);
+  global.addEventListener('resize',repositionOpenMenus,{passive:true});
+  global.visualViewport?.addEventListener('resize',repositionOpenMenus,{passive:true});
+  global.visualViewport?.addEventListener('scroll',repositionOpenMenus,{passive:true});
   document.addEventListener('click',async event=>{const ask=event.target.closest('#safeSpendAskSophy');if(!ask)return;event.preventDefault();event.stopImmediatePropagation();const report=typeof global.safeSpendingSnapshot==='function'?global.safeSpendingSnapshot():null;if(typeof global.setPage==='function')global.setPage('sophy');if(report&&typeof global.sophySendMessage==='function')await global.sophySendMessage(safeSpendPrompt(report));},true);
 
   const start=()=>{enhanceAll();let scheduled=false;new MutationObserver(()=>{if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;enhanceAll();});}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','disabled']});};
