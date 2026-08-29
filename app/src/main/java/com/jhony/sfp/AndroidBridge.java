@@ -106,11 +106,8 @@ public class AndroidBridge {
     @JavascriptInterface
     public void showNotification(String title, String message) {
         try {
-            // Privacy protection: sanitize sensitive financial values if accidentally passed
             String safeTitle = (title != null && !title.trim().isEmpty()) ? title.trim() : "Smart Financial Planner";
             String safeMessage = (message != null && !message.trim().isEmpty()) ? message.trim() : "Há uma atualização importante no Smart Financial Planner.";
-
-            // Remove direct bank figures / currency patterns for lockscreen privacy protection
             safeMessage = safeMessage.replaceAll("R\\$\\s*[0-9]+([.,][0-9]{2})?", "***");
 
             Intent intent = new Intent(context, MainActivity.class);
@@ -136,7 +133,6 @@ public class AndroidBridge {
                 Toast.makeText(context, safeTitle + ": " + safeMessage, Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
-            // Safe fallback without interrupting application flow
             Toast.makeText(context, title != null ? title : "Aviso do Smart Financial Planner", Toast.LENGTH_SHORT).show();
         }
     }
@@ -212,31 +208,59 @@ public class AndroidBridge {
         return keyGenerator.generateKey();
     }
 
+    private void resetSecretKeyAlias() {
+        try {
+            KeyStore keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER);
+            keyStore.load(null);
+            if (keyStore.containsAlias(KEY_ALIAS)) {
+                keyStore.deleteEntry(KEY_ALIAS);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
     private boolean encryptAndSaveApiKey(String rawKey) {
         if (rawKey == null || rawKey.trim().isEmpty()) {
-            return clearSophyApiKey();
-        }
-        try {
-            SecretKey secretKey = getOrCreateSecretKey();
-            Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-            byte[] iv = cipher.getIV();
-            byte[] ciphertext = cipher.doFinal(rawKey.trim().getBytes(StandardCharsets.UTF_8));
-
-            String ciphertextB64 = Base64.encodeToString(ciphertext, Base64.NO_WRAP);
-            String ivB64 = Base64.encodeToString(iv, Base64.NO_WRAP);
-
-            context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
-                    .edit()
-                    .putString(KEY_CIPHERTEXT, ciphertextB64)
-                    .putString(KEY_IV, ivB64)
-                    .putString(KEY_VERSION, "v3-keystore-gcm")
-                    .remove(LEGACY_KEY_GROQ_SECRET)
-                    .apply();
-            return true;
-        } catch (Exception e) {
+            // Empty input must never behave like an implicit destructive action.
+            // Key removal is only allowed through clearSophyApiKey().
             return false;
         }
+        final String trimmed = rawKey.trim();
+        for (int attempt = 0; attempt < 2; attempt++) {
+            try {
+                SecretKey secretKey = getOrCreateSecretKey();
+                Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+                byte[] iv = cipher.getIV();
+                byte[] ciphertext = cipher.doFinal(trimmed.getBytes(StandardCharsets.UTF_8));
+
+                String ciphertextB64 = Base64.encodeToString(ciphertext, Base64.NO_WRAP);
+                String ivB64 = Base64.encodeToString(iv, Base64.NO_WRAP);
+
+                boolean persisted = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
+                        .edit()
+                        .putString(KEY_CIPHERTEXT, ciphertextB64)
+                        .putString(KEY_IV, ivB64)
+                        .putString(KEY_VERSION, "v3-keystore-gcm")
+                        .remove(LEGACY_KEY_GROQ_SECRET)
+                        .commit();
+                if (!persisted) return false;
+
+                String verified = getDecryptedApiKeyInternal(false);
+                boolean ok = trimmed.equals(verified);
+                verified = null;
+                return ok;
+            } catch (Exception e) {
+                if (attempt == 0) {
+                    // A stale/invalidated AndroidKeyStore alias can survive an app update.
+                    // Recreate it once, then persist the newly entered key again.
+                    resetSecretKeyAlias();
+                    continue;
+                }
+                return false;
+            }
+        }
+        return false;
     }
 
     private void migrateLegacyKeyIfNeeded(SharedPreferences prefs) {
@@ -252,16 +276,21 @@ public class AndroidBridge {
         } catch (Exception ignored) {
             // Fail-secure: migration failure leaves API key unconfigured
         } finally {
-            // Unconditional purge: legacy plaintext is ALWAYS removed from disk
-            prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).apply();
+            // Legacy plaintext must never remain on disk.
+            prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).commit();
         }
     }
 
     private String getDecryptedApiKeyInternal() {
+        return getDecryptedApiKeyInternal(true);
+    }
+
+    private String getDecryptedApiKeyInternal(boolean allowLegacyMigration) {
         SharedPreferences prefs = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE);
 
-        // Fail-secure centralized legacy migration
-        migrateLegacyKeyIfNeeded(prefs);
+        if (allowLegacyMigration) {
+            migrateLegacyKeyIfNeeded(prefs);
+        }
 
         String ciphertextB64 = prefs.getString(KEY_CIPHERTEXT, null);
         String ivB64 = prefs.getString(KEY_IV, null);
@@ -302,7 +331,7 @@ public class AndroidBridge {
         } catch (Exception e) {
             return false;
         } finally {
-            key = null; // discard in-memory reference immediately
+            key = null;
         }
     }
 
@@ -319,7 +348,7 @@ public class AndroidBridge {
         } catch (Exception e) {
             return "";
         } finally {
-            key = null; // discard in-memory reference immediately
+            key = null;
         }
     }
 
@@ -340,14 +369,13 @@ public class AndroidBridge {
     @JavascriptInterface
     public boolean clearSophyApiKey() {
         try {
-            context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
+            return context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
                     .edit()
                     .remove(KEY_CIPHERTEXT)
                     .remove(KEY_IV)
                     .remove(KEY_VERSION)
                     .remove(LEGACY_KEY_GROQ_SECRET)
-                    .apply();
-            return true;
+                    .commit();
         } catch (Exception e) {
             return false;
         }
@@ -394,7 +422,6 @@ public class AndroidBridge {
 
             int responseCode = conn.getResponseCode();
 
-            // Handle prohibited redirects
             if (responseCode >= 300 && responseCode < 400) {
                 JSONObject errEnvelope = new JSONObject();
                 JSONObject errObj = new JSONObject();
@@ -466,7 +493,7 @@ public class AndroidBridge {
                 return "{\"error\":{\"message\":\"Internal Error\",\"status\":500}}";
             }
         } finally {
-            key = null; // discard in-memory secret immediately
+            key = null;
             if (conn != null) {
                 try { conn.disconnect(); } catch (Exception ignored) {}
             }
