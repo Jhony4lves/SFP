@@ -90,7 +90,7 @@ test.describe('Financial Insights UI',()=>{
     await expect(page.locator('#pageTitle')).toHaveText('Lançamentos');
   });
 
-  test('Perguntar à Sophy reutiliza o insight e não pede recálculo inventado',async({page})=>{
+  test('Perguntar à Sophy envia pergunta natural e específica daquele insight',async({page})=>{
     await boot(page);
     await page.evaluate(report=>{
       window.financialIntelligenceSnapshot=()=>report;
@@ -101,9 +101,55 @@ test.describe('Financial Insights UI',()=>{
     await page.locator('#financialInsightsPanel').getByRole('button',{name:'Perguntar à Sophy'}).click();
     await expect(page.locator('#pageTitle')).toHaveText('Sophy');
     const prompt=await page.evaluate(()=>window.__qaSophyPrompt);
+    expect(prompt).toContain('me explica esse alerta de um jeito simples');
     expect(prompt).toContain('Risco de saldo negativo em até 30 dias');
-    expect(prompt).toContain('Não recalcule nem invente valores');
-    expect(prompt).toContain('Local Financial Core');
+    expect(prompt).toContain('Menor saldo projetado');
+    expect(prompt).toContain('R$');
+    expect(prompt).not.toContain('Local Financial Core');
+  });
+
+  test('todos os selects simples recebem o componente visual do SFP',async({page})=>{
+    await boot(page);
+    await page.waitForFunction(()=>Array.from(document.querySelectorAll('select:not([multiple])')).every(select=>select.dataset.sfpReviewEnhanced==='1'));
+    const audit=await page.evaluate(()=>{
+      const selects=Array.from(document.querySelectorAll('select:not([multiple])'));
+      return {
+        total:selects.length,
+        enhanced:selects.filter(s=>s.dataset.sfpReviewEnhanced==='1').length,
+        hosts:selects.filter(s=>!!s._sfpReviewHost).length,
+        visibleNative:selects.filter(s=>!s.classList.contains('sfp-review-native-select')).length
+      };
+    });
+    expect(audit.total).toBeGreaterThan(20);
+    expect(audit.enhanced).toBe(audit.total);
+    expect(audit.hosts).toBe(audit.total);
+    expect(audit.visibleNative).toBe(0);
+  });
+
+  test('selects criados dinamicamente também são convertidos',async({page})=>{
+    await boot(page);
+    await page.evaluate(()=>{
+      const select=document.createElement('select');
+      select.id='qaDynamicSelect';
+      select.innerHTML='<option value="a">Opção A</option><option value="b">Opção B</option>';
+      document.body.appendChild(select);
+    });
+    await page.waitForFunction(()=>document.querySelector('#qaDynamicSelect')?.dataset.sfpReviewEnhanced==='1');
+    await expect(page.locator('.sfp-review-select[data-for-select="qaDynamicSelect"]')).toHaveCount(1);
+  });
+
+  test('recorrência de receita usa categorias de receita e não de despesa',async({page})=>{
+    await boot(page);
+    await page.evaluate(()=>{
+      const type=document.querySelector('#recType');
+      type.value='income';
+      type.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    const categories=await page.evaluate(()=>Array.from(document.querySelector('#recCategory').options).map(o=>o.value));
+    expect(categories).toContain('Salário');
+    expect(categories).toContain('Hora extra');
+    expect(categories).not.toContain('Lazer');
+    expect(categories).not.toContain('Dívida');
   });
 
   test('privacidade cobre mensagens e evidências monetárias do painel',async({page})=>{
