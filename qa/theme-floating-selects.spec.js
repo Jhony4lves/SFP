@@ -24,7 +24,7 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
       return b&&m?{offset:m.top-b.bottom,menuLeft:m.left,buttonLeft:b.left,widthDelta:Math.abs(m.width-b.width),position:getComputedStyle(host.querySelector('.sfp-select-menu')).position}:null;
     });
     expect(relation).not.toBeNull();
-    expect(relation.position).toBe('absolute');
+    expect(relation.position).toBe('fixed');
     expect(Math.abs(relation.menuLeft-relation.buttonLeft)).toBeLessThanOrEqual(2);
     expect(relation.widthDelta).toBeLessThanOrEqual(2);
 
