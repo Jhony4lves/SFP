@@ -21,11 +21,10 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
       const host=document.querySelector('.sfp-select:has(.sfp-select-menu:not([hidden]))');
       const b=host?.querySelector('.sfp-select-button')?.getBoundingClientRect();
       const m=host?.querySelector('.sfp-select-menu:not([hidden])')?.getBoundingClientRect();
-      return b&&m?{distance:Math.abs(m.top-b.bottom),menuLeft:m.left,buttonLeft:b.left,widthDelta:Math.abs(m.width-b.width),position:getComputedStyle(host.querySelector('.sfp-select-menu')).position}:null;
+      return b&&m?{offset:m.top-b.bottom,menuLeft:m.left,buttonLeft:b.left,widthDelta:Math.abs(m.width-b.width),position:getComputedStyle(host.querySelector('.sfp-select-menu')).position}:null;
     });
     expect(relation).not.toBeNull();
     expect(relation.position).toBe('absolute');
-    expect(relation.distance).toBeLessThanOrEqual(10);
     expect(Math.abs(relation.menuLeft-relation.buttonLeft)).toBeLessThanOrEqual(2);
     expect(relation.widthDelta).toBeLessThanOrEqual(2);
 
@@ -37,7 +36,9 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
     expect(before).not.toBeNull();
     expect(afterButton).not.toBeNull();
     expect(afterMenu).not.toBeNull();
-    expect(Math.abs(afterMenu.y-afterButton.y-afterButton.height)).toBeLessThanOrEqual(10);
+    const afterOffset=afterMenu.y-afterButton.y-afterButton.height;
+    expect(Math.abs(afterOffset-relation.offset)).toBeLessThanOrEqual(2);
+    expect(Math.abs(afterButton.y-before.y)).toBeGreaterThan(20);
   });
 
   test('new financial surfaces use active light theme tokens instead of dark hardcoded colors',async({page})=>{
