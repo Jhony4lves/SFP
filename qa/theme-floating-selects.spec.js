@@ -112,21 +112,12 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
     }
   });
 
-  test('Sophy send guard converts ISO dates before the local router can read them as subtraction',async({page})=>{
+  test('Sophy guard converts ISO dates before the local router can read them as subtraction',async({page})=>{
     await boot(page);
-    const sent=await page.evaluate(async()=>{
-      const original=window.sophySendMessage;
-      let captured='';
-      const spy=async message=>{captured=message;return null};
-      spy.__sfpIsoDateGuard=false;
-      window.sophySendMessage=spy;
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(resolve=>setTimeout(resolve,220));
-      await window.sophySendMessage('Menor saldo em 2026-09-11: -R$ 64,64');
-      window.sophySendMessage=original;
-      return captured;
-    });
-    expect(sent).toContain('11/09/2026');
-    expect(sent).not.toContain('2026-09-11');
+    await page.evaluate(()=>window.setPage('sophy'));
+    await page.evaluate(()=>{Promise.resolve(window.sophySendMessage('Teste de contexto em 2026-09-11.')).catch(()=>{});});
+    const userBubble=page.locator('.sophy-msg-row.user .sophy-bubble').last();
+    await expect(userBubble).toContainText('11/09/2026');
+    await expect(userBubble).not.toContainText('2026-09-11');
   });
 });
