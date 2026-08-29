@@ -17,25 +17,27 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
     const menu=page.locator('.sfp-select-menu:not([hidden])');
     await expect(menu).toBeVisible();
 
-    const before=await page.evaluate(()=>{
-      const b=document.querySelector('.sfp-select-button[aria-expanded="true"]')?.getBoundingClientRect();
-      const m=document.querySelector('.sfp-select-menu:not([hidden])')?.getBoundingClientRect();
-      return b&&m?{buttonTop:b.top,buttonBottom:b.bottom,menuTop:m.top,menuBottom:m.bottom}:null;
+    const relation=await page.evaluate(()=>{
+      const host=document.querySelector('.sfp-select:has(.sfp-select-menu:not([hidden]))');
+      const b=host?.querySelector('.sfp-select-button')?.getBoundingClientRect();
+      const m=host?.querySelector('.sfp-select-menu:not([hidden])')?.getBoundingClientRect();
+      return b&&m?{distance:Math.abs(m.top-b.bottom),menuLeft:m.left,buttonLeft:b.left,widthDelta:Math.abs(m.width-b.width),position:getComputedStyle(host.querySelector('.sfp-select-menu')).position}:null;
     });
-    expect(before).not.toBeNull();
+    expect(relation).not.toBeNull();
+    expect(relation.position).toBe('absolute');
+    expect(relation.distance).toBeLessThanOrEqual(10);
+    expect(Math.abs(relation.menuLeft-relation.buttonLeft)).toBeLessThanOrEqual(2);
+    expect(relation.widthDelta).toBeLessThanOrEqual(2);
 
+    const before=await button.boundingBox();
     await page.evaluate(()=>window.scrollBy(0,120));
     await page.waitForTimeout(50);
-
-    const after=await page.evaluate(()=>{
-      const b=document.querySelector('.sfp-select-button[aria-expanded="true"]')?.getBoundingClientRect();
-      const m=document.querySelector('.sfp-select-menu:not([hidden])')?.getBoundingClientRect();
-      return b&&m?{buttonTop:b.top,buttonBottom:b.bottom,menuTop:m.top,menuBottom:m.bottom}:null;
-    });
-    expect(after).not.toBeNull();
-    expect(Math.abs(after.menuTop-before.menuTop)).toBeGreaterThan(20);
-    const distance=Math.min(Math.abs(after.menuTop-after.buttonBottom),Math.abs(after.buttonTop-after.menuBottom));
-    expect(distance).toBeLessThanOrEqual(10);
+    const afterButton=await button.boundingBox();
+    const afterMenu=await menu.boundingBox();
+    expect(before).not.toBeNull();
+    expect(afterButton).not.toBeNull();
+    expect(afterMenu).not.toBeNull();
+    expect(Math.abs(afterMenu.y-afterButton.y-afterButton.height)).toBeLessThanOrEqual(10);
   });
 
   test('new financial surfaces use active light theme tokens instead of dark hardcoded colors',async({page})=>{
@@ -77,5 +79,54 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
       expect(value).not.toBe('rgb(7, 20, 35)');
       expect(value).not.toBe('rgb(8, 22, 38)');
     }
+  });
+
+  test('portrait bottom navigation prioritizes destinations and leaves creation to the FAB',async({page})=>{
+    await boot(page);
+    const visible=await page.locator('.sidebar .nav button:visible').evaluateAll(buttons=>buttons.map(button=>({page:button.dataset.page||null,id:button.id||null,label:button.textContent.trim()})));
+    expect(visible.map(item=>item.page||item.id)).toEqual(['hoje','contas','cartoes','calendario','moreNavBtn']);
+    expect(visible.some(item=>item.page==='sophy')).toBe(false);
+    expect(visible.some(item=>item.page==='lancamentos')).toBe(false);
+    await expect(page.locator('.mobilefab')).toBeVisible();
+  });
+
+  test('Mais menu is grouped by purpose and uses one fixed visual text axis',async({page})=>{
+    await boot(page);
+    await page.locator('#moreNavBtn').click();
+    await expect(page.locator('.sfp-more-modal')).toBeVisible();
+    await expect(page.locator('.sfp-more-group-title')).toHaveText(['Planejar','Analisar','Dados','Assistência e sistema']);
+    const titleXs=await page.locator('.sfp-more-copy strong').evaluateAll(nodes=>nodes.slice(0,10).map(node=>Math.round(node.getBoundingClientRect().left)));
+    expect(new Set(titleXs).size).toBe(1);
+    await expect(page.locator('[data-sfp-more-page="lancamentos"]')).toBeVisible();
+    await expect(page.locator('[data-sfp-more-page="sophy"]')).toBeVisible();
+  });
+
+  test('portrait forms never widen the document beyond the viewport',async({page})=>{
+    await boot(page);
+    for(const target of ['lancamentos','contas','cartoes','dividas']){
+      await page.evaluate(pageId=>window.setPage(pageId),target);
+      await page.waitForTimeout(50);
+      const widths=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth,body:document.body.scrollWidth}));
+      expect(widths.scroll).toBeLessThanOrEqual(widths.client+1);
+      expect(widths.body).toBeLessThanOrEqual(widths.client+1);
+    }
+  });
+
+  test('Sophy send guard converts ISO dates before the local router can read them as subtraction',async({page})=>{
+    await boot(page);
+    const sent=await page.evaluate(async()=>{
+      const original=window.sophySendMessage;
+      let captured='';
+      const spy=async message=>{captured=message;return null};
+      spy.__sfpIsoDateGuard=false;
+      window.sophySendMessage=spy;
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await new Promise(resolve=>setTimeout(resolve,220));
+      await window.sophySendMessage('Menor saldo em 2026-09-11: -R$ 64,64');
+      window.sophySendMessage=original;
+      return captured;
+    });
+    expect(sent).toContain('11/09/2026');
+    expect(sent).not.toContain('2026-09-11');
   });
 });
