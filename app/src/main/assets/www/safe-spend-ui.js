@@ -14,14 +14,14 @@
     style.textContent=`
       .safe-spend-panel{position:relative;overflow:hidden}
       .safe-spend-grid{display:grid;grid-template-columns:1.05fr 1.35fr;gap:12px}
-      .safe-spend-hero,.safe-spend-projection{border:1px solid var(--color-border);border-radius:var(--radius-md);background:#081626;padding:14px}
+      .safe-spend-hero,.safe-spend-projection{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-1);padding:14px}
       .safe-spend-eyebrow{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.055em;color:var(--color-text-muted)}
       .safe-spend-value{display:block;font-size:29px;line-height:1.05;font-weight:850;margin:7px 0 5px;color:var(--color-positive);font-variant-numeric:tabular-nums}
       .safe-spend-panel[data-status="tight"] .safe-spend-value{color:var(--color-warning)}
       .safe-spend-panel[data-status="critical"] .safe-spend-value{color:var(--color-negative)}
       .safe-spend-caption{font-size:10.5px;line-height:1.45;color:var(--color-text-secondary);margin:0}
       .safe-spend-equation{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}
-      .safe-spend-equation>div{padding:9px;border-radius:10px;background:#0b192b;border:1px solid rgba(26,52,82,.7)}
+      .safe-spend-equation>div{padding:9px;border-radius:10px;background:var(--color-surface-elevated);border:1px solid var(--color-border)}
       .safe-spend-equation small{display:block;color:var(--color-text-muted);font-size:8.5px;text-transform:uppercase;font-weight:750}
       .safe-spend-equation strong{display:block;margin-top:3px;font-size:12px;color:var(--color-text);font-variant-numeric:tabular-nums}
       .safe-spend-projection-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
@@ -30,19 +30,19 @@
       .safe-spend-min{font-size:10px;text-align:right;color:var(--color-text-secondary)}
       .safe-spend-min strong{display:block;font-size:13px;color:var(--color-text);font-variant-numeric:tabular-nums}
       .safe-spend-panel[data-status="critical"] .safe-spend-min strong{color:var(--color-negative)}
-      .safe-spend-chart{height:92px;border:1px solid rgba(26,52,82,.55);border-radius:10px;background:#071423;padding:7px;margin-bottom:10px;color:var(--color-brand)}
+      .safe-spend-chart{height:92px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface-elevated);padding:7px;margin-bottom:10px;color:var(--color-brand)}
       .safe-spend-chart svg{width:100%;height:100%;display:block;overflow:visible}
       .safe-spend-chart .baseline{stroke:var(--color-border);stroke-width:1;stroke-dasharray:3 3}
       .safe-spend-chart .line{fill:none;stroke:currentColor;stroke-width:2;vector-effect:non-scaling-stroke}
       .safe-spend-chart .point{fill:currentColor}
       .safe-spend-timeline{display:grid;gap:5px;max-height:172px;overflow:auto;padding-right:2px}
-      .safe-spend-event{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 8px;border-radius:9px;background:#0a1829;border:1px solid rgba(26,52,82,.58);font-size:9.5px}
+      .safe-spend-event{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 8px;border-radius:9px;background:var(--color-surface-elevated);border:1px solid var(--color-border);font-size:9.5px}
       .safe-spend-event-date{color:var(--color-text-muted);font-variant-numeric:tabular-nums}
       .safe-spend-event-desc{min-width:0;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .safe-spend-event-balance{font-weight:750;color:var(--color-text);font-variant-numeric:tabular-nums}
       .safe-spend-event[data-type="income"] .safe-spend-event-desc{color:var(--color-positive)}
       .safe-spend-event[data-type="expense"] .safe-spend-event-desc{color:var(--color-warning)}
-      .safe-spend-foot{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;margin-top:11px;padding-top:10px;border-top:1px solid rgba(26,52,82,.55)}
+      .safe-spend-foot{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;margin-top:11px;padding-top:10px;border-top:1px solid var(--color-border)}
       .safe-spend-foot p{margin:0;color:var(--color-text-secondary);font-size:9.5px;line-height:1.45;max-width:720px}
       .safe-spend-foot button{min-height:34px;padding:6px 10px;font-size:10px;flex:0 0 auto}
       @media(max-width:820px){.safe-spend-grid{grid-template-columns:1fr}.safe-spend-equation{grid-template-columns:repeat(3,1fr)}}
@@ -91,8 +91,6 @@
   global.safeSpendingSnapshot=snapshot;global.renderSafeSpendProjection=renderSafeSpendProjection;
 })(typeof window!=='undefined'?window:globalThis);
 
-// Custom select triggers live inside labels; cancel the label's default activation so
-// tapping the SFP control does not immediately re-trigger the hidden native select.
 document.addEventListener('click',event=>{
   if(event.target.closest?.('.sfp-select-button,.sfp-select-option')) event.preventDefault();
 },true);
