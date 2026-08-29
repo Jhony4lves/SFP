@@ -97,7 +97,7 @@ test.describe('Safe-to-spend + Cashflow Projection',()=>{
     await expect(panel).toContainText('não esconde margem arbitrária');
   });
 
-  test('Perguntar à Sophy exige o mesmo core e proíbe invenção de buffer',async({page})=>{
+  test('Perguntar à Sophy usa os números do painel em linguagem natural',async({page})=>{
     await boot(page);
     await page.evaluate(s=>{
       window.financialContextSnapshot=()=>s;
@@ -108,9 +108,14 @@ test.describe('Safe-to-spend + Cashflow Projection',()=>{
     await page.getByRole('button',{name:'Perguntar à Sophy'}).last().click();
     await expect(page.locator('#pageTitle')).toHaveText('Sophy');
     const prompt=await page.evaluate(()=>window.__qaSafePrompt);
-    expect(prompt).toContain('Local Financial Core');
-    expect(prompt).toContain('Não invente buffer');
-    expect(prompt).toContain('saldo disponível, reservado e livre');
+    expect(prompt).toContain('quanto eu posso gastar sem me apertar');
+    expect(prompt).toContain('disponível');
+    expect(prompt).toContain('reservado');
+    expect(prompt).toContain('livre');
+    expect(prompt).toContain('menor saldo projetado');
+    expect(prompt).toContain('próxima entrada conhecida');
+    expect(prompt).not.toContain('Local Financial Core');
+    expect(prompt).not.toContain('Não invente buffer');
   });
 
   test('modo de privacidade cobre valores do painel',async({page})=>{
