@@ -276,8 +276,8 @@ public class AndroidBridge {
         } catch (Exception ignored) {
             // Fail-secure: migration failure leaves API key unconfigured
         } finally {
-            // Legacy plaintext must never remain on disk.
-            prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).commit();
+            // Legacy plaintext must never remain on disk, even if migration fails.
+            prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).apply();
         }
     }
 
