@@ -16,6 +16,8 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci
+      - name: Public safety gate
+        run: node qa/public-safety-check.mjs
       - run: npx playwright install --with-deps chromium
       - run: npm run test:static
       - run: npm run test:sophy-arch

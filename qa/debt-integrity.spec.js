@@ -17,23 +17,23 @@ async function readDebt(page, id) {
 function payrollDebt() {
   return {
     id: 501,
-    name: 'Crédito Consignado CLT',
-    contractTotal: 4678.30,
-    balance: 4678.30,
-    principalReceived: 3800,
-    financedAmount: 3885.48,
-    iof: 85.48,
-    rate: 2.74,
-    cetMonthly: 3.08,
-    cetAnnual: 43.90,
-    payment: 467.83,
+    name: 'Empréstimo demonstrativo',
+    contractTotal: 3540,
+    balance: 3540,
+    principalReceived: 3000,
+    financedAmount: 3060,
+    iof: 60,
+    rate: 2.10,
+    cetMonthly: 2.45,
+    cetAnnual: 33.80,
+    payment: 354,
     installments: 10,
     paidInstallments: 0,
-    firstDue: '2026-09-26',
-    lastDue: '2027-06-26',
+    firstDue: '2026-09-25',
+    lastDue: '2027-06-25',
     paymentMethod: 'payroll',
     history: [],
-    note: 'Contrato original preservado.',
+    note: 'Contrato fictício de QA.',
     metadata: { source: 'seed', immutableReference: 'QA-501' }
   };
 }
@@ -57,7 +57,7 @@ test('editar somente o nome preserva integralmente contrato payroll e cronograma
   const after = await readDebt(page, 501);
   const { name: beforeName, ...beforeFields } = before;
   const { name: afterName, ...afterFields } = after;
-  expect(beforeName).toBe('Crédito Consignado CLT');
+  expect(beforeName).toBe('Empréstimo demonstrativo');
   expect(afterName).toBe('Consignado renomeado');
   expect(afterFields).toEqual(beforeFields);
   expect(after.paymentMethod).toBe('payroll');

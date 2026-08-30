@@ -12,22 +12,22 @@ async function boot(page, name = 'Import AI') {
   await expect.poll(() => page.evaluate(() => state.settings.name)).toBe(name);
 }
 
-const nubankOfx = `<OFX><BANKTRANLIST>
-<STMTTRN><DTPOSTED>20260801<TRNAMT>-8.00<FITID>NUB-1<MEMO>Rei do Sabor</STMTTRN>
-<STMTTRN><DTPOSTED>20260802<TRNAMT>-8.96<FITID>NUB-2<MEMO>Pix no Crédito</STMTTRN>
-<STMTTRN><DTPOSTED>20260803<TRNAMT>-94.36<FITID>NUB-3<MEMO>Assb Compra - Parcela 1/3</STMTTRN>
-<STMTTRN><DTPOSTED>20260804<TRNAMT>59.99<FITID>NUB-4<MEMO>Pagamento recebido</STMTTRN>
+const demoOfx = `<OFX><BANKTRANLIST>
+<STMTTRN><DTPOSTED>20260801<TRNAMT>-17.35<FITID>DEMO-1<MEMO>Loja Alpha</STMTTRN>
+<STMTTRN><DTPOSTED>20260802<TRNAMT>-26.40<FITID>DEMO-2<MEMO>Pix no Crédito</STMTTRN>
+<STMTTRN><DTPOSTED>20260803<TRNAMT>-73.25<FITID>DEMO-3<MEMO>Loja Beta - Parcela 1/3</STMTTRN>
+<STMTTRN><DTPOSTED>20260804<TRNAMT>91.10<FITID>DEMO-4<MEMO>Pagamento recebido</STMTTRN>
 </BANKTRANLIST></OFX>`;
 
-test('fatura OFX realista do Nubank: negativos são débitos da fatura e Pagamento recebido positivo é pagamento', async ({ page }) => {
-  await boot(page, 'Nubank OFX real');
+test('fatura OFX de demonstração: negativos são débitos da fatura e Pagamento recebido positivo é pagamento', async ({ page }) => {
+  await boot(page, 'OFX de demonstração');
   const result = await page.evaluate(async (ofx) => {
     const rows = parseOFX(ofx);
     const analysis = await analyzeImportDocument({ rows, ext: 'ofx', text: ofx, intendedType: 'invoice' });
     const classified = classifyInvoiceRows(rows, analysis);
     document.querySelector('#cardImportCard').value = '1';
     document.querySelector('#cardImportMonth').value = '2026-08';
-    prepareCardImport(classified, 'nubank-fatura.ofx', analysis);
+    prepareCardImport(classified, 'demo-fatura.ofx', analysis);
     return {
       documentType: analysis.documentType,
       signConvention: analysis.signConvention,
@@ -40,14 +40,14 @@ test('fatura OFX realista do Nubank: negativos são débitos da fatura e Pagamen
       validation: document.querySelector('#cardImportValidation').textContent,
       mobileText: document.querySelector('#cardImportMobile').textContent
     };
-  }, nubankOfx);
+  }, demoOfx);
 
   expect(result.documentType).toBe('invoice');
   expect(result.signConvention).toBe('debitNegative');
   expect(result.validator).toBe('local');
   expect(result.kinds).toEqual(['purchase', 'purchase', 'purchase', 'payment']);
-  expect(result.amounts).toEqual([8, 8.96, 94.36, 59.99]);
-  expect(result.totals).toEqual([8, 8.96, 283.08]);
+  expect(result.amounts).toEqual([17.35, 26.40, 73.25, 91.10]);
+  expect(result.totals).toEqual([17.35, 26.40, 219.75]);
   expect(result.paymentTarget).toBe('2026-07');
   expect(result.summary).toContain('3 débito(s) de fatura, 1 pagamento(s)/crédito(s)');
   expect(result.validation).toContain('débitos negativos');
@@ -57,7 +57,7 @@ test('fatura OFX realista do Nubank: negativos são débitos da fatura e Pagamen
 
 test('Pix no Crédito é débito estrutural da fatura, mas finalidade econômica continua em revisão', async ({ page }) => {
   await boot(page, 'Pix não é compra automática');
-  const result = await page.evaluate(() => semanticClassify('Pix no Crédito - Ana Carolina', -8.96));
+  const result = await page.evaluate(() => semanticClassify('Pix no Crédito - Destinatário Demo', -26.40));
   expect(result.semanticClass).toBe('possible_transfer');
   expect(result.economicImpact).toBe('review');
   expect(result.action).toBe('ignore');
@@ -99,8 +99,8 @@ test('Groq recebe somente amostra sanitizada e não pode derrubar âncora estrut
       }
     });
     const rows = [
-      { date: '2026-08-01', desc: 'Pix no Crédito 12345678901 usuario@email.com', amount: -12.34, fitid: 'SECRET-FITID-1' },
-      { date: '2026-08-02', desc: 'Loja comum 998877665544', amount: -20, fitid: 'SECRET-FITID-2' }
+      { date: '2026-08-01', desc: 'Pix no Crédito 1234567890122 usuario@example.invalid', amount: -12.34, fitid: 'DEMO-FITID-1' },
+      { date: '2026-08-02', desc: 'Loja comum 998877665544', amount: -20, fitid: 'DEMO-FITID-2' }
     ];
     const analysis = await analyzeImportDocument({ rows, ext: 'ofx', text: '<OFX>conteúdo local não enviado</OFX>', intendedType: 'invoice' });
     const classified = classifyInvoiceRows(rows, analysis);
@@ -112,10 +112,10 @@ test('Groq recebe somente amostra sanitizada e não pode derrubar âncora estrut
   });
   expect(result.validator).toBe('local+groq');
   expect(result.kinds[0]).toBe('purchase');
-  expect(result.payload).not.toContain('12345678901');
+  expect(result.payload).not.toContain('123456789012');
   expect(result.payload).not.toContain('998877665544');
-  expect(result.payload).not.toContain('usuario@email.com');
-  expect(result.payload).not.toContain('SECRET-FITID');
+  expect(result.payload).not.toContain('usuario@example.invalid');
+  expect(result.payload).not.toContain('DEMO-FITID');
   expect(result.payload).toContain('***');
 });
 
@@ -124,7 +124,7 @@ test('validador reconhece fatura carregada por engano no fluxo de extrato', asyn
   const result = await page.evaluate(async (ofx) => {
     const rows = parseOFX(ofx);
     return analyzeImportDocument({ rows, ext: 'ofx', text: ofx, intendedType: 'statement' });
-  }, nubankOfx);
+  }, demoOfx);
   expect(result.documentType).toBe('invoice');
   expect(result.confidence).toBeGreaterThanOrEqual(0.8);
 });
@@ -138,8 +138,8 @@ test('prévia de fatura usa cartões mobile em vez de tabela horizontal cortada'
     const analysis = await analyzeImportDocument({ rows, ext: 'ofx', text: ofx, intendedType: 'invoice' });
     document.querySelector('#cardImportCard').value = '1';
     document.querySelector('#cardImportMonth').value = '2026-08';
-    prepareCardImport(classifyInvoiceRows(rows, analysis), 'nubank.ofx', analysis);
-  }, nubankOfx);
+    prepareCardImport(classifyInvoiceRows(rows, analysis), 'demo.ofx', analysis);
+  }, demoOfx);
   await expect(page.locator('#cardImportMobile .mobile-record')).toHaveCount(4);
   await expect(page.locator('#cardImportMobile .mobile-record').first()).toBeVisible();
   await expect(page.locator('#cardImportReview .desktop-table-mobile')).toBeHidden();

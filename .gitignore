@@ -11,3 +11,19 @@ dist/
 *.keystore
 *.p12
 signing.properties
+
+# Nunca versionar extratos, faturas ou backups pessoais exportados pelo SFP.
+*.ofx
+*.qfx
+*.ofc
+*.csv
+*.xlsx
+*.xls
+*.ods
+*.bak
+*.backup
+sfp-completo-*.json
+sfp-backup-*.json
+backups/
+exports/
+Downloads/SFP/

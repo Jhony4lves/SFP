@@ -68,7 +68,7 @@ test('fontes comprovadamente vazias usam seed', async ({ page }) => {
   await page.evaluate(() => localStorage.clear());
   const errors = monitor(page);
   await page.reload();
-  await expectBootComplete(page, expect, 'SFP Jhony');
+  await expectBootComplete(page, expect, 'SFP Demo');
   expect(errors).toEqual([]);
 });
 

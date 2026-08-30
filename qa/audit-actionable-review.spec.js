@@ -74,7 +74,7 @@ test('AUDIT-REVIEW-02: Pix no Crédito pode ser neutro economicamente sem sair d
   value.purchases.push({
     id: 77,
     cardId: 1,
-    desc: 'Pix no Crédito - Ana Carolina',
+    desc: 'Pix no Crédito - Destinatário Demo',
     total: 80,
     installments: 1,
     purchaseDate: '2026-01-05',
