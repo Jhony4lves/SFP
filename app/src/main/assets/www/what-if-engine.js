@@ -14,6 +14,15 @@
     return amount;
   }
 
+  function validatedDebtAmortization(scenario){
+    const amount=assertPositiveCents(scenario?.amountCents);
+    const debt=clone(scenario?.debt)||{};
+    const balance=cents(debt.balanceCents);
+    if(balance<=0)throw new Error('debt.balanceCents is required for debt_amortization');
+    if(amount>balance)throw new Error('amountCents cannot exceed debt.balanceCents');
+    return {amount,debt,balance};
+  }
+
   function civilMs(value){
     const match=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if(!match)return NaN;
@@ -79,7 +88,8 @@
       return parts.map((amount,index)=>scenarioEvent({id:`scenario:installment:${index+1}`,date:addMonths(firstDueDate,index),type:'expense',amountCents:amount,origin:'what_if_installment'}));
     }
     if(type==='debt_amortization'){
-      return [scenarioEvent({id:'scenario:debt-amortization',date:scenario.date||referenceDate,type:'expense',amountCents:scenario.amountCents,origin:'what_if_debt_amortization',economicImpact:'debt_transfer'})];
+      const {amount}=validatedDebtAmortization(scenario);
+      return [scenarioEvent({id:'scenario:debt-amortization',date:scenario.date||referenceDate,type:'expense',amountCents:amount,origin:'what_if_debt_amortization',economicImpact:'debt_transfer'})];
     }
     throw new Error(`Unsupported what-if scenario: ${String(type||'')}`);
   }
@@ -142,13 +152,13 @@
 
   function debtImpact(scenario){
     if(scenario?.type!=='debt_amortization')return null;
-    const amount=assertPositiveCents(scenario.amountCents),debt=clone(scenario.debt)||{},balance=clamp0(debt.balanceCents),applied=Math.min(balance,amount),newBalance=balance-applied;
+    const {amount,debt,balance}=validatedDebtAmortization(scenario),newBalance=balance-amount;
     const monthlyRate=Math.max(0,Number(debt.monthlyRate)||0),payment=clamp0(debt.paymentCents);
     const before=debtSchedule({balanceCents:balance,monthlyRate,paymentCents:payment});
     const after=debtSchedule({balanceCents:newBalance,monthlyRate,paymentCents:payment});
     const interestSaved=before.totalInterestCents!=null&&after.totalInterestCents!=null?Math.max(0,before.totalInterestCents-after.totalInterestCents):null;
     const monthsSaved=before.months!=null&&after.months!=null?Math.max(0,before.months-after.months):null;
-    return {debtId:debt.id??null,balanceBeforeCents:balance,amortizationCents:applied,balanceAfterCents:newBalance,monthlyRate,paymentCents:payment,interestSavedCents:interestSaved,monthsSaved,beforeSchedule:before,afterSchedule:after};
+    return {debtId:debt.id??null,balanceBeforeCents:balance,amortizationCents:amount,balanceAfterCents:newBalance,monthlyRate,paymentCents:payment,interestSavedCents:interestSaved,monthsSaved,beforeSchedule:before,afterSchedule:after};
   }
 
   function goalImpact(scenario){
@@ -195,7 +205,7 @@
         'O cenário começa no snapshot autoritativo do Local Financial Core.',
         'Eventos hipotéticos só existem dentro deste relatório e não são persistidos.',
         rawScenario?.type==='monthly_saving'?'Guardar por mês é tratado como compromisso de reserva: reduz caixa livre projetado, mas não reduz patrimônio líquido por si só.':null,
-        rawScenario?.type==='debt_amortization'?'Amortização reduz caixa e saldo devedor pelo principal aplicado; estimativa de juros/prazo só existe quando taxa mensal e parcela foram fornecidas.':null,
+        rawScenario?.type==='debt_amortization'?'Amortização reduz caixa e saldo devedor pelo mesmo principal validado; estimativa de juros/prazo só existe quando taxa mensal e parcela foram fornecidas.':null,
         rawScenario?.type==='installment_purchase'?'Compra parcelada entra no caixa nas datas de vencimento fornecidas; limite de cartão e ciclo de fatura serão tratados pelo adaptador de produto, não inventados pelo engine.':null
       ].filter(Boolean),
       limitations:[
