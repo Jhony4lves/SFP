@@ -10137,7 +10137,15 @@ async function importStatement(){
    else state.transactions.push({id:uid(),kind:r.action==='income'?'income':'expense',desc:r.desc,amount:Math.abs(r.amount),date:r.date,category:r.category,accountId:r.accountId,status:'paid',dueDay:+r.date.slice(8,10),tags:['extrato'],note:'',statementKey:r.key,balanceImpact:r.date>state.baseDate,semanticClass:r.semanticClass||null,economicImpact:r.economicImpact||'economic',classificationConfidence:r.classificationConfidence||null,classificationReason:r.classificationReason||null,createdAt:Date.now()});
    used.add(r.key);accepted.push(r);if(r.learn&&['income','expense','transfer','ignore'].includes(r.action)){let pattern=r.desc.split(/\s+/).slice(0,3).join(' ');if(pattern.length>3&&!state.classificationRules.some(x=>String(x.pattern||'').toLowerCase()===pattern.toLowerCase()))state.classificationRules.push({pattern,action:r.action,category:r.category,source:'learned',learnedAt:new Date().toISOString(),example:r.desc})}
   }
-  if(accepted.length)state.statements.push({id:uid(),file:draft[0]?.file||'Extrato',account:acc?.name||'Conta',count:accepted.length,months:[...new Set(accepted.map(r=>ym(r.date)))],importedAt:new Date().toISOString()});
+  if(!accepted.length){
+   const duplicateOnly=draft.length>0&&draft.every(r=>r.duplicate);
+   statementDraft=[];$('stmtReview').classList.add('hidden');$('stmtFile').value='';
+   if(typeof renderStatements==='function')renderStatements();
+   if(typeof renderReconcileCenter==='function')renderReconcileCenter();
+   toast(duplicateOnly?'Nenhuma movimentação nova. Este extrato já foi importado.':'Nenhuma movimentação foi importada.');
+   return
+  }
+  state.statements.push({id:uid(),file:draft[0]?.file||'Extrato',account:acc?.name||'Conta',count:accepted.length,months:[...new Set(accepted.map(r=>ym(r.date)))],importedAt:new Date().toISOString()});
   if(lastSavedState){autoBackup();snapshotUndo('Importar extrato',lastSavedState)}normalize();await dbSet(state);persisted=true;lastSavedState=clone(state);statementDraft=[];$('stmtReview').classList.add('hidden');$('stmtFile').value='';renderAll();toast(`${accepted.length} movimentações processadas`)
  }catch(error){if(!persisted){state=before;lastSavedState=clone(before)}try{renderAll()}catch{}toast('Não foi possível importar o extrato. Nenhuma alteração foi aplicada.');console.error('Falha ao importar extrato:',error)}
 }
