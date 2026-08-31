@@ -133,8 +133,17 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
 
   test('portrait bottom navigation prioritizes destinations and leaves creation to the FAB',async({page})=>{
     await boot(page);
-    const visible=await page.locator('.sidebar .nav button:visible').evaluateAll(buttons=>buttons.map(button=>({page:button.dataset.page||null,id:button.id||null,label:button.textContent.trim()})));
+    const visible=await page.locator('.sidebar .nav button:visible').evaluateAll(buttons=>buttons.map(button=>{
+      const span=button.querySelector('span');
+      const style=getComputedStyle(button),labelStyle=span?getComputedStyle(span):null;
+      return {page:button.dataset.page||null,id:button.id||null,label:button.textContent.trim(),flexDirection:style.flexDirection,textOverflow:labelStyle?.textOverflow||null,whiteSpace:labelStyle?.whiteSpace||null,labelFits:span?span.scrollWidth<=span.clientWidth+1:true};
+    }));
     expect(visible.map(item=>item.page||item.id)).toEqual(['hoje','contas','cartoes','calendario','moreNavBtn']);
+    expect(visible.map(item=>item.label)).toEqual(['Hoje','Contas','Cartões','Calendário','Mais']);
+    expect(visible.every(item=>item.flexDirection==='column')).toBe(true);
+    expect(visible.every(item=>item.textOverflow!=='ellipsis')).toBe(true);
+    expect(visible.every(item=>item.whiteSpace==='nowrap')).toBe(true);
+    expect(visible.every(item=>item.labelFits)).toBe(true);
     expect(visible.some(item=>item.page==='sophy')).toBe(false);
     expect(visible.some(item=>item.page==='lancamentos')).toBe(false);
     await expect(page.locator('.mobilefab')).toBeVisible();

@@ -144,8 +144,9 @@ document.addEventListener('click',event=>{
       .sfp-more-arrow{color:var(--color-text-muted);font-size:19px;text-align:center}
       .context-fab-label{display:none!important}
       @media(max-width:650px) and (orientation:portrait){
-        .sidebar .nav button{display:none!important}
+        .sidebar .nav button{display:none!important;min-width:0!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;padding:4px 1px!important;font-size:11px!important;gap:2px!important;text-align:center!important}
         .sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="contas"],.sidebar .nav button[data-page="cartoes"],.sidebar .nav button[data-page="calendario"],.sidebar .nav #moreNavBtn{display:flex!important}
+        .sidebar .nav button span{display:block!important;font-size:9.25px!important;line-height:1.15!important;margin-top:2px!important;overflow:visible!important;text-overflow:clip!important;white-space:nowrap!important;max-width:100%!important;text-align:center!important}
         .sidebar .nav button[data-page="hoje"]{order:1}.sidebar .nav button[data-page="contas"]{order:2}.sidebar .nav button[data-page="cartoes"]{order:3}.sidebar .nav button[data-page="calendario"]{order:4}.sidebar .nav #moreNavBtn{order:5}
         .sfp-select{z-index:auto}
         .sfp-select-menu{position:fixed!important;max-width:calc(100vw - 16px)!important}
