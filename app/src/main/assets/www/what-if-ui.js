@@ -34,6 +34,15 @@
     return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
   }
 
+  function civilMs(value){
+    const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return NaN;
+    return Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]),12);
+  }
+
+  function daysBetween(from,to){
+    const a=civilMs(from),b=civilMs(to);return Number.isFinite(a)&&Number.isFinite(b)?Math.round((b-a)/86400000):0;
+  }
+
   function debts(){try{return safeArray(typeof state!=='undefined'?state.debts:null)}catch(error){return []}}
   function goals(){try{return safeArray(typeof state!=='undefined'?state.goals:null)}catch(error){return []}}
   function goalCurrent(goal){try{return typeof global.goalBalance==='function'?Math.round(global.goalBalance(goal)*100):0}catch(error){return 0}}
@@ -53,7 +62,7 @@
       .what-if-form{display:grid;gap:10px}.what-if-form .two{margin:0}.what-if-help{font-size:11px;color:var(--color-text-secondary);line-height:1.45;margin:0}
       .what-if-result{border:1px solid var(--color-border);border-radius:14px;padding:12px;background:rgba(4,13,23,.32);display:grid;gap:10px}
       .what-if-result[hidden]{display:none}.what-if-compare{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch}.what-if-arrow{align-self:center;color:var(--color-text-secondary);font-weight:800}
-      .what-if-side{border:1px solid var(--color-border);border-radius:12px;padding:10px;display:grid;gap:3px}.what-if-side small{color:var(--color-text-secondary)}.what-if-side strong{font-size:18px}.what-if-side em{font-size:10px;font-style:normal;color:var(--color-text-secondary)}
+      .what-if-side{border:1px solid var(--color-border);border-radius:12px;padding:10px;display:grid;gap:3px}.what-if-side small{color:var(--color-text-secondary)}.what-if-side strong{font-size:18px}.what-if-side em{font-size:10px;font-style:normal;color:var(--color-text-secondary);line-height:1.35}
       .what-if-delta{display:flex;gap:6px;flex-wrap:wrap}.what-if-delta span{border:1px solid var(--color-border);border-radius:999px;padding:5px 8px;font-size:10px;background:var(--color-surface-subtle)}
       .what-if-detail{font-size:11px;line-height:1.55;color:var(--color-text-secondary)}.what-if-detail b{color:var(--color-text)}.what-if-error{border-color:var(--color-negative-border);color:var(--color-negative)}
       @media(max-width:760px){.what-if-layout{grid-template-columns:1fr}.what-if-compare{grid-template-columns:1fr}.what-if-arrow{text-align:center;transform:rotate(90deg)}.what-if-result{padding:10px}}
@@ -119,13 +128,45 @@
     return '<b>Gasto imediato:</b> o valor é retirado do caixa no cenário e propagado por toda a trajetória projetada.';
   }
 
+  function periodComparison(report){
+    const ref=report?.referenceDate,scenarioEvents=safeArray(report?.events).filter(event=>event?.date&&Number.isFinite(civilMs(event.date))).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    let endDate=scenarioEvents.at(-1)?.date||ref;
+    if(daysBetween(ref,endDate)<0)endDate=ref;
+    const endDays=Math.max(0,daysBetween(ref,endDate));
+    const projections=safeArray(report?.simulated?.projections).map(item=>item).sort((a,b)=>(Number(a?.days)||0)-(Number(b?.days)||0));
+    if(!projections.length){
+      const delta=scenarioEvents.filter(event=>!event.date||event.date<=endDate).reduce((sum,event)=>sum+(event.type==='income'?event.amountCents:-event.amountCents),0);
+      const start=Number(report?.baseline?.availableCents)||0,after=start+delta;
+      return {endDate,beforeCents:start,afterCents:after,knownThroughDate:ref,extendsBeyondKnownCore:endDays>0,minBalanceCents:Math.min(start,after),minDate:after<start?endDate:ref,negativeRisk:Math.min(start,after)<0};
+    }
+    const max=projections.at(-1),maxDays=Math.max(0,Number(max?.days)||0),knownThroughDate=addDays(ref,maxDays),within=endDays<=maxDays;
+    const source=within?(projections.find(item=>(Number(item?.days)||0)>=endDays)||max):max;
+    const horizonDate=within?endDate:knownThroughDate;
+    const events=safeArray(source?.events).filter(event=>!event?.date||event.date<=horizonDate).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(a.scenario===b.scenario?0:a.scenario?1:-1));
+    let before=Number(report?.baseline?.availableCents)||0,after=before,minBalance=after,minDate=ref;
+    for(const event of events){
+      const delta=event.type==='income'?(Number(event.amountCents)||0):-(Number(event.amountCents)||0);
+      if(!event.scenario)before+=delta;
+      after+=delta;
+      if(after<minBalance){minBalance=after;minDate=event.date||minDate;}
+    }
+    if(!within){
+      for(const event of scenarioEvents.filter(event=>event.date>knownThroughDate&&event.date<=endDate)){
+        const delta=event.type==='income'?(Number(event.amountCents)||0):-(Number(event.amountCents)||0);
+        after+=delta;
+        if(after<minBalance){minBalance=after;minDate=event.date||minDate;}
+      }
+    }
+    return {endDate,beforeCents:before,afterCents:after,knownThroughDate,extendsBeyondKnownCore:!within,minBalanceCents:minBalance,minDate,negativeRisk:minBalance<0};
+  }
+
   function renderReport(report){
     const root=q('#whatIfResult');if(!root)return;
-    const base=report.baseline,sim=report.simulated,worst=sim.worstProjection;
-    const freeDelta=report.delta.freeCents,availableDelta=report.delta.availableCents;
-    const risk=Boolean(worst?.negativeRisk),riskText=risk?`Risco: saldo pode chegar a ${money(worst?.minBalanceCents)}${worst?.minDate?` em ${datePt(worst.minDate)}`:''}.`:`Sem saldo negativo nos horizontes conhecidos deste snapshot.`;
+    const period=periodComparison(report),freeDelta=report.delta.freeCents,availableDelta=report.delta.availableCents;
+    const risk=Boolean(period.negativeRisk),riskText=risk?`Risco no período: saldo pode chegar a ${money(period.minBalanceCents)}${period.minDate?` em ${datePt(period.minDate)}`:''}.`:`Sem saldo negativo conhecido até ${datePt(period.endDate)} dentro desta projeção condicional.`;
+    const horizonNote=period.extendsBeyondKnownCore?`<br><br><b>Horizonte:</b> o core conhece eventos até ${datePt(period.knownThroughDate)}. Depois disso, o SFP mantém o último saldo conhecido e aplica somente este cenário; não presume novas rendas ou despesas.`:'';
     root.classList.remove('what-if-error');root.hidden=false;root.setAttribute('data-money','');
-    root.innerHTML=`<div class="what-if-compare"><div class="what-if-side"><small>Antes</small><strong>${money(base.freeCents)}</strong><em>livre conhecido</em></div><div class="what-if-arrow">→</div><div class="what-if-side"><small>Depois</small><strong>${money(sim.freeCents)}</strong><em>livre no cenário</em></div></div><div class="what-if-delta"><span>Caixa ${availableDelta>=0?'+':''}${money(availableDelta)}</span><span>Livre ${freeDelta>=0?'+':''}${money(freeDelta)}</span><span>${risk?'⚠️ risco de caixa':'✓ trajetória sem negativo conhecido'}</span></div><div class="what-if-detail">${scenarioDetail(report)}<br><br><b>Leitura:</b> ${riskText}<br><br><small>Projeção condicional. Nada foi salvo e o SFP não inventou renda, margem de segurança ou eventos futuros.</small></div>`;
+    root.innerHTML=`<div class="what-if-compare"><div class="what-if-side"><small>Antes</small><strong>${money(period.beforeCents)}</strong><em>fim do período · ${datePt(period.endDate)} · sem cenário</em></div><div class="what-if-arrow">→</div><div class="what-if-side"><small>Depois</small><strong>${money(period.afterCents)}</strong><em>fim do período · ${datePt(period.endDate)} · com cenário</em></div></div><div class="what-if-delta"><span>Caixa agora ${availableDelta>=0?'+':''}${money(availableDelta)}</span><span>Livre agora ${freeDelta>=0?'+':''}${money(freeDelta)}</span><span>${risk?'⚠️ risco de caixa':'✓ trajetória sem negativo conhecido'}</span></div><div class="what-if-detail">${scenarioDetail(report)}<br><br><b>Leitura:</b> ${riskText}${horizonNote}<br><br><small>Projeção condicional. Nada foi salvo e o SFP não inventou renda, margem de segurança ou eventos futuros.</small></div>`;
     if(typeof global.applyPrivacy==='function')global.applyPrivacy();
   }
 
@@ -146,7 +187,7 @@
     q('#whatIfRun')?.addEventListener('click',run);renderFields();return panel;
   }
 
-  global.SFPWhatIfUI=Object.freeze({version:VERSION,install,run,getLastReport:()=>lastReport,parseBRLCents});
+  global.SFPWhatIfUI=Object.freeze({version:VERSION,install,run,getLastReport:()=>lastReport,parseBRLCents,periodComparison});
   if(typeof document!=='undefined'){
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else queueMicrotask(install);
   }
