@@ -7358,7 +7358,7 @@ const sophyOfflineCore={
     if((/explica\s+esse\s+alerta|analise\s+este\s+alerta\s+financeiro\s+concreto|o\s+sfp\s+encontrou|evidencia\s+do\s+sfp/i.test(clean))&&/(acao\s+mais\s+util|significa\s+para\s+o\s+meu\s+mes|proximos?\s+\d+\s+dias|obrigacao|obrigacoes|compromissos?)/i.test(clean)){
       const daysMatch=clean.match(/proximos?\s+(\d+)\s+dias/i);
       const countMatch=clean.match(/(?:\b|^)(\d+)\s+compromiss(?:o|os)|(?:\b|^)(\d+)\s+obrigacao|(?:\b|^)(\d+)\s+obrigacoes/i);
-      const totalMatch=clean.match(/total\s+de\s+r\$\s*([\d.,]+)/i);
+      const totalMatch=clean.match(/total\s+de\s+r\$\s*((?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?)/i);
       const days=daysMatch?Math.max(1,parseInt(daysMatch[1],10)||14):14;
       const promptCount=countMatch?parseInt(countMatch[1]||countMatch[2]||countMatch[3],10):null;
       const promptTotal=totalMatch?parseMoney(totalMatch[1]):null;
