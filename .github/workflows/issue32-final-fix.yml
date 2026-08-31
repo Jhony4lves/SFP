@@ -1,0 +1,139 @@
+name: Apply Issue 32 final fixes
+
+on:
+  push:
+    branches:
+      - fix/issue32-sophy-context-review-amount
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/issue32-sophy-context-review-amount
+          fetch-depth: 0
+
+      - name: Apply focused fixes and regressions
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          index_path = Path('app/src/main/assets/www/index.html')
+          text = index_path.read_text(encoding='utf-8')
+
+          marker = "    // Explicabilidade: Caixa vs Competência vs Compromisso\n"
+          if marker not in text:
+              raise SystemExit('Sophy explainability marker not found')
+
+          handler = r'''    // Explicação contextual de alerta concreto (Financial Insights / Perguntar à Sophy)
+              if((/explica\s+esse\s+alerta|analise\s+este\s+alerta\s+financeiro\s+concreto|o\s+sfp\s+encontrou|evidencia\s+do\s+sfp/i.test(clean))&&/(acao\s+mais\s+util|significa\s+para\s+o\s+meu\s+mes|proximos?\s+\d+\s+dias|obrigacao|obrigacoes|compromissos?)/i.test(clean)){
+                const daysMatch=clean.match(/proximos?\s+(\d+)\s+dias/i);
+                const countMatch=clean.match(/(?:\b|^)(\d+)\s+compromiss(?:o|os)|(?:\b|^)(\d+)\s+obrigacao|(?:\b|^)(\d+)\s+obrigacoes/i);
+                const totalMatch=clean.match(/total\s+de\s+r\$\s*([\d.,]+)/i);
+                const days=daysMatch?Math.max(1,parseInt(daysMatch[1],10)||14):14;
+                const promptCount=countMatch?parseInt(countMatch[1]||countMatch[2]||countMatch[3],10):null;
+                const promptTotal=totalMatch?parseMoney(totalMatch[1]):null;
+                const upcoming=(pendingUpcomingEvents(days)||[]).filter(e=>e.type==='expense');
+                const count=Number.isFinite(promptCount)?promptCount:upcoming.length;
+                const total=(promptTotal!=null&&!Number.isNaN(promptTotal))?promptTotal:Math.round(upcoming.reduce((s,e)=>s+(Number(e.amount)||0),0)*100)/100;
+                const free=Math.round((allAccountBalance()-commitmentUntilNextIncome())*100)/100;
+                const nextInc=nextIncomeEvent();
+                const first=upcoming[0]||null;
+                const firstText=first?`O compromisso mais próximo é **${first.desc}**, em **${dateObj(first.date).toLocaleDateString('pt-BR')}**, de **${brl(first.amount)}**.`:'';
+                const nextText=nextInc
+                  ? `Sua próxima entrada prevista é **${nextInc.desc}**, em **${dateObj(nextInc.date).toLocaleDateString('pt-BR')}**, no valor de **${brl(nextInc.amount)}**.`
+                  : 'Não encontrei uma próxima entrada cadastrada para aliviar esse período.';
+                let action='';
+                if(count<=0||total<=0){
+                  action='Neste momento, não há obrigação aberta relevante nesse horizonte.';
+                }else if(free<0){
+                  action=`Como seu **livre projetado está em ${brl(free)}**, a ação mais útil agora é **segurar gastos variáveis e priorizar esse pagamento** para não apertar ainda mais o caixa.`;
+                }else if(free<total){
+                  action=`Seu **livre projetado atual é ${brl(free)}**, abaixo desse total. A ação mais útil agora é **reservar o que já puder, revisar gastos extras e garantir cobertura para esse compromisso**.`;
+                }else{
+                  action=`Seu **livre projetado atual é ${brl(free)}**, então esse valor cabe no planejamento. A ação mais útil agora é **separar ${brl(total)} desde já** para não confundir esse dinheiro com sobra livre.`;
+                }
+                state.sophy.context={lastIntent:'financial_alert_explanation',lastAmount:total,lastEntity:'upcoming_obligations',lastDays:days};
+                return{
+                  text:`Isso significa que o SFP já encontrou **${count} compromisso${count===1?'':'s'}** para os próximos **${days} dias**, somando **${brl(total)}**.\n\n${firstText} ${nextText}\n\nEm outras palavras: esse valor **já precisa entrar no seu planejamento do mês**, porque representa dinheiro que provavelmente vai sair antes ou perto da sua próxima entrada.\n\n${action}`,
+                  emotion:(free<0||free<total)?'focused':'cheerful',
+                  structured:{type:'financial_alert_explanation',days,count,total,freeBRL:free}
+                };
+              }
+
+          '''
+          text = text.replace(marker, handler + marker, 1)
+
+          category_line = "  const currentCategory=item.category||'Outros';\n"
+          if category_line not in text:
+              raise SystemExit('Financial review category marker not found')
+          review_vars = category_line + "  const reviewAmount=brl(Math.abs(Number(isPurchase?item.total:item.amount)||0));\n  const reviewDate=sfpEsc(item.date||item.purchaseDate||'');\n  const reviewSubtitle=[sfpEsc(item.desc||'Movimentação'),reviewAmount,reviewDate].filter(Boolean).join(' · ');\n"
+          text = text.replace(category_line, review_vars, 1)
+
+          old_subtitle = "${sfpEsc(item.desc||'Movimentação')} · ${sfpEsc(item.date||item.purchaseDate||'')}"
+          if old_subtitle not in text:
+              raise SystemExit('Financial review subtitle marker not found')
+          text = text.replace(old_subtitle, "${reviewSubtitle}", 1)
+          index_path.write_text(text, encoding='utf-8')
+
+          intelligence_path = Path('qa/financial-intelligence.spec.js')
+          intelligence = intelligence_path.read_text(encoding='utf-8')
+          close = "\n});\n"
+          if close not in intelligence:
+              raise SystemExit('Financial intelligence describe close not found')
+          regression = r'''
+
+            test('Sophy explica alerta concreto sem cair em definição genérica de compromisso',async({page})=>{
+              await boot(page);
+              const prompt='Sophy, me explica esse alerta de um jeito simples: “1 compromisso nos próximos 14 dias”. O SFP encontrou: 1 obrigação(ões) conhecida(s), total de R$ 400,00. O que isso significa para o meu mês e qual é a ação mais útil agora?';
+              const answer=await page.evaluate(p=>window.sophyOfflineCore.process(p),prompt);
+              expect(answer.structured?.type).toBe('financial_alert_explanation');
+              expect(answer.structured?.days).toBe(14);
+              expect(answer.structured?.count).toBe(1);
+              expect(answer.structured?.total).toBe(400);
+              expect(answer.text).toContain('R$ 400,00');
+              expect(answer.text).toContain('14 dias');
+              expect(answer.text).not.toContain('1. **Caixa**');
+              expect(answer.text).not.toContain('2. **Competência**');
+            });
+          '''
+          intelligence = intelligence.replace(close, regression + close, 1)
+          intelligence_path.write_text(intelligence, encoding='utf-8')
+
+          review_path = Path('qa/review-classification-ui.spec.js')
+          review = review_path.read_text(encoding='utf-8')
+          anchor = "  await openReview(page);\n\n  const native = page.locator('#financialReviewNature');"
+          if anchor not in review:
+              raise SystemExit('Review UI first test anchor not found')
+          replacement = "  await openReview(page);\n\n  const dialog = page.getByRole('dialog', { name: 'Revisar classificação financeira' });\n  await expect(dialog).toContainText('Pagamento recebido');\n  await expect(dialog).toContainText('R$ 150,00');\n  await expect(dialog).toContainText('2026-08-09');\n\n  const native = page.locator('#financialReviewNature');"
+          review = review.replace(anchor, replacement, 1)
+          review_path.write_text(review, encoding='utf-8')
+
+          props_path = Path('gradle.properties')
+          props = props_path.read_text(encoding='utf-8')
+          props = props.replace('# Release candidate: SFP 2.1.0-rc.1.', '# Release candidate: SFP 2.1.0-rc.2.')
+          props = props.replace('SFP_VERSION_CODE=5', 'SFP_VERSION_CODE=6')
+          props = props.replace('SFP_VERSION_NAME=2.1.0-rc.1', 'SFP_VERSION_NAME=2.1.0-rc.2')
+          props_path.write_text(props, encoding='utf-8')
+          PY
+
+          rm .github/workflows/issue32-final-fix.yml
+          git diff --check
+          grep -q "financial_alert_explanation" app/src/main/assets/www/index.html
+          grep -q "reviewSubtitle" app/src/main/assets/www/index.html
+          grep -q "SFP_VERSION_CODE=6" gradle.properties
+
+      - name: Commit final Issue 32 fixes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/index.html qa/financial-intelligence.spec.js qa/review-classification-ui.spec.js gradle.properties .github/workflows/issue32-final-fix.yml
+          git commit -m "fix: close final Sophy and review gaps for Issue #32"
+          git push origin HEAD:fix/issue32-sophy-context-review-amount
