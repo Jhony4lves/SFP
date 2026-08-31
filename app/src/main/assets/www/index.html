@@ -9708,7 +9708,7 @@ function semanticClassify(desc,amount){
     const category=inferImportCategory(d);
     return{
       action:'expense',category,semanticClass:'expense',economicImpact:'economic',
-      confidence:category==='Outros'?.86:.94,
+      confidence:category==='Outros' ? .86 : .94,
       reason:category==='Outros'?'Compra no débito reconhecida como gasto; categoria ainda genérica.':'Compra no débito reconhecida e categorizada pelo estabelecimento.'
     };
   }
@@ -10077,9 +10077,10 @@ function renderStatementDraft(){
   );
 
   document.querySelectorAll('[data-sc]').forEach(e=>
-    e.onchange=()=>
+    e.onchange=()=>{
       statementDraft[+e.dataset.sc].category=e.value;
-      statementDraft[+e.dataset.sc].learn=true
+      statementDraft[+e.dataset.sc].learn=true;
+    }
   );
 
   document.querySelectorAll('[data-st]').forEach(e=>
