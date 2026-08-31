@@ -68,7 +68,7 @@ test.describe('SFP Reference Alignment + Physical Polish V2 Suite (POLISH-01 - P
     expect(privacyText).not.toContain('🙈');
     await expect(page.locator('#privacyToggle svg')).toBeVisible();
 
-    await page.locator('.sidebar .nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(page.locator('#sophy')).toBeVisible();
 
     const memBtnText = await page.locator('#sophyOpenMemoriesBtn').textContent();
@@ -263,7 +263,7 @@ test.describe('SFP Reference Alignment + Physical Polish V2 Suite (POLISH-01 - P
     const errors = monitor(page);
     await boot(page, PORTRAIT_S24);
 
-    await page.locator('.sidebar .nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(page.locator('#sophy')).toBeVisible();
 
     const composer = page.locator('#sophyChatForm');

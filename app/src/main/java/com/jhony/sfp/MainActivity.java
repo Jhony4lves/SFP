@@ -37,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setMediaPlaybackRequiresUserGesture(true);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
@@ -66,18 +67,16 @@ public class MainActivity extends AppCompatActivity {
                 if (uri == null) return true;
                 String scheme = uri.getScheme();
                 String host = uri.getHost();
-                // Allow internal SFP asset origin
                 if ("https".equalsIgnoreCase(scheme) && "appassets.androidplatform.net".equalsIgnoreCase(host)) {
-                    return false; // allow WebView to load internally
+                    return false;
                 }
-                // For external http/https or other intents, launch externally via ACTION_VIEW if applicable
                 try {
                     if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme) || "mailto".equalsIgnoreCase(scheme) || "tel".equalsIgnoreCase(scheme)) {
                         Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
                         startActivity(browserIntent);
                     }
                 } catch (Exception ignored) {}
-                return true; // block remote URL from loading inside SFP WebView
+                return true;
             }
         });
 
@@ -113,27 +112,19 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.addJavascriptInterface(new AndroidBridge(this), "AndroidBridge");
-        if (savedInstanceState != null) {
-            webView.restoreState(savedInstanceState);
-        } else {
-            webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
-        }
+        // Always rebuild the document from the APK bundle. IndexedDB/local storage remain intact,
+        // while stale WebView DOM/cache from an older APK can no longer resurrect old navigation.
+        webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
     }
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        if (webView != null) {
-            webView.saveState(outState);
-        }
     }
 
     @Override
     protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-        if (webView != null) {
-            webView.restoreState(savedInstanceState);
-        }
     }
 
     @Override

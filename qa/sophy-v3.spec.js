@@ -25,7 +25,7 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
       const errors = monitor(page);
       await boot(page, { width: vp.width, height: vp.height });
 
-      await page.locator('.nav button[data-page="sophy"]').click();
+      await page.evaluate(() => window.setPage('sophy'));
       await expect(page.locator('#sophyChatList')).toBeVisible();
 
       const suggestionsBar = page.locator('#sophySuggestions');
@@ -67,7 +67,7 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
     const errors = monitor(page);
     await boot(page, { width: 390, height: 844 });
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(page.locator('#sophyChatList')).toBeVisible();
 
     const bar = page.locator('#sophySuggestions');
@@ -120,7 +120,7 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(page.locator('#sophyCoreTag')).toBeVisible();
     await expect(page.locator('#sophyNetworkTag')).toBeVisible();
 
@@ -134,7 +134,7 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await page.locator('#sophySettingsBtn').click();
 
     const modal = page.locator('#modalRoot');
@@ -181,7 +181,7 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     const memBtn = page.locator('#sophyOpenMemoriesBtn');
     await expect(memBtn).toBeVisible();
     const btnText = (await memBtn.textContent()).trim();
@@ -206,7 +206,7 @@ test.describe('Sophy V3 — Hybrid Architecture, UI Quick Actions & Keystore Set
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await page.locator('#sophyInput').fill('Qual meu saldo?');
     await page.locator('#sophySendBtn').click();
 

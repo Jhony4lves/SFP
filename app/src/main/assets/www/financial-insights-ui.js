@@ -1,19 +1,12 @@
 (function(global){
   'use strict';
 
-  const MAX_VISIBLE = 5;
-  const PANEL_ID = 'financialInsightsPanel';
-  const STYLE_ID = 'financialInsightsStyles';
-
-  const escapeHtml = value => String(value ?? '')
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
-
-  const money = cents => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format((Number(cents)||0)/100);
-  const pct = value => `${Math.round((Number(value)||0)*100)}%`;
+  const MAX_VISIBLE=5;
+  const PANEL_ID='financialInsightsPanel';
+  const STYLE_ID='financialInsightsStyles';
+  const escapeHtml=value=>String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const money=cents=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format((Number(cents)||0)/100);
+  const pct=value=>`${Math.round((Number(value)||0)*100)}%`;
 
   function ensureStyles(){
     if(document.getElementById(STYLE_ID)) return;
@@ -22,261 +15,100 @@
     style.textContent=`
       .financial-insights-panel{position:relative;overflow:hidden}
       .financial-insights-panel:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,var(--color-brand),transparent 88%);opacity:.75}
-      .financial-insights-panel .head{min-width:0}
-      .financial-insights-panel .head>div:first-child{min-width:0}
+      .financial-insights-panel .head{min-width:0}.financial-insights-panel .head>div:first-child{min-width:0}
       .financial-insights-summary{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap;min-width:0;max-width:100%}
-      .financial-insights-summary .badge{background:rgba(255,255,255,.025);white-space:nowrap;max-width:100%}
+      .financial-insights-summary .badge{background:var(--color-surface-elevated);white-space:nowrap;max-width:100%}
       .financial-insights-list{display:grid;gap:9px}
-      .financial-insight{border:1px solid var(--color-border);border-radius:var(--radius-md);background:#081626;padding:12px;display:grid;gap:9px}
-      .financial-insight[data-severity="critical"]{border-color:var(--color-negative-border);background:linear-gradient(180deg,rgba(244,63,94,.075),#081626 70%)}
-      .financial-insight[data-severity="warning"]{border-color:var(--color-warning-border);background:linear-gradient(180deg,rgba(245,158,11,.06),#081626 70%)}
-      .financial-insight-top{display:flex;gap:10px;align-items:flex-start}
-      .financial-insight-marker{width:30px;height:30px;border-radius:9px;border:1px solid var(--color-border);display:grid;place-items:center;font-weight:850;flex:0 0 auto;color:var(--color-brand);background:#0b1b2e}
+      .financial-insight{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-1);padding:12px;display:grid;gap:9px}
+      .financial-insight[data-severity="critical"]{border-color:var(--color-negative-border);background:linear-gradient(180deg,var(--color-negative-bg),var(--color-surface-1) 70%)}
+      .financial-insight[data-severity="warning"]{border-color:var(--color-warning-border);background:linear-gradient(180deg,var(--color-warning-bg),var(--color-surface-1) 70%)}
+      .financial-insight-top{display:flex;gap:10px;align-items:flex-start}.financial-insight-marker{width:30px;height:30px;border-radius:9px;border:1px solid var(--color-border);display:grid;place-items:center;font-weight:850;flex:0 0 auto;color:var(--color-brand);background:var(--color-surface-elevated)}
       .financial-insight[data-severity="critical"] .financial-insight-marker{color:var(--color-negative);border-color:var(--color-negative-border);background:var(--color-negative-bg)}
       .financial-insight[data-severity="warning"] .financial-insight-marker{color:var(--color-warning);border-color:var(--color-warning-border);background:var(--color-warning-bg)}
-      .financial-insight-copy{min-width:0;flex:1}
-      .financial-insight-copy b{display:block;font-size:12.5px;color:var(--color-text);line-height:1.35}
-      .financial-insight-copy p{margin:3px 0 0;color:var(--color-text-secondary);font-size:10.5px;line-height:1.45}
-      .financial-insight-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:5px}
-      .financial-insight-severity{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted)}
-      .financial-insight-evidence{font-size:10px;color:var(--color-text-secondary);padding:8px 9px;border-radius:9px;border:1px dashed var(--color-border);background:rgba(0,0,0,.08)}
-      .financial-insight-details{border-top:1px solid rgba(26,52,82,.55);padding-top:8px}
-      .financial-insight-details summary{cursor:pointer;color:var(--color-text-secondary);font-size:10px;font-weight:700;list-style:none}
-      .financial-insight-details summary::-webkit-details-marker{display:none}
-      .financial-insight-details p{margin:7px 0 0;font-size:10px;color:var(--color-text-secondary);line-height:1.45}
-      .financial-insight-actions{display:flex;gap:7px;flex-wrap:wrap}
-      .financial-insight-actions button{min-height:34px;padding:6px 10px;font-size:10px}
-      .financial-insights-empty{display:flex;gap:10px;align-items:center;padding:12px;border:1px solid rgba(34,197,94,.22);border-radius:var(--radius-md);background:rgba(34,197,94,.055)}
-      .financial-insights-empty strong{display:block;font-size:12px;color:var(--color-text)}
-      .financial-insights-empty small{display:block;margin-top:2px;color:var(--color-text-secondary);font-size:10px}
-      @media(max-width:720px){
-        .financial-insight-actions button{flex:1 1 auto}
-        .financial-insight-top{gap:8px}
-        .financial-insights-panel .head{display:flex;flex-wrap:wrap}
-        .financial-insights-summary{flex:1 1 100%;justify-content:flex-start;margin-top:2px}
-      }
+      .financial-insight-copy{min-width:0;flex:1}.financial-insight-copy b{display:block;font-size:12.5px;color:var(--color-text);line-height:1.35}.financial-insight-copy p{margin:3px 0 0;color:var(--color-text-secondary);font-size:10.5px;line-height:1.45}
+      .financial-insight-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:5px}.financial-insight-severity{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted)}
+      .financial-insight-evidence{font-size:10px;color:var(--color-text-secondary);padding:8px 9px;border-radius:9px;border:1px dashed var(--color-border);background:var(--color-surface-elevated)}
+      .financial-insight-details{border-top:1px solid var(--color-border);padding-top:8px}.financial-insight-details summary{cursor:pointer;color:var(--color-text-secondary);font-size:10px;font-weight:700;list-style:none}.financial-insight-details summary::-webkit-details-marker{display:none}.financial-insight-details p{margin:7px 0 0;font-size:10px;color:var(--color-text-secondary);line-height:1.45}
+      .financial-insight-actions{display:flex;gap:7px;flex-wrap:wrap}.financial-insight-actions button{min-height:34px;padding:6px 10px;font-size:10px}
+      .financial-insights-empty{display:flex;gap:10px;align-items:center;padding:12px;border:1px solid var(--color-positive-border);border-radius:var(--radius-md);background:var(--color-positive-bg)}
+      .financial-insights-empty strong{display:block;font-size:12px;color:var(--color-text)}.financial-insights-empty small{display:block;margin-top:2px;color:var(--color-text-secondary);font-size:10px}
+      @media(max-width:720px){.financial-insight-actions button{flex:1 1 auto}.financial-insight-top{gap:8px}.financial-insights-panel .head{display:flex;flex-wrap:wrap}.financial-insights-summary{flex:1 1 100%;justify-content:flex-start;margin-top:2px}}
     `;
     document.head.appendChild(style);
   }
-
-  function ensurePanel(){
-    let panel=document.getElementById(PANEL_ID);
-    if(panel) return panel;
-    const anchor=document.querySelector('.today-secondary-grid');
-    if(!anchor) return null;
-    panel=document.createElement('section');
-    panel.id=PANEL_ID;
-    panel.className='panel financial-insights-panel';
-    panel.setAttribute('aria-labelledby','financialInsightsTitle');
-    anchor.insertAdjacentElement('afterend',panel);
-    return panel;
-  }
-
-  function severityLabel(severity){
-    return severity==='critical'?'Crítico':severity==='warning'?'Atenção':'Informativo';
-  }
-
-  function markerFor(type){
-    return ({cashflow_risk:'!',upcoming_obligations:'↗',category_deviation:'Δ',duplicate_candidate:'=',low_savings:'%'}[type]||'•');
-  }
-
-  function destinationFor(type){
-    return ({
-      cashflow_risk:{page:'calendario',label:'Ver calendário'},
-      upcoming_obligations:{page:'calendario',label:'Ver compromissos'},
-      category_deviation:{page:'relatorios',label:'Ver relatórios'},
-      duplicate_candidate:{page:'lancamentos',label:'Revisar lançamentos'},
-      low_savings:{page:'orcamento',label:'Ver orçamento'}
-    })[type]||{page:'dashboard',label:'Ver detalhes'};
-  }
-
-  function evidenceLine(insight){
-    const e=insight?.evidence||{};
-    switch(insight?.type){
-      case 'cashflow_risk': return `Menor saldo projetado: ${money(e.minBalanceCents)}${e.minDate?` em ${escapeHtml(e.minDate)}`:''}.`;
-      case 'upcoming_obligations': return `${Number(e.events?.length)||0} obrigação(ões) conhecida(s), total de ${money(e.totalCents)}.`;
-      case 'category_deviation': return `Atual: ${money(e.currentCents)} · média recente: ${money(e.baselineCents)} · desvio: ${pct((Number(e.ratio)||1)-1)}.`;
-      case 'duplicate_candidate': return `${escapeHtml(e.date||'Data não informada')} · ${money(e.amountCents)} · mesma conta, natureza, valor e descrição normalizada.`;
-      case 'low_savings': return `Receitas: ${money(e.incomeCents)} · resultado: ${money(e.resultCents)} · taxa: ${pct(e.savingsRate)}.`;
-      default: return insight?.explanation||'';
-    }
-  }
-
-  function naturalInsightPrompt(insight){
-    return `Sophy, me explica esse alerta de um jeito simples: “${insight.title}”. O SFP encontrou: ${evidenceLine(insight)} O que isso significa para o meu mês e qual é a ação mais útil agora?`;
-  }
-
-  function headerHtml(report){
-    const s=report?.summary||{};
-    const badges=[];
-    if(s.critical) badges.push(`<span class="badge negative">${s.critical} crítico${s.critical===1?'':'s'}</span>`);
-    if(s.warning) badges.push(`<span class="badge warning">${s.warning} atenção</span>`);
-    if(s.info) badges.push(`<span class="badge">${s.info} informativo${s.info===1?'':'s'}</span>`);
-    if(!badges.length) badges.push('<span class="badge positive">Tudo tranquilo</span>');
-    return `<div class="head"><div><h2 id="financialInsightsTitle">O que merece atenção</h2><p>Leitura determinística do seu cenário financeiro. Nenhum alerta altera seus dados.</p></div><div class="financial-insights-summary">${badges.join('')}</div></div>`;
-  }
-
-  function cardHtml(insight,index){
-    const dest=destinationFor(insight.type);
-    const moneySensitive=['cashflow_risk','upcoming_obligations','category_deviation','duplicate_candidate','low_savings'].includes(insight.type);
-    return `<article class="financial-insight" data-insight-id="${escapeHtml(insight.id)}" data-severity="${escapeHtml(insight.severity)}"><div class="financial-insight-top"><div class="financial-insight-marker" aria-hidden="true">${escapeHtml(markerFor(insight.type))}</div><div class="financial-insight-copy"><b>${escapeHtml(insight.title)}</b><p${moneySensitive?' data-money':''}>${escapeHtml(insight.message)}</p><div class="financial-insight-meta"><span class="financial-insight-severity">${escapeHtml(severityLabel(insight.severity))}</span><span class="badge">Confiança ${Math.round((Number(insight.confidence)||0)*100)}%</span></div></div></div><div class="financial-insight-evidence"${moneySensitive?' data-money':''}>${evidenceLine(insight)}</div><details class="financial-insight-details"><summary>Como o SFP chegou nisso</summary><p${moneySensitive?' data-money':''}>${escapeHtml(insight.explanation||'Insight calculado a partir dos dados financeiros registrados no SFP.')}</p></details><div class="financial-insight-actions"><button type="button" class="btn2" data-insight-open="${escapeHtml(dest.page)}">${escapeHtml(dest.label)}</button><button type="button" class="ghost" data-insight-ask="${index}">Perguntar à Sophy</button></div></article>`;
-  }
-
-  function bindActions(panel,report){
-    panel.querySelectorAll('[data-insight-open]').forEach(btn=>{btn.onclick=()=>{const page=btn.dataset.insightOpen;if(page&&typeof global.setPage==='function') global.setPage(page);};});
-    panel.querySelectorAll('[data-insight-ask]').forEach(btn=>{btn.onclick=async()=>{const insight=report?.insights?.[Number(btn.dataset.insightAsk)];if(!insight||typeof global.sophySendMessage!=='function') return;if(typeof global.setPage==='function') global.setPage('sophy');await global.sophySendMessage(naturalInsightPrompt(insight));};});
-  }
-
-  function renderFinancialInsights(){
-    ensureStyles();
-    const panel=ensurePanel();
-    if(!panel) return null;
-    let report;
-    try{report=typeof global.financialIntelligenceSnapshot==='function'?global.financialIntelligenceSnapshot():{summary:{total:0,critical:0,warning:0,info:0},insights:[],error:'snapshot_unavailable'};}catch(error){report={summary:{total:0,critical:0,warning:0,info:0},insights:[],error:String(error?.message||error)};}
-    const insights=Array.isArray(report?.insights)?report.insights.slice(0,MAX_VISIBLE):[];
-    if(report?.error){panel.innerHTML=`${headerHtml(report)}<div class="financial-insights-empty"><div><strong>Insights temporariamente indisponíveis</strong><small>O restante do SFP continua funcionando normalmente.</small></div></div>`;return report;}
-    if(!insights.length){panel.innerHTML=`${headerHtml(report)}<div class="financial-insights-empty"><div><strong>Nenhum sinal relevante agora</strong><small>O motor não encontrou risco ou desvio material nas regras atuais.</small></div></div>`;return report;}
-    panel.innerHTML=`${headerHtml(report)}<div class="financial-insights-list">${insights.map(cardHtml).join('')}</div>${report.insights.length>MAX_VISIBLE?`<small class="muted">Mostrando ${MAX_VISIBLE} de ${report.insights.length} insights, priorizados por severidade.</small>`:''}`;
-    bindActions(panel,{...report,insights});
-    return report;
-  }
-
+  function ensurePanel(){let panel=document.getElementById(PANEL_ID);if(panel)return panel;const anchor=document.querySelector('.today-secondary-grid');if(!anchor)return null;panel=document.createElement('section');panel.id=PANEL_ID;panel.className='panel financial-insights-panel';panel.setAttribute('aria-labelledby','financialInsightsTitle');anchor.insertAdjacentElement('afterend',panel);return panel;}
+  function severityLabel(severity){return severity==='critical'?'Crítico':severity==='warning'?'Atenção':'Informativo';}
+  function markerFor(type){return ({cashflow_risk:'!',upcoming_obligations:'↗',category_deviation:'Δ',duplicate_candidate:'=',low_savings:'%'}[type]||'•');}
+  function destinationFor(type){return ({cashflow_risk:{page:'calendario',label:'Ver calendário'},upcoming_obligations:{page:'calendario',label:'Ver compromissos'},category_deviation:{page:'relatorios',label:'Ver relatórios'},duplicate_candidate:{page:'lancamentos',label:'Revisar lançamentos'},low_savings:{page:'orcamento',label:'Ver orçamento'}})[type]||{page:'dashboard',label:'Ver detalhes'};}
+  function evidenceLine(insight){const e=insight?.evidence||{};switch(insight?.type){case'cashflow_risk':return`Menor saldo projetado: ${money(e.minBalanceCents)}${e.minDate?` em ${escapeHtml(e.minDate)}`:''}.`;case'upcoming_obligations':return`${Number(e.events?.length)||0} obrigação(ões) conhecida(s), total de ${money(e.totalCents)}.`;case'category_deviation':return`Atual: ${money(e.currentCents)} · média recente: ${money(e.baselineCents)} · desvio: ${pct((Number(e.ratio)||1)-1)}.`;case'duplicate_candidate':return`${escapeHtml(e.date||'Data não informada')} · ${money(e.amountCents)} · mesma conta, natureza, valor e descrição normalizada.`;case'low_savings':return`Receitas: ${money(e.incomeCents)} · resultado: ${money(e.resultCents)} · taxa: ${pct(e.savingsRate)}.`;default:return insight?.explanation||'';}}
+  function naturalInsightPrompt(insight){return`Sophy, me explica esse alerta de um jeito simples: “${insight.title}”. O SFP encontrou: ${evidenceLine(insight)} O que isso significa para o meu mês e qual é a ação mais útil agora?`;}
+  function headerHtml(report){const s=report?.summary||{},badges=[];if(s.critical)badges.push(`<span class="badge negative">${s.critical} crítico${s.critical===1?'':'s'}</span>`);if(s.warning)badges.push(`<span class="badge warning">${s.warning} atenção</span>`);if(s.info)badges.push(`<span class="badge">${s.info} informativo${s.info===1?'':'s'}</span>`);if(!badges.length)badges.push('<span class="badge positive">Tudo tranquilo</span>');return`<div class="head"><div><h2 id="financialInsightsTitle">O que merece atenção</h2><p>Leitura determinística do seu cenário financeiro. Nenhum alerta altera seus dados.</p></div><div class="financial-insights-summary">${badges.join('')}</div></div>`;}
+  function cardHtml(insight,index){const dest=destinationFor(insight.type),moneySensitive=['cashflow_risk','upcoming_obligations','category_deviation','duplicate_candidate','low_savings'].includes(insight.type);return`<article class="financial-insight" data-insight-id="${escapeHtml(insight.id)}" data-severity="${escapeHtml(insight.severity)}"><div class="financial-insight-top"><div class="financial-insight-marker" aria-hidden="true">${escapeHtml(markerFor(insight.type))}</div><div class="financial-insight-copy"><b>${escapeHtml(insight.title)}</b><p${moneySensitive?' data-money':''}>${escapeHtml(insight.message)}</p><div class="financial-insight-meta"><span class="financial-insight-severity">${escapeHtml(severityLabel(insight.severity))}</span><span class="badge">Confiança ${Math.round((Number(insight.confidence)||0)*100)}%</span></div></div></div><div class="financial-insight-evidence"${moneySensitive?' data-money':''}>${evidenceLine(insight)}</div><details class="financial-insight-details"><summary>Como o SFP chegou nisso</summary><p${moneySensitive?' data-money':''}>${escapeHtml(insight.explanation||'Insight calculado a partir dos dados financeiros registrados no SFP.')}</p></details><div class="financial-insight-actions"><button type="button" class="btn2" data-insight-open="${escapeHtml(dest.page)}">${escapeHtml(dest.label)}</button><button type="button" class="ghost" data-insight-ask="${index}">Perguntar à Sophy</button></div></article>`;}
+  function bindActions(panel,report){panel.querySelectorAll('[data-insight-open]').forEach(btn=>{btn.onclick=()=>{const page=btn.dataset.insightOpen;if(page&&typeof global.setPage==='function')global.setPage(page);};});panel.querySelectorAll('[data-insight-ask]').forEach(btn=>{btn.onclick=async()=>{const insight=report?.insights?.[Number(btn.dataset.insightAsk)];if(!insight||typeof global.sophySendMessage!=='function')return;if(typeof global.setPage==='function')global.setPage('sophy');await global.sophySendMessage(naturalInsightPrompt(insight));};});}
+  function renderFinancialInsights(){ensureStyles();const panel=ensurePanel();if(!panel)return null;let report;try{report=typeof global.financialIntelligenceSnapshot==='function'?global.financialIntelligenceSnapshot():{summary:{total:0,critical:0,warning:0,info:0},insights:[],error:'snapshot_unavailable'};}catch(error){report={summary:{total:0,critical:0,warning:0,info:0},insights:[],error:String(error?.message||error)};}const insights=Array.isArray(report?.insights)?report.insights.slice(0,MAX_VISIBLE):[];if(report?.error){panel.innerHTML=`${headerHtml(report)}<div class="financial-insights-empty"><div><strong>Insights temporariamente indisponíveis</strong><small>O restante do SFP continua funcionando normalmente.</small></div></div>`;return report;}if(!insights.length){panel.innerHTML=`${headerHtml(report)}<div class="financial-insights-empty"><div><strong>Nenhum sinal relevante agora</strong><small>O motor não encontrou risco ou desvio material nas regras atuais.</small></div></div>`;return report;}panel.innerHTML=`${headerHtml(report)}<div class="financial-insights-list">${insights.map(cardHtml).join('')}</div>${report.insights.length>MAX_VISIBLE?`<small class="muted">Mostrando ${MAX_VISIBLE} de ${report.insights.length} insights, priorizados por severidade.</small>`:''}`;bindActions(panel,{...report,insights});return report;}
   global.renderFinancialInsights=renderFinancialInsights;
 })(typeof window!=='undefined'?window:globalThis);
 
 (function(global){
   'use strict';
-
   const STYLE_ID='sfpProductPolishStyles';
   const EXPENSE_CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Saúde','Assinaturas','Dívida','Lazer','Casa','Trabalho','Ajuste','Outros'];
   const INCOME_CATEGORIES=['Salário','Adiantamento salarial','Hora extra','Benefícios','Freelance / renda extra','Reembolso','Rendimentos','Venda','Presente','Ajuste','Outros'];
-
-  function ensureStyles(){
-    if(document.getElementById(STYLE_ID)) return;
-    const style=document.createElement('style');
-    style.id=STYLE_ID;
-    style.textContent=`
-      select.sfp-review-native-select{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;margin:0!important;padding:0!important;border:0!important;clip-path:inset(50%)!important}
-      .sfp-select{position:relative;margin-top:4px;min-width:0}
-      .sfp-select-button{width:100%;min-height:var(--control-height);display:flex;align-items:center;justify-content:space-between;gap:12px;background:#071423;border:1px solid var(--color-border);color:var(--color-text);border-radius:10px;padding:10px 12px;font:inherit;font-weight:650;text-align:left;box-shadow:none;min-width:0;cursor:pointer}
-      .sfp-select-button[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
-      .sfp-select-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-      .sfp-select-button:focus,.sfp-select-button[aria-expanded="true"]{outline:none;border-color:var(--color-brand);box-shadow:0 0 0 3px var(--color-brand-glow)}
-      .sfp-select-chevron{width:9px;height:9px;flex:0 0 auto;border-right:2px solid var(--color-text-secondary);border-bottom:2px solid var(--color-text-secondary);transform:rotate(45deg) translateY(-2px);transition:transform .15s ease}
-      .sfp-select-button[aria-expanded="true"] .sfp-select-chevron{transform:rotate(225deg) translate(-2px,-2px)}
-      .sfp-select-menu{position:absolute;z-index:20000;left:0;right:0;top:calc(100% + 6px);max-height:min(44vh,330px);overflow:auto;padding:6px;background:linear-gradient(180deg,var(--color-surface-elevated),var(--color-surface-1));border:1px solid var(--color-border-strong);border-radius:12px;box-shadow:var(--shadow-lg);overscroll-behavior:contain}
-      .sfp-select-menu[hidden]{display:none!important}
-      .sfp-select-option{width:100%;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:0;border-radius:9px;background:transparent;color:var(--color-text);font:inherit;text-align:left;cursor:pointer}
-      .sfp-select-option:hover,.sfp-select-option:focus{outline:none;background:rgba(255,255,255,.055)}
-      .sfp-select-option[aria-selected="true"]{background:var(--color-brand-muted);color:var(--color-brand);font-weight:800}
-      .sfp-select-option[aria-selected="true"]:after{content:"✓";font-weight:900}
-      .sfp-select-option[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
-      .field-help,.sfp-field-help{display:block;margin-top:5px;color:var(--color-text-muted);font-size:9.5px;line-height:1.4}
-      .head,.management-form-panel .head{overflow:visible!important}
-      .head h2,.management-form-panel .head h2{line-height:1.35!important;padding-top:1px;overflow:visible!important}
-      .form-section{min-width:0}.management-form,.management-form-panel form{min-width:0}
-      @media(max-width:720px){.sfp-select-menu{position:fixed;left:12px;right:12px;top:auto;bottom:calc(var(--bottom-nav-height,62px) + env(safe-area-inset-bottom,0px) + 12px);max-height:58vh;border-radius:16px;padding:8px;box-shadow:0 20px 70px rgba(0,0,0,.72)}.sfp-select-button,.sfp-select-option{font-size:16px}.form-section,.management-form-panel,.panel{scroll-margin-top:12px}.field-group--two,.two,.three{gap:10px}}
-      @media(orientation:landscape) and (max-height:600px){main{padding:10px 14px 78px!important}.top{margin-bottom:12px!important}.grid2,.grid3,.management-layout,.field-group--two,.two,.three{grid-template-columns:1fr!important}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.panel{padding:13px!important}.sidebar{padding-top:8px!important;padding-bottom:8px!important}}
-    `;
-    document.head.appendChild(style);
-  }
-
-  function closeOtherMenus(except){
-    document.querySelectorAll('.sfp-select-menu').forEach(menu=>{if(menu===except)return;menu.hidden=true;menu.parentElement?.querySelector('.sfp-select-button')?.setAttribute('aria-expanded','false');});
-  }
-
+  function ensureStyles(){if(document.getElementById(STYLE_ID))return;const style=document.createElement('style');style.id=STYLE_ID;style.textContent=`
+    select.sfp-review-native-select{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;margin:0!important;padding:0!important;border:0!important;clip-path:inset(50%)!important}
+    .sfp-select{position:relative;margin-top:4px;min-width:0}.sfp-select-button{width:100%;min-height:var(--control-height);display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--color-surface-1);border:1px solid var(--color-border);color:var(--color-text);border-radius:10px;padding:10px 12px;font:inherit;font-weight:650;text-align:left;box-shadow:none;min-width:0;cursor:pointer}.sfp-select-button[aria-disabled="true"]{opacity:.55;cursor:not-allowed}.sfp-select-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.sfp-select-button:focus,.sfp-select-button[aria-expanded="true"]{outline:none;border-color:var(--color-brand);box-shadow:0 0 0 3px var(--color-brand-glow)}.sfp-select-chevron{width:9px;height:9px;flex:0 0 auto;border-right:2px solid var(--color-text-secondary);border-bottom:2px solid var(--color-text-secondary);transform:rotate(45deg) translateY(-2px);transition:transform .15s ease}.sfp-select-button[aria-expanded="true"] .sfp-select-chevron{transform:rotate(225deg) translate(-2px,-2px)}
+    .sfp-select-menu{position:fixed!important;z-index:20000;max-height:min(44vh,330px);overflow:auto;padding:6px;background:var(--color-surface-elevated);border:1px solid var(--color-border-strong);border-radius:12px;box-shadow:var(--shadow-lg);overscroll-behavior:contain}.sfp-select-menu[hidden]{display:none!important}.sfp-select-option{width:100%;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:0;border-radius:9px;background:transparent;color:var(--color-text);font:inherit;text-align:left;cursor:pointer}.sfp-select-option:hover,.sfp-select-option:focus{outline:none;background:var(--color-brand-muted)}.sfp-select-option[aria-selected="true"]{background:var(--color-brand-muted);color:var(--color-brand);font-weight:800}.sfp-select-option[aria-selected="true"]:after{content:"✓";font-weight:900}.sfp-select-option[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
+    .field-help,.sfp-field-help{display:block;margin-top:5px;color:var(--color-text-muted);font-size:9.5px;line-height:1.4}.head,.management-form-panel .head{overflow:visible!important}.head h2,.management-form-panel .head h2{line-height:1.35!important;padding-top:1px;overflow:visible!important}.form-section{min-width:0}.management-form,.management-form-panel form{min-width:0}
+    @media(max-width:720px){.sfp-select-menu{padding:8px;border-radius:16px}.sfp-select-button,.sfp-select-option{font-size:16px}.form-section,.management-form-panel,.panel{scroll-margin-top:12px}.field-group--two,.two,.three{gap:10px}}
+    @media(orientation:landscape) and (max-height:600px){main{padding:10px 14px 78px!important}.top{margin-bottom:12px!important}.grid2,.grid3,.management-layout,.field-group--two,.two,.three{grid-template-columns:1fr!important}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.panel{padding:13px!important}.sidebar{padding-top:8px!important;padding-bottom:8px!important}}
+  `;document.head.appendChild(style);}
+  function closeOtherMenus(except){document.querySelectorAll('.sfp-select-menu').forEach(menu=>{if(menu===except)return;menu.hidden=true;menu.parentElement?.querySelector('.sfp-select-button')?.setAttribute('aria-expanded','false');});}
+  function positionMenu(host){const button=host?.querySelector('.sfp-select-button'),menu=host?.querySelector('.sfp-select-menu');if(!button||!menu||menu.hidden)return;const rect=button.getBoundingClientRect(),margin=8,gap=6,vw=document.documentElement.clientWidth,vh=global.innerHeight||document.documentElement.clientHeight;if(rect.bottom<0||rect.top>vh||rect.right<0||rect.left>vw){menu.hidden=true;button.setAttribute('aria-expanded','false');return;}const left=Math.max(margin,Math.min(rect.left,vw-margin-Math.max(rect.width,180))),width=Math.min(Math.max(rect.width,180),vw-margin*2);menu.style.left=`${left}px`;menu.style.width=`${width}px`;menu.style.right='auto';menu.style.bottom='auto';const desired=Math.min(menu.scrollHeight||330,330,Math.max(120,vh*.58)),below=Math.max(0,vh-rect.bottom-gap-margin),above=Math.max(0,rect.top-gap-margin),openBelow=below>=Math.min(desired,180)||below>=above,available=Math.max(96,openBelow?below:above);menu.style.maxHeight=`${Math.min(desired,available)}px`;const measured=Math.min(menu.scrollHeight||desired,parseFloat(menu.style.maxHeight)||desired),top=openBelow?rect.bottom+gap:Math.max(margin,rect.top-gap-measured);menu.style.top=`${Math.max(margin,Math.min(top,vh-margin-measured))}px`;}
+  function repositionOpenMenus(){document.querySelectorAll('.sfp-select').forEach(positionMenu);}
   function optionSignature(select){return Array.from(select.options).map(option=>`${option.value}:${option.textContent}:${option.disabled?'1':'0'}`).join('|');}
-
-  function refreshCustom(select){
-    const host=select?._sfpReviewHost;if(!host)return;
-    const button=host.querySelector('.sfp-select-button');
-    const menu=host.querySelector('.sfp-select-menu');
-    const selected=select.options[select.selectedIndex];
-    const label=host.querySelector('.sfp-select-label');
-    const labelText=selected?.textContent||select.getAttribute('placeholder')||'Selecione';
-    if(label&&label.textContent!==labelText) label.textContent=labelText;
-    if(button) button.setAttribute('aria-disabled',String(!!select.disabled));
-    if(!menu)return;
-    const signature=optionSignature(select);
-    if(menu.dataset.optionsSignature!==signature){
-      menu.dataset.optionsSignature=signature;
-      menu.replaceChildren(...Array.from(select.options).map(option=>{
-        const item=document.createElement('div');
-        item.className='sfp-select-option'+(select.id?.startsWith('financialReview')?' sfp-review-select-option':'');
-        item.setAttribute('role','option');
-        item.setAttribute('tabindex','-1');
-        item.setAttribute('aria-disabled',String(!!option.disabled));
-        item.dataset.value=option.value;
-        item.textContent=option.textContent;
-        item.onclick=()=>{if(option.disabled)return;select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));menu.hidden=true;button?.setAttribute('aria-expanded','false');button?.focus();};
-        return item;
-      }));
-    }
-    menu.querySelectorAll('.sfp-select-option').forEach(item=>item.setAttribute('aria-selected',String(item.dataset.value===select.value)));
-  }
-
-  function focusOption(menu,direction){
-    const options=Array.from(menu.querySelectorAll('.sfp-select-option:not([aria-disabled="true"])'));if(!options.length)return;
-    const current=document.activeElement,index=options.indexOf(current),next=index<0?(direction>0?0:options.length-1):(index+direction+options.length)%options.length;options[next].focus();
-  }
-
-  function enhanceSelect(select){
-    if(!select||select.multiple||select.dataset.sfpReviewEnhanced==='1')return;
-    select.dataset.sfpReviewEnhanced='1';select.classList.add('sfp-review-native-select');
-    const isReview=select.id?.startsWith('financialReview');
-    const host=document.createElement('div');
-    host.className='sfp-select'+(isReview?' sfp-review-select':'');host.dataset.forSelect=select.id||'';
-    host.innerHTML=`<div role="button" tabindex="0" class="sfp-select-button${isReview?' sfp-review-select-button':''}" aria-haspopup="listbox" aria-expanded="false"><span class="sfp-select-label"></span><span class="sfp-select-chevron" aria-hidden="true"></span></div><div class="sfp-select-menu${isReview?' sfp-review-select-menu':''}" role="listbox" hidden></div>`;
-    select.insertAdjacentElement('afterend',host);select._sfpReviewHost=host;
-    const button=host.querySelector('.sfp-select-button'),menu=host.querySelector('.sfp-select-menu');
-    button.onclick=()=>{if(select.disabled)return;const opening=menu.hidden;closeOtherMenus(menu);menu.hidden=!opening;button.setAttribute('aria-expanded',String(opening));if(opening)requestAnimationFrame(()=>menu.querySelector('[aria-selected="true"]')?.focus());};
-    button.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();button.click();}else if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();if(menu.hidden)button.click();requestAnimationFrame(()=>focusOption(menu,event.key==='ArrowDown'?1:-1));}else if(event.key==='Escape'){menu.hidden=true;button.setAttribute('aria-expanded','false');}};
-    menu.onkeydown=event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();focusOption(menu,event.key==='ArrowDown'?1:-1);}else if(event.key==='Enter'||event.key===' '){event.preventDefault();document.activeElement?.click();}else if(event.key==='Escape'){menu.hidden=true;button.setAttribute('aria-expanded','false');button.focus();}};
-    select.addEventListener('change',()=>refreshCustom(select));refreshCustom(select);
-  }
-
-  function replaceCategoryOptions(select,categories,preserve=true){
-    if(!select||!categories?.length)return;
-    const previous=select.value,current=Array.from(select.options).map(option=>option.value),changed=current.length!==categories.length||current.some((value,index)=>value!==categories[index]);
-    if(changed) select.replaceChildren(...categories.map(category=>{const option=document.createElement('option');option.value=category;option.textContent=category;return option;}));
-    const next=preserve&&categories.includes(previous)?previous:'Outros';if(select.value!==next)select.value=next;refreshCustom(select);
-  }
-
-  function visible(element){return !!element&&!element.classList.contains('hidden')&&element.offsetParent!==null;}
-
-  function syncSemanticCategories(){
-    const reviewNature=document.getElementById('financialReviewNature'),reviewCategory=document.getElementById('financialReviewCategory');
-    if(reviewNature&&reviewCategory){if(reviewNature.value==='income')replaceCategoryOptions(reviewCategory,INCOME_CATEGORIES);else if(reviewNature.value==='expense')replaceCategoryOptions(reviewCategory,EXPENSE_CATEGORIES);}
-    const recType=document.getElementById('recType'),recCategory=document.getElementById('recCategory');
-    if(recType&&recCategory)replaceCategoryOptions(recCategory,recType.value==='income'?INCOME_CATEGORIES:EXPENSE_CATEGORIES);
-    const ruleAction=document.getElementById('ruleEditAction'),ruleCategory=document.getElementById('ruleEditCategory');
-    if(ruleAction&&ruleCategory&&ruleAction.value!=='transfer'){
-      const base=ruleAction.value==='income'?INCOME_CATEGORIES:EXPENSE_CATEGORIES;
-      const current=ruleCategory.value;
-      const isKnownStandard=EXPENSE_CATEGORIES.includes(current)||INCOME_CATEGORIES.includes(current);
-      const categories=current&&!isKnownStandard?[...base,current]:base;
-      replaceCategoryOptions(ruleCategory,categories,true);
-    }
-    const txCategory=document.getElementById('txCategory');
-    if(txCategory){const incomeFields=document.getElementById('incomeFields'),transferFields=document.getElementById('transferFields');if(visible(incomeFields))replaceCategoryOptions(txCategory,INCOME_CATEGORIES);else if(!visible(transferFields))replaceCategoryOptions(txCategory,EXPENSE_CATEGORIES);}
-    document.querySelectorAll('select[data-sa]').forEach(action=>{const row=action.closest('tr'),category=row?.querySelector('select[data-sc]');if(!category||['transfer','transfer_match','pending_transfer','ignore'].includes(action.value))return;replaceCategoryOptions(category,action.value==='income'?INCOME_CATEGORIES:EXPENSE_CATEGORIES);});
-  }
-
+  function refreshCustom(select){const host=select?._sfpReviewHost;if(!host)return;const button=host.querySelector('.sfp-select-button'),menu=host.querySelector('.sfp-select-menu'),selected=select.options[select.selectedIndex],label=host.querySelector('.sfp-select-label'),labelText=selected?.textContent||select.getAttribute('placeholder')||'Selecione';if(label&&label.textContent!==labelText)label.textContent=labelText;if(button)button.setAttribute('aria-disabled',String(!!select.disabled));if(!menu)return;const signature=optionSignature(select);if(menu.dataset.optionsSignature!==signature){menu.dataset.optionsSignature=signature;menu.replaceChildren(...Array.from(select.options).map(option=>{const item=document.createElement('div');item.className='sfp-select-option'+(select.id?.startsWith('financialReview')?' sfp-review-select-option':'');item.setAttribute('role','option');item.setAttribute('tabindex','-1');item.setAttribute('aria-disabled',String(!!option.disabled));item.dataset.value=option.value;item.textContent=option.textContent;item.onclick=()=>{if(option.disabled)return;select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));menu.hidden=true;button?.setAttribute('aria-expanded','false');button?.focus();};return item;}));}menu.querySelectorAll('.sfp-select-option').forEach(item=>item.setAttribute('aria-selected',String(item.dataset.value===select.value)));positionMenu(host);}
+  function focusOption(menu,direction){const options=Array.from(menu.querySelectorAll('.sfp-select-option:not([aria-disabled="true"])'));if(!options.length)return;const current=document.activeElement,index=options.indexOf(current),next=index<0?(direction>0?0:options.length-1):(index+direction+options.length)%options.length;options[next].focus();}
+  function enhanceSelect(select){if(!select||select.multiple||select.dataset.sfpReviewEnhanced==='1')return;select.dataset.sfpReviewEnhanced='1';select.classList.add('sfp-review-native-select');const isReview=select.id?.startsWith('financialReview'),host=document.createElement('div');host.className='sfp-select'+(isReview?' sfp-review-select':'');host.dataset.forSelect=select.id||'';host.innerHTML=`<div role="button" tabindex="0" class="sfp-select-button${isReview?' sfp-review-select-button':''}" aria-haspopup="listbox" aria-expanded="false"><span class="sfp-select-label"></span><span class="sfp-select-chevron" aria-hidden="true"></span></div><div class="sfp-select-menu${isReview?' sfp-review-select-menu':''}" role="listbox" hidden></div>`;select.insertAdjacentElement('afterend',host);select._sfpReviewHost=host;const button=host.querySelector('.sfp-select-button'),menu=host.querySelector('.sfp-select-menu');button.onclick=()=>{if(select.disabled)return;const opening=menu.hidden;closeOtherMenus(menu);menu.hidden=!opening;button.setAttribute('aria-expanded',String(opening));if(opening)requestAnimationFrame(()=>{positionMenu(host);menu.querySelector('[aria-selected="true"]')?.focus();});};button.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();button.click();}else if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();if(menu.hidden)button.click();requestAnimationFrame(()=>focusOption(menu,event.key==='ArrowDown'?1:-1));}else if(event.key==='Escape'){menu.hidden=true;button.setAttribute('aria-expanded','false');}};menu.onkeydown=event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();focusOption(menu,event.key==='ArrowDown'?1:-1);}else if(event.key==='Enter'||event.key===' '){event.preventDefault();document.activeElement?.click();}else if(event.key==='Escape'){menu.hidden=true;button.setAttribute('aria-expanded','false');button.focus();}};select.addEventListener('change',()=>refreshCustom(select));refreshCustom(select);}
+  function replaceCategoryOptions(select,categories,preserve=true){if(!select||!categories?.length)return;const previous=select.value,current=Array.from(select.options).map(option=>option.value),changed=current.length!==categories.length||current.some((value,index)=>value!==categories[index]);if(changed)select.replaceChildren(...categories.map(category=>{const option=document.createElement('option');option.value=category;option.textContent=category;return option;}));const next=preserve&&categories.includes(previous)?previous:'Outros';if(select.value!==next)select.value=next;refreshCustom(select);}
+  function visible(element){return!!element&&!element.classList.contains('hidden')&&element.offsetParent!==null;}
+  function syncSemanticCategories(){const reviewNature=document.getElementById('financialReviewNature'),reviewCategory=document.getElementById('financialReviewCategory');if(reviewNature&&reviewCategory)replaceCategoryOptions(reviewCategory,reviewNature.value==='income'?INCOME_CATEGORIES:EXPENSE_CATEGORIES);const recType=document.getElementById('recType'),recCategory=document.getElementById('recCategory');if(recType&&recCategory)replaceCategoryOptions(recCategory,recType.value==='income'?INCOME_CATEGORIES:EXPENSE_CATEGORIES);const ruleAction=document.getElementById('ruleEditAction'),ruleCategory=document.getElementById('ruleEditCategory');if(ruleAction&&ruleCategory&&ruleAction.value!=='transfer'){const base=ruleAction.value==='income'?INCOME_CATEGORIES:EXPENSE_CATEGORIES,current=ruleCategory.value,isKnownStandard=EXPENSE_CATEGORIES.includes(current)||INCOME_CATEGORIES.includes(current),categories=current&&!isKnownStandard?[...base,current]:base;replaceCategoryOptions(ruleCategory,categories,true);}const txCategory=document.getElementById('txCategory');if(txCategory){const incomeFields=document.getElementById('incomeFields'),transferFields=document.getElementById('transferFields');if(visible(incomeFields))replaceCategoryOptions(txCategory,INCOME_CATEGORIES);else if(!visible(transferFields))replaceCategoryOptions(txCategory,EXPENSE_CATEGORIES);}document.querySelectorAll('select[data-sa]').forEach(action=>{const row=action.closest('tr'),category=row?.querySelector('select[data-sc]');if(!category||['transfer','transfer_match','pending_transfer','ignore'].includes(action.value))return;replaceCategoryOptions(category,action.value==='income'?INCOME_CATEGORIES:EXPENSE_CATEGORIES);});}
   function addHelp(id,text){const field=document.getElementById(id);if(!field||field.dataset.sfpHelpAdded==='1')return;field.dataset.sfpHelpAdded='1';const help=document.createElement('small');help.className='sfp-field-help';help.textContent=text;(field._sfpReviewHost||field).insertAdjacentElement('afterend',help);}
   function improveClarity(){addHelp('txFirstBill','Escolhe em qual fatura a compra começa. “Automática” usa a data de fechamento do cartão.');addHelp('debtRatePeriod','Define se a taxa informada é diária, mensal ou anual.');addHelp('debtAmortization','Price estima a parcela automaticamente; Manual preserva o valor definido no contrato.');addHelp('budgetPreset','É apenas um ponto de partida. Você pode personalizar os percentuais depois.');addHelp('cfgDay1','Usado para organizar seu primeiro ciclo principal de recebimento.');addHelp('cfgDay2','Usado para organizar seu segundo ciclo principal de recebimento.');}
   function enhanceAll(){ensureStyles();document.querySelectorAll('select:not([multiple])').forEach(enhanceSelect);syncSemanticCategories();document.querySelectorAll('select.sfp-review-native-select').forEach(refreshCustom);improveClarity();}
+  function safeSpendPrompt(report){const available=Number(report?.availableCents)||0,reserved=Number(report?.reservedCents)||0,free=Number(report?.freeCents)||0,safe=Number(report?.safeToSpendCents)||0,min=Number(report?.projection?.minBalanceCents)||0,next=report?.nextIncome,fmt=cents=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(cents/100),nextText=next?`${next.date}, ${fmt(Number(next.amountCents)||0)}`:'nenhuma entrada conhecida';return`Sophy, quanto eu posso gastar sem me apertar? Agora o SFP mostra ${fmt(available)} disponível, ${fmt(reserved)} reservado, ${fmt(free)} livre e ${fmt(safe)} como gasto seguro. O menor saldo projetado é ${fmt(min)} e a próxima entrada conhecida é ${nextText}. Me explica isso de forma simples e me diz o que merece atenção.`;}
+  document.addEventListener('change',event=>{const target=event.target;if(!(target instanceof HTMLSelectElement))return;syncSemanticCategories();refreshCustom(target);});document.addEventListener('click',event=>{if(!event.target.closest('.sfp-select'))closeOtherMenus(null);});document.addEventListener('scroll',repositionOpenMenus,true);global.addEventListener('resize',repositionOpenMenus,{passive:true});global.visualViewport?.addEventListener('resize',repositionOpenMenus,{passive:true});global.visualViewport?.addEventListener('scroll',repositionOpenMenus,{passive:true});document.addEventListener('click',async event=>{const ask=event.target.closest('#safeSpendAskSophy');if(!ask)return;event.preventDefault();event.stopImmediatePropagation();const report=typeof global.safeSpendingSnapshot==='function'?global.safeSpendingSnapshot():null;if(typeof global.setPage==='function')global.setPage('sophy');if(report&&typeof global.sophySendMessage==='function')await global.sophySendMessage(safeSpendPrompt(report));},true);
+  const start=()=>{enhanceAll();let scheduled=false;new MutationObserver(()=>{if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;enhanceAll();});}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})(typeof window!=='undefined'?window:globalThis);
 
-  function safeSpendPrompt(report){
-    const available=Number(report?.availableCents)||0,reserved=Number(report?.reservedCents)||0,free=Number(report?.freeCents)||0,safe=Number(report?.safeToSpendCents)||0,min=Number(report?.projection?.minBalanceCents)||0,next=report?.nextIncome;
-    const fmt=cents=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(cents/100);
-    const nextText=next?`${next.date}, ${fmt(Number(next.amountCents)||0)}`:'nenhuma entrada conhecida';
-    return `Sophy, quanto eu posso gastar sem me apertar? Agora o SFP mostra ${fmt(available)} disponível, ${fmt(reserved)} reservado, ${fmt(free)} livre e ${fmt(safe)} como gasto seguro. O menor saldo projetado é ${fmt(min)} e a próxima entrada conhecida é ${nextText}. Me explica isso de forma simples e me diz o que merece atenção.`;
-  }
-
-  document.addEventListener('change',event=>{const target=event.target;if(!(target instanceof HTMLSelectElement))return;syncSemanticCategories();refreshCustom(target);});
-  document.addEventListener('click',event=>{if(!event.target.closest('.sfp-select'))closeOtherMenus(null);});
-  document.addEventListener('click',async event=>{const ask=event.target.closest('#safeSpendAskSophy');if(!ask)return;event.preventDefault();event.stopImmediatePropagation();const report=typeof global.safeSpendingSnapshot==='function'?global.safeSpendingSnapshot():null;if(typeof global.setPage==='function')global.setPage('sophy');if(report&&typeof global.sophySendMessage==='function')await global.sophySendMessage(safeSpendPrompt(report));},true);
-
-  const start=()=>{enhanceAll();let scheduled=false;new MutationObserver(()=>{if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;enhanceAll();});}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','disabled']});};
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+(function(global){
+  'use strict';
+  const STYLE_ID='sfpMobilePriorityNavV2';
+  const PRIMARY_PAGES=['hoje','contas','cartoes','calendario'];
+  const MORE_GROUPS=[
+    {title:'Planejar',items:[['recorrencias','Recorrências','Assinaturas e gastos fixos'],['orcamento','Orçamento','Tetos e regras'],['dividas','Dívidas','Quitação e acordos'],['metas','Metas','Objetivos de poupança']]},
+    {title:'Analisar',items:[['visao','Visão Geral','Análise e fluxo'],['dashboard','Dashboard','Resumo e indicadores'],['patrimonio','Patrimônio','Ativos e evolução'],['relatorios','Relatórios','Leituras e comparativos'],['simuladores','Simuladores','Cenários e projeções']]},
+    {title:'Dados',items:[['lancamentos','Lançamentos','Histórico e edição'],['extratos','Extratos','Importação OFX e CSV'],['dados','Central de Dados','Backup, importação e exportação']]},
+    {title:'Assistência e sistema',items:[['sophy','Sophy','Assistente contextual'],['auditoria','Auditoria','Integridade dos dados'],['config','Configurações','Preferências do aplicativo']]}
+  ];
+  function ensureStyles(){if(document.getElementById(STYLE_ID))return;const style=document.createElement('style');style.id=STYLE_ID;style.textContent=`
+    .sfp-more-modal{width:min(720px,94vw);max-height:min(88dvh,780px);overflow:auto;padding:16px;border:1px solid var(--color-border);border-radius:20px;background:var(--color-surface-1);box-shadow:var(--shadow-lg);color:var(--color-text)}
+    .sfp-more-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;position:sticky;top:-16px;z-index:2;margin:-16px -16px 10px;padding:18px 16px 12px;background:var(--color-surface-1);border-bottom:1px solid var(--color-border)}.sfp-more-header h2{margin:0;font-size:20px}.sfp-more-header p{margin:2px 0 0;color:var(--color-text-secondary);font-size:11px}
+    .sfp-more-groups{display:grid;gap:18px}.sfp-more-group{display:grid;gap:8px}.sfp-more-group-title{margin:0;padding:0 4px;color:var(--color-text-muted);font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.sfp-more-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .sfp-more-item{width:100%;min-width:0;display:grid;grid-template-columns:42px minmax(0,1fr) 18px;align-items:center;gap:12px;min-height:76px;padding:12px 13px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface-elevated);color:var(--color-text);text-align:left}.sfp-more-item:hover,.sfp-more-item:focus-visible{border-color:var(--color-brand);background:var(--color-brand-muted);outline:none}.sfp-more-icon{width:42px;height:42px;display:grid;place-items:center;color:var(--color-brand)}.sfp-more-icon svg{width:26px;height:26px;display:block;stroke:currentColor}.sfp-more-copy{min-width:0}.sfp-more-copy strong,.sfp-more-copy small{display:block;text-align:left}.sfp-more-copy strong{font-size:14px;line-height:1.2}.sfp-more-copy small{margin-top:3px;color:var(--color-text-secondary);font-size:10.5px;line-height:1.3;white-space:normal}.sfp-more-arrow{color:var(--color-text-muted);font-size:19px;text-align:center}
+    @media(max-width:650px) and (orientation:portrait){.sidebar .nav button{display:none!important}.sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="contas"],.sidebar .nav button[data-page="cartoes"],.sidebar .nav button[data-page="calendario"],.sidebar .nav #moreNavBtn{display:flex!important}.sidebar .nav button[data-page="hoje"]{order:1}.sidebar .nav button[data-page="contas"]{order:2}.sidebar .nav button[data-page="cartoes"]{order:3}.sidebar .nav button[data-page="calendario"]{order:4}.sidebar .nav #moreNavBtn{order:5}html,body,.shell,main,.tab,.panel,.form-section,.management-page,.management-card{max-width:100%!important;min-width:0!important}body,main{overflow-x:hidden!important}.grid2,.grid3,.two,.three,.field-group--two,.field-group--three,.management-layout,.management-facts,.projection-grid{grid-template-columns:minmax(0,1fr)!important}.tablewrap,.analytics-metrics{max-width:100%;overscroll-behavior-x:contain}.sfp-more-modal{width:min(94vw,560px);padding:14px;border-radius:18px}.sfp-more-header{top:-14px;margin:-14px -14px 10px;padding:16px 14px 11px}.sfp-more-grid{grid-template-columns:1fr}.sfp-more-item{min-height:70px;grid-template-columns:40px minmax(0,1fr) 18px;padding:11px 12px}.sfp-more-icon{width:40px;height:40px}}
+    @media(orientation:landscape) and (max-height:600px){main,.tab,.panel,.form-section,.management-page,.management-card{max-width:100%!important;min-width:0!important}body,main{overflow-x:hidden!important}.grid2,.management-layout,.field-group--two,.two,.management-facts,.projection-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.grid3,.field-group--three,.three{grid-template-columns:repeat(3,minmax(0,1fr))!important}.transaction-form{padding-bottom:var(--space-4)!important}}
+    [data-theme="light"] .sfp-more-modal,[data-theme="light"] .sfp-more-header{background:#fff!important;color:#0b192c!important}[data-theme="light"] .sfp-more-item{background:#f3f7fb!important;color:#0b192c!important;border-color:var(--color-border)!important}[data-theme="light"] .sfp-more-item:hover,[data-theme="light"] .sfp-more-item:focus-visible{background:rgba(0,135,124,.10)!important;border-color:var(--color-brand)!important}
+  `;document.head.appendChild(style);}
+  function iconFor(page){const svg=document.querySelector(`.sidebar .nav button[data-page="${page}"] svg`);return svg?svg.outerHTML:'';}
+  function closeMore(){const root=document.getElementById('modalRoot');if(!root)return;root.className='hidden';root.innerHTML='';}
+  function showPriorityMoreMenu(){const root=document.getElementById('modalRoot');if(!root)return;root.className='modalback';const groups=MORE_GROUPS.map(group=>`<section class="sfp-more-group"><h3 class="sfp-more-group-title">${group.title}</h3><div class="sfp-more-grid">${group.items.map(([id,label,desc])=>`<button type="button" class="sfp-more-item" data-more="${id}" data-sfp-more-page="${id}"><span class="sfp-more-icon" aria-hidden="true">${iconFor(id)}</span><span class="sfp-more-copy"><strong>${label}</strong><small>${desc}</small></span><span class="sfp-more-arrow" aria-hidden="true">›</span></button>`).join('')}</div></section>`).join('');root.innerHTML=`<div class="modal sfp-more-modal" role="dialog" aria-modal="true" aria-labelledby="sfpMoreTitle"><header class="sfp-more-header"><div><h2 id="sfpMoreTitle">Mais</h2><p>Ferramentas organizadas por finalidade.</p></div><button id="closeMore" type="button" class="btn2" data-sfp-more-close>Fechar</button></header><div class="sfp-more-groups">${groups}</div></div>`;root.onclick=event=>{if(event.target===root||event.target.closest('[data-sfp-more-close]')){closeMore();return;}const item=event.target.closest('[data-sfp-more-page]');if(!item)return;const page=item.dataset.sfpMorePage;closeMore();if(page&&typeof global.setPage==='function')global.setPage(page);};}
+  function isPriorityPortrait(){return !!global.matchMedia?.('(max-width:650px) and (orientation:portrait)').matches;}
+  function syncPrimaryVisibility(){const order={hoje:1,contas:2,cartoes:3,calendario:4,moreNavBtn:5},portrait=isPriorityPortrait();document.querySelectorAll('.sidebar .nav button').forEach(button=>{if(!portrait){button.style.removeProperty('display');button.style.removeProperty('order');return;}const key=button.dataset.page||button.id||'';if(order[key]){button.style.setProperty('display','flex','important');button.style.order=String(order[key]);}else button.style.setProperty('display','none','important');});}
+  function syncMoreActive(){const more=document.getElementById('moreNavBtn');if(!more)return;const active=document.querySelector('.sidebar .nav button[data-page].active')?.dataset.page||document.querySelector('.tab.active')?.id||'';more.classList.toggle('active',!!active&&!PRIMARY_PAGES.includes(active));}
+  function interceptMore(event){const more=event.target.closest?.('#moreNavBtn');if(!more||!isPriorityPortrait())return;event.preventDefault();event.stopImmediatePropagation();showPriorityMoreMenu();}
+  function installNavigation(){ensureStyles();syncPrimaryVisibility();const more=document.getElementById('moreNavBtn');if(more)more.onclick=event=>{if(event){event.preventDefault();event.stopImmediatePropagation();}showPriorityMoreMenu();};global.showMoreMenu=showPriorityMoreMenu;syncMoreActive();const nav=document.querySelector('.sidebar .nav');if(nav&&!nav.dataset.sfpPriorityObserved){nav.dataset.sfpPriorityObserved='1';new MutationObserver(()=>{syncMoreActive();syncPrimaryVisibility();}).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});}if(!document.documentElement.dataset.sfpMoreCapture){document.documentElement.dataset.sfpMoreCapture='1';document.addEventListener('click',interceptMore,true);global.addEventListener('resize',syncPrimaryVisibility,{passive:true});global.addEventListener('orientationchange',syncPrimaryVisibility,{passive:true});}}
+  function formatIsoDates(value){return String(value??'').replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g,(_,y,m,d)=>`${d}/${m}/${y}`);}
+  function installSophyDateGuard(){const fn=global.sophySendMessage;if(typeof fn!=='function'||fn.__sfpIsoDateGuard)return false;const wrapped=function(message,...args){return fn.call(this,formatIsoDates(message),...args)};wrapped.__sfpIsoDateGuard=true;global.sophySendMessage=wrapped;return true;}
+  function boot(){installNavigation();installSophyDateGuard();let attempts=0;const timer=global.setInterval(()=>{installNavigation();if(installSophyDateGuard()||++attempts>20)global.clearInterval(timer);},150);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })(typeof window!=='undefined'?window:globalThis);

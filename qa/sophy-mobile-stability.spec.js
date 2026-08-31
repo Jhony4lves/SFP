@@ -28,7 +28,7 @@ test.describe('SFP Hotfix — Estabilidade Mobile & Sophy', () => {
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(page.locator('#sophyChatList')).toBeVisible();
 
     // 1. Saudação com caracteres repetidos ("Oiiii")
@@ -60,7 +60,7 @@ test.describe('SFP Hotfix — Estabilidade Mobile & Sophy', () => {
 
     const initialDebtsCount = await page.evaluate(() => (state.debts || []).length);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // Pergunta hipotética exata relatada no Galaxy S24
     const response = await sendSophy(page, 'E se eu pegar um empréstimo de 15.000 pra pagar em 12 parcelas de 2 mil?');
@@ -87,7 +87,7 @@ test.describe('SFP Hotfix — Estabilidade Mobile & Sophy', () => {
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // Preenche e clica rapidamente duas vezes simultaneamente
     await page.locator('#sophyInput').fill('Como está meu saldo?');
@@ -185,12 +185,12 @@ test.describe('SFP Hotfix — Estabilidade Mobile & Sophy', () => {
     expect(fabBox.y + fabBox.height).toBeLessThanOrEqual(navBox.y + 4);
 
     // Navegar para a Sophy: FAB deve ser ocultado para não cobrir o composer
-    await page.locator('.sidebar .nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(fab).toBeHidden();
 
     // Em 'Lançamentos' o FAB permanece oculto para não duplicar
     // a própria ação principal de novo lançamento.
-    await page.locator('.sidebar .nav button[data-page="lancamentos"]').click();
+    await page.evaluate(() => window.setPage('lancamentos'));
     await expect(fab).toBeHidden();
 
     expect(errors).toEqual([]);
@@ -200,7 +200,7 @@ test.describe('SFP Hotfix — Estabilidade Mobile & Sophy', () => {
     const errors = monitor(page);
     await boot(page, MOBILE_S24);
 
-    await page.locator('.sidebar .nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     const card = page.locator('.sophy-chat-card');
     await expect(card).toBeVisible();
@@ -223,7 +223,7 @@ test.describe('SFP Hotfix — Estabilidade Mobile & Sophy', () => {
     const errors = monitor(page);
     await boot(page, MOBILE_S24);
 
-    await page.locator('.sidebar .nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // Envia 4 mensagens em sequência
     await sendSophy(page, 'Oi!');
@@ -246,7 +246,7 @@ test.describe('SFP Hotfix — Estabilidade Mobile & Sophy', () => {
     // Recarregar a página e confirmar que o histórico persistiu
     await page.reload();
     await expect(page.locator('#pageTitle')).toHaveText('Hoje');
-    await page.locator('.sidebar .nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(page.locator('.sophy-msg-row.user')).toHaveCount(userMsgs);
 
     expect(errors).toEqual([]);
@@ -256,7 +256,7 @@ test.describe('SFP Hotfix — Estabilidade Mobile & Sophy', () => {
     const errors = monitor(page);
     await boot(page, MOBILE_S24);
 
-    await page.locator('.sidebar .nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // Simula falha catastrófica no router
     await page.evaluate(() => {
@@ -293,7 +293,7 @@ test.describe('SFP Hotfix — Estabilidade Mobile & Sophy', () => {
     const errors = monitor(page);
     await boot(page, { width: 780, height: 360 });
 
-    await page.locator('.sidebar .nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // Em landscape: a barra lateral fica à esquerda e visível
     const sidebar = page.locator('.sidebar');

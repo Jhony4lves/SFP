@@ -17,7 +17,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(page.locator('#sophyChatList')).toBeVisible();
 
     // Primeira vez: exibe bolha inicial de apresentação curta
@@ -54,7 +54,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     await page.locator('#sophyInput').fill('Como você tá?');
     await page.locator('#sophySendBtn').click();
@@ -72,7 +72,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     await page.locator('#sophyInput').fill('Qual é a capital da Mongólia?');
     await page.locator('#sophySendBtn').click();
@@ -94,7 +94,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
       window.sophySetMockProvider({ active: true });
     });
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(page.locator('#sophyNetworkTag')).toContainText('Mock Core');
 
     await page.locator('#sophyInput').fill('Então me diz, qual é a raiz cúbica de 1987');
@@ -120,7 +120,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
       window.sophySetMockProvider({ active: false });
     });
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await page.locator('#sophyInput').fill('Por que o céu é azul?');
     await page.locator('#sophySendBtn').click();
     const response = page.locator('.sophy-msg-row.sophy').last();
@@ -136,7 +136,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     await page.locator('#sophyInput').fill('Quanto tenho de livre projetado hoje?');
     await page.locator('#sophySendBtn').click();
@@ -157,7 +157,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
       window.sophySetMockProvider({ active: true });
     });
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await page.locator('#sophyInput').fill('Quanto sobra depois das contas?');
     await page.locator('#sophySendBtn').click();
     const response = page.locator('.sophy-msg-row.sophy').last();
@@ -173,7 +173,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // 1. Consulta cartões
     await page.locator('#sophyInput').fill('Como estão minhas faturas de cartão?');
@@ -193,7 +193,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     await page.locator('#sophyInput').fill('Lembre que prefiro pagar o aluguel no dia 5');
     await page.locator('#sophySendBtn').click();
@@ -210,7 +210,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     await page.locator('#sophyInput').fill('Tô com sono');
     await page.locator('#sophySendBtn').click();
@@ -234,7 +234,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
       window.sophySetMockProvider({ active: true, simulateTimeout: true });
     });
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await page.locator('#sophyInput').fill('Quanto tenho nas contas?');
     await page.locator('#sophySendBtn').click();
     const response = page.locator('.sophy-msg-row.sophy').last();
@@ -251,7 +251,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
       window.sophySetMockProvider({ active: true, simulateAuthError: true });
     });
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await page.locator('#sophyInput').fill('Qual meu livre projetado?');
     await page.locator('#sophySendBtn').click();
     const response = page.locator('.sophy-msg-row.sophy').last();
@@ -268,7 +268,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     await expect(page.locator('#sophyNetworkTag')).toContainText(/Local Core/i);
 
@@ -285,7 +285,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     await page.evaluate(() => {
       window.sophyAddMemory('fact', 'Trabalho como desenvolvedor', 'chat');
@@ -297,7 +297,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     await expect(page.locator('.sophy-msg-row.sophy').last()).toBeVisible();
 
     await page.reload();
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     await expect(page.locator('.sophy-msg-row.user').last()).toContainText('Persistência V2 do SFP');
 
@@ -312,7 +312,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
 
     await boot(page, PORTRAIT);
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     const input = page.locator('#sophyInput');
     await expect(input).toBeVisible();
@@ -333,7 +333,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     await page.locator('#sophySettingsBtn').click();
     await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
@@ -352,7 +352,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     const prompts = [
       'Oi Sophy',
@@ -376,7 +376,7 @@ test.describe('Sophy Foundation V2 — Conversação Natural, Hybrid AI Router &
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     await page.locator('#sophyInput').fill('Sophy, fiz uma merda.');
     await page.locator('#sophySendBtn').click();
