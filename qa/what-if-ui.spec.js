@@ -3,7 +3,7 @@ const { expectBootComplete } = require('./helpers');
 
 async function boot(page){
   await page.goto('/index.html');
-  await expectBootComplete(page, expect);
+  await expectBootComplete(page, expect, 'Fixture QA');
   await page.waitForFunction(()=>window.SFPWhatIf?.version===1&&window.SFPWhatIfUI?.version===1);
   await page.locator('button[data-page="simuladores"]').click();
   await expect(page.locator('#whatIfPlanner')).toBeVisible();
