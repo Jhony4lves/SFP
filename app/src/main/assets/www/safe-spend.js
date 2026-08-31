@@ -80,3 +80,12 @@
 
   global.SFPSafeSpend=Object.freeze({version:VERSION,analyze});
 })(typeof window!=='undefined'?window:globalThis);
+
+(function loadWhatIfEngine(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-what-if="1"]'))return;
+  const script=document.createElement('script');
+  script.src='what-if-engine.js';
+  script.async=false;
+  script.dataset.sfpWhatIf='1';
+  document.head.appendChild(script);
+})();
