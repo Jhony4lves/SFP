@@ -57,3 +57,67 @@ test('open portrait dropdown never enters bottom nav while the page scrolls',asy
   await expect(menu).toBeVisible();
   await assertClear();
 });
+
+
+test('portrait dropdown placement change is animated and resists threshold thrash',async({page})=>{
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await boot(page);
+  await page.evaluate(()=>{
+    const main=document.querySelector('main');
+    const wrap=document.createElement('div');
+    wrap.id='qaMotionDropdownProbe';
+    wrap.style.cssText='margin-top:1100px;padding-bottom:1200px';
+    const select=document.createElement('select');
+    select.id='qaMotionDropdownSelect';
+    for(const label of ['Todos','Receitas','Despesas','Transferências','Essencial','Alimentação','Transporte','Faculdade']){
+      const option=document.createElement('option');
+      option.value=label;
+      option.textContent=label;
+      select.appendChild(option);
+    }
+    wrap.appendChild(select);
+    main.appendChild(wrap);
+  });
+
+  const button=page.locator('#qaMotionDropdownSelect + .sfp-select .sfp-select-button');
+  await expect(button).toBeVisible();
+  await button.scrollIntoViewIfNeeded();
+  await page.evaluate(()=>{
+    const button=document.querySelector('#qaMotionDropdownSelect + .sfp-select .sfp-select-button');
+    if(button) window.scrollBy(0,button.getBoundingClientRect().top-500);
+  });
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  await button.click();
+
+  const menu=page.locator('#qaMotionDropdownSelect + .sfp-select .sfp-select-menu:not([hidden])');
+  await expect(menu).toBeVisible();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  const initial=await menu.getAttribute('data-sfp-placement');
+  expect(['above','below']).toContain(initial);
+
+  const direction=initial==='above'?1:-1;
+  let changed=initial;
+  for(let i=0;i<24&&changed===initial;i++){
+    await page.evaluate(step=>window.scrollBy(0,step),direction*24);
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    changed=await menu.getAttribute('data-sfp-placement');
+  }
+  expect(changed).not.toBe(initial);
+
+  const hasMotion=await menu.evaluate(el=>el.getAnimations().some(animation=>Number(animation.effect?.getTiming?.().duration||0)>=160));
+  expect(hasMotion).toBe(true);
+
+  await page.evaluate(step=>window.scrollBy(0,step),-direction*16);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  expect(await menu.getAttribute('data-sfp-placement')).toBe(changed);
+
+  const geometry=await page.evaluate(()=>{
+    const menu=document.querySelector('#qaMotionDropdownSelect + .sfp-select .sfp-select-menu:not([hidden])');
+    const nav=document.querySelector('.sidebar .nav');
+    const m=menu?.getBoundingClientRect(),n=nav?.getBoundingClientRect();
+    return m&&n?{menuTop:m.top,menuBottom:m.bottom,navTop:n.top}:null;
+  });
+  expect(geometry).not.toBeNull();
+  expect(geometry.menuTop).toBeGreaterThanOrEqual(7);
+  expect(geometry.menuBottom).toBeLessThanOrEqual(geometry.navTop-3);
+});
