@@ -60,3 +60,56 @@ test('revisão de extrato vira cartões mobile sem arrastar a página para o lad
   expect(overflow.review).toBeLessThanOrEqual(2);
   expect(overflow.body).toBeLessThanOrEqual(2);
 });
+
+
+test('RC4 separa Valor de Saldo em extrato tabular e remove ID operacional da descrição',async({page})=>{
+  await boot(page);
+  const rows=await page.evaluate(()=>parsePdfFinancialText(`Data Descrição ID da operação Valor Saldo
+07/08/2026 Pagamento Loja Exemplo 171601400157 R$ -28,00 R$ 1.068,67
+08/08/2026 Pagamento Mercado Exemplo 171822116995 R$ -77,91 R$ 941,05`,{intendedType:'statement',month:'2026-08'}));
+  expect(rows).toHaveLength(2);
+  expect(rows[0]).toMatchObject({date:'2026-08-07',desc:'Pagamento Loja Exemplo',amount:-28,fitid:'171601400157'});
+  expect(rows[1]).toMatchObject({date:'2026-08-08',desc:'Pagamento Mercado Exemplo',amount:-77.91,fitid:'171822116995'});
+  expect(rows.map(r=>r.amount)).not.toContain(1068.67);
+  expect(rows.map(r=>r.amount)).not.toContain(941.05);
+});
+
+test('linhas de saldo são descartadas antes da revisão',async({page})=>{
+  await boot(page);
+  const result=await page.evaluate(()=>{
+    const parsed=parsePdfFinancialText(`Data Descrição ID da operação Valor Saldo
+26/08/2026 SALDO DO DIA R$ -22,18
+26/08/2026 Pagamento real 172000000001 R$ -22,18 R$ 100,00`,{intendedType:'statement',month:'2026-08'});
+    document.querySelector('#stmtAccount').value=String(state.accounts[0].id);
+    prepareStatement([...parsed,{date:'2026-08-26',desc:'Saldo atual',amount:100}], 'saldo.pdf');
+    return {parsed,draft:statementDraft.map(r=>({desc:r.desc,amount:r.amount}))};
+  });
+  expect(result.parsed).toHaveLength(1);
+  expect(result.parsed[0]).toMatchObject({desc:'Pagamento real',amount:-22.18});
+  expect(result.draft).toEqual([{desc:'Pagamento real',amount:-22.18}]);
+});
+
+test('transferência não exibe categoria e receita usa apenas categorias de entrada',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await boot(page);
+  await page.evaluate(()=>{
+    statementReviewMode='all';
+    document.querySelector('#stmtAccount').value=String(state.accounts[0].id);
+    prepareStatement([
+      {date:'2026-08-17',desc:'PIX TRANSF CONTA PROPRIA',amount:-50},
+      {date:'2026-08-21',desc:'SALARIO EMPRESA',amount:1000}
+    ],'categorias.csv');
+  });
+  const cards=page.locator('#stmtMobile .stmt-review-card');
+  await expect(cards).toHaveCount(2);
+  await expect(cards.nth(0).locator('[data-sc]')).toHaveCount(0);
+  const incomeSelect=cards.nth(1).locator('[data-sc]');
+  await expect(incomeSelect).toHaveCount(1);
+  const labels=await incomeSelect.locator('option').allTextContents();
+  expect(labels).toContain('Trabalho');
+  expect(labels).toContain('Rendimentos');
+  expect(labels).not.toContain('Faculdade');
+  expect(labels).not.toContain('Saúde');
+  expect(labels).not.toContain('Assinaturas');
+  expect(labels).not.toContain('Dívida');
+});
