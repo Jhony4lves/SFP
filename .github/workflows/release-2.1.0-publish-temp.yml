@@ -37,7 +37,7 @@ jobs:
           grep -Fx 'versionName=2.1.0' release-bundle/RELEASE-METADATA.txt
           grep -Fx 'versionCode=9' release-bundle/RELEASE-METADATA.txt
           grep -Fx 'commit=0e939b70154ecd9599673a6c7d44869d72d00df5' release-bundle/RELEASE-METADATA.txt
-          sha256sum -c release-bundle/SHA256SUMS.txt
+          sed 's#dist/##g' release-bundle/SHA256SUMS.txt | (cd release-bundle && sha256sum -c -)
 
       - name: Create stable tag
         env:
@@ -75,6 +75,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git fetch origin release/2.1.0
           git checkout -B release/2.1.0 origin/release/2.1.0
           git rm .github/workflows/release-2.1.0-publish-temp.yml
