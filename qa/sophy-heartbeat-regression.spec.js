@@ -8,6 +8,7 @@ async function boot(page, value) {
   await page.evaluate(v => localStorage.setItem('sfp_final_fallback', JSON.stringify(v)), value);
   await page.reload();
   await page.waitForFunction(expectedName => typeof state !== 'undefined' && state?.settings?.name === expectedName, value.settings.name);
+  await page.waitForFunction(() => window.__SFP_SOPHY_A3_INSTALLED === true && window.SFPProactiveBrief?.version === 2);
 }
 
 test('ERR-005 heartbeat inicializa cooldown em memória sem reescrever a persistência no bootstrap', async ({ page }) => {
@@ -25,6 +26,7 @@ test('ERR-005 heartbeat inicializa cooldown em memória sem reescrever a persist
 
   await page.reload();
   await page.waitForFunction(() => typeof state !== 'undefined' && state?.settings?.name === 'Heartbeat bootstrap seguro');
+  await page.waitForFunction(() => window.__SFP_SOPHY_A3_INSTALLED === true);
   const second = await page.evaluate(() => ({
     last: state.sophy.lastProactiveAt,
     fallback: JSON.parse(localStorage.getItem('sfp_final_fallback'))
@@ -33,7 +35,7 @@ test('ERR-005 heartbeat inicializa cooldown em memória sem reescrever a persist
   expect(second.fallback).toEqual(value);
 });
 
-test('ERR-005 heartbeat periódico gera mensagem relevante sem force e persiste após reload', async ({ page }) => {
+test('ERR-005 heartbeat periódico gera brief crítico determinístico e persiste após reload', async ({ page }) => {
   const value = fixture('Heartbeat real');
   value.sophy.introDone = true;
   value.sophy.lastProactiveAt = '2026-01-01T00:00:00.000Z';
@@ -52,17 +54,32 @@ test('ERR-005 heartbeat periódico gera mensagem relevante sem force e persiste 
     lastSavedState = clone(state);
     const beforeCount = state.sophy.messages.length;
     const text = await sophyHeartbeatTick({ notify: false });
-    return { text, beforeCount, afterCount: state.sophy.messages.length, lastAt: state.sophy.lastProactiveAt, latest: state.sophy.messages.at(-1)?.text || '' };
+    const latestMessage = state.sophy.messages.at(-1) || null;
+    return {
+      text,
+      beforeCount,
+      afterCount: state.sophy.messages.length,
+      lastAt: state.sophy.lastProactiveAt,
+      latest: latestMessage?.text || '',
+      source: latestMessage?.proactiveSource || '',
+      priority: latestMessage?.proactivePriority || '',
+      evidence: latestMessage?.proactiveEvidence || [],
+      financial: latestMessage?.proactiveFinancial === true
+    };
   });
 
-  expect(result.text).toContain('livre projetado');
+  expect(result.text).toContain('Pressão de caixa merece atenção');
   expect(result.afterCount).toBe(result.beforeCount + 1);
-  expect(result.latest).toContain('livre projetado');
+  expect(result.latest).toBe(result.text);
+  expect(result.source).toBe('cashflow_pressure');
+  expect(result.priority).toBe('critical');
+  expect(result.evidence.some(item => item.label === 'Gasto seguro')).toBe(true);
+  expect(result.financial).toBe(true);
   expect(result.lastAt).toBeTruthy();
 
   await page.reload();
   await page.waitForFunction(() => typeof state !== 'undefined' && state?.settings?.name === 'Heartbeat real');
-  await expect.poll(() => page.evaluate(() => state.sophy.messages.some(m => m.text?.includes('livre projetado')))).toBe(true);
+  await expect.poll(() => page.evaluate(text => state.sophy.messages.some(m => m.text === text), result.text)).toBe(true);
 });
 
 test('ERR-005 startSophyHeartbeat é idempotente e não cria vários timers', async ({ page }) => {
