@@ -1,0 +1,38 @@
+name: Fix PR56 Landscape
+
+on:
+  push:
+    branches:
+      - feat/sophy-proactive-brief
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: feat/sophy-proactive-brief
+      - name: Remove brief footprint on low landscape
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/assets/www/sophy-proactive-brief.js')
+          s = p.read_text()
+          start = s.index('      @media(orientation:landscape) and (max-height:500px){')
+          end = s.index('\n      }\n    `;', start) + len('\n      }')
+          replacement = '''      @media(orientation:landscape) and (max-height:520px){
+        .sophy-proactive-brief{display:none!important}
+      }'''
+          p.write_text(s[:start] + replacement + s[end:])
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/sophy-proactive-brief.js
+          git commit -m "fix(sophy): preserve composer in low landscape"
+          git push
