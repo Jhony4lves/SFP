@@ -104,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
                         "application/octet-stream",
                         "application/x-ofx",
                         "application/ofx",
+                        "application/pdf",
                         "text/plain"
                 });
                 startActivityForResult(intent, FILE_CHOOSER_REQUEST);
