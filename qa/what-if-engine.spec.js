@@ -95,7 +95,7 @@ test.describe('SFP What-if Engine',()=>{
     expect(report.assumptions.join(' ')).toContain('não reduz patrimônio líquido');
   });
 
-  test('amortização reduz caixa e dívida pelo principal e estima juros/prazo quando há contrato suficiente',async({page})=>{
+  test('amortização reduz caixa e dívida pelo mesmo principal e estima juros/prazo quando há contrato suficiente',async({page})=>{
     await boot(page);
     const report=await page.evaluate(base=>window.SFPWhatIf.simulate({snapshot:base,scenario:{type:'debt_amortization',amountCents:20000,date:'2026-08-31',debt:{id:11,balanceCents:100000,monthlyRate:0.02,paymentCents:12000}}}),coreSnapshot());
     expect(report.simulated.availableCents).toBe(80000);
@@ -111,7 +111,29 @@ test.describe('SFP What-if Engine',()=>{
     const report=await page.evaluate(base=>window.SFPWhatIf.simulate({snapshot:base,scenario:{type:'debt_amortization',amountCents:20000,debt:{id:11,balanceCents:100000}}}),coreSnapshot());
     expect(report.debtImpact.interestSavedCents).toBeNull();
     expect(report.debtImpact.monthsSaved).toBeNull();
+    expect(report.debtImpact.amortizationCents).toBe(20000);
+    expect(report.simulated.availableCents).toBe(80000);
     expect(report.limitations.join(' ')).toContain('projeções condicionais');
+  });
+
+  test('amortização maior que o saldo falha fechada e nunca cria divergência caixa × dívida',async({page})=>{
+    await boot(page);
+    const result=await page.evaluate(base=>{
+      const before=JSON.stringify(base);
+      let error='';
+      try{window.SFPWhatIf.simulate({snapshot:base,scenario:{type:'debt_amortization',amountCents:120000,debt:{id:11,balanceCents:100000,monthlyRate:0.02,paymentCents:12000}}});}catch(e){error=e.message;}
+      return {error,before,after:JSON.stringify(base)};
+    },coreSnapshot());
+    expect(result.error).toContain('cannot exceed debt.balanceCents');
+    expect(result.after).toBe(result.before);
+  });
+
+  test('amortização exige saldo conhecido da dívida',async({page})=>{
+    await boot(page);
+    const error=await page.evaluate(base=>{
+      try{window.SFPWhatIf.simulate({snapshot:base,scenario:{type:'debt_amortization',amountCents:20000,debt:{id:11}}});return null;}catch(e){return e.message;}
+    },coreSnapshot());
+    expect(error).toContain('debt.balanceCents is required');
   });
 
   test('datas mensais preservam dia e ajustam fim do mês',async({page})=>{
