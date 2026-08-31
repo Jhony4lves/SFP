@@ -81,11 +81,24 @@
   global.SFPSafeSpend=Object.freeze({version:VERSION,analyze});
 })(typeof window!=='undefined'?window:globalThis);
 
-(function loadWhatIfEngine(){
-  if(typeof document==='undefined'||document.querySelector('script[data-sfp-what-if="1"]'))return;
-  const script=document.createElement('script');
-  script.src='what-if-engine.js';
-  script.async=false;
-  script.dataset.sfpWhatIf='1';
-  document.head.appendChild(script);
+(function loadWhatIfSuite(){
+  if(typeof document==='undefined')return;
+  const loadUI=()=>{
+    if(document.querySelector('script[data-sfp-what-if-ui="1"]'))return;
+    const ui=document.createElement('script');
+    ui.src='what-if-ui.js';
+    ui.async=false;
+    ui.dataset.sfpWhatIfUi='1';
+    document.head.appendChild(ui);
+  };
+  if(globalThis.SFPWhatIf){loadUI();return;}
+  let script=document.querySelector('script[data-sfp-what-if="1"]');
+  if(!script){
+    script=document.createElement('script');
+    script.src='what-if-engine.js';
+    script.async=false;
+    script.dataset.sfpWhatIf='1';
+    document.head.appendChild(script);
+  }
+  script.addEventListener('load',loadUI,{once:true});
 })();
