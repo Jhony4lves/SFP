@@ -3393,7 +3393,19 @@ button:active:not(:disabled){transform:translateY(1px)}
 <script src="safe-spend-ui.js"></script>
 <script>
 const VERSION=202, SCHEMA_VERSION=12, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
-const CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Saúde','Assinaturas','Dívida','Lazer','Casa','Trabalho','Ajuste','Outros'];
+const EXPENSE_CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Educação','Saúde','Assinaturas','Dívida','Lazer','Casa','Contas','Trabalho','Investimentos','Cartão','Ajuste','Outros'];
+const INCOME_CATEGORIES=['Trabalho','Rendimentos','Reembolso','Venda','Benefícios','Investimentos','Ajuste','Outros'];
+const CATEGORIES=[...new Set([...EXPENSE_CATEGORIES,...INCOME_CATEGORIES])];
+function statementActionHasCategory(action){return action==='income'||action==='expense'}
+function categoriesForAction(action){return action==='income'?INCOME_CATEGORIES:action==='expense'?EXPENSE_CATEGORIES:[]}
+function normalizedCategoryForAction(action,category){const allowed=categoriesForAction(action);return allowed.includes(category)?category:'Outros'}
+function categoryOptionsMarkup(action,current){const allowed=categoriesForAction(action),selected=normalizedCategoryForAction(action,current);return allowed.map(c=>`<option ${selected===c?'selected':''}>${sfpEsc(c)}</option>`).join('')}
+function setCategorySelectOptions(select,categories,preferred=''){if(!select)return;const allowed=categories?.length?categories:['Outros'],selected=allowed.includes(preferred)?preferred:(allowed.includes('Outros')?'Outros':allowed[0]);select.innerHTML=allowed.map(c=>`<option>${sfpEsc(c)}</option>`).join('');select.value=selected}
+function syncTxCategoryOptions(preferred=null){const select=$('txCategory');if(!select)return;const action=currentKind==='income'?'income':'expense';setCategorySelectOptions(select,categoriesForAction(action),preferred??select.value)}
+function syncRecCategoryOptions(preferred=null){const select=$('recCategory');if(!select)return;const action=$('recType')?.value==='income'?'income':'expense';setCategorySelectOptions(select,categoriesForAction(action),preferred??select.value)}
+function normalizeStatementLabel(value){return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim()}
+function isStatementBalanceLabel(value){const d=normalizeStatementLabel(value);return /^(?:saldo|saldo do dia|saldo atual|saldo anterior|saldo final|saldo inicial|saldo disponivel|saldo em conta|saldo da conta|saldo total|saldo bancario)$/.test(d)}
+function isStatementBalanceRow(row){return isStatementBalanceLabel(row?.desc)}
 const seed={
  version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:'2026-08',baseDate:'2026-08-18',persistenceMeta:{revision:1,savedAt:'2026-08-18T00:00:00.000Z'},
  settings:{name:'SFP Jhony',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:true,theme:'dark'},
@@ -4683,11 +4695,12 @@ function contextualNew(page){
 }
 
 function renderSelects(){
- let acc=state.accounts.map(a=>`<option value="${a.id}">${sfpEsc(a.name)}</option>`).join(''),transferAcc=state.accounts.map(a=>`<option value="${a.id}">${sfpEsc(a.name)} • ${state.settings?.privacy?'••••':brl(accountBalance(a.id))}</option>`).join(''),cards=state.cards.map(c=>`<option value="${c.id}">${sfpEsc(c.name)}</option>`).join(''),cats=CATEGORIES.map(c=>`<option>${sfpEsc(c)}</option>`).join('');
+ let acc=state.accounts.map(a=>`<option value="${a.id}">${sfpEsc(a.name)}</option>`).join(''),transferAcc=state.accounts.map(a=>`<option value="${a.id}">${sfpEsc(a.name)} • ${state.settings?.privacy?'••••':brl(accountBalance(a.id))}</option>`).join(''),cards=state.cards.map(c=>`<option value="${c.id}">${sfpEsc(c.name)}</option>`).join('');
  ['txAccount','stmtAccount','cardPayAccount','recAccount','debtAccount','goalAccount'].forEach(id=>{if($(id))$(id).innerHTML=acc});
  ['txFrom','txTo'].forEach(id=>{if($(id))$(id).innerHTML=transferAcc});
  ['txCard','invoiceCard','cardImportCard'].forEach(id=>{if($(id))$(id).innerHTML=cards});
- ['txCategory','recCategory','catBudgetCategory'].forEach(id=>{if($(id))$(id).innerHTML=cats});
+ syncTxCategoryOptions();syncRecCategoryOptions();
+ if($('catBudgetCategory'))setCategorySelectOptions($('catBudgetCategory'),EXPENSE_CATEGORIES,$('catBudgetCategory').value);
 }
 function renderTop(){
   const labelEl=$('monthLabel');
@@ -9413,7 +9426,7 @@ function applyTxKindCopy(){
 function setTxFormMode(editing=false){$('txFormTitle').textContent=editing?'Editar lançamento':'Novo lançamento';$('txModeBadge').textContent=editing?'Editando':'Criando';$('txCancelEdit').classList.toggle('hidden',!editing);document.querySelectorAll('.quicktype').forEach(b=>{b.disabled=editing&&b.dataset.kind!==currentKind});applyTxKindCopy()}
 function setKind(k){
  if(!TX_KIND_COPY[k])return;currentKind=k;document.querySelectorAll('.quicktype').forEach(b=>{let active=b.dataset.kind===k;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
- $('normalFields').classList.toggle('hidden',k==='transfer');$('transferFields').classList.toggle('hidden',k!=='transfer');$('billFields').classList.toggle('hidden',k!=='bill');$('cardFields').classList.toggle('hidden',k!=='card');$('incomeFields').classList.toggle('hidden',k!=='income');$('txClassificationSection').classList.toggle('hidden',k==='transfer');$('txStatusSection').classList.toggle('hidden',k!=='income');$('txAccountField').classList.toggle('hidden',k==='card');$('txRecurringField').classList.toggle('hidden',['card','transfer','income'].includes(k));$('txSubmit').textContent={expense:'Registrar gasto',bill:'Adicionar conta a pagar',card:'Adicionar compra',income:'Adicionar receita',transfer:'Transferir'}[k];applyTxKindCopy()
+ $('normalFields').classList.toggle('hidden',k==='transfer');$('transferFields').classList.toggle('hidden',k!=='transfer');$('billFields').classList.toggle('hidden',k!=='bill');$('cardFields').classList.toggle('hidden',k!=='card');$('incomeFields').classList.toggle('hidden',k!=='income');$('txClassificationSection').classList.toggle('hidden',k==='transfer');$('txStatusSection').classList.toggle('hidden',k!=='income');$('txAccountField').classList.toggle('hidden',k==='card');$('txRecurringField').classList.toggle('hidden',['card','transfer','income'].includes(k));$('txSubmit').textContent={expense:'Registrar gasto',bill:'Adicionar conta a pagar',card:'Adicionar compra',income:'Adicionar receita',transfer:'Transferir'}[k];applyTxKindCopy();syncTxCategoryOptions()
 }
 
 function moveToTrash(type,item){state.trash.push({type,item:clone(item),deletedAt:new Date().toISOString()})}
@@ -9450,7 +9463,7 @@ window.cancelPurchase=async id=>{let p=state.purchases.find(x=>x.id===id);if(p&&
 window.postRec=async id=>{let r=state.recurring.find(x=>x.id===id),month=state.mesAtual;if(!r)return;if(!r.active||r.start>month||(r.end&&r.end<month)||(r.skips||[]).includes(month))return toast('Essa recorrência não está prevista neste mês.');let[y,m]=month.split('-').map(Number),day=clampDay(y,m,r.day),date=`${month}-${String(day).padStart(2,'0')}`;if(state.transactions.some(t=>t.recurringId===r.id&&ym(t.date)===month))return toast('Essa ocorrência já foi registrada.');state.transactions.push({id:uid(),recurringId:r.id,kind:r.type,desc:r.desc,amount:r.amount,date,category:r.category,accountId:r.accountId,status:'paid',dueDay:day,tags:['recorrente'],note:'',balanceImpact:date>state.baseDate,createdAt:Date.now()});await save('Registrar recorrência');toast('Ocorrência do mês registrada')}
 window.toggleRec=async id=>{let r=state.recurring.find(x=>x.id===id);r.active=!r.active;await save('Alterar recorrência')}
 window.skipRec=async id=>{let r=state.recurring.find(x=>x.id===id);r.skips??=[];if(!r.skips.includes(state.mesAtual))r.skips.push(state.mesAtual);await save('Pular recorrência')}
-window.editRec=id=>{let r=state.recurring.find(x=>x.id===id);if(!r)return;$('recId').value=r.id;$('recDesc').value=r.desc;$('recType').value=r.type;$('recAmount').value=r.amount;$('recDay').value=r.day;$('recCategory').value=r.category;$('recAccount').value=r.accountId;$('recStart').value=r.start;$('recEnd').value=r.end||'';setPage('recorrencias')}
+window.editRec=id=>{let r=state.recurring.find(x=>x.id===id);if(!r)return;$('recId').value=r.id;$('recDesc').value=r.desc;$('recType').value=r.type;syncRecCategoryOptions(r.category);$('recAmount').value=r.amount;$('recDay').value=r.day;$('recAccount').value=r.accountId;$('recStart').value=r.start;$('recEnd').value=r.end||'';setPage('recorrencias')}
 window.removeRec=async id=>{let r=state.recurring.find(x=>x.id===id);if(r)moveToTrash('recurring',r);state.recurring=state.recurring.filter(r=>r.id!==id);await save('Excluir recorrência')}
 window.removeCatBudget=async cat=>{delete state.categoryBudgets[cat];await save('Excluir orçamento de categoria')}
 window.amortize=async id=>{let d=state.debts.find(x=>x.id===id);if(!d)return;let raw=await sfpPrompt({title:`Amortizar ${d.name}`,message:`Saldo devedor atual: ${brl(d.balance)}\nInforme o valor extra a amortizar:`,placeholder:'0,00'});if(raw==null||raw==='')return;let v=parseMoney(raw);if(v>0){d.balance=Math.max(0,Math.round((d.balance-v)*100)/100);d.history??=[];d.history.push({date:localCivilDate(),type:'extra',amount:v});await save('Amortizar dívida');toast('Amortização registrada com sucesso.','success')}}
@@ -9536,7 +9549,7 @@ function initForms(){
 
 Deseja continuar?`,confirmText:'Continuar',cancelText:'Cancelar',danger:true})))return;let obj={...(old||{}),id:id||uid(),desc,amount,date,fromId:from,toId:to,tags,note,balanceImpact:true};if(old)state.transfers=state.transfers.map(t=>t.id===id?obj:t);else state.transfers.push(obj);await save(old?'Editar transferência':'Nova transferência')}
   else if(currentKind==='card'){if(id)return toast('Para mudar o tipo de um lançamento, finalize ou cancele a edição atual.','warning');let cd=card($('txCard').value),first=ym(date),day=+date.slice(8,10),mode=$('txFirstBill').value;if(mode==='auto'&&cd&&day>cd.closeDay)first=monthAdd(first,1);if(mode==='next')first=monthAdd(first,1);state.purchases.push({id:uid(),cardId:+$('txCard').value,desc,total:amount,installments:+$('txInstallments').value||1,purchaseDate:date,firstMonth:first,category:$('txCategory').value,status:'active',note,tags});await save('Nova compra no cartão')}
-  else{let old=id?state.transactions.find(t=>t.id===id):null;if(id&&!old)return toast('O lançamento em edição não foi encontrado.','error');let kind=currentKind==='income'?'income':'expense',status=currentKind==='income'?$('txIncomeStatus').value:(currentKind==='expense'?'paid':$('txStatus').value),dueDay=currentKind==='bill'?+$('txDueDay').value:+date.slice(8,10),obj={...(old||{}),id:id||uid(),kind,entryType:currentKind,desc,amount,date,category:$('txCategory').value,accountId:+$('txAccount').value,status,dueDay,note,tags,balanceImpact:status==='paid',createdAt:old?.createdAt||Date.now()};if(old)state.transactions=state.transactions.map(t=>t.id===id?obj:t);else state.transactions.push(obj);if($('txRecurring').checked||(currentKind==='income'&&$('txIncomeRecurring').value==='yes')){let rec={id:uid(),desc,type:kind,amount,day:dueDay,category:obj.category,accountId:obj.accountId,start:ym(date),end:'',active:true,skips:[]};if(isPayrollRecurring(rec)){rec.dateRule='business-day-before-anchor';rec.payrollAnchor=+rec.day||1}state.recurring.push(rec)};await save(old?'Editar lançamento':'Novo lançamento')}
+  else{let old=id?state.transactions.find(t=>t.id===id):null;if(id&&!old)return toast('O lançamento em edição não foi encontrado.','error');let kind=currentKind==='income'?'income':'expense',status=currentKind==='income'?$('txIncomeStatus').value:(currentKind==='expense'?'paid':$('txStatus').value),dueDay=currentKind==='bill'?+$('txDueDay').value:+date.slice(8,10),obj={...(old||{}),id:id||uid(),kind,entryType:currentKind,desc,amount,date,category:normalizedCategoryForAction(kind,$('txCategory').value),accountId:+$('txAccount').value,status,dueDay,note,tags,balanceImpact:status==='paid',createdAt:old?.createdAt||Date.now()};if(old)state.transactions=state.transactions.map(t=>t.id===id?obj:t);else state.transactions.push(obj);if($('txRecurring').checked||(currentKind==='income'&&$('txIncomeRecurring').value==='yes')){let rec={id:uid(),desc,type:kind,amount,day:dueDay,category:obj.category,accountId:obj.accountId,start:ym(date),end:'',active:true,skips:[]};if(isPayrollRecurring(rec)){rec.dateRule='business-day-before-anchor';rec.payrollAnchor=+rec.day||1}state.recurring.push(rec)};await save(old?'Editar lançamento':'Novo lançamento')}
   let effect=currentKind==='income'?`Receita de ${brl(amount)} registrada.`:currentKind==='transfer'?`Transferência de ${brl(amount)} registrada.`:currentKind==='card'?`Compra de ${brl(amount)} adicionada ao cartão.`:currentKind==='bill'?`Conta de ${brl(amount)} registrada.`:`Gasto de ${brl(amount)} registrado.`;resetTxForm();setPage('hoje',{mode:'replace'});showFeedback(`${effect} Livre projetado agora: ${brl(allAccountBalance()-commitmentUntilNextIncome())}`)
  };
  $('accountForm').onsubmit=async e=>{e.preventDefault();let panel=e.currentTarget.closest('.management-form-panel'),id=+$('accountId').value,old=id?account(id):null,patch={id:id||uid(),name:$('accountName').value.trim(),type:$('accountType').value,initial:parseMoney($('accountInitial').value)};if(!patch.name)return toast('Informe o nome da conta.','warning');let obj=old?{...old,...patch}:{...patch,reconciled:null};if(id)state.accounts=state.accounts.map(a=>a.id===id?obj:a);else state.accounts.push(obj);await save('Salvar conta');resetManagementForm('accountForm',{id:'accountId',titleId:'accountFormTitle',title:'Adicionar conta',modeId:'accountFormMode',submitId:'accountSubmit',submitText:'Salvar conta'});if(progressiveRestore?.node===panel)closeProgressive(false)};
@@ -9553,7 +9566,7 @@ Deseja continuar?`,confirmText:'Continuar',cancelText:'Cancelar',danger:true})))
    if(progressiveRestore?.node===panel)closeProgressive(false);
    toast(id?'Cartão atualizado com sucesso.':'Cartão salvo com sucesso.','success')
  };
- $('recForm').onsubmit=async e=>{e.preventDefault();let panel=e.currentTarget.closest('.management-form-panel'),id=+$('recId').value,old=id?state.recurring.find(r=>r.id===id):null,obj={...(old||{}),id:id||uid(),desc:$('recDesc').value.trim(),type:$('recType').value,amount:+$('recAmount').value,day:+$('recDay').value,category:$('recCategory').value,accountId:+$('recAccount').value,start:$('recStart').value,end:$('recEnd').value,active:id?old?.active!==false:true,skips:id?(old?.skips||[]):[]};if(isPayrollRecurring(obj)){obj.dateRule='business-day-before-anchor';obj.payrollAnchor=+obj.day||1}if(!obj.desc)return toast('Informe a descrição da recorrência.','warning');if(!requirePositiveAmount(obj.amount,'O valor da recorrência'))return;if(obj.end&&obj.end<obj.start)return toast('O término não pode ser anterior ao início.','warning');if(id)state.recurring=state.recurring.map(r=>r.id===id?obj:r);else state.recurring.push(obj);await save(id?'Editar recorrência':'Nova recorrência');resetManagementForm('recForm',{id:'recId'});if(progressiveRestore?.node===panel)closeProgressive(false)};
+ $('recForm').onsubmit=async e=>{e.preventDefault();let panel=e.currentTarget.closest('.management-form-panel'),id=+$('recId').value,old=id?state.recurring.find(r=>r.id===id):null,obj={...(old||{}),id:id||uid(),desc:$('recDesc').value.trim(),type:$('recType').value,amount:+$('recAmount').value,day:+$('recDay').value,category:normalizedCategoryForAction($('recType').value,$('recCategory').value),accountId:+$('recAccount').value,start:$('recStart').value,end:$('recEnd').value,active:id?old?.active!==false:true,skips:id?(old?.skips||[]):[]};if(isPayrollRecurring(obj)){obj.dateRule='business-day-before-anchor';obj.payrollAnchor=+obj.day||1}if(!obj.desc)return toast('Informe a descrição da recorrência.','warning');if(!requirePositiveAmount(obj.amount,'O valor da recorrência'))return;if(obj.end&&obj.end<obj.start)return toast('O término não pode ser anterior ao início.','warning');if(id)state.recurring=state.recurring.map(r=>r.id===id?obj:r);else state.recurring.push(obj);await save(id?'Editar recorrência':'Nova recorrência');resetManagementForm('recForm',{id:'recId'});if(progressiveRestore?.node===panel)closeProgressive(false)};
  $('catBudgetForm').onsubmit=async e=>{e.preventDefault();state.categoryBudgets[$('catBudgetCategory').value]=+$('catBudgetAmount').value;await save('Orçamento de categoria')};
  $('debtForm').onsubmit=async e=>{e.preventDefault();let panel=e.currentTarget.closest('.management-form-panel'),id=+$('debtId').value,old=id?state.debts.find(d=>d.id===id):null,firstDue=$('debtFirstDue').value,installments=Number($('debtInstallments').value);if(!Number.isInteger(installments)||installments<1)return toast('O número de parcelas da dívida precisa ser um inteiro maior ou igual a 1.','warning');let patch={id:id||uid(),name:$('debtName').value.trim(),balance:parseMoney($('debtBalance').value),rate:parsePercent($('debtRate').value),payment:parseMoney($('debtPayment').value),firstDue,installments};if(!old||Object.hasOwn(old,'ratePeriod')||$('debtRatePeriod').dataset.userEdited==='1')patch.ratePeriod=$('debtRatePeriod').value||'monthly';if(!old||Object.hasOwn(old,'amortizationMethod')||$('debtAmortization').dataset.userEdited==='1')patch.amortizationMethod=$('debtAmortization').value||'manual';if(!old||Object.hasOwn(old,'dueDay')||$('debtDay').dataset.userEdited==='1')patch.dueDay=+$('debtDay').value;if(!old||Object.hasOwn(old,'accountId')||$('debtAccount').dataset.userEdited==='1')patch.accountId=+$('debtAccount').value;if(!patch.name)return toast('Informe o credor da dívida.','warning');if(!requirePositiveAmount(patch.balance,'O saldo da dívida'))return;if(!requirePositiveAmount(patch.payment,'A parcela da dívida'))return;let obj=old?{...old,...patch}:{...patch,paidInstallments:0,paymentMethod:'bank',history:[]};if(id)state.debts=state.debts.map(d=>d.id===id?obj:d);else state.debts.push(obj);await save(id?'Editar dívida':'Nova dívida');resetManagementForm('debtForm',{id:'debtId',titleId:'debtFormTitle',title:'Adicionar dívida',modeId:'debtFormMode',submitId:'debtSubmit',submitText:'Adicionar dívida',detailsId:'debtMoreDetails'});if(progressiveRestore?.node===panel)closeProgressive(false)};
  $('goalForm').onsubmit=async e=>{
@@ -9864,6 +9877,7 @@ function reconcileCandidate(r,accountId,reserved=new Set()){
 }
 function statementHash(rows){let value=rows.map(r=>`${r.date}|${Math.round(Number(r.amount)*100)}|${String(r.desc||'').trim().toLowerCase()}|${String(r.fitid||'').trim()}`).join('\n'),hash=2166136261;for(let i=0;i<value.length;i++){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619)}return(hash>>>0).toString(36)}
 function prepareStatement(rows,file){
+ rows=(rows||[]).filter(r=>!isStatementBalanceRow(r));
  let accountId=+$('stmtAccount').value,ex=existingStmtKeys(),seen=new Set(ex),reserved=new Set(),occurrences=new Map(),sourceHash=statementHash(rows);statementDraft=rows.map((r,i)=>{
    let fitid=String(r.fitid||'').trim(),fingerprint=`${r.date}|${Math.round(Number(r.amount)*100)}|${String(r.desc||'').trim().toLowerCase()}`,occurrence=(occurrences.get(fingerprint)||0)+1;
    occurrences.set(fingerprint,occurrence);
@@ -9874,7 +9888,8 @@ function prepareStatement(rows,file){
    let pendingTransfer=!duplicate&&!cand&&!transferMatch&&g.semanticClass==='possible_transfer';
    let action=duplicate?'ignore':cand?'reconcile':transferMatch?'transfer_match':pendingTransfer?'pending_transfer':g.action;
    seen.add(key);
-   return{...r,fitid:fitid||null,index:i,key,accountId,duplicate,action,category:g.category,candidateId:cand?.id||null,
+   let category=statementActionHasCategory(action)?normalizedCategoryForAction(action,g.category):null;
+   return{...r,fitid:fitid||null,index:i,key,accountId,duplicate,action,category,candidateId:cand?.id||null,
      transferAccountId:transferMatch?.accountId||null,transferMatchSource:transferMatch?.source||null,transferMatchId:transferMatch?.id??null,
      transferMatchAccountId:transferMatch?.accountId||null,transferMatchConfidence:transferMatch?.confidence||null,transferMatchReason:transferMatch?.reason||null,
      learn:false,file,semanticClass:transferMatch?'transfer':g.semanticClass||null,economicImpact:(transferMatch||pendingTransfer)?'neutral':g.economicImpact||'economic',
@@ -9918,7 +9933,11 @@ function statementActionOptions(r){
 }
 function renderStatementDraftMobile(visibleIndexes){
   const host=$('stmtMobile');if(!host)return;
-  host.innerHTML=visibleIndexes.map(i=>{const r=statementDraft[i],review=statementNeedsReview(r),transferVisible=['transfer','transfer_match','pending_transfer'].includes(r.action);return `<article class="stmt-review-card" data-review="${review?'true':'false'}"><div class="stmt-review-card__head"><div><b>${sfpEsc(r.desc)}</b><small>${dateObj(r.date).toLocaleDateString('pt-BR')} · <span class="stmt-review-card__status">${sfpEsc(statementDraftStatus(r))}</span></small></div><strong class="stmt-review-card__amount ${r.amount>0?'positive':'negative'}">${brl(r.amount)}</strong></div><div class="stmt-review-controls"><label>Ação<select data-sa="${i}">${statementActionOptions(r)}</select></label><label>Categoria<select data-sc="${i}">${CATEGORIES.map(c=>`<option ${r.category===c?'selected':''}>${c}</option>`).join('')}</select></label>${transferVisible?`<label>Transferir para<select data-st="${i}"><option value="">—</option>${state.accounts.filter(a=>a.id!=r.accountId).map(a=>`<option value="${a.id}" ${r.transferAccountId==a.id?'selected':''}>${sfpEsc(a.name)}</option>`).join('')}</select></label>`:''}<label class="stmt-review-learn"><input type="checkbox" data-sl="${i}" ${r.learn?'checked':''} ${['income','expense','transfer','ignore'].includes(r.action)?'':'disabled'}/> Aprender esta decisão</label></div></article>`}).join('');
+  host.innerHTML=visibleIndexes.map(i=>{
+    const r=statementDraft[i],review=statementNeedsReview(r),transferVisible=['transfer','transfer_match','pending_transfer'].includes(r.action),categoryVisible=statementActionHasCategory(r.action);
+    const categoryField=categoryVisible?`<label>Categoria<select data-sc="${i}">${categoryOptionsMarkup(r.action,r.category)}</select></label>`:'';
+    return `<article class="stmt-review-card" data-review="${review?'true':'false'}"><div class="stmt-review-card__head"><div><b>${sfpEsc(r.desc)}</b><small>${dateObj(r.date).toLocaleDateString('pt-BR')} · <span class="stmt-review-card__status">${sfpEsc(statementDraftStatus(r))}</span></small></div><strong class="stmt-review-card__amount ${r.amount>0?'positive':'negative'}">${brl(r.amount)}</strong></div><div class="stmt-review-controls"><label>Ação<select data-sa="${i}">${statementActionOptions(r)}</select></label>${categoryField}${transferVisible?`<label>Transferir para<select data-st="${i}"><option value="">—</option>${state.accounts.filter(a=>a.id!=r.accountId).map(a=>`<option value="${a.id}" ${r.transferAccountId==a.id?'selected':''}>${sfpEsc(a.name)}</option>`).join('')}</select></label>`:''}<label class="stmt-review-learn"><input type="checkbox" data-sl="${i}" ${r.learn?'checked':''} ${['income','expense','transfer','ignore'].includes(r.action)?'':'disabled'}/> Aprender esta decisão</label></div></article>`;
+  }).join('');
 }
 
 function renderStatementDraft(){
@@ -10020,11 +10039,7 @@ function renderStatementDraft(){
       </td>
 
       <td>
-        <select data-sc="${i}">
-          ${CATEGORIES.map(c=>
-            `<option ${r.category===c?'selected':''}>${c}</option>`
-          ).join('')}
-        </select>
+        ${statementActionHasCategory(r.action)?`<select data-sc="${i}">${categoryOptionsMarkup(r.action,r.category)}</select>`:'—'}
       </td>
 
       <td>
@@ -10070,8 +10085,9 @@ function renderStatementDraft(){
 
   document.querySelectorAll('[data-sa]').forEach(e=>
     e.onchange=()=>{
-      statementDraft[+e.dataset.sa].action=e.value;
-      if(['income','expense','transfer','ignore'].includes(e.value))statementDraft[+e.dataset.sa].learn=true;
+      const r=statementDraft[+e.dataset.sa];r.action=e.value;
+      if(statementActionHasCategory(e.value))r.category=normalizedCategoryForAction(e.value,r.category);else r.category=null;
+      if(['income','expense','transfer','ignore'].includes(e.value))r.learn=true;
       renderStatementDraft();
     }
   );
@@ -10152,6 +10168,7 @@ async function importStatement(){
 
 function initOther(){
  updateContextFab();
+ if($('recType'))$('recType').onchange=()=>syncRecCategoryOptions();
  if($('cfgTheme')) $('cfgTheme').onchange=async()=>{await setThemePreference($('cfgTheme').value,{persist:true})};
  document.querySelectorAll('.nav button[data-page]').forEach(b=>b.onclick=()=>setPage(b.dataset.page));if($('moreNavBtn'))$('moreNavBtn').onclick=showMoreMenu;document.addEventListener('click',e=>{let b=e.target.closest?.('[data-go]');if(!b)return;b.dataset.go==='lancamentos'?contextualNew(document.querySelector('.tab.active')?.id):setPage(b.dataset.go)});document.querySelectorAll('.quicktype').forEach(b=>b.onclick=()=>setKind(b.dataset.kind));
  if($('privacyToggle'))$('privacyToggle').onclick=async()=>{let from=$('txFrom')?.value||'',to=$('txTo')?.value||'';state.settings.privacy=!state.settings.privacy;['txFrom','txTo'].forEach(id=>{let sel=$(id);if(!sel)return;[...sel.options].forEach(opt=>{let a=account(+opt.value);if(a)opt.textContent=`${a.name} • ${state.settings?.privacy?'••••':brl(accountBalance(a.id))}`})});if($('txFrom')&&from)$('txFrom').value=from;if($('txTo')&&to)$('txTo').value=to;applyPrivacy();await dbSet(state);lastSavedState=clone(state)};
@@ -10347,15 +10364,20 @@ function pdfImportDate(line,{month=null}={}){
 }
 function parsePdfFinancialText(text,{intendedType='statement',month=null}={}){
   const lines=String(text||'').replace(/\u00a0/g,' ').split(/\r?\n/).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean),rows=[];
-  const amountRe=/([+-]?\s*(?:R\$\s*)?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{2}|\.\d{2}))\s*([CD])?\s*$/i;
+  const hasValueBalanceColumns=intendedType==='statement'&&lines.some(line=>/\bvalor\b/i.test(line)&&/\bsaldo\b/i.test(line));
+  const amountRe=/([+-]?\s*(?:R\$\s*)?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{2}|\.\d{2}))\s*([CD])?/ig;
   for(const line of lines){
-    const dt=pdfImportDate(line,{month});if(!dt)continue;const am=line.match(amountRe);if(!am)continue;
-    let amount=parseMoney(am[1]);const explicit=/^[+-]/.test(am[1].replace(/\s|R\$/gi,''))||Boolean(am[2]);
-    if(am[2]?.toUpperCase()==='D')amount=-Math.abs(amount);else if(am[2]?.toUpperCase()==='C')amount=Math.abs(amount);
-    let desc=line.replace(am[0],'').replace(dt.raw,'').replace(/^[-–—|:;\s]+|[-–—|:;\s]+$/g,'').trim();
-    if(!desc||/^(total|saldo|vencimento|limite|resumo|valor)$/i.test(desc))continue;
-    if(intendedType==='statement'&&!explicit){let d=desc.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(/compra|debito|saque|tarifa|pix enviado|transferencia enviada|pagamento efetuado/.test(d))amount=-Math.abs(amount);else if(/credito|recebido|salario|pix recebido|estorno/.test(d))amount=Math.abs(amount)}
-    if(amount)rows.push({date:dt.date,desc,amount,fitid:null});
+    const dt=pdfImportDate(line,{month});if(!dt)continue;
+    const body=line.replace(dt.raw,' ').replace(/\s+/g,' ').trim();
+    const monetary=[...body.matchAll(amountRe)];if(!monetary.length)continue;
+    const movement=hasValueBalanceColumns&&monetary.length>=2?monetary[monetary.length-2]:monetary[monetary.length-1];
+    let amount=parseMoney(movement[1]);const explicit=/^[+-]/.test(movement[1].replace(/\s|R\$/gi,''))||Boolean(movement[2]);
+    if(movement[2]?.toUpperCase()==='D')amount=-Math.abs(amount);else if(movement[2]?.toUpperCase()==='C')amount=Math.abs(amount);
+    const operationId=hasValueBalanceColumns?(body.match(/\b\d{10,20}\b/)||[])[0]||null:null;
+    let desc=body.replace(amountRe,' ').replace(hasValueBalanceColumns?/\b\d{10,20}\b/g:/$^/g,' ').replace(/^[-–—|:;\s]+|[-–—|:;\s]+$/g,'').replace(/\s+/g,' ').trim();
+    if(!desc||isStatementBalanceLabel(desc)||/^(total|vencimento|limite|resumo|valor)$/i.test(desc))continue;
+    if(intendedType==='statement'&&!explicit){let d=normalizeStatementLabel(desc);if(/compra|debito|saque|tarifa|pix enviado|transferencia enviada|pagamento efetuado/.test(d))amount=-Math.abs(amount);else if(/credito|recebido|salario|pix recebido|estorno|rendimento/.test(d))amount=Math.abs(amount)}
+    if(amount)rows.push({date:dt.date,desc,amount,fitid:operationId});
   }
   return rows;
 }
