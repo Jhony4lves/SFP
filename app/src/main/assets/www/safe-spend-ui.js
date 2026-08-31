@@ -142,12 +142,14 @@ document.addEventListener('click',event=>{
       .sfp-more-icon svg{width:26px;height:26px;display:block;stroke:currentColor}
       .sfp-more-copy{min-width:0}.sfp-more-copy strong,.sfp-more-copy small{display:block;text-align:left}.sfp-more-copy strong{font-size:14px;line-height:1.2}.sfp-more-copy small{margin-top:3px;color:var(--color-text-secondary);font-size:10.5px;line-height:1.3;white-space:normal}
       .sfp-more-arrow{color:var(--color-text-muted);font-size:19px;text-align:center}
+      .context-fab-label{display:none!important}
       @media(max-width:650px) and (orientation:portrait){
         .sidebar .nav button{display:none!important}
         .sidebar .nav button[data-page="hoje"],.sidebar .nav button[data-page="contas"],.sidebar .nav button[data-page="cartoes"],.sidebar .nav button[data-page="calendario"],.sidebar .nav #moreNavBtn{display:flex!important}
         .sidebar .nav button[data-page="hoje"]{order:1}.sidebar .nav button[data-page="contas"]{order:2}.sidebar .nav button[data-page="cartoes"]{order:3}.sidebar .nav button[data-page="calendario"]{order:4}.sidebar .nav #moreNavBtn{order:5}
-        .sfp-select{z-index:auto}.sfp-select:has(.sfp-select-menu:not([hidden])){z-index:20010}
-        .sfp-select-menu{position:absolute!important;left:0!important;right:auto!important;top:calc(100% + 6px)!important;bottom:auto!important;width:100%!important;max-width:100%!important;max-height:min(42vh,330px)!important}
+        .sfp-select{z-index:auto}
+        .sfp-select-menu{position:fixed!important;max-width:calc(100vw - 16px)!important}
+        .sfp-select-option{white-space:nowrap}
         html,body,.shell,main,.tab,.panel,.form-section,.management-page,.management-card{max-width:100%!important;min-width:0!important}
         body,main{overflow-x:hidden!important}
         .grid2,.grid3,.two,.three,.field-group--two,.field-group--three,.management-layout,.management-facts,.projection-grid{grid-template-columns:minmax(0,1fr)!important}
@@ -203,6 +205,42 @@ document.addEventListener('click',event=>{
     more.classList.toggle('active',!!active&&!PRIMARY_PAGES.includes(active));
   }
 
+  function isPriorityPortrait(){
+    return !!global.matchMedia?.('(max-width:650px) and (orientation:portrait)').matches;
+  }
+
+  function clampOpenSelectMenus(){
+    if(!isPriorityPortrait()) return;
+    const nav=document.querySelector('.sidebar');
+    const navRect=nav?.getBoundingClientRect();
+    const viewportWidth=document.documentElement.clientWidth;
+    const viewportHeight=global.innerHeight||document.documentElement.clientHeight;
+    const usableBottom=navRect&&navRect.top>0&&navRect.top<viewportHeight?navRect.top:viewportHeight;
+    const margin=8,gap=6;
+    document.querySelectorAll('.sfp-select-menu:not([hidden])').forEach(menu=>{
+      const host=menu.closest('.sfp-select');
+      const button=host?.querySelector('.sfp-select-button');
+      if(!button) return;
+      const buttonRect=button.getBoundingClientRect();
+      const optionWidth=Array.from(menu.querySelectorAll('.sfp-select-option')).reduce((max,item)=>Math.max(max,item.scrollWidth||0),0);
+      const width=Math.min(Math.max(buttonRect.width,optionWidth+16,180),viewportWidth-margin*2);
+      const left=Math.max(margin,Math.min(buttonRect.left,viewportWidth-margin-width));
+      menu.style.width=`${width}px`;
+      menu.style.maxWidth=`${viewportWidth-margin*2}px`;
+      menu.style.left=`${left}px`;
+      menu.style.right='auto';
+      const current=menu.getBoundingClientRect();
+      const maxBottom=usableBottom-margin;
+      if(current.bottom>maxBottom){
+        const availableAbove=Math.max(72,buttonRect.top-gap-margin);
+        menu.style.maxHeight=`${Math.min(menu.scrollHeight||330,330,availableAbove)}px`;
+        const measured=menu.getBoundingClientRect().height;
+        menu.style.top=`${Math.max(margin,buttonRect.top-gap-measured)}px`;
+        menu.style.bottom='auto';
+      }
+    });
+  }
+
   function installNavigation(){
     ensureStyles();
     const more=document.getElementById('moreNavBtn');
@@ -213,6 +251,14 @@ document.addEventListener('click',event=>{
     if(nav&&!nav.dataset.sfpPriorityObserved){
       nav.dataset.sfpPriorityObserved='1';
       new MutationObserver(syncMoreActive).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
+    }
+    if(!document.documentElement.dataset.sfpSelectClamp){
+      document.documentElement.dataset.sfpSelectClamp='1';
+      document.addEventListener('click',event=>{if(event.target.closest?.('.sfp-select-button')) global.requestAnimationFrame(clampOpenSelectMenus);});
+      document.addEventListener('scroll',clampOpenSelectMenus,true);
+      global.addEventListener('resize',clampOpenSelectMenus,{passive:true});
+      global.visualViewport?.addEventListener('resize',clampOpenSelectMenus,{passive:true});
+      global.visualViewport?.addEventListener('scroll',clampOpenSelectMenus,{passive:true});
     }
   }
 
