@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   patch:
-    if: ${{ !contains(github.event.head_commit.message, 'fix(runtime): stop global class mutation churn') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,8 +17,8 @@ jobs:
           ref: fix/issue-32-theme-floating-selects
           fetch-depth: 0
       - name: Apply surgical observer fix and regression
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           asset = Path('app/src/main/assets/www/financial-insights-ui.js')
@@ -44,6 +43,7 @@ jobs:
             expect(source).toContain("childList:true,subtree:true");
           });
           """, encoding='utf-8')
+          PY
       - name: Remove temporary workflow
         run: git rm .github/workflows/issue32-runtime-fix.yml
       - name: Commit and push
