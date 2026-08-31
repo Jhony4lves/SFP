@@ -1,0 +1,151 @@
+name: Apply Issue 32 dropdown scroll fix
+
+on:
+  push:
+    branches:
+      - fix/issue32-dropdown-scroll-nav
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/issue32-dropdown-scroll-nav
+          fetch-depth: 0
+      - name: Apply bottom-nav aware dropdown positioning
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          fi = Path('app/src/main/assets/www/financial-insights-ui.js')
+          text = fi.read_text(encoding='utf-8')
+          lines = text.splitlines()
+          replacement = "  function positionMenu(host){const button=host?.querySelector('.sfp-select-button'),menu=host?.querySelector('.sfp-select-menu');if(!button||!menu||menu.hidden)return;const rect=button.getBoundingClientRect(),margin=8,gap=6,vw=document.documentElement.clientWidth,vh=global.innerHeight||document.documentElement.clientHeight,nav=document.querySelector('.sidebar .nav'),navRect=nav?.getBoundingClientRect(),usableBottom=navRect&&navRect.top>0&&navRect.top<vh?navRect.top:vh;if(rect.bottom<0||rect.top>usableBottom||rect.right<0||rect.left>vw){menu.hidden=true;button.setAttribute('aria-expanded','false');return;}const left=Math.max(margin,Math.min(rect.left,vw-margin-Math.max(rect.width,180))),width=Math.min(Math.max(rect.width,180),vw-margin*2);menu.style.left=`${left}px`;menu.style.width=`${width}px`;menu.style.right='auto';menu.style.bottom='auto';const desired=Math.min(menu.scrollHeight||330,330,Math.max(120,vh*.58)),below=Math.max(0,usableBottom-rect.bottom-gap-margin),above=Math.max(0,rect.top-gap-margin),openBelow=below>=Math.min(desired,180)||below>=above,available=Math.max(96,openBelow?below:above);menu.style.maxHeight=`${Math.min(desired,available)}px`;const measured=Math.min(menu.scrollHeight||desired,parseFloat(menu.style.maxHeight)||desired),top=openBelow?Math.min(rect.bottom+gap,usableBottom-margin-measured):Math.max(margin,rect.top-gap-measured);menu.style.top=`${Math.max(margin,Math.min(top,usableBottom-margin-measured))}px`; }"
+          matches = [i for i,line in enumerate(lines) if line.startswith('  function positionMenu(host){')]
+          if len(matches) != 1:
+              raise SystemExit(f'expected one positionMenu line, found {len(matches)}')
+          lines[matches[0]] = replacement
+          fi.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+          ss = Path('app/src/main/assets/www/safe-spend-ui.js')
+          text = ss.read_text(encoding='utf-8')
+          old_nav = "const nav=document.querySelector('.sidebar');"
+          if text.count(old_nav) != 1:
+              raise SystemExit(f'expected one sidebar clamp selector, found {text.count(old_nav)}')
+          text = text.replace(old_nav, "const nav=document.querySelector('.sidebar .nav');", 1)
+          old_block = """      const current=menu.getBoundingClientRect();
+      const maxBottom=usableBottom-margin;
+      if(current.bottom>maxBottom){
+        const availableAbove=Math.max(72,buttonRect.top-gap-margin);
+        menu.style.maxHeight=`${Math.min(menu.scrollHeight||330,330,availableAbove)}px`;
+        const measured=menu.getBoundingClientRect().height;
+        menu.style.top=`${Math.max(margin,buttonRect.top-gap-measured)}px`;
+        menu.style.bottom='auto';
+      }"""
+          new_block = """      const current=menu.getBoundingClientRect();
+      const maxBottom=usableBottom-margin;
+      if(current.bottom>maxBottom){
+        const availableAbove=Math.max(72,buttonRect.top-gap-margin);
+        menu.style.maxHeight=`${Math.min(menu.scrollHeight||330,330,availableAbove)}px`;
+        const measured=menu.getBoundingClientRect().height;
+        menu.style.top=`${Math.max(margin,Math.min(buttonRect.top-gap-measured,maxBottom-measured))}px`;
+        menu.style.bottom='auto';
+      }
+      const adjusted=menu.getBoundingClientRect();
+      if(adjusted.bottom>maxBottom){
+        menu.style.top=`${Math.max(margin,maxBottom-adjusted.height)}px`;
+      }"""
+          if old_block not in text:
+              raise SystemExit('expected clamp block not found')
+          text = text.replace(old_block, new_block, 1)
+          ss.write_text(text, encoding='utf-8')
+
+          qa = Path('qa/theme-floating-selects.spec.js')
+          text = qa.read_text(encoding='utf-8')
+          marker = "  test('new financial surfaces use active light theme tokens instead of dark hardcoded colors',async({page})=>{"
+          if marker not in text:
+              raise SystemExit('QA insertion marker not found')
+          test_block = r'''  test('open portrait dropdown never enters bottom nav while the page scrolls',async({page})=>{
+    await boot(page);
+    await page.evaluate(()=>{
+      const main=document.querySelector('main');
+      const wrap=document.createElement('div');
+      wrap.id='qaScrollDropdownProbe';
+      wrap.style.cssText='margin-top:900px;padding-bottom:500px';
+      const select=document.createElement('select');
+      select.id='qaScrollDropdownSelect';
+      for(const label of ['Todos','Receitas','Despesas','Transferências']){
+        const option=document.createElement('option');
+        option.value=label;
+        option.textContent=label;
+        select.appendChild(option);
+      }
+      wrap.appendChild(select);
+      main.appendChild(wrap);
+    });
+    const button=page.locator('#qaScrollDropdownSelect + .sfp-select .sfp-select-button');
+    await button.scrollIntoViewIfNeeded();
+    await page.evaluate(()=>window.scrollBy(0,80));
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await button.click();
+    const menu=page.locator('#qaScrollDropdownSelect + .sfp-select .sfp-select-menu:not([hidden])');
+    await expect(menu).toBeVisible();
+
+    const assertClear=async()=>{
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      const geometry=await page.evaluate(()=>{
+        const menu=document.querySelector('#qaScrollDropdownSelect + .sfp-select .sfp-select-menu:not([hidden])');
+        const nav=document.querySelector('.sidebar .nav');
+        const m=menu?.getBoundingClientRect(),n=nav?.getBoundingClientRect();
+        return m&&n?{menuBottom:m.bottom,navTop:n.top,menuTop:m.top}:null;
+      });
+      expect(geometry).not.toBeNull();
+      expect(geometry.menuTop).toBeGreaterThanOrEqual(7);
+      expect(geometry.menuBottom).toBeLessThanOrEqual(geometry.navTop-3);
+    };
+
+    await assertClear();
+    await page.evaluate(()=>window.scrollBy(0,110));
+    await expect(menu).toBeVisible();
+    await assertClear();
+    await page.evaluate(()=>window.scrollBy(0,-90));
+    await expect(menu).toBeVisible();
+    await assertClear();
+  });
+
+'''
+          if "open portrait dropdown never enters bottom nav while the page scrolls" not in text:
+              text = text.replace(marker, test_block + marker, 1)
+          qa.write_text(text, encoding='utf-8')
+
+          gp = Path('gradle.properties')
+          text = gp.read_text(encoding='utf-8')
+          text, n1 = re.subn(r'^SFP_VERSION_CODE=\d+$', 'SFP_VERSION_CODE=7', text, count=1, flags=re.M)
+          text, n2 = re.subn(r'^SFP_VERSION_NAME=.*$', 'SFP_VERSION_NAME=2.1.0-rc.3', text, count=1, flags=re.M)
+          if n1 != 1 or n2 != 1:
+              raise SystemExit(f'version bump failed: code={n1}, name={n2}')
+          gp.write_text(text, encoding='utf-8')
+          PY
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -q "sidebar .nav" app/src/main/assets/www/financial-insights-ui.js
+          grep -q "open portrait dropdown never enters bottom nav while the page scrolls" qa/theme-floating-selects.spec.js
+          grep -q "SFP_VERSION_CODE=7" gradle.properties
+          grep -q "SFP_VERSION_NAME=2.1.0-rc.3" gradle.properties
+      - name: Commit patch and remove temporary workflow
+        shell: bash
+        run: |
+          rm .github/workflows/issue32-dropdown-scroll-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/financial-insights-ui.js app/src/main/assets/www/safe-spend-ui.js qa/theme-floating-selects.spec.js gradle.properties .github/workflows/issue32-dropdown-scroll-fix.yml
+          git commit -m "fix: keep open dropdowns above mobile navigation"
+          git push origin HEAD:fix/issue32-dropdown-scroll-nav
