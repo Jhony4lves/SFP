@@ -40,6 +40,56 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
     expect(Math.abs(afterButton.y-before.y)).toBeGreaterThan(20);
   });
 
+  test('portrait dropdown stays clear of bottom nav and keeps long options readable',async({page})=>{
+    await boot(page);
+    await page.evaluate(()=>{
+      const main=document.querySelector('main');
+      const wrap=document.createElement('div');
+      wrap.id='qaDropdownProbe';
+      wrap.style.cssText='margin-top:1000px;padding-bottom:300px';
+      const select=document.createElement('select');
+      select.id='qaDropdownSelect';
+      for(const label of ['Todos','Receitas','Despesas','Transferências']){
+        const option=document.createElement('option');
+        option.value=label;
+        option.textContent=label;
+        select.appendChild(option);
+      }
+      wrap.appendChild(select);
+      main.appendChild(wrap);
+    });
+    const button=page.locator('#qaDropdownSelect + .sfp-select .sfp-select-button');
+    await expect(button).toBeVisible();
+    await button.scrollIntoViewIfNeeded();
+    await page.evaluate(()=>window.scrollBy(0,100));
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await button.click();
+    const menu=page.locator('#qaDropdownSelect + .sfp-select .sfp-select-menu:not([hidden])');
+    await expect(menu).toBeVisible();
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+
+    const geometry=await page.evaluate(()=>{
+      const menu=document.querySelector('#qaDropdownSelect + .sfp-select .sfp-select-menu:not([hidden])');
+      const nav=document.querySelector('.sidebar');
+      const transfer=Array.from(menu?.querySelectorAll('.sfp-select-option')||[]).find(item=>item.textContent==='Transferências');
+      const m=menu?.getBoundingClientRect(),n=nav?.getBoundingClientRect();
+      return m&&n&&transfer?{
+        menuBottom:m.bottom,
+        menuLeft:m.left,
+        menuRight:m.right,
+        navTop:n.top,
+        viewportWidth:innerWidth,
+        optionScrollWidth:transfer.scrollWidth,
+        optionClientWidth:transfer.clientWidth
+      }:null;
+    });
+    expect(geometry).not.toBeNull();
+    expect(geometry.menuBottom).toBeLessThanOrEqual(geometry.navTop-3);
+    expect(geometry.menuLeft).toBeGreaterThanOrEqual(7);
+    expect(geometry.menuRight).toBeLessThanOrEqual(geometry.viewportWidth-7);
+    expect(geometry.optionScrollWidth).toBeLessThanOrEqual(geometry.optionClientWidth+1);
+  });
+
   test('new financial surfaces use active light theme tokens instead of dark hardcoded colors',async({page})=>{
     await boot(page);
     await page.evaluate(()=>{
@@ -88,6 +138,7 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
     expect(visible.some(item=>item.page==='sophy')).toBe(false);
     expect(visible.some(item=>item.page==='lancamentos')).toBe(false);
     await expect(page.locator('.mobilefab')).toBeVisible();
+    await expect(page.locator('#fabLabel')).toBeHidden();
   });
 
   test('Mais menu is grouped by purpose and uses one fixed visual text axis',async({page})=>{
