@@ -22,6 +22,10 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import org.json.JSONObject;
 
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
+import com.tom_roush.pdfbox.pdmodel.PDDocument;
+import com.tom_roush.pdfbox.text.PDFTextStripper;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -44,6 +48,7 @@ public class AndroidBridge {
 
     AndroidBridge(Context context) {
         this.context = context;
+        PDFBoxResourceLoader.init(context.getApplicationContext());
         createNotificationChannel();
     }
 
@@ -165,6 +170,50 @@ public class AndroidBridge {
             Toast.makeText(context, "Salvo em Downloads/SFP", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             Toast.makeText(context, "Falha ao salvar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+
+    @JavascriptInterface
+    public String extractPdfText(String base64Pdf) {
+        JSONObject result = new JSONObject();
+        try {
+            if (base64Pdf == null || base64Pdf.trim().isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "PDF vazio.");
+                return result.toString();
+            }
+            byte[] bytes = Base64.decode(base64Pdf, Base64.DEFAULT);
+            if (bytes.length == 0) {
+                result.put("ok", false);
+                result.put("error", "PDF vazio.");
+                return result.toString();
+            }
+            if (bytes.length > 20 * 1024 * 1024) {
+                result.put("ok", false);
+                result.put("error", "PDF maior que 20 MB. Exporte uma versão menor para importar no SFP.");
+                return result.toString();
+            }
+            try (PDDocument document = PDDocument.load(bytes)) {
+                PDFTextStripper stripper = new PDFTextStripper();
+                stripper.setSortByPosition(true);
+                String text = stripper.getText(document);
+                result.put("ok", text != null && !text.trim().isEmpty());
+                result.put("text", text == null ? "" : text);
+                result.put("pages", document.getNumberOfPages());
+                if (text == null || text.trim().isEmpty()) {
+                    result.put("error", "O PDF não contém texto pesquisável. PDFs escaneados ainda precisam de OCR.");
+                }
+                return result.toString();
+            }
+        } catch (Exception e) {
+            try {
+                result.put("ok", false);
+                result.put("error", "Não foi possível extrair o texto deste PDF.");
+                return result.toString();
+            } catch (Exception ignored) {
+                return "{\"ok\":false,\"error\":\"Falha ao ler PDF.\"}";
+            }
         }
     }
 

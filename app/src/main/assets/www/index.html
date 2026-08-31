@@ -2793,6 +2793,30 @@ button:active:not(:disabled){transform:translateY(1px)}
     color: var(--color-brand) !important;
   }
 }
+
+
+/* IMPORT_RECONCILIATION_MOBILE_V2 */
+.statement-review-mobile{display:none}
+@media(max-width:760px){
+  #stmtReview .tablewrap{display:none!important}
+  .statement-review-mobile{display:grid;gap:10px;margin-top:12px;min-width:0}
+  .stmt-review-card{min-width:0;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface-1);padding:12px;display:grid;gap:10px;overflow:hidden}
+  .stmt-review-card__head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-width:0}
+  .stmt-review-card__head>div{min-width:0}
+  .stmt-review-card__head b{display:block;font-size:13px;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
+  .stmt-review-card__head small{display:block;margin-top:3px;color:var(--color-text-secondary);font-size:10px}
+  .stmt-review-card__amount{flex:0 0 auto;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+  .stmt-review-card__status{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.025em;color:var(--color-text-secondary)}
+  .stmt-review-controls{display:grid;grid-template-columns:1fr;gap:8px;min-width:0}
+  .stmt-review-controls label{margin:0;min-width:0}
+  .stmt-review-controls select{min-width:0;width:100%;max-width:100%}
+  .stmt-review-learn{display:flex!important;align-items:center;gap:9px;padding:8px 0;margin:0!important}
+  .stmt-review-learn input{width:20px;height:20px;min-height:20px;margin:0;flex:0 0 auto}
+  .stmt-review-card[data-review="true"]{border-color:var(--color-warning-border)}
+  .stmt-review-card[data-review="false"] .stmt-review-card__status{color:var(--color-positive)}
+  #stmtReview{overflow:hidden}
+}
+
 </style>
 </head>
 <body>
@@ -3155,9 +3179,9 @@ button:active:not(:disabled){transform:translateY(1px)}
     <section class="tab" id="extratos">
       <div class="grid2">
         <article class="panel">
-          <div class="head"><div><h2>Importar extrato</h2><p>CSV ou OFX, com conferência antes de entrar</p></div><span class="badge">offline</span></div>
+          <div class="head"><div><h2>Importar extrato</h2><p>CSV, OFX ou PDF, com conferência antes de entrar</p></div><span class="badge">offline</span></div>
           <label>Conta do extrato<select id="stmtAccount"></select></label>
-          <div class="statement-drop" id="stmtDrop"><b>Solte o arquivo aqui</b><small>ou toque para escolher um CSV/OFX. Nada sai do aparelho.</small><label class="btn2" style="display:inline-block;margin-top:10px;cursor:pointer">Selecionar<input id="stmtFile" type="file" accept=".csv,.ofx" hidden/></label></div>
+          <div class="statement-drop" id="stmtDrop"><b>Solte o arquivo aqui</b><small>ou toque para escolher um CSV, OFX ou PDF. A leitura do PDF é local e nada sai do aparelho.</small><label class="btn2" style="display:inline-block;margin-top:10px;cursor:pointer">Selecionar<input id="stmtFile" type="file" accept=".csv,.ofx,.pdf,text/csv,application/x-ofx,application/ofx,application/pdf" hidden/></label></div>
           <div class="note">O sistema tenta conciliar com lançamentos existentes, evita duplicatas, aprende descrições já classificadas e trata transferências entre suas contas separadamente.</div>
         </article>
         <article class="panel"><div class="head"><div><h2>Histórico</h2><p>Extratos já importados</p></div></div><div id="stmtHistory" class="list"></div></article>
@@ -3181,7 +3205,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 <div class="note" id="stmtReviewHint" style="margin-top:10px">
   O SFP destaca primeiro apenas movimentações que precisam da sua decisão.
 </div>
-        <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Ação</th><th>Categoria</th><th>Transferir p/</th><th>Aprender?</th><th>Conciliação</th></tr></thead><tbody id="stmtRows"></tbody></table></div>
+        <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Ação</th><th>Categoria</th><th>Transferir p/</th><th>Aprender?</th><th>Conciliação</th></tr></thead><tbody id="stmtRows"></tbody></table></div><div id="stmtMobile" class="statement-review-mobile"></div>
       </article>
 
       <div class="grid2">
@@ -3201,7 +3225,7 @@ button:active:not(:disabled){transform:translateY(1px)}
       <div class="management-summary" aria-label="Resumo dos cartões"><div class="metric"><span>Limite total</span><strong id="cardsLimitTotal">R$ 0,00</strong><small>dos cartões cadastrados</small></div><div class="metric"><span>Obrigação atual</span><strong id="cardsOutstandingTotal">R$ 0,00</strong><small>limite comprometido</small></div></div>
       <div class="management-layout"><article class="panel management-list-panel"><div class="head"><div><h2>Seus cartões</h2><p>Limite e obrigação em uma visão rápida</p></div></div><div id="cardsGrid" class="cards"></div></article><article class="panel management-form-panel"><div class="head"><div><h2 id="cardFormTitle">Adicionar cartão</h2><p>Configure limite e ciclo da fatura</p></div><span class="management-mode" id="cardFormMode">Criação</span></div><form id="cardForm" class="management-form"><input id="cardId" type="hidden"/><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Essencial</h3><p class="form-section__description">Identificação e limite disponível.</p></div></div><div class="field-group field-group--two"><label>Nome<input id="cardName" required/></label><label class="money-field">Limite<input id="cardLimit" type="number" inputmode="decimal" step="0.01" required/></label></div></section><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Ciclo da fatura</h3><p class="form-section__description">Datas usadas para organizar as compras.</p></div></div><div class="field-group field-group--two"><label>Fechamento<input id="cardClose" type="number" inputmode="numeric" min="1" max="31" required/><small class="field-help">Compras após este dia entram normalmente na fatura seguinte.</small></label><label>Vencimento<input id="cardDue" type="number" inputmode="numeric" min="1" max="31" required/><small class="field-help">Dia previsto para pagar a fatura.</small></label></div></section><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Pagamento</h3><p class="form-section__description">Conta usada ao registrar o pagamento.</p></div></div><label>Conta pagadora<select id="cardPayAccount"></select></label></section><div class="section-actions"><button class="btn" id="cardSubmit">Salvar cartão</button></div></form></article></div>
       <article class="panel invoice-focus"><div class="head"><div><h2>Fatura atual</h2><p>Total, pagamento e compras da fatura selecionada</p></div><div class="actions"><button class="btn2 tiny" id="closeInvoice">Fechar fatura</button><button class="btn tiny" id="payInvoice">Registrar pagamento</button></div></div><div class="two"><label>Cartão<select id="invoiceCard"></select></label><label>Mês da fatura<input id="invoiceMonth" type="month"/></label></div><div class="invoice-summary"><div><small>Total da fatura</small><strong id="invoiceTotalView">R$ 0,00</strong></div><div><small>Pago</small><strong class="positive" id="invoicePaidView">R$ 0,00</strong></div><div><small>Falta pagar</small><strong class="warning" id="invoiceRemainingView">R$ 0,00</strong></div><div><small>Status</small><strong id="invoiceStatusView">Aberta</strong></div></div><div class="tablewrap desktop-table-mobile"><table><thead><tr><th>Compra</th><th>Parcela</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="invoiceTable"></tbody></table></div><div id="invoiceMobile" class="mobile-card-list"></div></article>
-      <article class="panel secondary-content"><div class="head"><div><h2>Importar fatura</h2><p>CSV ou OFX: data, descrição/título e valor</p></div><span class="badge">com conferência</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,.ofx,text/csv,application/csv,text/comma-separated-values,application/x-ofx,application/ofx"/></label></div><div class="note" id="cardImportHint">O SFP identifica a convenção do arquivo, valida débitos/créditos e usa o Groq como segunda opinião quando disponível. A finalidade econômica (gasto, transferência etc.) é separada do débito do cartão. Nada é salvo antes da sua confirmação.</div></article>
+      <article class="panel secondary-content"><div class="head"><div><h2>Importar fatura</h2><p>CSV, OFX ou PDF: data, descrição/título e valor</p></div><span class="badge">com conferência</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,.ofx,.pdf,text/csv,application/csv,text/comma-separated-values,application/x-ofx,application/ofx,application/pdf"/></label></div><div class="note" id="cardImportHint">O SFP identifica a convenção do arquivo, valida débitos/créditos e usa o Groq como segunda opinião quando disponível. A finalidade econômica (gasto, transferência etc.) é separada do débito do cartão. Nada é salvo antes da sua confirmação.</div></article>
       <article class="panel secondary-content hidden" id="cardImportReview"><div class="head"><div><h2>Conferir fatura</h2><p id="cardImportSummary"></p></div><div class="actions"><button class="btn2" type="button" id="cardImportCancel">Cancelar</button><button class="btn" type="button" id="cardImportConfirm">Importar fatura</button></div></div><div class="note" id="cardImportValidation"></div><div class="tablewrap desktop-table-mobile"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Destino</th><th>Status</th></tr></thead><tbody id="cardImportRows"></tbody></table></div><div id="cardImportMobile" class="mobile-card-list"></div></article>
       <article class="panel secondary-content"><div class="head"><div><h2>Histórico do cartão</h2><p>Alterações de limite, pagamentos e estornos</p></div></div><label>Cartão<select id="cardHistorySelect"></select></label><div id="cardHistory" class="card-history"></div></article>
     </section>
@@ -9576,6 +9600,47 @@ function tag(block,n){let m=block.match(new RegExp('<'+n+'>([^<\\r\\n]+)','i'));
 function parseOFX(txt){let blocks=txt.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/gi)||txt.split(/<STMTTRN>/i).slice(1);return blocks.map(b=>({date:parseDate(tag(b,'DTPOSTED')),desc:tag(b,'MEMO')||tag(b,'NAME')||'Movimentação',amount:parseMoney(tag(b,'TRNAMT')),fitid:tag(b,'FITID')})).filter(x=>x.date&&x.amount)}
 function ruleFor(desc){let d=desc.toLowerCase();return state.classificationRules.find(r=>d.includes(r.pattern.toLowerCase()))}
 
+
+function classificationConfidenceScore(value){
+  if(value==null||value==='')return null;
+  if(Number.isFinite(Number(value)))return Math.max(0,Math.min(1,Number(value)));
+  let v=String(value).toLowerCase();
+  if(v==='high'||v==='alta')return .96;
+  if(v==='medium'||v==='media'||v==='média')return .82;
+  if(v==='low'||v==='baixa')return .5;
+  return null;
+}
+function normalizeImportMerchant(value){
+  return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\b(compra\s+(?:no\s+)?debito|compra\s+debito|cartao\s+debito|debito\s+cartao)\b/g,' ')
+    .replace(/\b(pagamento|compra|debito|credito|cartao|visa|mastercard|elo)\b/g,' ')
+    .replace(/\b\d{5,}\b/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim().split(' ').slice(0,5).join(' ');
+}
+function inferImportCategory(value){
+  let d=String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(/mercado|supermerc|supermarket|mercat|atacadao|assai|carrefour|mundial|hortifruti|padaria|lanch|sorvet|restaur|ifood|pizza|burger|grao de ouro/.test(d))return 'Alimentação';
+  if(/uber|99\b|taxi|onibus|metro|combust|posto\b|gasolina|estacion/.test(d))return 'Transporte';
+  if(/farmac|drog|hospital|clinica|laboratorio|medic/.test(d))return 'Saúde';
+  if(/faculdade|universidade|curso|escola|livraria/.test(d))return 'Educação';
+  if(/netflix|spotify|disney|prime video|youtube|stream|assinatura/.test(d))return 'Assinaturas';
+  if(/luz|energia|agua|gas\b|internet|telefone|vivo|claro|tim\b/.test(d))return 'Contas';
+  if(/cinema|show|ingresso|jogo|steam|playstation|xbox/.test(d))return 'Lazer';
+  return 'Outros';
+}
+function historicalImportClassification(raw,amount){
+  const key=normalizeImportMerchant(raw);if(key.length<3)return null;
+  const candidates=[];
+  const add=(desc,action,category,confidence,manual)=>{const k=normalizeImportMerchant(desc);if(!k)return;let affinity=k===key?1:(k.includes(key)||key.includes(k)?0.9:descriptionAffinity(k,key));if(affinity<.72)return;candidates.push({action,category:category||'Outros',affinity,confidence:classificationConfidenceScore(confidence)??.7,manual:Boolean(manual)});};
+  (state.transactions||[]).forEach(t=>{if(t.economicImpact!=='economic'||!['income','expense'].includes(t.kind))return;add(t.statementDesc||t.desc,t.kind,t.category,t.classificationConfidence,String(t.semanticClass||'').startsWith('user_')||Number(t.classificationConfidence)>=.99)});
+  (state.purchases||[]).forEach(p=>{if(p.economicImpact!=='economic')return;add(p.desc,'expense',p.category,p.classificationConfidence,String(p.semanticClass||'').startsWith('user_')||Number(p.classificationConfidence)>=.99)});
+  if(!candidates.length)return null;
+  const groups=new Map();
+  candidates.forEach(c=>{let id=`${c.action}|${c.category}`,g=groups.get(id)||{...c,weight:0,count:0};g.weight+=c.affinity*(c.manual?3:Math.max(1,c.confidence*2));g.count++;groups.set(id,g)});
+  const ranked=[...groups.values()].sort((a,b)=>b.weight-a.weight);const best=ranked[0],next=ranked[1];
+  if(best.weight<1.75||(next&&best.weight-next.weight<.55))return null;
+  return{action:best.action,category:best.category,semanticClass:'historical_rule',economicImpact:'economic',confidence:best.manual ? .97 : .9,reason:`Reconhecido pelo histórico: ${key}`};
+}
+
 function semanticClassify(desc,amount){
   const raw=String(desc||'').trim();
   const d=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -9591,6 +9656,9 @@ function semanticClassify(desc,amount){
       reason:`Regra aprendida: ${learned.pattern}`
     };
   }
+
+  const historical=historicalImportClassification(raw,amount);
+  if(historical)return historical;
 
   if(/resgate.*rdb|resgate.*invest|resgate.*aplic|resgate.*cdb|resgate.*tesouro|resgate.*fundo/.test(d)){
     return{
@@ -9633,6 +9701,15 @@ function semanticClassify(desc,amount){
       economicImpact:'review',
       confidence:'medium',
       reason:'Possível estorno/reembolso; requer conciliação com a movimentação original.'
+    };
+  }
+
+  if(/\b(compra\s+(?:no\s+)?debito|compra\s+debito|cartao\s+debito|debito\s+cartao)\b/.test(d)){
+    const category=inferImportCategory(d);
+    return{
+      action:'expense',category,semanticClass:'expense',economicImpact:'economic',
+      confidence:category==='Outros' ? .86 : .94,
+      reason:category==='Outros'?'Compra no débito reconhecida como gasto; categoria ainda genérica.':'Compra no débito reconhecida e categorizada pelo estabelecimento.'
     };
   }
 
@@ -9813,8 +9890,8 @@ function statementNeedsReview(r){
   if(r.economicImpact==='review')return true;
   if(r.semanticClass==='review')return true;
 
-  if(r.classificationConfidence!=null &&
-     Number(r.classificationConfidence)<0.75)return true;
+  const confidence=classificationConfidenceScore(r.classificationConfidence);
+  if(confidence!=null&&confidence<0.75)return true;
 
   if(r.action==='transfer' && !r.transferAccountId)return true;
 
@@ -9825,6 +9902,23 @@ function statementNeedsReview(r){
   )return true;
 
   return false;
+}
+
+
+function statementDraftStatus(r){
+  if(r.duplicate)return 'Já importado';
+  if(r.transferMatchId)return `Possível transferência · ${Math.round((r.transferMatchConfidence||0)*100)}%`;
+  if(r.action==='pending_transfer')return 'Aguardando extrato da outra conta';
+  if(r.candidateId)return 'Possível correspondência';
+  return statementNeedsReview(r)?'Revisar':'Reconhecido';
+}
+function statementActionOptions(r){
+  const options=[['expense','Gasto'],['income','Receita'],['transfer','Transferência'],['transfer_match','Transferência detectada'],['pending_transfer','Aguardar outra conta'],['reconcile','Conciliar'],['ignore','Ignorar']];
+  return options.filter(([value])=>!['transfer_match','pending_transfer','reconcile'].includes(value)||r.action===value||value==='reconcile'&&r.candidateId).map(([value,label])=>`<option value="${value}" ${r.action===value?'selected':''}>${label}</option>`).join('');
+}
+function renderStatementDraftMobile(visibleIndexes){
+  const host=$('stmtMobile');if(!host)return;
+  host.innerHTML=visibleIndexes.map(i=>{const r=statementDraft[i],review=statementNeedsReview(r),transferVisible=['transfer','transfer_match','pending_transfer'].includes(r.action);return `<article class="stmt-review-card" data-review="${review?'true':'false'}"><div class="stmt-review-card__head"><div><b>${sfpEsc(r.desc)}</b><small>${dateObj(r.date).toLocaleDateString('pt-BR')} · <span class="stmt-review-card__status">${sfpEsc(statementDraftStatus(r))}</span></small></div><strong class="stmt-review-card__amount ${r.amount>0?'positive':'negative'}">${brl(r.amount)}</strong></div><div class="stmt-review-controls"><label>Ação<select data-sa="${i}">${statementActionOptions(r)}</select></label><label>Categoria<select data-sc="${i}">${CATEGORIES.map(c=>`<option ${r.category===c?'selected':''}>${c}</option>`).join('')}</select></label>${transferVisible?`<label>Transferir para<select data-st="${i}"><option value="">—</option>${state.accounts.filter(a=>a.id!=r.accountId).map(a=>`<option value="${a.id}" ${r.transferAccountId==a.id?'selected':''}>${sfpEsc(a.name)}</option>`).join('')}</select></label>`:''}<label class="stmt-review-learn"><input type="checkbox" data-sl="${i}" ${r.learn?'checked':''} ${['income','expense','transfer','ignore'].includes(r.action)?'':'disabled'}/> Aprender esta decisão</label></div></article>`}).join('');
 }
 
 function renderStatementDraft(){
@@ -9972,16 +10066,21 @@ function renderStatementDraft(){
     </tr>`;
   }).join('');
 
+  renderStatementDraftMobile(visibleIndexes);
+
   document.querySelectorAll('[data-sa]').forEach(e=>
     e.onchange=()=>{
       statementDraft[+e.dataset.sa].action=e.value;
+      if(['income','expense','transfer','ignore'].includes(e.value))statementDraft[+e.dataset.sa].learn=true;
       renderStatementDraft();
     }
   );
 
   document.querySelectorAll('[data-sc]').forEach(e=>
-    e.onchange=()=>
-      statementDraft[+e.dataset.sc].category=e.value
+    e.onchange=()=>{
+      statementDraft[+e.dataset.sc].category=e.value;
+      statementDraft[+e.dataset.sc].learn=true;
+    }
   );
 
   document.querySelectorAll('[data-st]').forEach(e=>
@@ -10038,7 +10137,15 @@ async function importStatement(){
    else state.transactions.push({id:uid(),kind:r.action==='income'?'income':'expense',desc:r.desc,amount:Math.abs(r.amount),date:r.date,category:r.category,accountId:r.accountId,status:'paid',dueDay:+r.date.slice(8,10),tags:['extrato'],note:'',statementKey:r.key,balanceImpact:r.date>state.baseDate,semanticClass:r.semanticClass||null,economicImpact:r.economicImpact||'economic',classificationConfidence:r.classificationConfidence||null,classificationReason:r.classificationReason||null,createdAt:Date.now()});
    used.add(r.key);accepted.push(r);if(r.learn&&['income','expense','transfer','ignore'].includes(r.action)){let pattern=r.desc.split(/\s+/).slice(0,3).join(' ');if(pattern.length>3&&!state.classificationRules.some(x=>String(x.pattern||'').toLowerCase()===pattern.toLowerCase()))state.classificationRules.push({pattern,action:r.action,category:r.category,source:'learned',learnedAt:new Date().toISOString(),example:r.desc})}
   }
-  if(accepted.length)state.statements.push({id:uid(),file:draft[0]?.file||'Extrato',account:acc?.name||'Conta',count:accepted.length,months:[...new Set(accepted.map(r=>ym(r.date)))],importedAt:new Date().toISOString()});
+  if(!accepted.length){
+   const duplicateOnly=draft.length>0&&draft.every(r=>r.duplicate);
+   statementDraft=[];$('stmtReview').classList.add('hidden');$('stmtFile').value='';
+   if(typeof renderStatements==='function')renderStatements();
+   if(typeof renderReconcileCenter==='function')renderReconcileCenter();
+   toast(duplicateOnly?'Nenhuma movimentação nova. Este extrato já foi importado.':'Nenhuma movimentação foi importada.');
+   return
+  }
+  state.statements.push({id:uid(),file:draft[0]?.file||'Extrato',account:acc?.name||'Conta',count:accepted.length,months:[...new Set(accepted.map(r=>ym(r.date)))],importedAt:new Date().toISOString()});
   if(lastSavedState){autoBackup();snapshotUndo('Importar extrato',lastSavedState)}normalize();await dbSet(state);persisted=true;lastSavedState=clone(state);statementDraft=[];$('stmtReview').classList.add('hidden');$('stmtFile').value='';renderAll();toast(`${accepted.length} movimentações processadas`)
  }catch(error){if(!persisted){state=before;lastSavedState=clone(before)}try{renderAll()}catch{}toast('Não foi possível importar o extrato. Nenhuma alteração foi aplicada.');console.error('Falha ao importar extrato:',error)}
 }
@@ -10220,11 +10327,51 @@ function renderCardImportDraft(){
   $('cardImportRows').innerHTML=draft.rows.map(rowHtml).join('');
   if($('cardImportMobile'))$('cardImportMobile').innerHTML=draft.rows.map(r=>`<div class="mobile-record"><div class="mobile-record-head"><div><b>${sfpEsc(r.desc)}</b><small>${dateObj(r.date).toLocaleDateString('pt-BR')} • ${sfpEsc(cardImportNatureLabel(r,{mobile:true}))}</small></div><strong class="${r.kind==='payment'?'positive':'negative'}">${brl(r.kind==='payment'?r.amount:-r.amount)}</strong></div><small>${r.duplicate?'Já importada':'Pronta para importar'}</small></div>`).join('');
 }
+
+function readFileAsText(file){return new Promise((resolve,reject)=>{let rd=new FileReader();rd.onload=()=>resolve(String(rd.result||''));rd.onerror=()=>reject(Error('Não consegui abrir o arquivo.'));rd.readAsText(file,'UTF-8')})}
+function readFileAsDataUrl(file){return new Promise((resolve,reject)=>{let rd=new FileReader();rd.onload=()=>resolve(String(rd.result||''));rd.onerror=()=>reject(Error('Não consegui abrir o PDF.'));rd.readAsDataURL(file)})}
+async function extractPdfTextLocal(file){
+  if(!window.AndroidBridge||typeof AndroidBridge.extractPdfText!=='function')throw Error('A leitura de PDF está disponível no aplicativo Android.');
+  const dataUrl=await readFileAsDataUrl(file),base64=(dataUrl.split(',')[1]||'');
+  if(!base64)throw Error('PDF vazio ou ilegível.');
+  let parsed;try{parsed=JSON.parse(AndroidBridge.extractPdfText(base64))}catch{throw Error('O leitor local de PDF retornou uma resposta inválida.')}
+  if(!parsed?.ok)throw Error(parsed?.error||'Não foi possível extrair texto do PDF.');
+  return String(parsed.text||'');
+}
+function pdfImportDate(line,{month=null}={}){
+  let m=String(line||'').match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?\b/);
+  if(m){let year=m[3]?(m[3].length===2?'20'+m[3]:m[3]):(month?.slice(0,4)||String(new Date().getFullYear()));return {raw:m[0],date:`${year}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`}}
+  const map={jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+  m=String(line||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/\b(\d{1,2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)(?:\s+(\d{2,4}))?\b/);
+  if(!m)return null;let year=m[3]?(m[3].length===2?'20'+m[3]:m[3]):(month?.slice(0,4)||String(new Date().getFullYear()));return {raw:m[0],date:`${year}-${String(map[m[2]]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`};
+}
+function parsePdfFinancialText(text,{intendedType='statement',month=null}={}){
+  const lines=String(text||'').replace(/\u00a0/g,' ').split(/\r?\n/).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean),rows=[];
+  const amountRe=/([+-]?\s*(?:R\$\s*)?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{2}|\.\d{2}))\s*([CD])?\s*$/i;
+  for(const line of lines){
+    const dt=pdfImportDate(line,{month});if(!dt)continue;const am=line.match(amountRe);if(!am)continue;
+    let amount=parseMoney(am[1]);const explicit=/^[+-]/.test(am[1].replace(/\s|R\$/gi,''))||Boolean(am[2]);
+    if(am[2]?.toUpperCase()==='D')amount=-Math.abs(amount);else if(am[2]?.toUpperCase()==='C')amount=Math.abs(amount);
+    let desc=line.replace(am[0],'').replace(dt.raw,'').replace(/^[-–—|:;\s]+|[-–—|:;\s]+$/g,'').trim();
+    if(!desc||/^(total|saldo|vencimento|limite|resumo|valor)$/i.test(desc))continue;
+    if(intendedType==='statement'&&!explicit){let d=desc.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(/compra|debito|saque|tarifa|pix enviado|transferencia enviada|pagamento efetuado/.test(d))amount=-Math.abs(amount);else if(/credito|recebido|salario|pix recebido|estorno/.test(d))amount=Math.abs(amount)}
+    if(amount)rows.push({date:dt.date,desc,amount,fitid:null});
+  }
+  return rows;
+}
+
 async function importCardCsv(file){
   if(!file)return;
   let ext=(file.name.split('.').pop()||'').toLowerCase();
-  if(!['csv','ofx'].includes(ext)){toast('Selecione um arquivo CSV ou OFX de fatura.','warning');$('cardImportFile').value='';return}
-  let rd=new FileReader();rd.onload=async()=>{try{let rows=ext==='ofx'?parseOFX(rd.result):parseCardCsv(rd.result);if(!rows.length)throw Error('Nenhuma movimentação reconhecida no arquivo.');let analysis=await analyzeImportDocument({rows,ext,text:rd.result,intendedType:'invoice'});if(analysis.documentType==='statement'&&analysis.confidence>=.8){let ok=await sfpConfirm({title:'Este arquivo parece ser um extrato',message:`A validação classificou o arquivo como extrato com ${Math.round(analysis.confidence*100)}% de confiança. Quer continuar mesmo assim como fatura?`,confirmText:'Continuar como fatura',cancelText:'Cancelar'});if(!ok){$('cardImportFile').value='';return;}}prepareCardImport(classifyInvoiceRows(rows,analysis),file.name,analysis)}catch(e){cardImportDraft=null;$('cardImportReview').classList.add('hidden');toast('Não consegui ler a fatura: '+e.message,'error')}finally{$('cardImportFile').value=''}};rd.onerror=()=>{toast('Não consegui abrir o arquivo da fatura. Tente selecionar o CSV ou OFX novamente.','error');$('cardImportFile').value=''};rd.readAsText(file,'UTF-8')
+  if(!['csv','ofx','pdf'].includes(ext)){toast('Selecione um arquivo CSV, OFX ou PDF de fatura.','warning');$('cardImportFile').value='';return}
+  try{
+    let text=ext==='pdf'?await extractPdfTextLocal(file):await readFileAsText(file);
+    let rows=ext==='ofx'?parseOFX(text):ext==='pdf'?parsePdfFinancialText(text,{intendedType:'invoice',month:$('cardImportMonth').value}):parseCardCsv(text);
+    if(!rows.length)throw Error(ext==='pdf'?'Não encontrei linhas com data e valor no PDF. Se ele for escaneado, será necessário OCR.':'Nenhuma movimentação reconhecida no arquivo.');
+    let analysis=await analyzeImportDocument({rows,ext,text,intendedType:'invoice'});
+    if(analysis.documentType==='statement'&&analysis.confidence>=.8){let ok=await sfpConfirm({title:'Este arquivo parece ser um extrato',message:`A validação classificou o arquivo como extrato com ${Math.round(analysis.confidence*100)}% de confiança. Quer continuar mesmo assim como fatura?`,confirmText:'Continuar como fatura',cancelText:'Cancelar'});if(!ok)return;}
+    prepareCardImport(classifyInvoiceRows(rows,analysis),file.name,analysis);
+  }catch(e){cardImportDraft=null;$('cardImportReview').classList.add('hidden');toast('Não consegui ler a fatura: '+e.message,'error')}finally{$('cardImportFile').value=''}
 }
 async function confirmCardImport(){
   let draft=cardImportDraft;if(!draft)return;let before=clone(state);try{
@@ -10233,7 +10380,18 @@ async function confirmCardImport(){
   }catch(e){state=before;lastSavedState=clone(before);renderAll();toast('Não foi possível importar a fatura. Nenhuma alteração foi aplicada.','error');console.error('Falha ao importar fatura:',e)}
 }
 
-function readStmtFile(f){if(!f)return;let rd=new FileReader();rd.onload=async()=>{try{let ext=f.name.split('.').pop().toLowerCase();if(!['csv','ofx'].includes(ext))throw Error('Selecione um arquivo CSV ou OFX.');let rows;if(ext==='ofx')rows=parseOFX(rd.result);else{try{rows=parseCSV(rd.result)}catch{rows=await parseCSVManual(rd.result)}}if(!rows.length)throw Error('Nenhuma movimentação reconhecida. Confira as colunas e os valores.');let analysis=await analyzeImportDocument({rows,ext,text:rd.result,intendedType:'statement'});if(analysis.documentType==='invoice'&&analysis.confidence>=.8){let ok=await sfpConfirm({title:'Este arquivo parece ser uma fatura',message:`A validação classificou o arquivo como fatura com ${Math.round(analysis.confidence*100)}% de confiança. Quer continuar mesmo assim como extrato?`,confirmText:'Continuar como extrato',cancelText:'Cancelar'});if(!ok){$('stmtFile').value='';return;}}prepareStatement(rows,f.name)}catch(e){$('stmtFile').value='';toast('Não consegui ler o extrato: '+e.message,'error')}};rd.onerror=()=>{toast('Não consegui abrir o arquivo do extrato. Tente selecionar novamente.','error');$('stmtFile').value=''};rd.readAsText(f,'UTF-8')}
+function readStmtFile(f){
+ if(!f)return;
+ (async()=>{try{
+   let ext=(f.name.split('.').pop()||'').toLowerCase();if(!['csv','ofx','pdf'].includes(ext))throw Error('Selecione um arquivo CSV, OFX ou PDF.');
+   let text=ext==='pdf'?await extractPdfTextLocal(f):await readFileAsText(f),rows;
+   if(ext==='ofx')rows=parseOFX(text);else if(ext==='pdf')rows=parsePdfFinancialText(text,{intendedType:'statement',month:state.mesAtual});else{try{rows=parseCSV(text)}catch{rows=await parseCSVManual(text)}}
+   if(!rows.length)throw Error(ext==='pdf'?'Não encontrei linhas com data e valor no PDF. Se ele for escaneado, será necessário OCR.':'Nenhuma movimentação reconhecida. Confira as colunas e os valores.');
+   let analysis=await analyzeImportDocument({rows,ext,text,intendedType:'statement'});
+   if(analysis.documentType==='invoice'&&analysis.confidence>=.8){let ok=await sfpConfirm({title:'Este arquivo parece ser uma fatura',message:`A validação classificou o arquivo como fatura com ${Math.round(analysis.confidence*100)}% de confiança. Quer continuar mesmo assim como extrato?`,confirmText:'Continuar como extrato',cancelText:'Cancelar'});if(!ok)return;}
+   prepareStatement(rows,f.name);
+ }catch(e){toast('Não consegui ler o extrato: '+e.message,'error')}finally{$('stmtFile').value=''}})();
+}
 function renderGlobalSearch(){let q=$('globalSearch').value.trim().toLowerCase();if(q.length<2)return $('globalResults').classList.add('hidden');let res=[];state.transactions.filter(t=>`${t.desc} ${t.category} ${(t.tags||[]).join(' ')}`.toLowerCase().includes(q)).slice(0,8).forEach(t=>res.push({title:t.desc,sub:`${t.date} • ${brl(t.amount)} • ${t.kind}`,page:'lancamentos'}));state.purchases.filter(p=>p.desc.toLowerCase().includes(q)).slice(0,5).forEach(p=>res.push({title:p.desc,sub:`Compra em ${card(p.cardId)?.name||'cartão'} • ${brl(p.total)}`,page:'cartoes'}));state.accounts.filter(a=>a.name.toLowerCase().includes(q)).forEach(a=>res.push({title:a.name,sub:`Conta • ${brl(accountBalance(a.id))}`,page:'contas'}));$('globalResults').innerHTML=res.length?res.map((r,i)=>`<div class="item" data-sr="${i}"><div><b>${r.title}</b><small>${r.sub}</small></div></div>`).join(''):'<div class="item"><span>Nada encontrado.</span></div>';$('globalResults').classList.remove('hidden');document.querySelectorAll('[data-sr]').forEach((el,i)=>el.onclick=()=>{setPage(res[i].page);$('globalResults').classList.add('hidden')})}
 
 function showAutoBackups(){
