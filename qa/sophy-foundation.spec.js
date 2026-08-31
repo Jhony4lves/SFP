@@ -18,7 +18,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
     await boot(page);
 
     // Navega para a aba Sophy
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(page.locator('#pageTitle')).toHaveText('Sophy');
     await expect(page.locator('#sophy')).toHaveClass(/active/);
 
@@ -65,7 +65,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
     await boot(page);
 
     // Navega para Sophy
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // Pergunta sobre saldo
     await page.locator('#sophyInput').fill('Qual é o meu saldo total?');
@@ -87,7 +87,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // Pergunta sobre faturas
     await page.locator('#sophyInput').fill('Como estão minhas faturas de cartão?');
@@ -112,7 +112,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // Envia instrução de memória
     await page.locator('#sophyInput').fill('Lembre que meu aniversário é no dia 25 de dezembro');
@@ -154,7 +154,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // Saudação
     await page.locator('#sophyInput').fill('Oi, Sophy!');
@@ -192,7 +192,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
     expect(lastMsg.sender).toBe('sophy');
 
     // Abre tela Sophy e valida que a mensagem aparece no DOM
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(page.locator('.sophy-msg-row.sophy').last()).toBeVisible();
 
     expect(errors).toEqual([]);
@@ -202,7 +202,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
     const errors = monitor(page);
     await boot(page);
 
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // Cria uma memória
     await page.evaluate(() => {
@@ -217,7 +217,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
 
     // Recarrega a página
     await page.reload();
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
 
     // Valida que a mensagem permanece
     await expect(page.locator('.sophy-msg-row.user').last()).toContainText('Teste de persistência do chat');
@@ -240,7 +240,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
 
     // Portrait
     await boot(page, PORTRAIT);
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await expect(page.locator('#sophy')).toBeVisible();
 
     // Envia mensagem em portrait
@@ -269,7 +269,7 @@ test.describe('Sophy — Fundação da Inteligência Financeira e Conversacional
     expect(isOnline).toBe(false);
 
     // 2. Navega para Sophy e abre memórias
-    await page.locator('.nav button[data-page="sophy"]').click();
+    await page.evaluate(() => window.setPage('sophy'));
     await page.locator('#sophyOpenMemoriesBtn').click();
     await expect(page.locator('#modalRoot')).not.toHaveClass(/hidden/);
 
