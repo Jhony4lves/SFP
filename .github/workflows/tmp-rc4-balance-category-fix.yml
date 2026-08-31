@@ -17,7 +17,20 @@ jobs:
           ref: fix/2.2-pdf-balance-category-semantics
           fetch-depth: 0
       - name: Apply RC4 source patch
-        run: python3 .github/tmp_rc4_patch.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/tmp_rc4_patch.py')
+          s=p.read_text(encoding='utf-8')
+          old='s, n = re.subn(r"function parsePdfFinancialText\\(text,\\{intendedType=\'statement\',month=null\\}=\\{\\}\\)\\{.*?\\n\\}\\n\\nasync function importCardCsv", parser + "\\n\\nasync function importCardCsv", s, count=1, flags=re.S)'
+          new='s, n = re.subn(r"function parsePdfFinancialText\\(text,\\{intendedType=\'statement\',month=null\\}=\\{\\}\\)\\{.*?\\n\\}\\n\\nasync function importCardCsv", lambda _m: parser + "\\n\\nasync function importCardCsv", s, count=1, flags=re.S)'
+          if old not in s:
+              raise SystemExit('parser replacement line not found')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+          python3 .github/tmp_rc4_patch.py
       - name: Validate and push
         shell: bash
         run: |
