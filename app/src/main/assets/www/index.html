@@ -9638,7 +9638,7 @@ function historicalImportClassification(raw,amount){
   candidates.forEach(c=>{let id=`${c.action}|${c.category}`,g=groups.get(id)||{...c,weight:0,count:0};g.weight+=c.affinity*(c.manual?3:Math.max(1,c.confidence*2));g.count++;groups.set(id,g)});
   const ranked=[...groups.values()].sort((a,b)=>b.weight-a.weight);const best=ranked[0],next=ranked[1];
   if(best.weight<1.75||(next&&best.weight-next.weight<.55))return null;
-  return{action:best.action,category:best.category,semanticClass:'historical_rule',economicImpact:'economic',confidence:best.manual?.97:.9,reason:`Reconhecido pelo histórico: ${key}`};
+  return{action:best.action,category:best.category,semanticClass:'historical_rule',economicImpact:'economic',confidence:best.manual ? .97 : .9,reason:`Reconhecido pelo histórico: ${key}`};
 }
 
 function semanticClassify(desc,amount){
