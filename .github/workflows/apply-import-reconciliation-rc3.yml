@@ -1,0 +1,40 @@
+name: Apply Import Reconciliation RC3
+
+on:
+  push:
+    branches:
+      - fix/2.2-import-reconciliation
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/2.2-import-reconciliation
+          fetch-depth: 0
+
+      - name: Apply patch
+        run: python .github/scripts/apply-import-reconciliation-rc3.py
+
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -q "application/pdf" app/src/main/java/com/jhony/sfp/MainActivity.java
+          grep -q "extractPdfText" app/src/main/java/com/jhony/sfp/AndroidBridge.java
+          grep -q "statement-review-mobile" app/src/main/assets/www/index.html
+          grep -q "historicalImportClassification" app/src/main/assets/www/index.html
+          grep -q "parsePdfFinancialText" app/src/main/assets/www/index.html
+
+      - name: Commit product changes and self-clean
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/scripts/apply-import-reconciliation-rc3.py
+          git rm .github/workflows/apply-import-reconciliation-rc3.yml
+          git add app qa
+          git commit -m "fix: make imports mobile-first, PDF-ready and smarter"
+          git push origin HEAD:fix/2.2-import-reconciliation
