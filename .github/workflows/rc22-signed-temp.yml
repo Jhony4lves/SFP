@@ -1,0 +1,90 @@
+name: SFP 2.2 RC Signed Candidate
+
+on:
+  push:
+    branches: [ "feat/2.2-integration" ]
+
+permissions:
+  contents: write
+
+jobs:
+  build-signed-rc:
+    runs-on: ubuntu-latest
+    env:
+      SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}
+      SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
+      SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
+      SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: feat/2.2-integration
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "8.11.1"
+
+      - run: yes | sdkmanager --licenses >/dev/null || true
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Validate RC version and signing configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME="$(sed -n 's/^SFP_VERSION_NAME=//p' gradle.properties)"
+          VERSION_CODE="$(sed -n 's/^SFP_VERSION_CODE=//p' gradle.properties)"
+          test "$VERSION_NAME" = "2.2.0-rc.1"
+          test "$VERSION_CODE" = "10"
+          for var in SFP_KEYSTORE_BASE64 SFP_KEYSTORE_PASSWORD SFP_KEY_ALIAS SFP_KEY_PASSWORD; do
+            test -n "${!var:-}" || { echo "::error::$var ausente"; exit 1; }
+          done
+
+      - name: Restore signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-release.jks"
+          test -s "$RUNNER_TEMP/sfp-release.jks"
+
+      - name: Build signed APK and AAB
+        env:
+          SFP_KEYSTORE_PATH: ${{ runner.temp }}/sfp-release.jks
+          SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
+          SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
+          SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease :app:bundleRelease
+
+      - name: Verify and package candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk dist/SFP-2.2.0-rc.1.apk
+          cp app/build/outputs/bundle/release/app-release.aab dist/SFP-2.2.0-rc.1.aab
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs dist/SFP-2.2.0-rc.1.apk | tee dist/SIGNING-CERT.txt
+          jarsigner -verify dist/SFP-2.2.0-rc.1.aab
+          printf 'versionName=2.2.0-rc.1\nversionCode=10\ncommit=%s\nbranch=feat/2.2-integration\nworkflowRun=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > dist/RELEASE-METADATA.txt
+          sha256sum dist/SFP-2.2.0-rc.1.apk dist/SFP-2.2.0-rc.1.aab > dist/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: SFP-2.2.0-rc.1-signed
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Remove temporary workflow from branch
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/rc22-signed-temp.yml
+          git commit -m "ci: remove temporary SFP 2.2 RC builder"
+          git push origin HEAD:feat/2.2-integration
