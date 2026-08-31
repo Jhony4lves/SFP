@@ -7354,6 +7354,42 @@ const sophyOfflineCore={
       };
     }
 
+    // Explicação contextual de alerta concreto (Financial Insights / Perguntar à Sophy)
+    if((/explica\s+esse\s+alerta|analise\s+este\s+alerta\s+financeiro\s+concreto|o\s+sfp\s+encontrou|evidencia\s+do\s+sfp/i.test(clean))&&/(acao\s+mais\s+util|significa\s+para\s+o\s+meu\s+mes|proximos?\s+\d+\s+dias|obrigacao|obrigacoes|compromissos?)/i.test(clean)){
+      const daysMatch=clean.match(/proximos?\s+(\d+)\s+dias/i);
+      const countMatch=clean.match(/(?:\b|^)(\d+)\s+compromiss(?:o|os)|(?:\b|^)(\d+)\s+obrigacao|(?:\b|^)(\d+)\s+obrigacoes/i);
+      const totalMatch=clean.match(/total\s+de\s+r\$\s*([\d.,]+)/i);
+      const days=daysMatch?Math.max(1,parseInt(daysMatch[1],10)||14):14;
+      const promptCount=countMatch?parseInt(countMatch[1]||countMatch[2]||countMatch[3],10):null;
+      const promptTotal=totalMatch?parseMoney(totalMatch[1]):null;
+      const upcoming=(pendingUpcomingEvents(days)||[]).filter(e=>e.type==='expense');
+      const count=Number.isFinite(promptCount)?promptCount:upcoming.length;
+      const total=(promptTotal!=null&&!Number.isNaN(promptTotal))?promptTotal:Math.round(upcoming.reduce((s,e)=>s+(Number(e.amount)||0),0)*100)/100;
+      const free=Math.round((allAccountBalance()-commitmentUntilNextIncome())*100)/100;
+      const nextInc=nextIncomeEvent();
+      const first=upcoming[0]||null;
+      const firstText=first?`O compromisso mais próximo é **${first.desc}**, em **${dateObj(first.date).toLocaleDateString('pt-BR')}**, de **${brl(first.amount)}**.`:'';
+      const nextText=nextInc
+        ? `Sua próxima entrada prevista é **${nextInc.desc}**, em **${dateObj(nextInc.date).toLocaleDateString('pt-BR')}**, no valor de **${brl(nextInc.amount)}**.`
+        : 'Não encontrei uma próxima entrada cadastrada para aliviar esse período.';
+      let action='';
+      if(count<=0||total<=0){
+        action='Neste momento, não há obrigação aberta relevante nesse horizonte.';
+      }else if(free<0){
+        action=`Como seu **livre projetado está em ${brl(free)}**, a ação mais útil agora é **segurar gastos variáveis e priorizar esse pagamento** para não apertar ainda mais o caixa.`;
+      }else if(free<total){
+        action=`Seu **livre projetado atual é ${brl(free)}**, abaixo desse total. A ação mais útil agora é **reservar o que já puder, revisar gastos extras e garantir cobertura para esse compromisso**.`;
+      }else{
+        action=`Seu **livre projetado atual é ${brl(free)}**, então esse valor cabe no planejamento. A ação mais útil agora é **separar ${brl(total)} desde já** para não confundir esse dinheiro com sobra livre.`;
+      }
+      state.sophy.context={lastIntent:'financial_alert_explanation',lastAmount:total,lastEntity:'upcoming_obligations',lastDays:days};
+      return{
+        text:`Isso significa que o SFP já encontrou **${count} compromisso${count===1?'':'s'}** para os próximos **${days} dias**, somando **${brl(total)}**.\n\n${firstText} ${nextText}\n\nEm outras palavras: esse valor **já precisa entrar no seu planejamento do mês**, porque representa dinheiro que provavelmente vai sair antes ou perto da sua próxima entrada.\n\n${action}`,
+        emotion:(free<0||free<total)?'focused':'cheerful',
+        structured:{type:'financial_alert_explanation',days,count,total,freeBRL:free}
+      };
+    }
+
     // Explicabilidade: Caixa vs Competência vs Compromisso
     if(/caixa|competencia|compromisso|diferenca/i.test(clean)&&/o que e|qual a diferenca|expli/i.test(clean)){
       return{
@@ -8567,10 +8603,13 @@ window.openFinancialReview=(kind,id)=>{
   const item=financialReviewEntity(kind,id);if(!item)return toast('Movimentação não encontrada.','warning');
   const isPurchase=kind==='purchase',root=$('modalRoot');root.className='modalback';
   const currentCategory=item.category||'Outros';
+  const reviewAmount=brl(Math.abs(Number(isPurchase?item.total:item.amount)||0));
+  const reviewDate=sfpEsc(item.date||item.purchaseDate||'');
+  const reviewSubtitle=[sfpEsc(item.desc||'Movimentação'),reviewAmount,reviewDate].filter(Boolean).join(' · ');
   const options=isPurchase
     ? `<option value="expense">Gasto/compra real</option><option value="transfer">Transferência ou movimentação patrimonial</option>`
     : `<option value="expense">Despesa real</option><option value="income">Receita real</option><option value="transfer">Transferência entre contas / movimentação patrimonial</option><option value="card-payment">Pagamento de fatura</option><option value="neutral">Outro movimento neutro</option>`;
-  root.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Revisar classificação financeira"><div class="head"><div><h2>Revisar classificação</h2><p>${sfpEsc(item.desc||'Movimentação')} · ${sfpEsc(item.date||item.purchaseDate||'')}</p></div><button class="btn2" id="financialReviewCancel">Cancelar</button></div><div class="note">${isPurchase?'Este item continuará como débito/obrigação da fatura. A escolha abaixo altera apenas o impacto econômico nos relatórios e orçamento.':'Escolha o que esta movimentação representa economicamente. O SFP não altera o valor nem a data.'}</div><label>O que isto representa?<select id="financialReviewNature">${options}</select></label><label id="financialReviewCategoryWrap">Categoria<select id="financialReviewCategory">${CATEGORIES.map(c=>`<option ${c===currentCategory?'selected':''}>${sfpEsc(c)}</option>`).join('')}</select></label>${isPurchase?'':`<label id="financialReviewCounterpartWrap" class="hidden">Outra conta da transferência<select id="financialReviewCounterpart">${state.accounts.filter(a=>a.id!=item.accountId).map(a=>`<option value="${a.id}">${sfpEsc(a.name)} • ${brl(accountBalance(a.id))}</option>`).join('')}</select><small>O SFP usará esta conta como a outra ponta da transferência e preservará valor e data.</small></label>`}<div class="section-actions"><button class="btn" id="financialReviewSave">Salvar classificação</button></div></div>`;
+  root.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Revisar classificação financeira"><div class="head"><div><h2>Revisar classificação</h2><p>${reviewSubtitle}</p></div><button class="btn2" id="financialReviewCancel">Cancelar</button></div><div class="note">${isPurchase?'Este item continuará como débito/obrigação da fatura. A escolha abaixo altera apenas o impacto econômico nos relatórios e orçamento.':'Escolha o que esta movimentação representa economicamente. O SFP não altera o valor nem a data.'}</div><label>O que isto representa?<select id="financialReviewNature">${options}</select></label><label id="financialReviewCategoryWrap">Categoria<select id="financialReviewCategory">${CATEGORIES.map(c=>`<option ${c===currentCategory?'selected':''}>${sfpEsc(c)}</option>`).join('')}</select></label>${isPurchase?'':`<label id="financialReviewCounterpartWrap" class="hidden">Outra conta da transferência<select id="financialReviewCounterpart">${state.accounts.filter(a=>a.id!=item.accountId).map(a=>`<option value="${a.id}">${sfpEsc(a.name)} • ${brl(accountBalance(a.id))}</option>`).join('')}</select><small>O SFP usará esta conta como a outra ponta da transferência e preservará valor e data.</small></label>`}<div class="section-actions"><button class="btn" id="financialReviewSave">Salvar classificação</button></div></div>`;
   const sync=()=>{let n=$('financialReviewNature').value;$('financialReviewCategoryWrap').classList.toggle('hidden',['transfer','card-payment','neutral'].includes(n));if(!isPurchase&&$('financialReviewCounterpartWrap'))$('financialReviewCounterpartWrap').classList.toggle('hidden',n!=='transfer')};
   $('financialReviewNature').onchange=sync;sync();$('financialReviewCancel').onclick=()=>{root.className='hidden';root.replaceChildren()};
   $('financialReviewSave').onclick=async()=>{let n=$('financialReviewNature').value,cat=$('financialReviewCategory').value||'Outros';

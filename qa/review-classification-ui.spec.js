@@ -40,6 +40,11 @@ test('REVIEW-UI-01: seletor da revisão usa UI do SFP sem popup nativo visível'
   await boot(page, value);
   await openReview(page);
 
+  const dialog = page.getByRole('dialog', { name: 'Revisar classificação financeira' });
+  await expect(dialog).toContainText('Pagamento recebido');
+  await expect(dialog).toContainText('R$ 150,00');
+  await expect(dialog).toContainText('2026-08-09');
+
   const native = page.locator('#financialReviewNature');
   await expect(native).toHaveClass(/sfp-review-native-select/);
   await expect(page.locator('.sfp-review-select-button').first()).toBeVisible();
