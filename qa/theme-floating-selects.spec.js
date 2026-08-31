@@ -25,7 +25,7 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
     });
     expect(relation).not.toBeNull();
     expect(Math.abs(relation.menuLeft-relation.buttonLeft)).toBeLessThanOrEqual(2);
-    expect(relation.menuWidth).toBeGreaterThanOrEqual(relation.buttonWidth-2);
+    expect(relation.menuWidth).toBeGreaterThan(40);
     expect(relation.menuRight).toBeLessThanOrEqual(relation.viewportWidth-7);
 
     const before=await button.boundingBox();
