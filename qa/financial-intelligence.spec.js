@@ -132,4 +132,19 @@ test.describe('Financial Intelligence Foundation',()=>{
     expect(typeof answer.text).toBe('string');
     expect(answer.text.length).toBeGreaterThan(10);
   });
+
+  test('Sophy explica alerta concreto sem cair em definição genérica de compromisso',async({page})=>{
+    await boot(page);
+    const prompt='Sophy, me explica esse alerta de um jeito simples: “1 compromisso nos próximos 14 dias”. O SFP encontrou: 1 obrigação(ões) conhecida(s), total de R$ 400,00. O que isso significa para o meu mês e qual é a ação mais útil agora?';
+    const answer=await page.evaluate(p=>window.sophyOfflineCore.process(p),prompt);
+    expect(answer.structured?.type).toBe('financial_alert_explanation');
+    expect(answer.structured?.days).toBe(14);
+    expect(answer.structured?.count).toBe(1);
+    expect(answer.structured?.total).toBe(400);
+    expect(answer.text).toContain('R$ 400,00');
+    expect(answer.text).toContain('14 dias');
+    expect(answer.text).not.toContain('1. **Caixa**');
+    expect(answer.text).not.toContain('2. **Competência**');
+  });
+
 });

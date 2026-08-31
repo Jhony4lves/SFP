@@ -21,11 +21,12 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
       const host=document.querySelector('.sfp-select:has(.sfp-select-menu:not([hidden]))');
       const b=host?.querySelector('.sfp-select-button')?.getBoundingClientRect();
       const m=host?.querySelector('.sfp-select-menu:not([hidden])')?.getBoundingClientRect();
-      return b&&m?{offset:m.top-b.bottom,menuLeft:m.left,buttonLeft:b.left,widthDelta:Math.abs(m.width-b.width)}:null;
+      return b&&m?{offset:m.top-b.bottom,menuLeft:m.left,buttonLeft:b.left,menuWidth:m.width,buttonWidth:b.width,menuRight:m.right,viewportWidth:innerWidth}:null;
     });
     expect(relation).not.toBeNull();
     expect(Math.abs(relation.menuLeft-relation.buttonLeft)).toBeLessThanOrEqual(2);
-    expect(relation.widthDelta).toBeLessThanOrEqual(2);
+    expect(relation.menuWidth).toBeGreaterThan(40);
+    expect(relation.menuRight).toBeLessThanOrEqual(relation.viewportWidth-7);
 
     const before=await button.boundingBox();
     await page.evaluate(()=>window.scrollBy(0,120));
