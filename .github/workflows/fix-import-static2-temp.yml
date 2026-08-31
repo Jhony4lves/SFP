@@ -1,0 +1,43 @@
+name: Fix Remaining Import Static Syntax
+
+on:
+  push:
+    branches:
+      - fix/2.2-import-reconciliation
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/2.2-import-reconciliation
+      - name: Patch remaining syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/assets/www/index.html')
+          s=p.read_text(encoding='utf-8')
+          replacements=[
+            ("confidence:category==='Outros'?.86:.94", "confidence:category==='Outros' ? .86 : .94"),
+            ("document.querySelectorAll('[data-sc]').forEach(e=>\n    e.onchange=()=>\n      statementDraft[+e.dataset.sc].category=e.value;\n      statementDraft[+e.dataset.sc].learn=true\n  );",
+             "document.querySelectorAll('[data-sc]').forEach(e=>\n    e.onchange=()=>{\n      statementDraft[+e.dataset.sc].category=e.value;\n      statementDraft[+e.dataset.sc].learn=true;\n    }\n  );")
+          ]
+          for old,new in replacements:
+              if old not in s:
+                  raise SystemExit('remaining syntax anchor missing: '+old[:60])
+              s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+          git diff --check
+      - name: Commit and self-clean
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/fix-import-static2-temp.yml
+          git add app/src/main/assets/www/index.html
+          git commit -m "fix: close remaining import syntax gaps"
+          git push origin HEAD:fix/2.2-import-reconciliation
