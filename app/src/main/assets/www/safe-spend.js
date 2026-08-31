@@ -102,3 +102,12 @@
   }
   script.addEventListener('load',loadUI,{once:true});
 })();
+
+(function loadSophyA3(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-sophy-a3="1"]'))return;
+  const script=document.createElement('script');
+  script.src='sophy-proactive-brief.js';
+  script.async=false;
+  script.dataset.sfpSophyA3='1';
+  document.head.appendChild(script);
+})();
