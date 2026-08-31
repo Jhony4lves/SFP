@@ -212,7 +212,7 @@ document.addEventListener('click',event=>{
 
   function clampOpenSelectMenus(){
     if(!isPriorityPortrait()) return;
-    const nav=document.querySelector('.sidebar');
+    const nav=document.querySelector('.sidebar .nav');
     const navRect=nav?.getBoundingClientRect();
     const viewportWidth=document.documentElement.clientWidth;
     const viewportHeight=global.innerHeight||document.documentElement.clientHeight;
@@ -236,8 +236,12 @@ document.addEventListener('click',event=>{
         const availableAbove=Math.max(72,buttonRect.top-gap-margin);
         menu.style.maxHeight=`${Math.min(menu.scrollHeight||330,330,availableAbove)}px`;
         const measured=menu.getBoundingClientRect().height;
-        menu.style.top=`${Math.max(margin,buttonRect.top-gap-measured)}px`;
+        menu.style.top=`${Math.max(margin,Math.min(buttonRect.top-gap-measured,maxBottom-measured))}px`;
         menu.style.bottom='auto';
+      }
+      const adjusted=menu.getBoundingClientRect();
+      if(adjusted.bottom>maxBottom){
+        menu.style.top=`${Math.max(margin,maxBottom-adjusted.height)}px`;
       }
     });
   }

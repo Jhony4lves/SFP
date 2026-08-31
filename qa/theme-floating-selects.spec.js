@@ -36,8 +36,18 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
     expect(before).not.toBeNull();
     expect(afterButton).not.toBeNull();
     expect(afterMenu).not.toBeNull();
-    const afterOffset=afterMenu.y-afterButton.y-afterButton.height;
-    expect(Math.abs(afterOffset-relation.offset)).toBeLessThanOrEqual(2);
+    const afterGeometry=await page.evaluate(()=>{
+      const host=document.querySelector('.sfp-select:has(.sfp-select-menu:not([hidden]))');
+      const b=host?.querySelector('.sfp-select-button')?.getBoundingClientRect();
+      const m=host?.querySelector('.sfp-select-menu:not([hidden])')?.getBoundingClientRect();
+      const n=document.querySelector('.sidebar .nav')?.getBoundingClientRect();
+      return b&&m&&n?{menuLeft:m.left,buttonLeft:b.left,menuRight:m.right,viewportWidth:innerWidth,menuTop:m.top,menuBottom:m.bottom,navTop:n.top}:null;
+    });
+    expect(afterGeometry).not.toBeNull();
+    expect(Math.abs(afterGeometry.menuLeft-afterGeometry.buttonLeft)).toBeLessThanOrEqual(2);
+    expect(afterGeometry.menuTop).toBeGreaterThanOrEqual(7);
+    expect(afterGeometry.menuBottom).toBeLessThanOrEqual(afterGeometry.navTop-3);
+    expect(afterGeometry.menuRight).toBeLessThanOrEqual(afterGeometry.viewportWidth-7);
     expect(Math.abs(afterButton.y-before.y)).toBeGreaterThan(20);
   });
 
@@ -71,7 +81,7 @@ test.describe('Issue #32 floating selects and theme consistency',()=>{
 
     const geometry=await page.evaluate(()=>{
       const menu=document.querySelector('#qaDropdownSelect + .sfp-select .sfp-select-menu:not([hidden])');
-      const nav=document.querySelector('.sidebar');
+      const nav=document.querySelector('.sidebar .nav');
       const transfer=Array.from(menu?.querySelectorAll('.sfp-select-option')||[]).find(item=>item.textContent==='Transferências');
       const m=menu?.getBoundingClientRect(),n=nav?.getBoundingClientRect();
       return m&&n&&transfer?{
