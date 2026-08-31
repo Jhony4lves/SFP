@@ -3403,7 +3403,7 @@ function categoryOptionsMarkup(action,current){const allowed=categoriesForAction
 function setCategorySelectOptions(select,categories,preferred=''){if(!select)return;const allowed=categories?.length?categories:['Outros'],selected=allowed.includes(preferred)?preferred:(allowed.includes('Outros')?'Outros':allowed[0]);select.innerHTML=allowed.map(c=>`<option>${sfpEsc(c)}</option>`).join('');select.value=selected}
 function syncTxCategoryOptions(preferred=null){const select=$('txCategory');if(!select)return;const action=currentKind==='income'?'income':'expense';setCategorySelectOptions(select,categoriesForAction(action),preferred??select.value)}
 function syncRecCategoryOptions(preferred=null){const select=$('recCategory');if(!select)return;const action=$('recType')?.value==='income'?'income':'expense';setCategorySelectOptions(select,categoriesForAction(action),preferred??select.value)}
-function normalizeStatementLabel(value){return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim()}
+function normalizeStatementLabel(value){return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/r\$/g,' ').replace(/\s+/g,' ').trim()}
 function isStatementBalanceLabel(value){const d=normalizeStatementLabel(value);return /^(?:saldo|saldo do dia|saldo atual|saldo anterior|saldo final|saldo inicial|saldo disponivel|saldo em conta|saldo da conta|saldo total|saldo bancario)$/.test(d)}
 function isStatementBalanceRow(row){return isStatementBalanceLabel(row?.desc)}
 const seed={
@@ -10365,7 +10365,7 @@ function pdfImportDate(line,{month=null}={}){
 function parsePdfFinancialText(text,{intendedType='statement',month=null}={}){
   const lines=String(text||'').replace(/\u00a0/g,' ').split(/\r?\n/).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean),rows=[];
   const hasValueBalanceColumns=intendedType==='statement'&&lines.some(line=>/\bvalor\b/i.test(line)&&/\bsaldo\b/i.test(line));
-  const amountRe=/([+-]?\s*(?:R\$\s*)?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{2}|\.\d{2}))\s*([CD])?/ig;
+  const amountRe=/((?:[+-]\s*)?(?:R\$\s*)?(?:[+-]\s*)?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{2}|\.\d{2}))\s*([CD])?/ig;
   for(const line of lines){
     const dt=pdfImportDate(line,{month});if(!dt)continue;
     const body=line.replace(dt.raw,' ').replace(/\s+/g,' ').trim();
