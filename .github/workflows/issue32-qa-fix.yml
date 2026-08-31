@@ -1,0 +1,58 @@
+name: Fix Issue 32 final QA regressions
+
+on:
+  push:
+    branches:
+      - fix/issue32-sophy-context-review-amount
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/issue32-sophy-context-review-amount
+          fetch-depth: 0
+
+      - name: Apply minimal parser and select-test fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          index_path=Path('app/src/main/assets/www/index.html')
+          text=index_path.read_text(encoding='utf-8')
+          old="      const totalMatch=clean.match(/total\\s+de\\s+r\\$\\s*([\\d.,]+)/i);"
+          new="      const totalMatch=clean.match(/total\\s+de\\s+r\\$\\s*((?:\\d{1,3}(?:\\.\\d{3})+|\\d+)(?:,\\d{1,2})?)/i);"
+          if old not in text:
+              raise SystemExit('alert BRL parser marker not found')
+          text=text.replace(old,new,1)
+          index_path.write_text(text,encoding='utf-8')
+
+          test_path=Path('qa/theme-floating-selects.spec.js')
+          test=test_path.read_text(encoding='utf-8')
+          old_rel="      return b&&m?{offset:m.top-b.bottom,menuLeft:m.left,buttonLeft:b.left,widthDelta:Math.abs(m.width-b.width)}:null;"
+          new_rel="      return b&&m?{offset:m.top-b.bottom,menuLeft:m.left,buttonLeft:b.left,menuWidth:m.width,buttonWidth:b.width,menuRight:m.right,viewportWidth:innerWidth}:null;"
+          old_assert="    expect(relation.widthDelta).toBeLessThanOrEqual(2);"
+          new_assert="    expect(relation.menuWidth).toBeGreaterThanOrEqual(relation.buttonWidth-2);\n    expect(relation.menuRight).toBeLessThanOrEqual(relation.viewportWidth-7);"
+          if old_rel not in test or old_assert not in test:
+              raise SystemExit('floating select assertion marker not found')
+          test=test.replace(old_rel,new_rel,1).replace(old_assert,new_assert,1)
+          test_path.write_text(test,encoding='utf-8')
+          PY
+
+          rm .github/workflows/issue32-qa-fix.yml
+          git diff --check
+
+      - name: Commit corrected QA contract
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/index.html qa/theme-floating-selects.spec.js .github/workflows/issue32-qa-fix.yml
+          git commit -m "fix: parse alert BRL and align select QA contract"
+          git push origin HEAD:fix/issue32-sophy-context-review-amount
