@@ -180,6 +180,96 @@ Limite total R$ 2.000,00
   expect(result.meta).toEqual({source:'pdf',officialTotal:1234.56,minimumPayment:185.18,availableLimit:765.44,totalLimit:2000,dueDate:'2026-09-16',closingDate:'2026-09-09'});
 });
 
+test('fatura Itaú separa ciclo anterior, lançamentos atuais e parcelas futuras com prova contábil',async({page})=>{
+  await boot(page);
+  const result=await page.evaluate(async()=>{
+    const text=`Banco Itaú S.A.
+Resumo da fatura em R$
+Total da fatura anterior 537,16
+Pagamento efetuado em 06/07/2026 -537,16
+Saldo financiado 0,00
+Lançamentos atuais 74,25
+= Total desta fatura 74,25
+Vencimento: 10/08/2026
+O total da sua fatura é: R$ 74,25 Limite total de crédito: R$ 2.040,00
+Pagamento mínimo: R$ 7,42
+Pagamentos efetuados Encargos cobrados nesta fatura
+DATA VALOR EM R$
+06/07 PAGAMENTO -537,16
+P Total dos pagamentos -537,16
+Lançamentos: compras e saques
+DATA ESTABELECIMENTO VALOR EM R$
+06/07 AMAZON BR 01/10 54,90
+28/07 MERCADO*MERCAD 01/10 19,35
+outros LIMEIRA Juros e encargos financeiros até o momento 0,00
+L Total dos lançamentos atuais 74,25
+Compras parceladas - próximas faturas
+DATA ESTABELECIMENTO VALOR EM R$
+06/07 AMAZON BR 02/10 54,90
+28/07 MERCADO*MERCAD 02/10 19,29
+Próxima fatura 74,19
+Total para próximas faturas 667,71
+Limite disponível 1.298,04`;
+    const parsed=parseInvoicePdfDocument(text,{month:'2026-08'});
+    document.querySelector('#cardImportCard').value='1';
+    document.querySelector('#cardImportMonth').value='2026-08';
+    const analysis={documentType:'invoice',confidence:.99,signConvention:'debitPositive',signConfidence:.99,validator:'local',warnings:[]};
+    prepareCardImport(classifyInvoiceRows(parsed.rows,analysis),'fatura-itau.pdf',analysis,{...parsed.meta,profileId:parsed.profile.id,profileLabel:parsed.profile.label,integrity:parsed.integrity});
+    const preview={
+      profile:parsed.profile,
+      meta:parsed.meta,
+      integrity:parsed.integrity,
+      rows:cardImportDraft.rows.map(row=>({desc:row.desc,kind:row.kind,amount:row.amount,total:row.total,installment:row.installment,installments:row.installments,schedule:row.installmentSchedule})),
+      blocked:document.querySelector('#cardImportConfirm').disabled,
+      validation:document.querySelector('#cardImportValidation').textContent
+    };
+    await confirmCardImport();
+    const current=state.invoices.find(invoice=>invoice.cardId===1&&invoice.month==='2026-08');
+    const previous=state.invoices.find(invoice=>invoice.cardId===1&&invoice.month==='2026-07');
+    return {...preview,persisted:{purchaseTotals:state.purchases.map(purchase=>purchase.total),august:invoiceCalculated(1,'2026-08'),september:invoiceCalculated(1,'2026-09'),official:current.officialTotal,previousPaid:previous.paidAmount,profile:state.invoiceImports.at(-1).documentProfile,verification:state.invoiceImports.at(-1).verificationStatus}};
+  });
+  expect(result.profile).toMatchObject({id:'itau-card-v1',confidence:.99});
+  expect(result.meta).toMatchObject({officialTotal:74.25,previousInvoiceTotal:537.16,financedBalance:0,currentChargesTotal:74.25,futureInstallmentsTotal:667.71,nextInvoiceTotal:74.19,totalLimit:2040,dueDate:'2026-08-10'});
+  expect(result.integrity).toMatchObject({status:'verified',importAllowed:true,currentRows:2,payments:1,futureRowsExcluded:2,currentNet:74.25});
+  expect(result.rows.map(row=>({desc:row.desc,kind:row.kind,amount:row.amount}))).toEqual([
+    {desc:'PAGAMENTO',kind:'payment',amount:537.16},
+    {desc:'AMAZON BR',kind:'purchase',amount:54.9},
+    {desc:'MERCADO*MERCAD outros LIMEIRA',kind:'purchase',amount:19.35}
+  ]);
+  expect(result.rows[1]).toMatchObject({total:549,installment:1,installments:10});
+  expect(result.rows[2]).toMatchObject({total:192.96,installment:1,installments:10});
+  expect(result.rows[2].schedule).toEqual([19.35,19.29,19.29,19.29,19.29,19.29,19.29,19.29,19.29,19.29]);
+  expect(result.blocked).toBe(false);
+  expect(result.validation).toContain('Verificação contábil aprovada');
+  expect(result.persisted).toEqual({purchaseTotals:[549,192.96],august:74.25,september:74.19,official:74.25,previousPaid:537.16,profile:'itau-card-v1',verification:'verified'});
+});
+
+test('PDF com soma divergente fica bloqueado e não altera nenhum dado',async({page})=>{
+  await boot(page);
+  const result=await page.evaluate(async()=>{
+    const text=`Resumo da fatura
+Total da fatura R$ 100,00
+Vencimento 16/09/2026
+Lançamentos: compras e saques
+DATA ESTABELECIMENTO VALOR EM R$
+31/08 Compra real 90,00
+Total dos lançamentos atuais 90,00`;
+    const parsed=parseInvoicePdfDocument(text,{month:'2026-09'});
+    document.querySelector('#cardImportCard').value='1';
+    document.querySelector('#cardImportMonth').value='2026-09';
+    const analysis={documentType:'invoice',confidence:.9,signConvention:'debitPositive',signConfidence:.9,validator:'local',warnings:[]};
+    prepareCardImport(classifyInvoiceRows(parsed.rows,analysis),'fatura-divergente.pdf',analysis,{...parsed.meta,profileId:parsed.profile.id,profileLabel:parsed.profile.label,integrity:parsed.integrity});
+    const before=JSON.stringify({purchases:state.purchases,invoices:state.invoices,imports:state.invoiceImports});
+    await confirmCardImport();
+    return {integrity:parsed.integrity,disabled:document.querySelector('#cardImportConfirm').disabled,before,after:JSON.stringify({purchases:state.purchases,invoices:state.invoices,imports:state.invoiceImports})};
+  });
+  expect(result.integrity.status).toBe('blocked');
+  expect(result.integrity.importAllowed).toBe(false);
+  expect(result.integrity.checks).toEqual(expect.arrayContaining([expect.objectContaining({id:'official_total',status:'fail',actual:90,expected:100})]));
+  expect(result.disabled).toBe(true);
+  expect(result.after).toBe(result.before);
+});
+
 test('transferência não exibe categoria e receita usa apenas categorias de entrada',async({page})=>{
   await page.setViewportSize({width:390,height:844});
   await boot(page);
