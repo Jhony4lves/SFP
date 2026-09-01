@@ -201,3 +201,89 @@ test('reimportação da fatura detecta compra e pagamento pelo detalhe completo 
   });
   expect(result).toEqual({ duplicates: [true, true, true], purchases: 1, payments: 2 });
 });
+
+test('fatura completa pode ser reimportada e inclui só as linhas novas, conciliando o total oficial', async ({ page }) => {
+  await boot(page, fixture('Fatura incremental RC8'));
+  const result = await page.evaluate(async () => {
+    document.querySelector('#cardImportCard').value = '1';
+    document.querySelector('#cardImportMonth').value = '2026-09';
+    const through30 = [
+      { date: '2026-08-30', desc: 'Compra já conhecida', amount: 50, fitid: 'CARD-30', invoiceKind: 'purchase' }
+    ];
+    prepareCardImport(through30, 'fatura-30.ofx', null, { source: 'pdf', officialTotal: 50, dueDate: '2026-09-16' });
+    await confirmCardImport();
+
+    const through31 = [
+      ...through30,
+      { date: '2026-08-31', desc: 'Compra do dia 31', amount: 25, fitid: 'CARD-31', invoiceKind: 'purchase' }
+    ];
+    prepareCardImport(through31, 'fatura-completa.ofx', null, { source: 'pdf', officialTotal: 75, dueDate: '2026-09-16', closingDate: '2026-09-09' });
+    const secondPreview = cardImportDraft.rows.map(r => r.duplicate);
+    await confirmCardImport();
+    const historyAfterSecond = state.invoiceImports.length;
+    const revisionAfterSecond = state.persistenceMeta.revision;
+
+    prepareCardImport(through31, 'fatura-completa.ofx', null, { source: 'pdf', officialTotal: 75, dueDate: '2026-09-16', closingDate: '2026-09-09' });
+    const thirdPreview = cardImportDraft.rows.map(r => r.duplicate);
+    await confirmCardImport();
+    const inv = state.invoices.find(i => i.cardId === 1 && i.month === '2026-09');
+    return {
+      secondPreview,
+      thirdPreview,
+      purchases: state.purchases.map(p => p.desc),
+      importKeys: state.purchases.map(p => p.invoiceImportKey),
+      invoice: { total: inv.officialTotal, source: inv.officialTotalSource, due: inv.documentDueDate, closing: inv.documentClosingDate },
+      historyAfterSecond,
+      historyAfterThird: state.invoiceImports.length,
+      revisionUnchanged: state.persistenceMeta.revision === revisionAfterSecond
+    };
+  });
+  expect(result).toEqual({
+    secondPreview: [true, false],
+    thirdPreview: [true, true],
+    purchases: ['Compra já conhecida', 'Compra do dia 31'],
+    importKeys: ['card:1|fit:CARD-30', 'card:1|fit:CARD-31'],
+    invoice: { total: 75, source: 'document', due: '2026-09-16', closing: '2026-09-09' },
+    historyAfterSecond: 2,
+    historyAfterThird: 2,
+    revisionUnchanged: true
+  });
+});
+
+test('compras realmente idênticas usam ocorrência e não são esmagadas como uma só', async ({ page }) => {
+  await boot(page, fixture('Ocorrências idênticas de fatura'));
+  const result = await page.evaluate(async () => {
+    document.querySelector('#cardImportCard').value = '1';
+    document.querySelector('#cardImportMonth').value = '2026-08';
+    const row = { date: '2026-08-31', desc: 'Café', amount: 8, invoiceKind: 'purchase' };
+    prepareCardImport([row, row], 'fatura-parcial.pdf');
+    const firstPreview = cardImportDraft.rows.map(r => r.duplicate);
+    await confirmCardImport();
+    prepareCardImport([row, row, row], 'fatura-completa.pdf');
+    const secondPreview = cardImportDraft.rows.map(r => r.duplicate);
+    await confirmCardImport();
+    return { firstPreview, secondPreview, count: state.purchases.length, keys: state.purchases.map(p => p.invoiceImportKey) };
+  });
+  expect(result.firstPreview).toEqual([false, false]);
+  expect(result.secondPreview).toEqual([true, true, false]);
+  expect(result.count).toBe(3);
+  expect(new Set(result.keys).size).toBe(3);
+});
+
+test('estorno importado reduz a fatura atual sem fingir que houve pagamento bancário', async ({ page }) => {
+  await boot(page, fixture('Crédito correto na fatura'));
+  const result = await page.evaluate(async () => {
+    document.querySelector('#cardImportCard').value = '1';
+    document.querySelector('#cardImportMonth').value = '2026-08';
+    const rows = classifyInvoiceRows([
+      { date: '2026-08-20', desc: 'Compra', amount: 100 },
+      { date: '2026-08-21', desc: 'Estorno da compra', amount: -10 }
+    ], { signConvention: 'debitPositive', signConfidence: 1 });
+    prepareCardImport(rows, 'fatura.pdf', null, { source: 'pdf', officialTotal: 90 });
+    await confirmCardImport();
+    const current = state.invoices.find(i => i.cardId === 1 && i.month === '2026-08');
+    const previous = state.invoices.find(i => i.cardId === 1 && i.month === '2026-07');
+    return { calculated: invoiceCalculated(1, '2026-08'), official: current.officialTotal, paid: current.paidAmount, previousPayments: previous?.payments?.length || 0, adjustments: state.invoiceAdjustments.map(a => ({ amount: a.amount, source: a.source })) };
+  });
+  expect(result).toEqual({ calculated: 90, official: 90, paid: 0, previousPayments: 0, adjustments: [{ amount: -10, source: 'invoice-import' }] });
+});

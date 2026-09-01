@@ -3225,7 +3225,7 @@ button:active:not(:disabled){transform:translateY(1px)}
       <div class="management-summary" aria-label="Resumo dos cartões"><div class="metric"><span>Limite total</span><strong id="cardsLimitTotal">R$ 0,00</strong><small>dos cartões cadastrados</small></div><div class="metric"><span>Obrigação atual</span><strong id="cardsOutstandingTotal">R$ 0,00</strong><small>limite comprometido</small></div></div>
       <div class="management-layout"><article class="panel management-list-panel"><div class="head"><div><h2>Seus cartões</h2><p>Limite e obrigação em uma visão rápida</p></div></div><div id="cardsGrid" class="cards"></div></article><article class="panel management-form-panel"><div class="head"><div><h2 id="cardFormTitle">Adicionar cartão</h2><p>Configure limite e ciclo da fatura</p></div><span class="management-mode" id="cardFormMode">Criação</span></div><form id="cardForm" class="management-form"><input id="cardId" type="hidden"/><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Essencial</h3><p class="form-section__description">Identificação e limite disponível.</p></div></div><div class="field-group field-group--two"><label>Nome<input id="cardName" required/></label><label class="money-field">Limite<input id="cardLimit" type="number" inputmode="decimal" step="0.01" required/></label></div></section><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Ciclo da fatura</h3><p class="form-section__description">Datas usadas para organizar as compras.</p></div></div><div class="field-group field-group--two"><label>Fechamento<input id="cardClose" type="number" inputmode="numeric" min="1" max="31" required/><small class="field-help">Compras após este dia entram normalmente na fatura seguinte.</small></label><label>Vencimento<input id="cardDue" type="number" inputmode="numeric" min="1" max="31" required/><small class="field-help">Dia previsto para pagar a fatura.</small></label></div></section><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Pagamento</h3><p class="form-section__description">Conta usada ao registrar o pagamento.</p></div></div><label>Conta pagadora<select id="cardPayAccount"></select></label></section><div class="section-actions"><button class="btn" id="cardSubmit">Salvar cartão</button></div></form></article></div>
       <article class="panel invoice-focus"><div class="head"><div><h2>Fatura atual</h2><p>Total, pagamento e compras da fatura selecionada</p></div><div class="actions"><button class="btn2 tiny" id="closeInvoice">Fechar fatura</button><button class="btn tiny" id="payInvoice">Registrar pagamento</button></div></div><div class="two"><label>Cartão<select id="invoiceCard"></select></label><label>Mês da fatura<input id="invoiceMonth" type="month"/></label></div><div class="invoice-summary"><div><small>Total da fatura</small><strong id="invoiceTotalView">R$ 0,00</strong></div><div><small>Pago</small><strong class="positive" id="invoicePaidView">R$ 0,00</strong></div><div><small>Falta pagar</small><strong class="warning" id="invoiceRemainingView">R$ 0,00</strong></div><div><small>Status</small><strong id="invoiceStatusView">Aberta</strong></div></div><div class="tablewrap desktop-table-mobile"><table><thead><tr><th>Compra</th><th>Parcela</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="invoiceTable"></tbody></table></div><div id="invoiceMobile" class="mobile-card-list"></div></article>
-      <article class="panel secondary-content"><div class="head"><div><h2>Importar fatura</h2><p>CSV, OFX ou PDF: data, descrição/título e valor</p></div><span class="badge">com conferência</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,.ofx,.pdf,text/csv,application/csv,text/comma-separated-values,application/x-ofx,application/ofx,application/pdf"/></label></div><div class="note" id="cardImportHint">O SFP identifica a convenção do arquivo, valida débitos/créditos e usa o Groq como segunda opinião quando disponível. A finalidade econômica (gasto, transferência etc.) é separada do débito do cartão. Nada é salvo antes da sua confirmação.</div></article>
+      <article class="panel secondary-content"><div class="head"><div><h2>Importar fatura</h2><p>CSV, OFX ou PDF: reimporte o arquivo completo sem duplicar</p></div><span class="badge">incremental</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,.ofx,.pdf,text/csv,application/csv,text/comma-separated-values,application/x-ofx,application/ofx,application/pdf"/></label></div><div class="note" id="cardImportHint">O SFP reconhece cada ocorrência, importa somente linhas inéditas e, quando o PDF informa, concilia total oficial, vencimento, fechamento e limite. Estornos reduzem a fatura sem fingir pagamento bancário. Nada é salvo antes da sua confirmação.</div></article>
       <article class="panel secondary-content hidden" id="cardImportReview"><div class="head"><div><h2>Conferir fatura</h2><p id="cardImportSummary"></p></div><div class="actions"><button class="btn2" type="button" id="cardImportCancel">Cancelar</button><button class="btn" type="button" id="cardImportConfirm">Importar fatura</button></div></div><div class="note" id="cardImportValidation"></div><div class="tablewrap desktop-table-mobile"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Destino</th><th>Status</th></tr></thead><tbody id="cardImportRows"></tbody></table></div><div id="cardImportMobile" class="mobile-card-list"></div></article>
       <article class="panel secondary-content"><div class="head"><div><h2>Histórico do cartão</h2><p>Alterações de limite, pagamentos e estornos</p></div></div><label>Cartão<select id="cardHistorySelect"></select></label><div id="cardHistory" class="card-history"></div></article>
     </section>
@@ -3392,7 +3392,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 <script src="safe-spend.js"></script>
 <script src="safe-spend-ui.js"></script>
 <script>
-const VERSION=202, SCHEMA_VERSION=14, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
+const VERSION=203, SCHEMA_VERSION=15, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
 const EXPENSE_CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Educação','Saúde','Assinaturas','Dívida','Lazer','Casa','Contas','Trabalho','Investimentos','Cartão','Ajuste','Outros'];
 const INCOME_CATEGORIES=['Trabalho','Rendimentos','Reembolso','Venda','Benefícios','Investimentos','Ajuste','Outros'];
 const CATEGORIES=[...new Set([...EXPENSE_CATEGORIES,...INCOME_CATEGORIES])];
@@ -3453,7 +3453,7 @@ const seed={
  debts:[
   {id:501,name:'Crédito Consignado CLT',contractTotal:4678.30,balance:4678.30,principalReceived:3800,financedAmount:3885.48,iof:85.48,rate:2.74,cetMonthly:3.08,cetAnnual:43.90,payment:467.83,installments:10,paidInstallments:0,firstDue:'2026-09-26',lastDue:'2027-06-26',paymentMethod:'payroll',history:[],note:'Contratado em 15/07/2026. Desconto em folha. Nenhuma parcela paga na carga inicial.'}
  ],
- goals:[],assets:[],statements:[],transferEvidence:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],
+ goals:[],assets:[],statements:[],invoiceImports:[],transferEvidence:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],
  creditFacilities:[
   {id:801,institution:'Itaú',name:'Crédito Especial',limit:200,used:0,type:'overdraft'},
   {id:802,institution:'Mercado Pago',name:'Linha de crédito',limit:1010,used:0,type:'credit_line'},
@@ -3635,6 +3635,10 @@ function migrateSchema(s){
     s.schemaVersion=13;
   }
   if(s.schemaVersion<14)s.schemaVersion=14;
+  if(s.schemaVersion<15){
+    s.invoiceImports??=[];
+    s.schemaVersion=15;
+  }
   return s
 }
 function sanitizeSophySecretsInPlace(target){
@@ -3648,7 +3652,7 @@ function hasPersistedUserData(s){return !!(s&&((s.accounts||[]).length||(s.trans
 window.hasPersistedUserData=hasPersistedUserData;
 function normalize(){
  state.version=VERSION;state.schemaVersion=SCHEMA_VERSION;state.baseDate??='2026-08-18';
- for(const k of ['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','transferEvidence','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'])state[k]??=[];
+ for(const k of ['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','invoiceImports','transferEvidence','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'])state[k]??=[];
  state.settings??=clone(seed.settings);if(state.settings.onboardingDone!==true&&hasPersistedUserData(state))state.settings.onboardingDone=true;state.settings.theme=(state.settings.theme&&['dark','light','system'].includes(state.settings.theme))?state.settings.theme:'dark';state.categoryBudgets??={};state.mesAtual??=localCivilMonth();state.ui??={};state.ui.invoiceMonthByCard??={};
  state.cards.forEach(c=>c.history??=[]);state.purchases.forEach(p=>p.refunds??=[]);state.invoices.forEach(i=>{i.payments??=[];i.paidAmount??=0});state.recurring.forEach(r=>{if(isPayrollRecurring(r)){r.dateRule='business-day-before-anchor';r.payrollAnchor=+r.payrollAnchor||+r.day||1}});
  state.sophy??={personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},rollingSummary:'',settings:{proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true}};
@@ -3708,7 +3712,7 @@ const FALLBACK_KEY='sfp_final_fallback';
 const LEGACY_QUARANTINE_KEY='sfp_legacy_quarantine';
 function validPersistedState(v){
  if(!v||typeof v!=='object'||Array.isArray(v))return false;
- const arrays=['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','transferEvidence','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'];
+ const arrays=['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','invoiceImports','transferEvidence','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'];
  if(arrays.some(key=>key in v&&!Array.isArray(v[key])))return false;
  if('settings'in v&&(!v.settings||typeof v.settings!=='object'||Array.isArray(v.settings)))return false;
  if('sophy'in v&&(!v.sophy||typeof v.sophy!=='object'||Array.isArray(v.sophy)))return false;
@@ -3839,7 +3843,7 @@ function createCleanInitialState(){
  return {
   version:VERSION,schemaVersion:SCHEMA_VERSION,mesAtual:localCivilMonth(),baseDate:localCivilDate(),persistenceMeta:{revision:1,savedAt:new Date().toISOString()},
   settings:{name:'SFP',day1:1,day2:15,budgetPreset:'503020',needs:50,wants:30,save:20,privacy:false,onboardingDone:false},
-  accounts:[],cards:[],transactions:[],transfers:[],purchases:[],invoiceAdjustments:[],invoices:[],recurring:[],debts:[],goals:[],assets:[],statements:[],transferEvidence:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],creditFacilities:[],ui:{invoiceMonthByCard:{}},
+  accounts:[],cards:[],transactions:[],transfers:[],purchases:[],invoiceAdjustments:[],invoices:[],recurring:[],debts:[],goals:[],assets:[],statements:[],invoiceImports:[],transferEvidence:[],classificationRules:[],categoryBudgets:{},snapshots:[],trash:[],undo:[],closedMonths:[],csvTemplates:[],favorites:[],creditFacilities:[],ui:{invoiceMonthByCard:{}},
   sophy:{personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},rollingSummary:'',settings:{proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true,preferOnlineForGeneral:true}}
  };
 }
@@ -4239,7 +4243,7 @@ function isWant(cat){return ['Lazer','Assinaturas'].includes(cat)}
 function actualSavings(m=state.mesAtual){return state.transfers.filter(t=>ym(t.date)===m&&account(t.toId)?.type.match(/Reserva|Investimento/)).reduce((s,t)=>s+t.amount,0)}
 function dueEvents(m=state.mesAtual){
  let out=[];[...txInMonth(m),...recurringOccurrences(m)].forEach(t=>out.push({date:t.date,desc:t.desc,amount:t.amount,type:t.kind,status:t.status,source:t.virtual?'recurring':'tx',sourceId:t.id,accountId:t.accountId}));
- state.cards.forEach(c=>{let rem=invoiceRemaining(c.id,m);if(rem>0){let[y,mo]=m.split('-').map(Number),day=clampDay(y,mo,c.dueDay);out.push({date:`${m}-${String(day).padStart(2,'0')}`,desc:`Fatura ${c.name}`,amount:rem,type:'expense',status:invoiceDisplayStatus(c.id,m)==='paid'?'paid':'pending',source:'invoice',sourceId:`${c.id}:${m}`,cardId:c.id})}});
+ state.cards.forEach(c=>{let rem=invoiceRemaining(c.id,m);if(rem>0){let inv=invoiceStatus(c.id,m),[y,mo]=m.split('-').map(Number),day=clampDay(y,mo,c.dueDay),date=inv.documentDueDate&&ym(inv.documentDueDate)===m?inv.documentDueDate:`${m}-${String(day).padStart(2,'0')}`;out.push({date,desc:`Fatura ${c.name}`,amount:rem,type:'expense',status:invoiceDisplayStatus(c.id,m)==='paid'?'paid':'pending',source:'invoice',sourceId:`${c.id}:${m}`,cardId:c.id})}});
  debtDueForMonth(m).forEach(d=>out.push({date:d.date,desc:`Consignado — ${d.debt.name} (${d.n}/${d.total})`,amount:d.amount,type:'expense',status:d.status,source:'payroll',sourceId:`${d.debt.id}:${d.n}`,debtId:d.debt.id}));
  return out.sort((a,b)=>a.date.localeCompare(b.date))
 }
@@ -5931,13 +5935,20 @@ function sfpRenderInvoiceV2(cardId,m){
     ${Math.abs(a.officialDifference)>.009?`
       <div class="sfp-invoice-bank-diff">
         <div>
-          <b>Ajuste do total oficial</b>
+          <b>Diferença para o total oficial</b>
           <small>
-            O total informado pelo banco difere da soma das compras cadastradas.
+            O total informado pelo banco difere da soma cadastrada. O SFP preservou a diferença sem criar lançamento artificial.
           </small>
         </div>
 
         <strong>${brl(a.officialDifference)}</strong>
+      </div>
+    `:''}
+
+    ${(a.st.documentDueDate||a.st.documentClosingDate)?`
+      <div class="sfp-invoice-explain">
+        <b>Datas confirmadas no documento:</b>
+        ${a.st.documentClosingDate?` fechamento em ${dateObj(a.st.documentClosingDate).toLocaleDateString('pt-BR')}`:''}${a.st.documentClosingDate&&a.st.documentDueDate?' · ':''}${a.st.documentDueDate?`vencimento em ${dateObj(a.st.documentDueDate).toLocaleDateString('pt-BR')}`:''}.
       </div>
     `:''}
 
@@ -6133,7 +6144,7 @@ function renderCards(){
     rows.push(`
       <tr>
         <td>
-          <b>Ajuste do total oficial</b>
+          <b>Diferença para o total oficial</b>
         </td>
 
         <td>Banco</td>
@@ -10275,23 +10286,66 @@ function parseCardCsv(txt){
   if(invalid)rows.invalid=invalid;
   return rows
 }
-function cardPurchaseDuplicate(cardId,row){
-  return state.purchases.some(p=>p.cardId===cardId&&p.desc===row.desc&&p.installments===row.installments&&p.firstMonth===row.firstMonth&&p.purchaseDate===row.purchaseDate&&Math.abs(p.total-row.total)<.02);
+function cardPurchaseMatches(p,cardId,row){
+  return p.cardId===cardId&&normalizeImportText(p.desc)===normalizeImportText(row.desc)&&p.installments===row.installments&&p.firstMonth===row.firstMonth&&p.purchaseDate===row.purchaseDate&&Math.abs(Number(p.total)-Number(row.total))<.02;
 }
-function cardPaymentDuplicate(invoice,row){
-  return (invoice.payments||[]).some(p=>{
-    if(p.date!==row.date||Math.abs(p.amount-row.amount)>=.01)return false;
-    let existingDesc=normalizeImportText(p.sourceDesc),importedDesc=normalizeImportText(row.desc);
-    return !existingDesc||!importedDesc||existingDesc===importedDesc;
-  });
+function cardPaymentMatches(p,row){
+  if(p.date!==row.date||Math.abs(Number(p.amount)-Number(row.amount))>=.01)return false;
+  let existingDesc=normalizeImportText(p.sourceDesc),importedDesc=normalizeImportText(row.desc);
+  return !existingDesc||!importedDesc||existingDesc===importedDesc;
 }
+function cardCreditMatches(a,cardId,month,row){
+  return a.cardId===cardId&&a.month===month&&a.date===row.date&&Math.abs(Math.abs(Number(a.amount))-Number(row.amount))<.01&&normalizeImportText(a.desc)===normalizeImportText(row.desc);
+}
+function invoiceImportBaseKey(cardId,row){
+  let fitid=String(row.fitid||'').trim();
+  if(fitid)return `card:${cardId}|fit:${fitid}`;
+  let desc=normalizeImportText(row.desc),date=row.date||'',cents=Math.round(Number(row.amount||row.total||0)*100);
+  if(row.kind==='purchase')return `card:${cardId}|purchase|${date}|${desc}|${Math.round(Number(row.total||0)*100)}|${row.installments}|${row.firstMonth}`;
+  if(row.kind==='credit')return `card:${cardId}|credit|${date}|${desc}|${cents}|${row.targetMonth}`;
+  return `card:${cardId}|payment|${date}|${desc}|${cents}|${row.targetMonth}`;
+}
+function invoiceImportKey(cardId,row,occurrences){
+  let base=invoiceImportBaseKey(cardId,row);
+  if(row.fitid)return base;
+  let occurrence=(occurrences.get(base)||0)+1;occurrences.set(base,occurrence);
+  return `${base}|occ:${occurrence}`;
+}
+function existingInvoiceImportMatch(cardId,row,reserved=new Set()){
+  if(row.kind==='purchase'){
+    let exact=state.purchases.find(p=>p.cardId===cardId&&p.invoiceImportKey===row.importKey&&!reserved.has(`purchase:${p.id}`));
+    if(exact)return{source:'purchase',id:exact.id,token:`purchase:${exact.id}`,legacy:false};
+    let legacy=state.purchases.find(p=>(p.tags||[]).includes('fatura-importada')&&!p.invoiceImportKey&&cardPurchaseMatches(p,cardId,{...row,purchaseDate:row.date})&&!reserved.has(`purchase:${p.id}`));
+    return legacy?{source:'purchase',id:legacy.id,token:`purchase:${legacy.id}`,legacy:true}:null;
+  }
+  if(row.kind==='credit'){
+    let exact=state.invoiceAdjustments.find(a=>a.cardId===cardId&&a.invoiceImportKey===row.importKey&&!reserved.has(`credit:${a.id}`));
+    if(exact)return{source:'credit',id:exact.id,token:`credit:${exact.id}`,legacy:false};
+    let legacy=state.invoiceAdjustments.find(a=>a.source==='invoice-import'&&!a.invoiceImportKey&&cardCreditMatches(a,cardId,row.targetMonth,row)&&!reserved.has(`credit:${a.id}`));
+    return legacy?{source:'credit',id:legacy.id,token:`credit:${legacy.id}`,legacy:true}:null;
+  }
+  let invoice=state.invoices.find(i=>i.cardId==cardId&&i.month===row.targetMonth),payments=invoice?.payments||[];
+  let exactIndex=payments.findIndex((p,index)=>p.invoiceImportKey===row.importKey&&!reserved.has(`payment:${invoice.id}:${index}`));
+  if(exactIndex>=0)return{source:'payment',invoiceId:invoice.id,index:exactIndex,token:`payment:${invoice.id}:${exactIndex}`,legacy:false};
+  let legacyIndex=payments.findIndex((p,index)=>!p.invoiceImportKey&&cardPaymentMatches(p,row)&&!reserved.has(`payment:${invoice.id}:${index}`));
+  return legacyIndex>=0?{source:'payment',invoiceId:invoice.id,index:legacyIndex,token:`payment:${invoice.id}:${legacyIndex}`,legacy:true}:null;
+}
+function attachInvoiceImportKey(match,key){
+  if(!match?.legacy||!key)return false;
+  if(match.source==='purchase'){let p=state.purchases.find(x=>String(x.id)===String(match.id));if(p&&!p.invoiceImportKey){p.invoiceImportKey=key;return true}}
+  if(match.source==='credit'){let a=state.invoiceAdjustments.find(x=>String(x.id)===String(match.id));if(a&&!a.invoiceImportKey){a.invoiceImportKey=key;return true}}
+  if(match.source==='payment'){let inv=state.invoices.find(x=>String(x.id)===String(match.invoiceId)),p=inv?.payments?.[match.index];if(p&&!p.invoiceImportKey){p.invoiceImportKey=key;return true}}
+  return false;
+}
+function cardPurchaseDuplicate(cardId,row){return !!existingInvoiceImportMatch(cardId,{...row,kind:'purchase',date:row.purchaseDate||row.date,importKey:row.importKey||null})}
+function cardPaymentDuplicate(invoice,row){return (invoice.payments||[]).some(p=>row.importKey&&p.invoiceImportKey===row.importKey||cardPaymentMatches(p,row))}
 function normalizeImportSignalText(value){
   return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
 }
 function invoiceSemanticHint(desc){
   const d=normalizeImportSignalText(desc);
   if(/\b(pagamento recebido|pagamento da fatura|pagamento de fatura|payment received|pagamento cartao|pagamento cartão)\b/.test(d))return 'payment';
-  if(/\b(estorno|reembolso|refund|cashback|ajuste credor|credito recebido)\b/.test(d))return 'payment';
+  if(/\b(estorno|reembolso|refund|cashback|ajuste credor|credito recebido|crédito recebido)\b/.test(d))return 'credit';
   if(/parcela\s*\d+\s*\/\s*\d+/.test(d)||/\bpix no credito\b/.test(d))return 'purchase';
   return null;
 }
@@ -10307,7 +10361,7 @@ function localImportAnalysis({rows,ext='',text='',intendedType='statement'}={}){
     const d=normalizeImportSignalText(r.desc),hint=invoiceSemanticHint(r.desc);
     if(/parcela\s*\d+\s*\/\s*\d+/.test(d)){invoiceScore+=3;if(r.amount<0)negPurchase++;else posPurchase++;}
     if(/\bpix no credito\b/.test(d)){invoiceScore+=2;if(r.amount<0)negPurchase++;else posPurchase++;}
-    if(hint==='payment'){invoiceScore+=2.5;if(r.amount<0)negPayment++;else posPayment++;}
+    if(hint==='payment'||hint==='credit'){invoiceScore+=2.5;if(r.amount<0)negPayment++;else posPayment++;}
     if(/\b(salario|ted|doc|tarifa bancaria|pix enviado|pix recebido|transferencia recebida|transferencia enviada)\b/.test(d))statementScore+=1.5;
   });
   if(posPayment>0){negPurchase+=(rows||[]).filter(r=>r.amount<0&&!invoiceSemanticHint(r.desc)).length;}
@@ -10333,7 +10387,7 @@ function parseImportGroqJson(content){
 async function validateImportWithGroq({rows,ext,intendedType,local}={}){
   if(!importGroqAvailable())return null;
   const safeRows=(rows||[]).slice(0,60).map((r,index)=>({index,date:r.date,description:sanitizeImportDescription(r.desc),amount:Number(r.amount)}));
-  const instruction='Classifique um arquivo financeiro brasileiro. Responda SOMENTE JSON com documentType (invoice|statement|unknown), confidence 0..1, signConvention (debitNegative|debitPositive|unknown), rows [{index,kind,confidence}] onde kind é purchase|payment|unknown, e warnings []. Não altere data nem valor. Aqui purchase significa somente débito/encargo na fatura, não prova de despesa econômica. Pagamento recebido/estorno/reembolso é crédito/pagamento. Compra parcelada é débito da fatura. Pix no Crédito é débito do cartão, mas sua finalidade econômica pode ser gasto, transferência ou outra movimentação e pode exigir revisão. Em fatura OFX, sinais podem ser o oposto de CSV.';
+  const instruction='Classifique um arquivo financeiro brasileiro. Responda SOMENTE JSON com documentType (invoice|statement|unknown), confidence 0..1, signConvention (debitNegative|debitPositive|unknown), rows [{index,kind,confidence}] onde kind é purchase|payment|credit|unknown, e warnings []. Não altere data nem valor. Aqui purchase significa somente débito/encargo na fatura, não prova de despesa econômica. Pagamento recebido é payment. Estorno, reembolso, cashback e ajuste credor são credit e reduzem a fatura atual sem virar pagamento bancário. Compra parcelada é débito da fatura. Pix no Crédito é débito do cartão, mas sua finalidade econômica pode ser gasto, transferência ou outra movimentação e pode exigir revisão. Em fatura OFX, sinais podem ser o oposto de CSV.';
   const model=(state?.sophy?.settings?.model&&state.sophy.settings.model!=='default')?state.sophy.settings.model:'openai/gpt-oss-120b';
   const payload={model,messages:[{role:'system',content:instruction},{role:'user',content:JSON.stringify({intendedType,extension:ext,local:{documentType:local.documentType,confidence:local.confidence,signConvention:local.signConvention,signConfidence:local.signConfidence},rows:safeRows})}],temperature:0,max_tokens:1400};
   const raw=window.AndroidBridge.callSophyGroq(JSON.stringify(payload)),data=JSON.parse(raw||'{}');if(data.error)throw Error(data.error.message||'Groq indisponível');
@@ -10341,7 +10395,7 @@ async function validateImportWithGroq({rows,ext,intendedType,local}={}){
   const documentType=['invoice','statement','unknown'].includes(parsed.documentType)?parsed.documentType:'unknown';
   const signConvention=['debitNegative','debitPositive','unknown'].includes(parsed.signConvention)?parsed.signConvention:'unknown';
   const confidence=Math.max(0,Math.min(1,Number(parsed.confidence)||0));
-  const rowKinds={};(Array.isArray(parsed.rows)?parsed.rows:[]).forEach(x=>{let i=+x.index,c=Math.max(0,Math.min(1,Number(x.confidence)||0));if(Number.isInteger(i)&&i>=0&&i<(rows||[]).length&&['purchase','payment','unknown'].includes(x.kind))rowKinds[i]={kind:x.kind,confidence:c}});
+  const rowKinds={};(Array.isArray(parsed.rows)?parsed.rows:[]).forEach(x=>{let i=+x.index,c=Math.max(0,Math.min(1,Number(x.confidence)||0));if(Number.isInteger(i)&&i>=0&&i<(rows||[]).length&&['purchase','payment','credit','unknown'].includes(x.kind))rowKinds[i]={kind:x.kind,confidence:c}});
   return {documentType,confidence,signConvention,rowKinds,warnings:Array.isArray(parsed.warnings)?parsed.warnings.slice(0,5).map(String):[]};
 }
 async function analyzeImportDocument({rows,ext,text,intendedType}={}){
@@ -10365,31 +10419,39 @@ function classifyInvoiceRows(rows,analysis){
     return {...r,invoiceKind,classificationConfidence:strong?1:(ai?.confidence||analysis?.signConfidence||.5)};
   });
 }
-function prepareCardImport(rows,file,analysis=null){
+function prepareCardImport(rows,file,analysis=null,meta=null){
   let cardId=+$('cardImportCard').value,month=$('cardImportMonth').value||currentInvoiceMonth(card(cardId));
   if(!card(cardId))throw Error('Selecione um cartão válido antes de importar a fatura.');
-  let futurePurchases=[],futurePayments=[],draft=rows.map(r=>{
-    const resolvedKind=r.invoiceKind||(r.amount<0?'payment':'purchase');
-    if(resolvedKind==='payment'){let targetMonth=monthAdd(month,-1),row={...r,kind:'payment',targetMonth,amount:Math.abs(r.amount)},invoice=state.invoices.find(i=>i.cardId==cardId&&i.month===targetMonth)||{payments:[]},duplicate=cardPaymentDuplicate(invoice,row)||futurePayments.some(x=>x.targetMonth===targetMonth&&x.date===row.date&&x.amount===row.amount&&normalizeImportText(x.desc)===normalizeImportText(row.desc));if(!duplicate)futurePayments.push(row);return {...row,duplicate};}
-    let amount=Math.abs(r.amount),pm=r.desc.match(/Parcela\s*(\d+)\s*\/\s*(\d+)/i),desc=r.desc.replace(/\s*-?\s*Parcela\s*\d+\s*\/\s*\d+/i,'').trim();
-    let row=pm?{...r,amount,desc,kind:'purchase',installment:+pm[1],installments:+pm[2],firstMonth:monthAdd(month,-(+pm[1]-1)),total:Math.round(amount*(+pm[2])*100)/100}:{...r,amount,desc,kind:'purchase',installment:1,installments:1,firstMonth:month,total:amount};
-    let duplicate=cardPurchaseDuplicate(cardId,{...row,purchaseDate:row.date})||futurePurchases.some(x=>x.desc===row.desc&&x.installments===row.installments&&x.firstMonth===row.firstMonth&&x.purchaseDate===row.date&&Math.abs(x.total-row.total)<.02);if(!duplicate)futurePurchases.push({...row,purchaseDate:row.date});return {...row,duplicate};
-  });
-  cardImportDraft={cardId,month,file,rows:draft,invalid:rows.invalid||0,analysis};renderCardImportDraft();
+  let occurrences=new Map(),reserved=new Set(),seenKeys=new Set(),draft=[];
+  for(const input of rows){
+    const resolvedKind=input.invoiceKind||(input.amount<0?'payment':'purchase');let row;
+    if(resolvedKind==='payment'||resolvedKind==='credit'){
+      row={...input,kind:resolvedKind,targetMonth:resolvedKind==='payment'?monthAdd(month,-1):month,amount:Math.abs(Number(input.amount)||0)};
+    }else{
+      let amount=Math.abs(Number(input.amount)||0),pm=String(input.desc||'').match(/Parcela\s*(\d+)\s*\/\s*(\d+)/i),desc=String(input.desc||'').replace(/\s*-?\s*Parcela\s*\d+\s*\/\s*\d+/i,'').trim();
+      row=pm?{...input,amount,desc,kind:'purchase',installment:+pm[1],installments:+pm[2],firstMonth:monthAdd(month,-(+pm[1]-1)),total:Math.round(amount*(+pm[2])*100)/100}:{...input,amount,desc,kind:'purchase',installment:1,installments:1,firstMonth:month,total:amount};
+    }
+    row.importKey=invoiceImportKey(cardId,row,occurrences);
+    let repeatedFitid=seenKeys.has(row.importKey),match=repeatedFitid?null:existingInvoiceImportMatch(cardId,row,reserved);
+    if(match)reserved.add(match.token);seenKeys.add(row.importKey);
+    draft.push({...row,duplicate:repeatedFitid||!!match,duplicateMatch:match,duplicateReason:repeatedFitid?'repeated-file-id':match?'already-imported':null});
+  }
+  cardImportDraft={cardId,month,file,rows:draft,invalid:rows.invalid||0,analysis,meta:meta?{...meta,file}:null};renderCardImportDraft();
 }
 function cardImportNatureLabel(r,{mobile=false}={}){
-  if(r.kind==='payment')return `${mobile?'Pagamento/crédito':'Pagamento/crédito da fatura'} ${monthName(r.targetMonth)}`;
+  if(r.kind==='payment')return `${mobile?'Pagamento':'Pagamento da fatura'} ${monthName(r.targetMonth)}`;
+  if(r.kind==='credit')return `${mobile?'Crédito/estorno':'Crédito ou estorno na fatura'} ${monthName(r.targetMonth)}`;
   const pix=/\bpix no credito\b/.test(normalizeImportSignalText(r.desc));
   const base=pix?'Pix no crédito • débito na fatura':'Débito na fatura';
   return `${base}${r.installments>1?` • parcela ${r.installment}/${r.installments}`:''}`;
 }
 function renderCardImportDraft(){
-  let draft=cardImportDraft;if(!draft)return;let fresh=draft.rows.filter(r=>!r.duplicate),purchases=fresh.filter(r=>r.kind==='purchase').length,payments=fresh.filter(r=>r.kind==='payment').length,duplicates=draft.rows.length-fresh.length;
-  $('cardImportReview').classList.remove('hidden');$('cardImportSummary').textContent=`${draft.rows.length} linha(s) lida(s): ${purchases} débito(s) de fatura, ${payments} pagamento(s)/crédito(s) e ${duplicates} já importada(s)${draft.invalid?` e ${draft.invalid} linha(s) inválida(s) ignorada(s)`:''}.`;
-  let a=draft.analysis,validation=$('cardImportValidation');if(validation){let type=a?.documentType==='invoice'?'Fatura':a?.documentType==='statement'?'Extrato':'Tipo incerto',pct=Math.round((a?.confidence||0)*100),sign=a?.signConvention==='debitNegative'?'débitos negativos':a?.signConvention==='debitPositive'?'débitos positivos':'sinais ambíguos',engine=a?.validator==='local+groq'?'regras locais + Groq':'regras locais';validation.textContent=a?`Detectado: ${type} (${pct}%). Convenção: ${sign}. Validação: ${engine}.${a.warnings?.length?' '+a.warnings.join(' '):''}`:'Prévia validada pelas regras locais.';}
-  const rowHtml=r=>`<tr><td>${dateObj(r.date).toLocaleDateString('pt-BR')}</td><td>${sfpEsc(r.desc)}</td><td class="${r.kind==='payment'?'positive':'negative'}">${brl(r.kind==='payment'?r.amount:-r.amount)}</td><td>${sfpEsc(cardImportNatureLabel(r))}</td><td>${r.duplicate?'Já importada':'Pronta para importar'}</td></tr>`;
+  let draft=cardImportDraft;if(!draft)return;let fresh=draft.rows.filter(r=>!r.duplicate),purchases=fresh.filter(r=>r.kind==='purchase').length,payments=fresh.filter(r=>r.kind==='payment').length,credits=fresh.filter(r=>r.kind==='credit').length,duplicates=draft.rows.length-fresh.length;
+  $('cardImportReview').classList.remove('hidden');$('cardImportSummary').textContent=`${draft.rows.length} linha(s): ${purchases} débito(s), ${payments} pagamento(s), ${credits} crédito(s)/estorno(s), ${duplicates} já importada(s)${draft.invalid?` e ${draft.invalid} inválida(s) ignorada(s)`:''}.`;
+  let a=draft.analysis,validation=$('cardImportValidation');if(validation){let type=a?.documentType==='invoice'?'Fatura':a?.documentType==='statement'?'Extrato':'Tipo incerto',pct=Math.round((a?.confidence||0)*100),sign=a?.signConvention==='debitNegative'?'débitos negativos':a?.signConvention==='debitPositive'?'débitos positivos':'sinais ambíguos',engine=a?.validator==='local+groq'?'regras locais + Groq':'regras locais',meta=[];if(Number.isFinite(Number(draft.meta?.officialTotal)))meta.push(`total oficial ${brl(draft.meta.officialTotal)}`);if(draft.meta?.dueDate)meta.push(`vence em ${dateObj(draft.meta.dueDate).toLocaleDateString('pt-BR')}`);if(draft.meta?.closingDate)meta.push(`fecha em ${dateObj(draft.meta.closingDate).toLocaleDateString('pt-BR')}`);validation.textContent=(a?`Detectado: ${type} (${pct}%). Convenção: ${sign}. Validação: ${engine}.${a.warnings?.length?' '+a.warnings.join(' '):''}`:'Prévia validada pelas regras locais.')+(meta.length?` Documento: ${meta.join(' • ')}.`:'');}
+  const rowHtml=r=>`<tr><td>${dateObj(r.date).toLocaleDateString('pt-BR')}</td><td>${sfpEsc(r.desc)}</td><td class="${r.kind==='purchase'?'negative':'positive'}">${brl(r.kind==='purchase'?-r.amount:r.amount)}</td><td>${sfpEsc(cardImportNatureLabel(r))}</td><td>${r.duplicate?'Já importada':'Pronta para importar'}</td></tr>`;
   $('cardImportRows').innerHTML=draft.rows.map(rowHtml).join('');
-  if($('cardImportMobile'))$('cardImportMobile').innerHTML=draft.rows.map(r=>`<div class="mobile-record"><div class="mobile-record-head"><div><b>${sfpEsc(r.desc)}</b><small>${dateObj(r.date).toLocaleDateString('pt-BR')} • ${sfpEsc(cardImportNatureLabel(r,{mobile:true}))}</small></div><strong class="${r.kind==='payment'?'positive':'negative'}">${brl(r.kind==='payment'?r.amount:-r.amount)}</strong></div><small>${r.duplicate?'Já importada':'Pronta para importar'}</small></div>`).join('');
+  if($('cardImportMobile'))$('cardImportMobile').innerHTML=draft.rows.map(r=>`<div class="mobile-record"><div class="mobile-record-head"><div><b>${sfpEsc(r.desc)}</b><small>${dateObj(r.date).toLocaleDateString('pt-BR')} • ${sfpEsc(cardImportNatureLabel(r,{mobile:true}))}</small></div><strong class="${r.kind==='purchase'?'negative':'positive'}">${brl(r.kind==='purchase'?-r.amount:r.amount)}</strong></div><small>${r.duplicate?'Já importada':'Pronta para importar'}</small></div>`).join('');
 }
 
 function readFileAsText(file){return new Promise((resolve,reject)=>{let rd=new FileReader();rd.onload=()=>resolve(String(rd.result||''));rd.onerror=()=>reject(Error('Não consegui abrir o arquivo.'));rd.readAsText(file,'UTF-8')})}
@@ -10409,6 +10471,62 @@ function pdfImportDate(line,{month=null}={}){
   m=String(line||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/\b(\d{1,2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)(?:\s+(\d{2,4}))?\b/);
   if(!m)return null;let year=m[3]?(m[3].length===2?'20'+m[3]:m[3]):(month?.slice(0,4)||String(new Date().getFullYear()));return {raw:m[0],date:`${year}-${String(map[m[2]]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`};
 }
+function validCivilImportDate(value){
+  let m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return false;
+  let d=new Date(`${value}T12:00:00`);return !Number.isNaN(d.getTime())&&d.getFullYear()===+m[1]&&d.getMonth()+1===+m[2]&&d.getDate()===+m[3];
+}
+function invoiceSummaryLabel(value){
+  let d=normalizeImportSignalText(value);
+  return /^(?:valor )?total da fatura\b|^valor da fatura\b|^total a pagar\b|^pagamento minimo\b|^data de vencimento\b|^vencimento\b|^data de fechamento\b|^fechamento\b|^fecha(?:mento)? em\b|^limite (?:total|disponivel)\b|^resumo da fatura\b/.test(d);
+}
+function invoiceMetaMoney(lines,labelRe){
+  const moneyRe=/((?:R\$\s*)?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{2}|\.\d{2}))/ig;
+  for(let i=0;i<lines.length;i++){
+    if(!labelRe.test(normalizeImportSignalText(lines[i])))continue;
+    let scope=lines[i],matches=[...scope.matchAll(moneyRe)];
+    if(!matches.length&&lines[i+1])matches=[...(scope+' '+lines[i+1]).matchAll(moneyRe)];
+    if(matches.length){let value=Math.abs(parseMoney(matches[matches.length-1][1]));if(Number.isFinite(value))return Math.round(value*100)/100}
+  }
+  return null;
+}
+function invoiceMetaDate(lines,labelRe,month){
+  for(let i=0;i<lines.length;i++){
+    if(!labelRe.test(normalizeImportSignalText(lines[i])))continue;
+    let found=pdfImportDate(lines[i],{month})||pdfImportDate(lines[i+1]||'',{month});
+    if(found&&validCivilImportDate(found.date))return found.date;
+  }
+  return null;
+}
+function invoiceDocumentMeta(text,type='pdf',rows=[],month=null){
+  if(type!=='pdf')return null;
+  let lines=String(text||'').replace(/\u00a0/g,' ').split(/\r?\n/).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
+  let officialTotal=invoiceMetaMoney(lines,/\b(?:valor )?total da fatura\b|\bvalor da fatura\b|\btotal a pagar\b/),
+      minimumPayment=invoiceMetaMoney(lines,/\bpagamento minimo\b|\bvalor minimo\b/),
+      availableLimit=invoiceMetaMoney(lines,/\blimite disponivel\b/),
+      totalLimit=invoiceMetaMoney(lines,/\blimite total\b/),
+      dueDate=invoiceMetaDate(lines,/\bdata de vencimento\b|^vencimento\b/,month),
+      closingDate=invoiceMetaDate(lines,/\bdata de fechamento\b|^fechamento\b|\bfecha(?:mento)? em\b/,month);
+  let meta={source:type};
+  if(officialTotal!=null)meta.officialTotal=officialTotal;
+  if(minimumPayment!=null)meta.minimumPayment=minimumPayment;
+  if(availableLimit!=null)meta.availableLimit=availableLimit;
+  if(totalLimit!=null)meta.totalLimit=totalLimit;
+  if(dueDate)meta.dueDate=dueDate;
+  if(closingDate)meta.closingDate=closingDate;
+  return Object.keys(meta).length>1?meta:null;
+}
+function applyInvoiceDocumentMeta(draft){
+  let meta=draft.meta,inv=ensureInvoice(draft.cardId,draft.month),c=card(draft.cardId),changed=false;
+  const set=(obj,key,value)=>{if(value==null||obj[key]===value)return false;obj[key]=value;changed=true;return true};
+  if(meta&&Number.isFinite(Number(meta.officialTotal))){set(inv,'officialTotal',Math.round(Number(meta.officialTotal)*100)/100);set(inv,'officialTotalSource','document')}
+  if(meta?.dueDate)set(inv,'documentDueDate',meta.dueDate);
+  if(meta?.closingDate)set(inv,'documentClosingDate',meta.closingDate);
+  if(meta&&Number.isFinite(Number(meta.minimumPayment)))set(inv,'minimumPayment',Math.round(Number(meta.minimumPayment)*100)/100);
+  if(meta&&Number.isFinite(Number(meta.availableLimit))&&c)set(c,'availableLimitSnapshot',Math.round(Number(meta.availableLimit)*100)/100);
+  if(meta&&Number.isFinite(Number(meta.totalLimit))&&c&&Math.abs(Number(c.limit)-Number(meta.totalLimit))>=.01){let old=Number(c.limit)||0;c.limit=Math.round(Number(meta.totalLimit)*100)/100;addCardHistory(c.id,'limit',`Limite conciliado pela fatura: ${brl(old)} → ${brl(c.limit)}`,c.limit);changed=true}
+  if(changed&&meta){inv.documentFile=meta.file||draft.file||null;inv.documentImportedAt=new Date().toISOString();inv.documentSource=meta.source||null}
+  return changed;
+}
 function parsePdfFinancialText(text,{intendedType='statement',month=null}={}){
   const lines=String(text||'').replace(/\u00a0/g,' ').split(/\r?\n/).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean),rows=[];
   const hasValueBalanceColumns=intendedType==='statement'&&lines.some(line=>/\bvalor\b/i.test(line)&&/\bsaldo\b/i.test(line));
@@ -10422,7 +10540,7 @@ function parsePdfFinancialText(text,{intendedType='statement',month=null}={}){
     if(movement[2]?.toUpperCase()==='D')amount=-Math.abs(amount);else if(movement[2]?.toUpperCase()==='C')amount=Math.abs(amount);
     const operationId=hasValueBalanceColumns?(body.match(/\b\d{10,20}\b/)||[])[0]||null:null;
     let desc=body.replace(amountRe,' ').replace(hasValueBalanceColumns?/\b\d{10,20}\b/g:/$^/g,' ').replace(/^[-–—|:;\s]+|[-–—|:;\s]+$/g,'').replace(/\s+/g,' ').trim();
-    if(!desc||isStatementBalanceLabel(desc)||/^(total|vencimento|limite|resumo|valor)$/i.test(desc))continue;
+    if(!desc||isStatementBalanceLabel(desc)||/^(total|vencimento|limite|resumo|valor)$/i.test(desc)||(intendedType==='invoice'&&invoiceSummaryLabel(desc)))continue;
     if(intendedType==='statement'&&!explicit){let d=normalizeStatementLabel(desc);if(/compra|debito|saque|tarifa|pix enviado|transferencia enviada|pagamento efetuado/.test(d))amount=-Math.abs(amount);else if(/credito|recebido|salario|pix recebido|estorno|rendimento/.test(d))amount=Math.abs(amount)}
     if(amount)rows.push({date:dt.date,desc,amount,fitid:operationId});
   }
@@ -10439,13 +10557,34 @@ async function importCardCsv(file){
     if(!rows.length)throw Error(ext==='pdf'?'Não encontrei linhas com data e valor no PDF. Se ele for escaneado, será necessário OCR.':'Nenhuma movimentação reconhecida no arquivo.');
     let analysis=await analyzeImportDocument({rows,ext,text,intendedType:'invoice'});
     if(analysis.documentType==='statement'&&analysis.confidence>=.8){let ok=await sfpConfirm({title:'Este arquivo parece ser um extrato',message:`A validação classificou o arquivo como extrato com ${Math.round(analysis.confidence*100)}% de confiança. Quer continuar mesmo assim como fatura?`,confirmText:'Continuar como fatura',cancelText:'Cancelar'});if(!ok)return;}
-    prepareCardImport(classifyInvoiceRows(rows,analysis),file.name,analysis);
+    let meta=invoiceDocumentMeta(text,ext,rows,$('cardImportMonth').value);
+    prepareCardImport(classifyInvoiceRows(rows,analysis),file.name,analysis,meta);
   }catch(e){cardImportDraft=null;$('cardImportReview').classList.add('hidden');toast('Não consegui ler a fatura: '+e.message,'error')}finally{$('cardImportFile').value=''}
 }
 async function confirmCardImport(){
   let draft=cardImportDraft;if(!draft)return;let before=clone(state);try{
-    let added=0,credits=0;for(let r of draft.rows){if(r.duplicate)continue;if(r.kind==='payment'){let inv=ensureInvoice(draft.cardId,r.targetMonth);if(cardPaymentDuplicate(inv,r))continue;inv.payments.push({date:r.date,amount:r.amount,balanceImpact:false,targetMonth:r.targetMonth,sourceDesc:r.desc});inv.paidAmount=Math.round(((inv.paidAmount||0)+r.amount)*100)/100;if(inv.officialTotal==null&&invoiceCalculated(draft.cardId,r.targetMonth)<=0)inv.historicalOnly=true;credits++;continue}if(cardPurchaseDuplicate(draft.cardId,{...r,purchaseDate:r.date}))continue;let sem=semanticClassify(r.desc,-Math.abs(r.total));state.purchases.push({id:uid(),cardId:draft.cardId,desc:r.desc,total:r.total,installments:r.installments,purchaseDate:r.date,firstMonth:r.firstMonth,category:sem.category||'Outros',status:'active',note:'Importado de fatura.',tags:['fatura-importada'],refunds:[],semanticClass:sem.semanticClass||'unclassified',economicImpact:sem.economicImpact||'review',classificationConfidence:sem.confidence||null,classificationReason:sem.reason||null});added++;}
-    let inv=ensureInvoice(draft.cardId,draft.month);inv.officialTotal=invoiceCalculated(draft.cardId,draft.month);state.ui.invoiceMonthByCard[draft.cardId]=draft.month;await save('Importar fatura de cartão');cardImportDraft=null;$('cardImportReview').classList.add('hidden');toast(`${added} débitos de fatura e ${credits} pagamentos/créditos importados.`,'success')
+    let purchasesAdded=0,paymentsAdded=0,creditsAdded=0,identityChanged=false;
+    for(let r of draft.rows){
+      if(r.duplicate){identityChanged=attachInvoiceImportKey(r.duplicateMatch,r.importKey)||identityChanged;continue}
+      if(r.kind==='payment'){
+        let inv=ensureInvoice(draft.cardId,r.targetMonth);if((inv.payments||[]).some(p=>p.invoiceImportKey===r.importKey))continue;
+        inv.payments.push({date:r.date,amount:r.amount,balanceImpact:false,targetMonth:r.targetMonth,sourceDesc:r.desc,invoiceImportKey:r.importKey,sourceFile:draft.file});
+        inv.paidAmount=Math.round(((inv.paidAmount||0)+r.amount)*100)/100;if(inv.officialTotal==null&&invoiceCalculated(draft.cardId,r.targetMonth)<=0)inv.historicalOnly=true;paymentsAdded++;continue;
+      }
+      if(r.kind==='credit'){
+        if(state.invoiceAdjustments.some(a=>a.invoiceImportKey===r.importKey))continue;
+        state.invoiceAdjustments.push({id:uid(),cardId:draft.cardId,month:r.targetMonth,date:r.date,desc:r.desc,amount:-Math.abs(r.amount),source:'invoice-import',invoiceImportKey:r.importKey,sourceFile:draft.file});creditsAdded++;continue;
+      }
+      if(state.purchases.some(p=>p.invoiceImportKey===r.importKey))continue;
+      let sem=semanticClassify(r.desc,-Math.abs(r.total));state.purchases.push({id:uid(),cardId:draft.cardId,desc:r.desc,total:r.total,installments:r.installments,purchaseDate:r.date,firstMonth:r.firstMonth,category:sem.category||'Outros',status:'active',note:'Importado de fatura.',tags:['fatura-importada'],refunds:[],invoiceImportKey:r.importKey,sourceFile:draft.file,semanticClass:sem.semanticClass||'unclassified',economicImpact:sem.economicImpact||'review',classificationConfidence:sem.confidence||null,classificationReason:sem.reason||null});purchasesAdded++;
+    }
+    let inv=ensureInvoice(draft.cardId,draft.month),metaChanged=applyInvoiceDocumentMeta(draft),calculated=invoiceCalculated(draft.cardId,draft.month),calculatedChanged=false;
+    if(!Number.isFinite(Number(draft.meta?.officialTotal))&&!inv.closedAt&&!['closed','paid'].includes(inv.status)&&inv.officialTotalSource!=='document'&&(inv.officialTotal==null||Math.abs(Number(inv.officialTotal)-calculated)>=.01)){inv.officialTotal=calculated;inv.officialTotalSource='calculated-import';calculatedChanged=true}
+    let uiChanged=state.ui.invoiceMonthByCard[draft.cardId]!==draft.month;state.ui.invoiceMonthByCard[draft.cardId]=draft.month;
+    let changed=purchasesAdded>0||paymentsAdded>0||creditsAdded>0||identityChanged||metaChanged||calculatedChanged||uiChanged;
+    if(!changed){cardImportDraft=null;$('cardImportReview').classList.add('hidden');toast('Fatura já estava atualizada. Nenhuma duplicata foi criada.','info');return}
+    state.invoiceImports.push({id:uid(),cardId:draft.cardId,card:card(draft.cardId)?.name||'Cartão',month:draft.month,file:draft.file||'Fatura',count:purchasesAdded+paymentsAdded+creditsAdded,purchases:purchasesAdded,payments:paymentsAdded,credits:creditsAdded,duplicates:draft.rows.filter(r=>r.duplicate).length,officialTotal:Number.isFinite(Number(draft.meta?.officialTotal))?Number(draft.meta.officialTotal):null,dueDate:draft.meta?.dueDate||null,closingDate:draft.meta?.closingDate||null,importedAt:new Date().toISOString()});
+    await save('Importar fatura de cartão');cardImportDraft=null;$('cardImportReview').classList.add('hidden');toast(`${purchasesAdded} débito(s), ${paymentsAdded} pagamento(s) e ${creditsAdded} crédito(s) novos. Fatura conciliada sem duplicar.`, 'success')
   }catch(e){state=before;lastSavedState=clone(before);renderAll();toast('Não foi possível importar a fatura. Nenhuma alteração foi aplicada.','error');console.error('Falha ao importar fatura:',e)}
 }
 

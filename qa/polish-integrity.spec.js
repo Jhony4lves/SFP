@@ -474,7 +474,7 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
     expect(errors).toEqual([]);
   });
 
-  test('15. Versão da estrutura: SCHEMA_VERSION=14 é dinâmico e única fonte da verdade', async ({ page }) => {
+  test('15. Versão da estrutura: SCHEMA_VERSION=15 é dinâmico e única fonte da verdade', async ({ page }) => {
     const errors = monitor(page);
     await boot(page);
 
@@ -484,9 +484,9 @@ test.describe('Pacote Pré-IA de Acabamento Funcional e Integridade', () => {
       domValue: document.getElementById('dcSchema')?.textContent
     }));
 
-    expect(versions.schemaVersion).toBe(14);
-    expect(versions.constantSchema).toBe(14);
-    expect(versions.domValue).toBe('v14');
+    expect(versions.schemaVersion).toBe(15);
+    expect(versions.constantSchema).toBe(15);
+    expect(versions.domValue).toBe('v15');
 
     expect(errors).toEqual([]);
   });

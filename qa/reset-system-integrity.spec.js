@@ -224,8 +224,8 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
     expect(finalState.accounts).toEqual([]);
     expect(finalState.cards).toEqual([]);
     expect(finalState.transactions).toEqual([]);
-    expect(finalState.version).toBe(202);
-    expect(finalState.schemaVersion).toBe(14);
+    expect(finalState.version).toBe(203);
+    expect(finalState.schemaVersion).toBe(15);
     expect(await page.evaluate(() => validPersistedState(state))).toBe(true);
 
     expect(errors).toEqual([]);

@@ -100,6 +100,24 @@ test('PDF extrai saldo final oficial sem transformar saldo em movimentação',as
   expect(result.meta).toEqual({closingBalance:699.98,closingDate:'2026-08-31',source:'pdf'});
 });
 
+test('PDF de fatura extrai total, ciclo e limites sem transformar o resumo em compra',async({page})=>{
+  await boot(page);
+  const result=await page.evaluate(()=>{
+    const text=`Resumo da fatura
+Total da fatura R$ 1.234,56
+Vencimento 16/09/2026
+Fechamento 09/09/2026
+Pagamento mínimo R$ 185,18
+Limite disponível R$ 765,44
+Limite total R$ 2.000,00
+31/08/2026 Compra real R$ 25,00`;
+    const rows=parsePdfFinancialText(text,{intendedType:'invoice',month:'2026-09'});
+    return {rows,meta:invoiceDocumentMeta(text,'pdf',rows,'2026-09')};
+  });
+  expect(result.rows).toEqual([{date:'2026-08-31',desc:'Compra real',amount:25,fitid:null}]);
+  expect(result.meta).toEqual({source:'pdf',officialTotal:1234.56,minimumPayment:185.18,availableLimit:765.44,totalLimit:2000,dueDate:'2026-09-16',closingDate:'2026-09-09'});
+});
+
 test('transferência não exibe categoria e receita usa apenas categorias de entrada',async({page})=>{
   await page.setViewportSize({width:390,height:844});
   await boot(page);
