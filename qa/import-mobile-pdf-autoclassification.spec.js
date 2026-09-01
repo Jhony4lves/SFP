@@ -211,8 +211,17 @@ Próxima fatura 74,19
 Total para próximas faturas 667,71
 Limite disponível 1.298,04`;
     const parsed=parseInvoicePdfDocument(text,{month:'2026-08'});
+    const payAccountId=state.accounts[0]?.id||null;
+    state.cards=[
+      {...state.cards[0],id:1,name:'Nubank'},
+      {id:2,name:'Itaú',limit:2040,closeDay:2,dueDay:10,payAccountId,history:[]}
+    ];
+    state.purchases=[];state.invoices=[];state.invoiceImports=[];state.invoiceAdjustments=[];
+    state.ui.invoiceMonthByCard={1:'2026-09',2:'2026-09'};renderSelects();renderCards();
+    // Simula exatamente a falha física: cartão Nubank e setembro estavam
+    // selecionados antes de abrir uma fatura Itaú com vencimento em agosto.
     document.querySelector('#cardImportCard').value='1';
-    document.querySelector('#cardImportMonth').value='2026-08';
+    document.querySelector('#cardImportMonth').value='2026-09';
     const analysis={documentType:'invoice',confidence:.99,signConvention:'debitPositive',signConfidence:.99,validator:'local',warnings:[]};
     prepareCardImport(classifyInvoiceRows(parsed.rows,analysis),'fatura-itau.pdf',analysis,{...parsed.meta,profileId:parsed.profile.id,profileLabel:parsed.profile.label,integrity:parsed.integrity});
     const preview={
@@ -220,28 +229,55 @@ Limite disponível 1.298,04`;
       meta:parsed.meta,
       integrity:parsed.integrity,
       rows:cardImportDraft.rows.map(row=>({desc:row.desc,kind:row.kind,amount:row.amount,total:row.total,installment:row.installment,installments:row.installments,schedule:row.installmentSchedule})),
+      targetCardId:cardImportDraft.cardId,
+      targetMonth:cardImportDraft.month,
+      selectedCard:document.querySelector('#cardImportCard').value,
+      selectedMonth:document.querySelector('#cardImportMonth').value,
+      historyCard:document.querySelector('#cardHistorySelect').value,
+      target:document.querySelector('#cardImportTarget').textContent,
+      locked:document.querySelector('#cardImportCard').disabled&&document.querySelector('#cardImportMonth').disabled,
       blocked:document.querySelector('#cardImportConfirm').disabled,
       validation:document.querySelector('#cardImportValidation').textContent
     };
     await confirmCardImport();
-    const current=state.invoices.find(invoice=>invoice.cardId===1&&invoice.month==='2026-08');
-    const previous=state.invoices.find(invoice=>invoice.cardId===1&&invoice.month==='2026-07');
-    return {...preview,persisted:{purchaseTotals:state.purchases.map(purchase=>purchase.total),august:invoiceCalculated(1,'2026-08'),september:invoiceCalculated(1,'2026-09'),official:current.officialTotal,previousPaid:previous.paidAmount,profile:state.invoiceImports.at(-1).documentProfile,verification:state.invoiceImports.at(-1).verificationStatus}};
+    const current=state.invoices.find(invoice=>invoice.cardId===2&&invoice.month==='2026-08');
+    return {...preview,persisted:{purchaseCards:state.purchases.map(purchase=>purchase.cardId),purchaseTotals:state.purchases.map(purchase=>purchase.total),august:invoiceCalculated(2,'2026-08'),september:invoiceCalculated(2,'2026-09'),official:current.officialTotal,paymentCount:state.invoices.flatMap(invoice=>invoice.payments||[]).length,wrongCardInvoices:state.invoices.filter(invoice=>invoice.cardId===1).length,importPayments:state.invoiceImports.at(-1).payments,profile:state.invoiceImports.at(-1).documentProfile,verification:state.invoiceImports.at(-1).verificationStatus,unlocked:!document.querySelector('#cardImportCard').disabled&&!document.querySelector('#cardImportMonth').disabled}};
   });
   expect(result.profile).toMatchObject({id:'itau-card-v1',confidence:.99});
   expect(result.meta).toMatchObject({officialTotal:74.25,previousInvoiceTotal:537.16,financedBalance:0,currentChargesTotal:74.25,futureInstallmentsTotal:667.71,nextInvoiceTotal:74.19,totalLimit:2040,dueDate:'2026-08-10'});
   expect(result.integrity).toMatchObject({status:'verified',importAllowed:true,currentRows:2,payments:1,futureRowsExcluded:2,currentNet:74.25});
   expect(result.rows.map(row=>({desc:row.desc,kind:row.kind,amount:row.amount}))).toEqual([
-    {desc:'PAGAMENTO',kind:'payment',amount:537.16},
     {desc:'AMAZON BR',kind:'purchase',amount:54.9},
     {desc:'MERCADO*MERCAD outros LIMEIRA',kind:'purchase',amount:19.35}
   ]);
-  expect(result.rows[1]).toMatchObject({total:549,installment:1,installments:10});
-  expect(result.rows[2]).toMatchObject({total:192.96,installment:1,installments:10});
-  expect(result.rows[2].schedule).toEqual([19.35,19.29,19.29,19.29,19.29,19.29,19.29,19.29,19.29,19.29]);
+  expect(result.rows[0]).toMatchObject({total:549,installment:1,installments:10});
+  expect(result.rows[1]).toMatchObject({total:192.96,installment:1,installments:10});
+  expect(result.rows[1].schedule).toEqual([19.35,19.29,19.29,19.29,19.29,19.29,19.29,19.29,19.29,19.29]);
+  expect(result).toMatchObject({targetCardId:2,targetMonth:'2026-08',selectedCard:'2',selectedMonth:'2026-08',historyCard:'2',locked:true});
+  expect(result.target).toContain('Destino confirmado: Itaú');
+  expect(result.target).toContain('Agosto de 2026');
   expect(result.blocked).toBe(false);
   expect(result.validation).toContain('Verificação contábil aprovada');
-  expect(result.persisted).toEqual({purchaseTotals:[549,192.96],august:74.25,september:74.19,official:74.25,previousPaid:537.16,profile:'itau-card-v1',verification:'verified'});
+  expect(result.validation).toContain('pagamento(s) do ciclo anterior usado(s) somente na conferência');
+  expect(result.persisted).toEqual({purchaseCards:[2,2],purchaseTotals:[549,192.96],august:74.25,september:74.19,official:74.25,paymentCount:0,wrongCardInvoices:0,importPayments:0,profile:'itau-card-v1',verification:'verified',unlocked:true});
+});
+
+test('fatura identificada não pode cair em cartão de outro emissor',async({page})=>{
+  await boot(page);
+  const result=await page.evaluate(()=>{
+    state.cards=[{...state.cards[0],id:1,name:'Nubank'}];renderSelects();renderCards();
+    document.querySelector('#cardImportCard').value='1';
+    document.querySelector('#cardImportMonth').value='2026-09';
+    let error='';
+    try{
+      prepareCardImport([{date:'2026-07-06',desc:'AMAZON BR',amount:54.9,invoiceKind:'purchase'}],'fatura-itau.pdf',{documentType:'invoice',confidence:.99,validator:'local'},{source:'pdf',profileId:'itau-card-v1',profileLabel:'Fatura Itaú',officialTotal:54.9,dueDate:'2026-08-10',integrity:{status:'verified',importAllowed:true,payments:0}});
+    }catch(exception){error=exception.message}
+    return{error,draft:cardImportDraft,month:document.querySelector('#cardImportMonth').value};
+  });
+  expect(result.error).toContain('fatura Itaú');
+  expect(result.error).toContain('cartão selecionado é Nubank');
+  expect(result.draft).toBeNull();
+  expect(result.month).toBe('2026-09');
 });
 
 test('PDF com soma divergente fica bloqueado e não altera nenhum dado',async({page})=>{

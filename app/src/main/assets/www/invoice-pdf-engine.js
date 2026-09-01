@@ -284,8 +284,11 @@
     for(const row of currentRows){
       if(row.installments>1&&!row.authoritativeInstallmentPlan)row.currentChargeOnly=true;
     }
-    const rows=[...payments,...currentRows],integrity=validateStructuredInvoice({rows,meta,profileId:'itau-card-v1',structured:true,futureRows,installmentPlanVerified:plan.verified});
-    return {rows,meta,integrity,diagnostics:{futureRows,installmentPlanVerified:plan.verified}};
+    const validationRows=[...payments,...currentRows],integrity=validateStructuredInvoice({rows:validationRows,meta,profileId:'itau-card-v1',structured:true,futureRows,installmentPlanVerified:plan.verified});
+    // O pagamento exibido nesta fatura pertence ao ciclo anterior. Ele ajuda a
+    // provar a equação contábil, mas não é um lançamento da fatura atual e não
+    // deve ser oferecido para importação automática.
+    return {rows:currentRows,meta,integrity,diagnostics:{previousPayments:payments,futureRows,installmentPlanVerified:plan.verified}};
   }
 
   function isGenericExcludedLine(normalized){
