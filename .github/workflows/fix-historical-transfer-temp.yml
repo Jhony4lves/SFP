@@ -1,0 +1,40 @@
+name: Apply historical transfer balance fix
+
+on:
+  push:
+    branches: [ "fix/2.2-historical-transfer-balance-impact" ]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/2.2-historical-transfer-balance-impact
+      - name: Patch historical transfer balance impact
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/assets/www/index.html')
+          s = p.read_text()
+          old = "if(r.action==='transfer'){if(!r.transferAccountId||r.transferAccountId==r.accountId)continue;state.transfers.push({id:uid(),desc:r.desc,amount:Math.abs(r.amount),date:r.date,fromId:r.amount<0?r.accountId:r.transferAccountId,toId:r.amount<0?r.transferAccountId:r.accountId,tags:['extrato','transferência'],statementKey:r.key,balanceImpact:true})}"
+          new = "if(r.action==='transfer'){if(!r.transferAccountId||r.transferAccountId==r.accountId)continue;state.transfers.push({id:uid(),desc:r.desc,amount:Math.abs(r.amount),date:r.date,fromId:r.amount<0?r.accountId:r.transferAccountId,toId:r.amount<0?r.transferAccountId:r.accountId,tags:['extrato','transferência'],statementKey:r.key,balanceImpact:r.date>state.baseDate})}"
+          if s.count(old) != 1:
+              raise SystemExit(f'expected exactly one transfer import pattern, found {s.count(old)}')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Commit fix and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/index.html
+          git commit -m "fix: historical imported transfer must not alter current balance"
+          git rm .github/workflows/fix-historical-transfer-temp.yml
+          git commit -m "ci: remove historical transfer patch workflow"
+          git push origin HEAD:fix/2.2-historical-transfer-balance-impact
