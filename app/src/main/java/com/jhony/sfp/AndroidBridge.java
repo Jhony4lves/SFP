@@ -24,6 +24,7 @@ import org.json.JSONObject;
 
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 import com.tom_roush.pdfbox.pdmodel.PDDocument;
+import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import com.tom_roush.pdfbox.text.PDFTextStripper;
 
 import java.io.ByteArrayOutputStream;
@@ -176,6 +177,15 @@ public class AndroidBridge {
 
     @JavascriptInterface
     public String extractPdfText(String base64Pdf) {
+        return extractPdfTextInternal(base64Pdf, "", false);
+    }
+
+    @JavascriptInterface
+    public String extractPdfTextWithPassword(String base64Pdf, String password) {
+        return extractPdfTextInternal(base64Pdf, password, true);
+    }
+
+    private String extractPdfTextInternal(String base64Pdf, String password, boolean passwordWasProvided) {
         JSONObject result = new JSONObject();
         try {
             if (base64Pdf == null || base64Pdf.trim().isEmpty()) {
@@ -194,7 +204,8 @@ public class AndroidBridge {
                 result.put("error", "PDF maior que 20 MB. Exporte uma versão menor para importar no SFP.");
                 return result.toString();
             }
-            try (PDDocument document = PDDocument.load(bytes)) {
+            String transientPassword = password == null ? "" : password;
+            try (PDDocument document = PDDocument.load(bytes, transientPassword)) {
                 PDFTextStripper stripper = new PDFTextStripper();
                 stripper.setSortByPosition(true);
                 String text = stripper.getText(document);
@@ -205,6 +216,18 @@ public class AndroidBridge {
                     result.put("error", "O PDF não contém texto pesquisável. PDFs escaneados ainda precisam de OCR.");
                 }
                 return result.toString();
+            }
+        } catch (InvalidPasswordException e) {
+            try {
+                result.put("ok", false);
+                result.put("passwordRequired", true);
+                result.put("errorCode", passwordWasProvided ? "invalid_password" : "password_required");
+                result.put("error", passwordWasProvided
+                    ? "Senha incorreta. Confira e tente novamente."
+                    : "Este PDF é protegido por senha.");
+                return result.toString();
+            } catch (Exception ignored) {
+                return "{\"ok\":false,\"passwordRequired\":true,\"errorCode\":\"password_required\"}";
             }
         } catch (Exception e) {
             try {
