@@ -29,8 +29,8 @@ if arrays not in s:
     raise SystemExit('arrays anchor not found')
 s = s.replace(arrays, arrays + "\n repairImportedHistoricalTransferBalanceImpact();", 1)
 
-bad = "statementKey:r.key,balanceImpact:true,semanticClass:'user_transfer',classificationConfidence:1,classificationReason:'Confirmado como transferência interna pelo usuário durante a importação.'"
-good = "statementKey:r.key,balanceImpact:r.date>state.baseDate,semanticClass:'user_transfer',classificationConfidence:1,classificationReason:'Confirmado como transferência interna pelo usuário durante a importação.'"
+bad = "tags:['extrato','transferência'],statementKey:r.key,balanceImpact:true})"
+good = "tags:['extrato','transferência'],statementKey:r.key,balanceImpact:r.date>state.baseDate})"
 if bad not in s:
     raise SystemExit('explicit transfer balanceImpact anchor not found')
 s = s.replace(bad, good, 1)
