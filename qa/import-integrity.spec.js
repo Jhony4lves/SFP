@@ -9,16 +9,37 @@ async function boot(page, value) {
   await expect(page.locator('#pageTitle')).toHaveText('Hoje');
   await expect.poll(() => page.evaluate(() => state?.settings?.name)).toBe(value.settings.name);
 }
-async function importRows(page, rows, file = 'extrato.csv', configure = null) {
-  return page.evaluate(async ({ rows, file, configure }) => {
+async function importRows(page, rows, file = 'extrato.csv', configure = null, meta = null) {
+  return page.evaluate(async ({ rows, file, configure, meta }) => {
     document.querySelector('#stmtAccount').value = '1';
-    prepareStatement(rows, file);
+    prepareStatement(rows, file, meta);
     if (configure) Function(configure)();
     const draft = statementDraft.map(({ key, duplicate, candidateId, action }) => ({ key, duplicate, candidateId, action }));
     await importStatement();
     return draft;
-  }, { rows, file, configure });
+  }, { rows, file, configure, meta });
 }
+
+test('extrato completo pode ser reimportado e inclui só o dia novo, atualizando o saldo oficial', async ({ page }) => {
+  await boot(page, fixture('Importação incremental'));
+  const through30 = `<OFX><BANKTRANLIST><STMTTRN><DTPOSTED>20260130000000<TRNAMT>100.00<FITID>SAL-30<MEMO>SALARIO</STMTTRN></BANKTRANLIST><LEDGERBAL><BALAMT>1000.00<DTASOF>20260130000000</LEDGERBAL></OFX>`;
+  const complete31 = `<OFX><BANKTRANLIST><STMTTRN><DTPOSTED>20260130000000<TRNAMT>100.00<FITID>SAL-30<MEMO>SALARIO</STMTTRN><STMTTRN><DTPOSTED>20260131000000<TRNAMT>-25.00<FITID>NEW-31<MEMO>Compra no débito - Mercado</STMTTRN></BANKTRANLIST><LEDGERBAL><BALAMT>975.00<DTASOF>20260131000000</LEDGERBAL></OFX>`;
+
+  const first = await page.evaluate(text => { const rows=parseOFX(text); return {rows:[...rows],meta:rows.statementMeta}; }, through30);
+  await importRows(page, first.rows, 'nubank-ate-30.ofx', null, first.meta);
+  expect(await page.evaluate(() => ({balance:accountBalance(1),count:state.transactions.length,date:state.accounts[0].balanceDate})))
+    .toEqual({balance:1000,count:1,date:'2026-01-30'});
+
+  const second = await page.evaluate(text => { const rows=parseOFX(text); return {rows:[...rows],meta:rows.statementMeta}; }, complete31);
+  const preview = await importRows(page, second.rows, 'nubank-completo-31.ofx', null, second.meta);
+  expect(preview.map(x=>x.duplicate)).toEqual([true,false]);
+  expect(await page.evaluate(() => ({balance:accountBalance(1),count:state.transactions.length,date:state.accounts[0].balanceDate,statements:state.statements.length})))
+    .toEqual({balance:975,count:2,date:'2026-01-31',statements:2});
+
+  await importRows(page, second.rows, 'nubank-completo-31.ofx', null, second.meta);
+  expect(await page.evaluate(() => ({balance:accountBalance(1),count:state.transactions.length,statements:state.statements.length})))
+    .toEqual({balance:975,count:2,statements:2});
+});
 
 test('mesmo CSV sem FITID é idempotente e linhas idênticas legítimas mantêm ocorrências', async ({ page }) => {
   const errors = monitor(page); await boot(page, fixture('CSV íntegro'));

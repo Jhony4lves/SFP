@@ -89,6 +89,17 @@ test('linhas de saldo são descartadas antes da revisão',async({page})=>{
   expect(result.draft).toEqual([{desc:'Pagamento real',amount:-22.18}]);
 });
 
+test('PDF extrai saldo final oficial sem transformar saldo em movimentação',async({page})=>{
+  await boot(page);
+  const result=await page.evaluate(()=>{
+    const text=`Período: 01/08/2026 a 31/08/2026\nSaldo inicial: R$ 100,00 Saldo final: R$ 699,98\n31/08/2026 Compra real 123456789012 R$ -25,00 R$ 699,98`;
+    const rows=parsePdfFinancialText(text,{intendedType:'statement',month:'2026-08'});
+    return {rows,meta:statementBalanceMeta(text,'pdf',rows)};
+  });
+  expect(result.rows).toHaveLength(1);
+  expect(result.meta).toEqual({closingBalance:699.98,closingDate:'2026-08-31',source:'pdf'});
+});
+
 test('transferência não exibe categoria e receita usa apenas categorias de entrada',async({page})=>{
   await page.setViewportSize({width:390,height:844});
   await boot(page);

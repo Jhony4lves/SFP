@@ -3392,7 +3392,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 <script src="safe-spend.js"></script>
 <script src="safe-spend-ui.js"></script>
 <script>
-const VERSION=202, SCHEMA_VERSION=13, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
+const VERSION=202, SCHEMA_VERSION=14, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
 const EXPENSE_CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Educação','Saúde','Assinaturas','Dívida','Lazer','Casa','Contas','Trabalho','Investimentos','Cartão','Ajuste','Outros'];
 const INCOME_CATEGORIES=['Trabalho','Rendimentos','Reembolso','Venda','Benefícios','Investimentos','Ajuste','Outros'];
 const CATEGORIES=[...new Set([...EXPENSE_CATEGORIES,...INCOME_CATEGORIES])];
@@ -3461,7 +3461,7 @@ const seed={
  ],
  ui:{invoiceMonthByCard:{1:'2026-09',2:'2026-09'}}
 }
-let state=null,currentKind='expense',statementDraft=[],cardImportDraft=null,db=null;
+let state=null,currentKind='expense',statementDraft=[],statementImportMeta=null,cardImportDraft=null,db=null;
 Object.defineProperty(window,'state',{get(){return state},set(v){state=v},configurable:true,enumerable:true});
 const $=id=>document.getElementById(id), clone=o=>JSON.parse(JSON.stringify(o));
 const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -3634,6 +3634,7 @@ function migrateSchema(s){
     (s.transferEvidence||[]).forEach(e=>{if(e.balanceImpact===true)e.balanceImpact=false});
     s.schemaVersion=13;
   }
+  if(s.schemaVersion<14)s.schemaVersion=14;
   return s
 }
 function sanitizeSophySecretsInPlace(target){
@@ -3946,10 +3947,24 @@ function accountBalance(id){
  let a=account(id);if(!a)return 0;
  let v=+a.initial||0;
  state.transactions.filter(t=>t.accountId==id&&t.status==='paid'&&t.balanceImpact===true).forEach(t=>v+=t.kind==='income'?t.amount:-t.amount);
- state.transfers.filter(t=>t.balanceImpact!==false).forEach(t=>{if(t.fromId==id)v-=t.amount;if(t.toId==id)v+=t.amount});
+ state.transfers.filter(t=>(t.balanceImpactByAccount?.[id]??(t.balanceImpact!==false))).forEach(t=>{if(t.fromId==id)v-=t.amount;if(t.toId==id)v+=t.amount});
  state.invoices.filter(i=>i.accountId==id).forEach(i=>(i.payments||[]).filter(p=>p.balanceImpact===true).forEach(p=>v-=p.amount));
  (state.transferEvidence||[]).filter(e=>e.accountId==id&&e.status!=='matched'&&e.balanceImpact===true).forEach(e=>v+=Number(e.amount)||0);
  return Math.round(v*100)/100
+}
+function afterAccountSnapshot(accountId,date){let a=account(accountId),anchor=a?.balanceDate||state.baseDate;return !anchor||String(date)>String(anchor)}
+function reconcileAccountFromStatement(accountId,meta){
+ let a=account(accountId);if(!a||!meta||!Number.isFinite(Number(meta.closingBalance))||!meta.closingDate)return false;
+ if(a.balanceDate&&String(meta.closingDate)<String(a.balanceDate))return false;
+ let balance=Math.round(Number(meta.closingBalance)*100)/100,date=String(meta.closingDate),changed=a.initial!==balance||a.balanceDate!==date||a.balanceMode!=='snapshot'||a.reconciled?.source!=='statement';
+ if(!changed)return false;
+ a.initial=balance;a.balanceDate=date;a.balanceMode='snapshot';
+ a.reconciled={balance,date,difference:0,source:'statement',file:meta.file||null,at:new Date().toISOString()};
+ state.transactions.filter(t=>t.accountId==accountId&&t.statementKey).forEach(t=>{t.balanceImpact=String(t.date)>date});
+ state.transfers.filter(t=>t.fromId==accountId||t.toId==accountId).forEach(t=>{t.balanceImpactByAccount??={};let eventDate=t.fromId==accountId?t.date:(t.settledDate||t.date);t.balanceImpactByAccount[accountId]=String(eventDate)>date});
+ state.invoices.filter(i=>i.accountId==accountId).forEach(i=>(i.payments||[]).filter(p=>p.statementKey).forEach(p=>{p.balanceImpact=String(p.date)>date}));
+ (state.transferEvidence||[]).filter(e=>e.accountId==accountId).forEach(e=>{e.balanceImpact=false});
+ return changed
 }
 function allAccountBalance(){return state.accounts.reduce((s,a)=>s+accountBalance(a.id),0)}
 window.allAccountBalance=allAccountBalance;
@@ -9627,7 +9642,20 @@ function parseDate(v){let s=String(v||'').trim(),m=s.match(/^(\d{4})[-\/](\d{1,2
 function splitCSV(line,d){let out=[],cur='',q=false;for(let i=0;i<line.length;i++){let ch=line[i];if(ch==='"'){if(q&&line[i+1]==='"'){cur+='"';i++}else q=!q}else if(ch===d&&!q){out.push(cur);cur=''}else cur+=ch}out.push(cur);return out}
 function parseCSV(txt){let lines=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw Error('CSV vazio');let ds=[';',',','\t'],d=ds.sort((a,b)=>lines[0].split(b).length-lines[0].split(a).length)[0],heads=splitCSV(lines[0],d).map(x=>x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''));let find=names=>heads.findIndex(h=>names.some(n=>h.includes(n))),id=find(['data','date']),idesc=find(['descricao','historico','memo','description']),ival=find(['valor','amount']),ic=find(['credito','credit','entrada']),ideb=find(['debito','debit','saida']),ifit=find(['fitid','identificador','transaction id','transactionid','id transacao']);if(id<0)id=0;if(idesc<0)idesc=1;if(ival<0&&ic<0&&ideb<0)throw Error('Coluna de valor não encontrada');let rows=[];for(let i=1;i<lines.length;i++){let c=splitCSV(lines[i],d),date=parseDate(c[id]);if(!date)continue;let amount=ival>=0?parseMoney(c[ival]):Math.abs(parseMoney(c[ic]))-Math.abs(parseMoney(c[ideb]));if(amount)rows.push({date,desc:(c[idesc]||'Movimentação').trim(),amount,fitid:ifit>=0?(c[ifit]||'').trim():null})}return rows}
 function tag(block,n){let m=block.match(new RegExp('<'+n+'>([^<\\r\\n]+)','i'));return m?m[1].trim():''}
-function parseOFX(txt){let blocks=txt.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/gi)||txt.split(/<STMTTRN>/i).slice(1);return blocks.map(b=>({date:parseDate(tag(b,'DTPOSTED')),desc:tag(b,'MEMO')||tag(b,'NAME')||'Movimentação',amount:parseMoney(tag(b,'TRNAMT')),fitid:tag(b,'FITID')})).filter(x=>x.date&&x.amount)}
+function statementBalanceMeta(txt,type,rows=[]){
+ let balance=null,asOf=null;
+ if(type==='ofx'){
+  let ledger=String(txt||'').match(/<LEDGERBAL>[\s\S]*?<\/LEDGERBAL>/i)?.[0]||'';
+  if(ledger){let raw=tag(ledger,'BALAMT');if(raw!=='')balance=parseMoney(raw);asOf=parseDate(tag(ledger,'DTASOF'))}
+ }else if(type==='pdf'){
+  let raw=String(txt||'').match(/saldo\s+final\s*:\s*R?\$?\s*(-?[\d.]+,\d{2})/i)?.[1]
+    ||String(txt||'').match(/saldo\s+em\s+conta\s*(?:\r?\n|\s)+R?\$?\s*(-?[\d.]+,\d{2})/i)?.[1];
+  if(raw!=null)balance=parseMoney(raw);
+ }
+ if(!asOf&&rows.length)asOf=rows.map(r=>r.date).filter(Boolean).sort().at(-1)||null;
+ return Number.isFinite(balance)&&asOf?{closingBalance:Math.round(balance*100)/100,closingDate:asOf,source:type}:null
+}
+function parseOFX(txt){let blocks=txt.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/gi)||txt.split(/<STMTTRN>/i).slice(1),rows=blocks.map(b=>({date:parseDate(tag(b,'DTPOSTED')),desc:tag(b,'MEMO')||tag(b,'NAME')||'Movimentação',amount:parseMoney(tag(b,'TRNAMT')),fitid:tag(b,'FITID')})).filter(x=>x.date&&x.amount);rows.statementMeta=statementBalanceMeta(txt,'ofx',rows);return rows}
 function ruleFor(desc){let d=desc.toLowerCase();return state.classificationRules.find(r=>d.includes(r.pattern.toLowerCase()))}
 
 
@@ -9893,7 +9921,8 @@ function reconcileCandidate(r,accountId,reserved=new Set()){
  return vr?{id:`rec:${vr.recurringId}`,virtualRecurring:true,recurringId:vr.recurringId}:null
 }
 function statementHash(rows){let value=rows.map(r=>`${r.date}|${Math.round(Number(r.amount)*100)}|${String(r.desc||'').trim().toLowerCase()}|${String(r.fitid||'').trim()}`).join('\n'),hash=2166136261;for(let i=0;i<value.length;i++){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619)}return(hash>>>0).toString(36)}
-function prepareStatement(rows,file){
+function prepareStatement(rows,file,meta=null){
+ statementImportMeta=meta?{...meta,file}:null;
  rows=(rows||[]).filter(r=>!isStatementBalanceRow(r));
  let accountId=+$('stmtAccount').value,ex=existingStmtKeys(),seen=new Set(ex),reserved=new Set(),occurrences=new Map(),sourceHash=statementHash(rows);statementDraft=rows.map((r,i)=>{
    let fitid=String(r.fitid||'').trim(),fingerprint=`${r.date}|${Math.round(Number(r.amount)*100)}|${String(r.desc||'').trim().toLowerCase()}`,occurrence=(occurrences.get(fingerprint)||0)+1;
@@ -10154,7 +10183,7 @@ async function importStatement(){
   for(let r of draft){
    if(r.duplicate||r.action==='ignore'||used.has(r.key))continue;
    if(r.action==='pending_transfer'){
-    if(!(state.transferEvidence||[]).some(e=>e.statementKey===r.key))state.transferEvidence.push({id:uid(),statementKey:r.key,accountId:r.accountId,date:r.date,amount:Number(r.amount)||0,desc:r.desc,fitid:r.fitid||null,file:r.file||null,status:'pending',balanceImpact:r.date>state.baseDate,semanticClass:'possible_transfer',createdAt:Date.now()});
+    if(!(state.transferEvidence||[]).some(e=>e.statementKey===r.key))state.transferEvidence.push({id:uid(),statementKey:r.key,accountId:r.accountId,date:r.date,amount:Number(r.amount)||0,desc:r.desc,fitid:r.fitid||null,file:r.file||null,status:'pending',balanceImpact:false,semanticClass:'possible_transfer',createdAt:Date.now()});
     used.add(r.key);accepted.push(r);continue
    }
    if(r.action==='transfer_match'||(r.action==='transfer'&&r.transferMatchId&&r.transferAccountId==r.transferMatchAccountId)){
@@ -10166,20 +10195,21 @@ async function importStatement(){
     if(candidateId.startsWith('rec:')){let rid=+candidateId.split(':')[1],rule=state.recurring.find(x=>x.id===rid),already=state.transactions.some(t=>t.recurringId===rid&&ym(t.date)===ym(r.date));if(!rule||already)continue;state.transactions.push({id:uid(),recurringId:rid,kind:rule.type,desc:rule.desc,amount:rule.amount,date:r.date,category:rule.category,accountId:r.accountId,status:'paid',dueDay:+r.date.slice(8,10),tags:['recorrente','extrato'],note:'Conciliado com recorrência.',statementKey:r.key,balanceImpact:r.date>state.baseDate,createdAt:Date.now()});reserved.add(candidateId);used.add(r.key);accepted.push(r);continue}
     let t=state.transactions.find(x=>String(x.id)===candidateId);if(!t||t.statementKey||t.kind==='transfer')continue;t.status='paid';t.balanceImpact=t.date>state.baseDate;t.statementKey=r.key;t.statementDesc=r.desc;reserved.add(candidateId);used.add(r.key);accepted.push(r);continue
    }
-   if(r.action==='transfer'){if(!r.transferAccountId||r.transferAccountId==r.accountId)continue;state.transfers.push({id:uid(),desc:r.desc,amount:Math.abs(r.amount),date:r.date,fromId:r.amount<0?r.accountId:r.transferAccountId,toId:r.amount<0?r.transferAccountId:r.accountId,tags:['extrato','transferência'],statementKey:r.key,balanceImpact:r.date>state.baseDate})}
-   else state.transactions.push({id:uid(),kind:r.action==='income'?'income':'expense',desc:r.desc,amount:Math.abs(r.amount),date:r.date,category:r.category,accountId:r.accountId,status:'paid',dueDay:+r.date.slice(8,10),tags:['extrato'],note:'',statementKey:r.key,balanceImpact:r.date>state.baseDate,semanticClass:r.semanticClass||null,economicImpact:r.economicImpact||'economic',classificationConfidence:r.classificationConfidence||null,classificationReason:r.classificationReason||null,createdAt:Date.now()});
+   if(r.action==='transfer'){if(!r.transferAccountId||r.transferAccountId==r.accountId)continue;let fromId=r.amount<0?r.accountId:r.transferAccountId,toId=r.amount<0?r.transferAccountId:r.accountId;state.transfers.push({id:uid(),desc:r.desc,amount:Math.abs(r.amount),date:r.date,fromId,toId,tags:['extrato','transferência'],statementKey:r.key,balanceImpact:true,balanceImpactByAccount:{[fromId]:afterAccountSnapshot(fromId,r.date),[toId]:afterAccountSnapshot(toId,r.date)}})}
+   else state.transactions.push({id:uid(),kind:r.action==='income'?'income':'expense',desc:r.desc,amount:Math.abs(r.amount),date:r.date,category:r.category,accountId:r.accountId,status:'paid',dueDay:+r.date.slice(8,10),tags:['extrato'],note:'',statementKey:r.key,balanceImpact:afterAccountSnapshot(r.accountId,r.date),semanticClass:r.semanticClass||null,economicImpact:r.economicImpact||'economic',classificationConfidence:r.classificationConfidence||null,classificationReason:r.classificationReason||null,createdAt:Date.now()});
    used.add(r.key);accepted.push(r);if(r.learn&&['income','expense','transfer','ignore'].includes(r.action)){let pattern=r.desc.split(/\s+/).slice(0,3).join(' ');if(pattern.length>3&&!state.classificationRules.some(x=>String(x.pattern||'').toLowerCase()===pattern.toLowerCase()))state.classificationRules.push({pattern,action:r.action,category:r.category,source:'learned',learnedAt:new Date().toISOString(),example:r.desc})}
   }
-  if(!accepted.length){
+  let reconciled=reconcileAccountFromStatement(acc?.id,statementImportMeta);
+  if(!accepted.length&&!reconciled){
    const duplicateOnly=draft.length>0&&draft.every(r=>r.duplicate);
-   statementDraft=[];$('stmtReview').classList.add('hidden');$('stmtFile').value='';
+   statementDraft=[];statementImportMeta=null;$('stmtReview').classList.add('hidden');$('stmtFile').value='';
    if(typeof renderStatements==='function')renderStatements();
    if(typeof renderReconcileCenter==='function')renderReconcileCenter();
    toast(duplicateOnly?'Nenhuma movimentação nova. Este extrato já foi importado.':'Nenhuma movimentação foi importada.');
    return
   }
-  state.statements.push({id:uid(),file:draft[0]?.file||'Extrato',account:acc?.name||'Conta',count:accepted.length,months:[...new Set(accepted.map(r=>ym(r.date)))],importedAt:new Date().toISOString()});
-  if(lastSavedState){autoBackup();snapshotUndo('Importar extrato',lastSavedState)}normalize();await dbSet(state);persisted=true;lastSavedState=clone(state);statementDraft=[];$('stmtReview').classList.add('hidden');$('stmtFile').value='';renderAll();toast(`${accepted.length} movimentações processadas`)
+  if(accepted.length)state.statements.push({id:uid(),file:draft[0]?.file||statementImportMeta?.file||'Extrato',account:acc?.name||'Conta',count:accepted.length,months:[...new Set(accepted.map(r=>ym(r.date)))],closingBalance:statementImportMeta?.closingBalance??null,closingDate:statementImportMeta?.closingDate||null,importedAt:new Date().toISOString()});
+  if(lastSavedState){autoBackup();snapshotUndo('Importar extrato',lastSavedState)}normalize();await dbSet(state);persisted=true;lastSavedState=clone(state);statementDraft=[];statementImportMeta=null;$('stmtReview').classList.add('hidden');$('stmtFile').value='';renderAll();toast(`${accepted.length} movimentações novas processadas${reconciled?` • saldo conciliado em ${brl(acc.initial)}`:''}`)
  }catch(error){if(!persisted){state=before;lastSavedState=clone(before)}try{renderAll()}catch{}toast('Não foi possível importar o extrato. Nenhuma alteração foi aplicada.');console.error('Falha ao importar extrato:',error)}
 }
 
@@ -10428,7 +10458,8 @@ function readStmtFile(f){
    if(!rows.length)throw Error(ext==='pdf'?'Não encontrei linhas com data e valor no PDF. Se ele for escaneado, será necessário OCR.':'Nenhuma movimentação reconhecida. Confira as colunas e os valores.');
    let analysis=await analyzeImportDocument({rows,ext,text,intendedType:'statement'});
    if(analysis.documentType==='invoice'&&analysis.confidence>=.8){let ok=await sfpConfirm({title:'Este arquivo parece ser uma fatura',message:`A validação classificou o arquivo como fatura com ${Math.round(analysis.confidence*100)}% de confiança. Quer continuar mesmo assim como extrato?`,confirmText:'Continuar como extrato',cancelText:'Cancelar'});if(!ok)return;}
-   prepareStatement(rows,f.name);
+   let meta=ext==='ofx'?rows.statementMeta:ext==='pdf'?statementBalanceMeta(text,'pdf',rows):null;
+   prepareStatement(rows,f.name,meta);
  }catch(e){toast('Não consegui ler o extrato: '+e.message,'error')}finally{$('stmtFile').value=''}})();
 }
 function renderGlobalSearch(){let q=$('globalSearch').value.trim().toLowerCase();if(q.length<2)return $('globalResults').classList.add('hidden');let res=[];state.transactions.filter(t=>`${t.desc} ${t.category} ${(t.tags||[]).join(' ')}`.toLowerCase().includes(q)).slice(0,8).forEach(t=>res.push({title:t.desc,sub:`${t.date} • ${brl(t.amount)} • ${t.kind}`,page:'lancamentos'}));state.purchases.filter(p=>p.desc.toLowerCase().includes(q)).slice(0,5).forEach(p=>res.push({title:p.desc,sub:`Compra em ${card(p.cardId)?.name||'cartão'} • ${brl(p.total)}`,page:'cartoes'}));state.accounts.filter(a=>a.name.toLowerCase().includes(q)).forEach(a=>res.push({title:a.name,sub:`Conta • ${brl(accountBalance(a.id))}`,page:'contas'}));$('globalResults').innerHTML=res.length?res.map((r,i)=>`<div class="item" data-sr="${i}"><div><b>${r.title}</b><small>${r.sub}</small></div></div>`).join(''):'<div class="item"><span>Nada encontrado.</span></div>';$('globalResults').classList.remove('hidden');document.querySelectorAll('[data-sr]').forEach((el,i)=>el.onclick=()=>{setPage(res[i].page);$('globalResults').classList.add('hidden')})}
