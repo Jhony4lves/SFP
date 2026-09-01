@@ -111,3 +111,49 @@
   script.dataset.sfpSophyA3='1';
   document.head.appendChild(script);
 })();
+
+/*
+ * SFP_BALANCE_EVIDENCE_GUARD_V1
+ *
+ * transferEvidence é somente evidência de uma possível transferência.
+ * Enquanto não houver pareamento/confirmação, ela não representa dinheiro
+ * efetivamente debitado ou creditado no saldo oficial da conta.
+ *
+ * O core legado ainda soma evidências pendentes em accountBalance(). Este
+ * guard neutraliza apenas essa parcela e se auto-desativa quando o core for
+ * refatorado para remover transferEvidence da função nativa.
+ */
+(function installTransferEvidenceBalanceGuard(){
+  if(typeof document==='undefined')return;
+
+  const install=()=>{
+    try{
+      if(typeof accountBalance!=='function'||typeof state==='undefined'){
+        setTimeout(install,0);
+        return;
+      }
+      if(accountBalance.__sfpTransferEvidenceNeutral===true)return;
+
+      const source=Function.prototype.toString.call(accountBalance);
+      if(!source.includes('transferEvidence'))return;
+
+      const original=accountBalance;
+      const guarded=function(id){
+        let value=Number(original(id)||0);
+        (state.transferEvidence||[])
+          .filter(e=>e.accountId==id&&e.status!=='matched'&&e.balanceImpact===true)
+          .forEach(e=>value-=Number(e.amount)||0);
+        return Math.round(value*100)/100;
+      };
+
+      Object.defineProperty(guarded,'__sfpTransferEvidenceNeutral',{value:true});
+      Object.defineProperty(guarded,'__sfpOriginalAccountBalance',{value:original});
+      accountBalance=guarded;
+      if(typeof window!=='undefined')window.accountBalance=guarded;
+    }catch(error){
+      console.error('SFP balance evidence guard:',error);
+    }
+  };
+
+  setTimeout(install,0);
+})();
