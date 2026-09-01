@@ -105,7 +105,9 @@ test.describe('Conciliação de transferências entre extratos', () => {
       };
     });
 
-    expect(result).toEqual({ nubank: 1000, mercadoPago: 0, total: 1000 });
+    expect(result.nubank).toBe(1000);
+    expect(result.mercadoPago).toBe(0);
+    expect(result.total).toBe(1000);
   });
 
   test('segunda ponta liga as duas contas e vira uma única transferência, sem receita ou despesa', async ({ page }) => {
