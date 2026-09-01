@@ -47,13 +47,14 @@ assert.equal(parsed.integrity.status,'verified');
 assert.equal(parsed.integrity.importAllowed,true);
 assert.equal(parsed.integrity.currentNet,74.25);
 assert.equal(parsed.integrity.futureRowsExcluded,2);
+assert.equal(parsed.integrity.payments,1);
 assert.deepEqual(parsed.rows.map(row=>[row.desc,row.invoiceKind,row.amount]),[
-  ['PAGAMENTO','payment',-537.16],
   ['AMAZON BR','purchase',54.9],
   ['MERCADO*MERCAD outros LIMEIRA','purchase',19.35]
 ]);
-assert.deepEqual(parsed.rows[2].installmentSchedule,[19.35,19.29,19.29,19.29,19.29,19.29,19.29,19.29,19.29,19.29]);
-assert.equal(parsed.rows[2].total,192.96);
+assert.deepEqual(parsed.diagnostics.previousPayments.map(row=>[row.desc,row.amount]),[['PAGAMENTO',-537.16]]);
+assert.deepEqual(parsed.rows[1].installmentSchedule,[19.35,19.29,19.29,19.29,19.29,19.29,19.29,19.29,19.29,19.29]);
+assert.equal(parsed.rows[1].total,192.96);
 
 const fragmented=engine.parse(`Banco Itaú S.A.
 Resumo da fatura em R$
@@ -84,7 +85,8 @@ DATA ESTABELECIMENTO VALOR EM R$
 Próxima fatura 74,19
 Total para próximas faturas 667,71`,{month:'2026-08'});
 assert.equal(fragmented.integrity.status,'verified');
-assert.deepEqual(fragmented.rows.map(row=>[row.desc,row.amount]),[['PAGAMENTO',-537.16],['AMAZON BR',54.9],['MERCADO*MERCAD outros LIMEIRA',19.35]]);
+assert.deepEqual(fragmented.rows.map(row=>[row.desc,row.amount]),[['AMAZON BR',54.9],['MERCADO*MERCAD outros LIMEIRA',19.35]]);
+assert.deepEqual(fragmented.diagnostics.previousPayments.map(row=>[row.desc,row.amount]),[['PAGAMENTO',-537.16]]);
 
 const divergent=engine.parse(`Resumo da fatura
 Total da fatura R$ 100,00
