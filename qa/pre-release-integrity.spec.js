@@ -79,7 +79,18 @@ test('REL-03 save, pagamento, undo e reload não dependem de memória transitór
   await boot(page, realLifeFixture());
   await page.evaluate(async () => { state.invoices[0].paidAmount += 13.34; state.invoices[0].payments.push({ date: '2026-04-17', amount: 13.34, balanceImpact: true }); await save('pagamento'); });
   await page.reload(); await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState); expect(await page.evaluate(() => [invoiceRemaining(1, '2026-01'), accountBalance(1)])).toEqual([0, 2818.32]);
-  await page.evaluate(() => undoLast()); await page.reload();
+  await page.evaluate(() => {
+    window.__rel03UndoDone = false;
+    window.__rel03UndoError = null;
+    window.__rel03UndoPromise = Promise.resolve().then(() => undoLast()).then(
+      () => { window.__rel03UndoDone = true; },
+      error => { window.__rel03UndoError = String(error?.stack || error); window.__rel03UndoDone = true; }
+    );
+  });
+  await page.waitForFunction(() => window.__rel03UndoDone === true);
+  expect(await page.evaluate(() => window.__rel03UndoError)).toBeNull();
+  await page.evaluate(() => { delete window.__rel03UndoPromise; delete window.__rel03UndoDone; delete window.__rel03UndoError; });
+  await page.reload();
   await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
   expect(await page.evaluate(() => [state.invoices[0].paidAmount, state.undo.length])).toEqual([20, 0]);
 });
