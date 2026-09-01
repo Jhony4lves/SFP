@@ -104,5 +104,5 @@ test('captura incompleta falha fechada e não grava dinheiro',async({page})=>{
     await confirmCardImport();
     return{before,after:JSON.stringify({purchases:state.purchases,invoices:state.invoices,imports:state.invoiceImports,revision:state.persistenceMeta.revision}),preview};
   },ocrResult({complete:false}));
-  expect(result.preview.status).toBe('blocked');expect(result.preview.disabled).toBe(true);expect(result.preview.reason).toContain('captura inteira');expect(result.after).toBe(result.before);
+  expect(result.preview.status).toBe('blocked');expect(result.preview.disabled).toBe(true);expect(result.preview.reason).toContain('fatura inteira');expect(result.after).toBe(result.before);
 });
