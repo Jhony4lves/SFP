@@ -27,6 +27,18 @@ test.describe('Android release engineering', () => {
     expect(bridge).toContain('"SmartFinancialPlanner/" + BuildConfig.VERSION_NAME + " Sophy/3.0"');
   });
 
+  test('bridge Android desbloqueia PDF protegido sem persistir a senha', () => {
+    const bridge = read('app/src/main/java/com/jhony/sfp/AndroidBridge.java');
+
+    expect(bridge).toContain('extractPdfTextWithPassword(String base64Pdf, String password)');
+    expect(bridge).toContain('PDDocument.load(bytes, transientPassword)');
+    expect(bridge).toContain('catch (InvalidPasswordException e)');
+    expect(bridge).toContain('"passwordRequired"');
+    expect(bridge).toContain('"invalid_password"');
+    expect(bridge).not.toMatch(/putString\([^\n]*password/i);
+    expect(bridge).not.toMatch(/Log\.[a-z]+\([^\n]*password/i);
+  });
+
   test('pipeline produz e verifica APK/AAB versionados', () => {
     const workflow = read('.github/workflows/build-apk.yml');
 
