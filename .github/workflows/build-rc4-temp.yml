@@ -1,0 +1,103 @@
+name: Build SFP RC4 Signed Package
+
+on:
+  push:
+    branches: [ "feat/2.2-integration" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-signed-rc4:
+    runs-on: ubuntu-latest
+    env:
+      SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}
+      SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
+      SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
+      SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v4
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "8.11.1"
+
+      - run: yes | sdkmanager --licenses >/dev/null || true
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Read and validate RC4 version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME="$(sed -n 's/^SFP_VERSION_NAME=//p' gradle.properties)"
+          VERSION_CODE="$(sed -n 's/^SFP_VERSION_CODE=//p' gradle.properties)"
+          test "$VERSION_NAME" = "2.2.0-rc.4"
+          test "$VERSION_CODE" = "13"
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Validate signing configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for var in SFP_KEYSTORE_BASE64 SFP_KEYSTORE_PASSWORD SFP_KEY_ALIAS SFP_KEY_PASSWORD; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::$var não está configurado nos GitHub Actions secrets."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Restore signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-release.jks"
+          test -s "$RUNNER_TEMP/sfp-release.jks"
+
+      - name: Build signed release APK and AAB
+        env:
+          SFP_KEYSTORE_PATH: ${{ runner.temp }}/sfp-release.jks
+          SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
+          SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
+          SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease :app:bundleRelease
+
+      - name: Prepare and verify package
+        shell: bash
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          APK="dist/SFP-${VERSION_NAME}.apk"
+          AAB="dist/SFP-${VERSION_NAME}.aab"
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          cp app/build/outputs/bundle/release/app-release.aab "$AAB"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/SIGNING-CERT.txt
+          jarsigner -verify "$AAB"
+          cat > dist/RELEASE-METADATA.txt <<EOF
+          versionName=${VERSION_NAME}
+          versionCode=${VERSION_CODE}
+          commit=${GITHUB_SHA}
+          ref=${GITHUB_REF}
+          workflowRun=${GITHUB_RUN_ID}
+          EOF
+          sha256sum "$APK" "$AAB" > dist/SHA256SUMS.txt
+
+      - name: Upload signed RC4 package
+        uses: actions/upload-artifact@v6
+        with:
+          name: SFP-${{ steps.version.outputs.name }}-release
+          path: dist/*
+          if-no-files-found: error
