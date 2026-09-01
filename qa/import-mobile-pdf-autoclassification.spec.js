@@ -211,7 +211,13 @@ Próxima fatura 74,19
 Total para próximas faturas 667,71
 Limite disponível 1.298,04`;
     const parsed=parseInvoicePdfDocument(text,{month:'2026-08'});
+    const payAccountId=state.accounts[0]?.id||null;
+    state.cards=[
+      {...state.cards[0],id:1,name:'Nubank'},
+      {id:2,name:'Itaú',limit:2040,closeDay:2,dueDay:10,payAccountId,history:[]}
+    ];
     state.purchases=[];state.invoices=[];state.invoiceImports=[];state.invoiceAdjustments=[];
+    state.ui.invoiceMonthByCard={1:'2026-09',2:'2026-09'};renderSelects();renderCards();
     // Simula exatamente a falha física: cartão Nubank e setembro estavam
     // selecionados antes de abrir uma fatura Itaú com vencimento em agosto.
     document.querySelector('#cardImportCard').value='1';
@@ -259,7 +265,7 @@ Limite disponível 1.298,04`;
 test('fatura identificada não pode cair em cartão de outro emissor',async({page})=>{
   await boot(page);
   const result=await page.evaluate(()=>{
-    state.cards=state.cards.filter(card=>card.id===1);
+    state.cards=[{...state.cards[0],id:1,name:'Nubank'}];renderSelects();renderCards();
     document.querySelector('#cardImportCard').value='1';
     document.querySelector('#cardImportMonth').value='2026-09';
     let error='';
