@@ -37,3 +37,31 @@ test('transferência histórica importada não altera o saldo atual das contas',
   expect(after.mercadoPago).toBe(before.mercadoPago);
   expect(after.transfers).toContainEqual({ amount: 746.39, balanceImpact: false });
 });
+
+test('normalize corrige transferência histórica já salva com impacto indevido', async ({ page }) => {
+  const value = fixture('Reparo de transferência histórica');
+  value.baseDate = '2026-08-31';
+  value.accounts.push({ id: 2, name: 'Mercado Pago', type: 'Conta corrente', initial: 0, balanceMode: 'snapshot', balanceDate: '2026-08-31' });
+  value.transfers = [{
+    id: 991,
+    desc: 'PIX TRANSF JHONY',
+    amount: 746.39,
+    date: '2026-08-17',
+    fromId: 1,
+    toId: 2,
+    tags: ['extrato', 'transferência'],
+    statementKey: '1|fit:HIST-TRANSFER-74639',
+    balanceImpact: true
+  }];
+
+  await boot(page, value);
+
+  const repaired = await page.evaluate(() => ({
+    nubank: accountBalance(1),
+    mercadoPago: accountBalance(2),
+    balanceImpact: state.transfers[0].balanceImpact
+  }));
+
+  expect(repaired.balanceImpact).toBe(false);
+  expect(repaired.mercadoPago).toBe(0);
+});
