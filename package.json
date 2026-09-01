@@ -2,9 +2,10 @@
   "name": "sfp-qa-lab",
   "private": true,
   "scripts": {
-    "test": "npm run test:static && npm run test:invoice-pdf && npm run test:sophy-arch && npm run test:sophy-benchmark && npm run test:financial && npm run test:polish",
+    "test": "npm run test:static && npm run test:invoice-pdf && npm run test:invoice-image && npm run test:sophy-arch && npm run test:sophy-benchmark && npm run test:financial && npm run test:polish",
     "test:static": "node qa/static-check.mjs",
     "test:invoice-pdf": "node qa/invoice-pdf-engine-test.mjs",
+    "test:invoice-image": "node qa/invoice-image-engine-test.mjs",
     "test:sophy-arch": "node qa/sophy-v3-architecture-test.mjs",
     "test:sophy-benchmark": "node qa/sophy-v3-benchmark-100-test.mjs",
     "test:financial": "node -r ./qa/env-setup.js ./node_modules/.bin/playwright test qa/financial.spec.js",

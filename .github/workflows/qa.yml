@@ -19,6 +19,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:static
       - run: npm run test:invoice-pdf
+      - run: npm run test:invoice-image
       - run: npm run test:sophy-arch
       - run: npm run test:sophy-benchmark
       - run: npm run test:financial

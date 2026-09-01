@@ -3225,7 +3225,7 @@ button:active:not(:disabled){transform:translateY(1px)}
       <div class="management-summary" aria-label="Resumo dos cartões"><div class="metric"><span>Limite total</span><strong id="cardsLimitTotal">R$ 0,00</strong><small>dos cartões cadastrados</small></div><div class="metric"><span>Obrigação atual</span><strong id="cardsOutstandingTotal">R$ 0,00</strong><small>limite comprometido</small></div></div>
       <div class="management-layout"><article class="panel management-list-panel"><div class="head"><div><h2>Seus cartões</h2><p>Limite e obrigação em uma visão rápida</p></div></div><div id="cardsGrid" class="cards"></div></article><article class="panel management-form-panel"><div class="head"><div><h2 id="cardFormTitle">Adicionar cartão</h2><p>Configure limite e ciclo da fatura</p></div><span class="management-mode" id="cardFormMode">Criação</span></div><form id="cardForm" class="management-form"><input id="cardId" type="hidden"/><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Essencial</h3><p class="form-section__description">Identificação e limite disponível.</p></div></div><div class="field-group field-group--two"><label>Nome<input id="cardName" required/></label><label class="money-field">Limite<input id="cardLimit" type="number" inputmode="decimal" step="0.01" required/></label></div></section><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Ciclo da fatura</h3><p class="form-section__description">Datas usadas para organizar as compras.</p></div></div><div class="field-group field-group--two"><label>Fechamento<input id="cardClose" type="number" inputmode="numeric" min="1" max="31" required/><small class="field-help">Compras após este dia entram normalmente na fatura seguinte.</small></label><label>Vencimento<input id="cardDue" type="number" inputmode="numeric" min="1" max="31" required/><small class="field-help">Dia previsto para pagar a fatura.</small></label></div></section><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Pagamento</h3><p class="form-section__description">Conta usada ao registrar o pagamento.</p></div></div><label>Conta pagadora<select id="cardPayAccount"></select></label></section><div class="section-actions"><button class="btn" id="cardSubmit">Salvar cartão</button></div></form></article></div>
       <article class="panel invoice-focus"><div class="head"><div><h2>Fatura atual</h2><p>Total, pagamento e compras da fatura selecionada</p></div><div class="actions"><button class="btn2 tiny" id="closeInvoice">Fechar fatura</button><button class="btn tiny" id="payInvoice">Registrar pagamento</button></div></div><div class="two"><label>Cartão<select id="invoiceCard"></select></label><label>Mês da fatura<input id="invoiceMonth" type="month"/></label></div><div class="invoice-summary"><div><small>Total da fatura</small><strong id="invoiceTotalView">R$ 0,00</strong></div><div><small>Pago</small><strong class="positive" id="invoicePaidView">R$ 0,00</strong></div><div><small>Falta pagar</small><strong class="warning" id="invoiceRemainingView">R$ 0,00</strong></div><div><small>Status</small><strong id="invoiceStatusView">Aberta</strong></div></div><div class="tablewrap desktop-table-mobile"><table><thead><tr><th>Compra</th><th>Parcela</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="invoiceTable"></tbody></table></div><div id="invoiceMobile" class="mobile-card-list"></div></article>
-      <article class="panel secondary-content"><div class="head"><div><h2>Importar fatura</h2><p>CSV, OFX ou PDF: reimporte o arquivo completo sem duplicar</p></div><span class="badge">incremental</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,.ofx,.pdf,text/csv,application/csv,text/comma-separated-values,application/x-ofx,application/ofx,application/pdf"/></label></div><div class="note" id="cardImportHint">O SFP identifica o cartão e o mês da fatura, separa lançamentos atuais de pagamentos anteriores e parcelas futuras, reimporta somente ocorrências inéditas e só libera um PDF quando a soma fecha com o total oficial. Pagamentos do ciclo anterior servem apenas para conferência e não são importados automaticamente. PDFs protegidos são desbloqueados localmente e a senha não é salva. Documentos escaneados sem texto ainda precisam de OCR. Nada é salvo antes da sua confirmação.</div></article>
+      <article class="panel secondary-content"><div class="head"><div><h2>Importar fatura</h2><p>CSV, OFX, PDF ou captura: reimporte sem duplicar</p></div><span class="badge">incremental</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo ou captura<input id="cardImportFile" type="file" multiple accept=".csv,.ofx,.pdf,.jpg,.jpeg,.png,.webp,text/csv,application/csv,text/comma-separated-values,application/x-ofx,application/ofx,application/pdf,image/jpeg,image/png,image/webp"/></label></div><div class="note" id="cardImportHint">Escolha um arquivo ou uma ou mais capturas da fatura. Imagens são lidas por OCR no próprio aparelho e só são liberadas quando os lançamentos fecham com o total visível. O SFP identifica o cartão e o mês, separa pagamentos anteriores, reimporta apenas ocorrências inéditas e não salva nada antes da sua confirmação. PDFs protegidos também são desbloqueados localmente; senhas e imagens não são enviadas pela internet.</div></article>
       <article class="panel secondary-content hidden" id="cardImportReview"><div class="head"><div><h2>Conferir fatura</h2><p id="cardImportSummary"></p></div><div class="actions"><button class="btn2" type="button" id="cardImportCancel">Cancelar</button><button class="btn" type="button" id="cardImportConfirm">Importar fatura</button></div></div><div class="note" id="cardImportTarget"></div><div class="note" id="cardImportValidation"></div><div class="tablewrap desktop-table-mobile"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Destino</th><th>Status</th></tr></thead><tbody id="cardImportRows"></tbody></table></div><div id="cardImportMobile" class="mobile-card-list"></div></article>
       <article class="panel secondary-content"><div class="head"><div><h2>Histórico do cartão</h2><p>Alterações de limite, pagamentos e estornos</p></div></div><label>Cartão<select id="cardHistorySelect"></select></label><div id="cardHistory" class="card-history"></div></article>
     </section>
@@ -3388,6 +3388,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 <div id="feedbackCard" class="feedback-card"></div><div id="toast" class="toast"></div>
 
 <script src="invoice-pdf-engine.js"></script>
+<script src="invoice-image-engine.js"></script>
 <script src="financial-intelligence.js"></script>
 <script src="financial-insights-ui.js"></script>
 <script src="safe-spend.js"></script>
@@ -10240,7 +10241,7 @@ function initOther(){
  if($('dcAudit'))$('dcAudit').onclick=()=>setPage('auditoria');
  if($('dcExportAll'))$('dcExportAll').onclick=()=>download(JSON.stringify(state,null,2),`sfp-completo-${localCivilDate()}.json`,'application/json');
  $('prevMonth').onclick=async()=>{state.mesAtual=monthAdd(state.mesAtual,-1);await dbSet(state);renderAll()};$('nextMonth').onclick=async()=>{state.mesAtual=monthAdd(state.mesAtual,1);await dbSet(state);renderAll()};
- $('txSearch').oninput=renderTx;$('txFilter').onchange=renderTx;$('txCancelEdit').onclick=resetTxForm;$('invoiceCard').onchange=()=>{let cid=+$('invoiceCard').value,m=state.ui.invoiceMonthByCard?.[cid]||currentInvoiceMonth(card(cid));if($('invoiceMonth'))$('invoiceMonth').value=m;renderCards()};if($('invoiceMonth'))$('invoiceMonth').onchange=()=>{let cid=+$('invoiceCard').value;state.ui.invoiceMonthByCard[cid]=$('invoiceMonth').value;renderCards()};if($('cardImportFile'))$('cardImportFile').onchange=e=>importCardCsv(e.target.files[0]);if($('cardHistorySelect'))$('cardHistorySelect').onchange=renderCardHistory;
+ $('txSearch').oninput=renderTx;$('txFilter').onchange=renderTx;$('txCancelEdit').onclick=resetTxForm;$('invoiceCard').onchange=()=>{let cid=+$('invoiceCard').value,m=state.ui.invoiceMonthByCard?.[cid]||currentInvoiceMonth(card(cid));if($('invoiceMonth'))$('invoiceMonth').value=m;renderCards()};if($('invoiceMonth'))$('invoiceMonth').onchange=()=>{let cid=+$('invoiceCard').value;state.ui.invoiceMonthByCard[cid]=$('invoiceMonth').value;renderCards()};if($('cardImportFile'))$('cardImportFile').onchange=e=>importCardFiles([...e.target.files]);if($('cardHistorySelect'))$('cardHistorySelect').onchange=renderCardHistory;
 $('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoiceMonth')?.value||currentInvoiceMonth(card(cid)),total=invoiceTotal(cid,m);if(total<=0)return toast('Essa fatura está vazia.');let inv=ensureInvoice(cid,m);if(inv.closedAt)return toast('A fatura já está fechada.');inv.officialTotal=total;inv.closedAt=new Date().toISOString();inv.status='closed';addCardHistory(cid,'close',`Fatura ${monthName(m)} fechada`,total);await save('Fechar fatura')};
  $('payInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoiceMonth')?.value||currentInvoiceMonth(card(cid)),total=invoiceRemaining(cid,m),cd=card(cid);if(total<=0)return toast('Essa fatura não tem saldo aberto.','info');let raw=await sfpPrompt({title:`Pagar fatura ${cd.name}`,message:`Fatura de ${monthName(m)}\nSaldo restante em aberto: ${brl(total)}\nInforme o valor do pagamento:`,defaultValue:total.toFixed(2),placeholder:'0,00'});if(raw==null||raw==='')return;let v=parseMoney(raw);if(!(v>0))return;if(v>total){let proceedExcess=await sfpConfirm({title:'Valor Superior',message:`O valor informado (${brl(v)}) é maior que o restante da fatura (${brl(total)}).\n\nDeseja registrar apenas ${brl(total)}?`,confirmText:`Registrar ${brl(total)}`,cancelText:'Cancelar'});if(!proceedExcess)return;v=total}let inv=state.invoices.find(i=>i.cardId==cid&&i.month===m);if(!inv){inv={id:uid(),cardId:cid,month:m,status:'open',paidAmount:0,accountId:cd.payAccountId,payments:[]};state.invoices.push(inv)}inv.paidAmount=Math.min(invoiceTotal(cid,m),Math.round(((inv.paidAmount||0)+v)*100)/100);inv.status=inv.paidAmount>=invoiceTotal(cid,m)-.01?'paid':'partial';inv.payments.push({date:localCivilDate(),amount:v,balanceImpact:true,targetMonth:m});addCardHistory(cid,'payment',`Pagamento da fatura ${monthName(m)}`,v);await save('Pagar fatura');toast('Pagamento registrado com sucesso.','success')};
  $('budgetPreset').onchange=()=>{let p=$('budgetPreset').value,vals=p==='503020'?[50,30,20]:p==='601020'?[60,20,20]:null;if(vals){$('budgetNeeds').value=vals[0];$('budgetWants').value=vals[1];$('budgetSave').value=vals[2]}};
@@ -10316,12 +10317,26 @@ function invoiceImportKey(cardId,row,occurrences){
   let occurrence=(occurrences.get(base)||0)+1;occurrences.set(base,occurrence);
   return `${base}|occ:${occurrence}`;
 }
+function invoiceEntityHasImportKey(entity,key){
+  return Boolean(key)&&(entity?.invoiceImportKey===key||(entity?.invoiceImportAliases||[]).includes(key));
+}
+function invoiceMerchantIdentity(value){
+  return normalizeImportText(value).replace(/\b(?:parcela\s*)?\d+\s*(?:\/|de)\s*\d+\b/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function crossSourceInvoicePurchaseMatch(p,cardId,row){
+  const sourcePair=row.importSource==='image-ocr'||String(p?.importSource||'').includes('image');
+  if(!sourcePair||p.cardId!==cardId||p.purchaseDate!==row.date||invoiceMerchantIdentity(p.desc)!==invoiceMerchantIdentity(row.desc))return false;
+  const invoiceMonth=row.invoiceMonth||row.targetMonth||row.firstMonth,charge=invoiceMonth?purchaseInstallment(p,invoiceMonth):null;
+  return Boolean(charge)&&Math.abs(Number(charge.amount)-Math.abs(Number(row.amount)||0))<.01;
+}
 function existingInvoiceImportMatch(cardId,row,reserved=new Set()){
   if(row.kind==='purchase'){
-    let exact=state.purchases.find(p=>p.cardId===cardId&&p.invoiceImportKey===row.importKey&&!reserved.has(`purchase:${p.id}`));
+    let exact=state.purchases.find(p=>p.cardId===cardId&&invoiceEntityHasImportKey(p,row.importKey)&&!reserved.has(`purchase:${p.id}`));
     if(exact)return{source:'purchase',id:exact.id,token:`purchase:${exact.id}`,legacy:false};
     let legacy=state.purchases.find(p=>(p.tags||[]).includes('fatura-importada')&&!p.invoiceImportKey&&cardPurchaseMatches(p,cardId,{...row,purchaseDate:row.date})&&!reserved.has(`purchase:${p.id}`));
-    return legacy?{source:'purchase',id:legacy.id,token:`purchase:${legacy.id}`,legacy:true}:null;
+    if(legacy)return{source:'purchase',id:legacy.id,token:`purchase:${legacy.id}`,legacy:true};
+    let reconciled=state.purchases.find(p=>crossSourceInvoicePurchaseMatch(p,cardId,row)&&!reserved.has(`purchase:${p.id}`));
+    return reconciled?{source:'purchase',id:reconciled.id,token:`purchase:${reconciled.id}`,legacy:false,crossSource:true}:null;
   }
   if(row.kind==='credit'){
     let exact=state.invoiceAdjustments.find(a=>a.cardId===cardId&&a.invoiceImportKey===row.importKey&&!reserved.has(`credit:${a.id}`));
@@ -10335,9 +10350,19 @@ function existingInvoiceImportMatch(cardId,row,reserved=new Set()){
   let legacyIndex=payments.findIndex((p,index)=>!p.invoiceImportKey&&cardPaymentMatches(p,row)&&!reserved.has(`payment:${invoice.id}:${index}`));
   return legacyIndex>=0?{source:'payment',invoiceId:invoice.id,index:legacyIndex,token:`payment:${invoice.id}:${legacyIndex}`,legacy:true}:null;
 }
-function attachInvoiceImportKey(match,key){
-  if(!match?.legacy||!key)return false;
-  if(match.source==='purchase'){let p=state.purchases.find(x=>String(x.id)===String(match.id));if(p&&!p.invoiceImportKey){p.invoiceImportKey=key;return true}}
+function attachInvoiceImportKey(match,key,row=null){
+  if(!match||!key)return false;
+  if(match.source==='purchase'){
+    let p=state.purchases.find(x=>String(x.id)===String(match.id));if(!p)return false;let changed=false;
+    if(!p.invoiceImportKey){p.invoiceImportKey=key;changed=true}
+    else if(p.invoiceImportKey!==key&&!invoiceEntityHasImportKey(p,key)){p.invoiceImportAliases=[...new Set([...(p.invoiceImportAliases||[]),key])];changed=true}
+    if(match.crossSource&&row?.authoritativeInstallmentPlan&&p.documentInstallment?.projection==='not-inferred'){
+      p.total=row.total;p.installments=row.installments;p.firstMonth=row.firstMonth;p.installmentSchedule=Array.isArray(row.installmentSchedule)?[...row.installmentSchedule]:undefined;
+      p.documentInstallment={installment:row.installment,installments:row.installments,projection:'document-verified'};p.note='Importado por captura e conciliado depois com o cronograma conferido do documento.';p.importSource='image-ocr+document';changed=true;
+    }
+    return changed;
+  }
+  if(!match.legacy)return false;
   if(match.source==='credit'){let a=state.invoiceAdjustments.find(x=>String(x.id)===String(match.id));if(a&&!a.invoiceImportKey){a.invoiceImportKey=key;return true}}
   if(match.source==='payment'){let inv=state.invoices.find(x=>String(x.id)===String(match.invoiceId)),p=inv?.payments?.[match.index];if(p&&!p.invoiceImportKey){p.invoiceImportKey=key;return true}}
   return false;
@@ -10453,7 +10478,7 @@ function resolveInvoiceImportContext(meta){
   if(!selected)throw Error('Selecione um cartão válido antes de importar a fatura.');
   if(issuer&&cardIssuerFromName(selected.name)!==issuer.id){
     const candidates=state.cards.filter(candidate=>cardIssuerFromName(candidate.name)===issuer.id);
-    if(candidates.length!==1)throw Error(`O PDF foi identificado como fatura ${issuer.label}, mas o cartão selecionado é ${selected.name}. Selecione o cartão correto e tente novamente.`);
+    if(candidates.length!==1)throw Error(`O arquivo foi identificado como fatura ${issuer.label}, mas o cartão selecionado é ${selected.name}. Selecione o cartão correto e tente novamente.`);
     selected=candidates[0];cardAutoSelected=true;$('cardImportCard').value=String(selected.id);
   }
   const dueDate=String(meta?.dueDate||''),documentMonth=validCivilImportDate(dueDate)?dueDate.slice(0,7):null;
@@ -10474,12 +10499,12 @@ function prepareCardImport(rows,file,analysis=null,meta=null){
   for(const input of rows){
     const resolvedKind=input.invoiceKind||(input.amount<0?'payment':'purchase');let row;
     if(resolvedKind==='payment'||resolvedKind==='credit'){
-      row={...input,kind:resolvedKind,targetMonth:resolvedKind==='payment'?monthAdd(month,-1):month,amount:Math.abs(Number(input.amount)||0)};
+      row={...input,kind:resolvedKind,targetMonth:resolvedKind==='payment'?monthAdd(month,-1):month,invoiceMonth:month,importSource:meta?.source||input.importSource||null,amount:Math.abs(Number(input.amount)||0)};
     }else{
       let amount=Math.abs(Number(input.amount)||0),plan=trustedInvoiceInstallmentPlan(input),pm=String(input.desc||'').match(/Parcela\s*(\d+)\s*\/\s*(\d+)/i),desc=String(input.desc||'').replace(/\s*-?\s*Parcela\s*\d+\s*\/\s*\d+/i,'').trim();
-      if(plan)row={...input,amount,desc,kind:'purchase',installment:plan.installment,installments:plan.count,firstMonth:monthAdd(month,-(plan.installment-1)),total:plan.total,installmentSchedule:plan.schedule};
-      else if(input.currentChargeOnly)row={...input,amount,desc,kind:'purchase',installment:1,installments:1,firstMonth:month,total:amount,documentInstallment:{installment:Number(input.installment)||null,installments:Number(input.installments)||null,projection:'not-inferred'}};
-      else row=pm?{...input,amount,desc,kind:'purchase',installment:+pm[1],installments:+pm[2],firstMonth:monthAdd(month,-(+pm[1]-1)),total:Math.round(amount*(+pm[2])*100)/100}:{...input,amount,desc,kind:'purchase',installment:1,installments:1,firstMonth:month,total:amount};
+      if(plan)row={...input,amount,desc,kind:'purchase',invoiceMonth:month,importSource:meta?.source||input.importSource||null,installment:plan.installment,installments:plan.count,firstMonth:monthAdd(month,-(plan.installment-1)),total:plan.total,installmentSchedule:plan.schedule};
+      else if(input.currentChargeOnly)row={...input,amount,desc,kind:'purchase',invoiceMonth:month,importSource:meta?.source||input.importSource||null,installment:1,installments:1,firstMonth:month,total:amount,documentInstallment:{installment:Number(input.installment)||null,installments:Number(input.installments)||null,projection:'not-inferred'}};
+      else row=pm?{...input,amount,desc,kind:'purchase',invoiceMonth:month,importSource:meta?.source||input.importSource||null,installment:+pm[1],installments:+pm[2],firstMonth:monthAdd(month,-(+pm[1]-1)),total:Math.round(amount*(+pm[2])*100)/100}:{...input,amount,desc,kind:'purchase',invoiceMonth:month,importSource:meta?.source||input.importSource||null,installment:1,installments:1,firstMonth:month,total:amount};
     }
     row.importKey=invoiceImportKey(cardId,row,occurrences);
     let repeatedFitid=seenKeys.has(row.importKey),match=repeatedFitid?null:existingInvoiceImportMatch(cardId,row,reserved);
@@ -10500,20 +10525,21 @@ function renderCardImportDraft(){
   let draft=cardImportDraft;if(!draft)return;let fresh=draft.rows.filter(r=>!r.duplicate),purchases=fresh.filter(r=>r.kind==='purchase').length,payments=fresh.filter(r=>r.kind==='payment').length,credits=fresh.filter(r=>r.kind==='credit').length,duplicates=draft.rows.length-fresh.length;
   $('cardImportReview').classList.remove('hidden');$('cardImportSummary').textContent=`${draft.rows.length} linha(s): ${purchases} débito(s), ${payments} pagamento(s), ${credits} crédito(s)/estorno(s), ${duplicates} já importada(s)${draft.invalid?` e ${draft.invalid} inválida(s) ignorada(s)`:''}.`;
   let a=draft.analysis,integrity=draft.integrity,validation=$('cardImportValidation'),confirm=$('cardImportConfirm');
-  if(confirm){confirm.disabled=Boolean(integrity&&!integrity.importAllowed);confirm.textContent=integrity&&!integrity.importAllowed?'Importação bloqueada':'Importar fatura';}
+  if(confirm){confirm.disabled=Boolean(integrity&&!integrity.importAllowed);confirm.textContent=integrity&&!integrity.importAllowed?'Importação bloqueada':draft.meta?.source==='image-ocr'?'Conferi e importar':'Importar fatura';}
   if($('cardImportTarget')){
     const adjustments=[];if(draft.context?.cardAutoSelected)adjustments.push('cartão identificado pelo emissor');if(draft.context?.monthAutoSelected)adjustments.push('mês definido pelo vencimento');
     $('cardImportTarget').textContent=`Destino confirmado: ${card(draft.cardId)?.name||'Cartão'} • fatura ${monthName(draft.month)}.${adjustments.length?` ${adjustments.join(' e ')}.`:''}`;
   }
   if(validation){
-    let type=a?.documentType==='invoice'?'Fatura':a?.documentType==='statement'?'Extrato':'Tipo incerto',pct=Math.round((a?.confidence||0)*100),sign=a?.signConvention==='debitNegative'?'débitos negativos':a?.signConvention==='debitPositive'?'débitos positivos':'sinais ambíguos',engine=a?.validator==='local+groq'?'regras locais + Groq':'regras locais',meta=[];
+    let type=a?.documentType==='invoice'?'Fatura':a?.documentType==='statement'?'Extrato':'Tipo incerto',pct=Math.round((a?.confidence||0)*100),sign=a?.signConvention==='debitNegative'?'débitos negativos':a?.signConvention==='debitPositive'?'débitos positivos':'sinais ambíguos',engine=draft.meta?.source==='image-ocr'?'OCR local no aparelho':a?.validator==='local+groq'?'regras locais + Groq':'regras locais',meta=[];
     if(Number.isFinite(Number(draft.meta?.officialTotal)))meta.push(`total oficial ${brl(draft.meta.officialTotal)}`);
     if(draft.meta?.dueDate)meta.push(`vence em ${dateObj(draft.meta.dueDate).toLocaleDateString('pt-BR')}`);
     if(draft.meta?.closingDate)meta.push(`fecha em ${dateObj(draft.meta.closingDate).toLocaleDateString('pt-BR')}`);
     const profile=draft.meta?.profileLabel?` Layout: ${draft.meta.profileLabel}.`:'';
     const proof=integrity?` ${integrity.status==='verified'?'✓ Verificação contábil aprovada.':'⚠ Verificação contábil não aprovada.'} ${integrity.reason}`:'';
     const previousPaymentEvidence=Number(integrity?.payments)||0,scopeNote=previousPaymentEvidence?` ${previousPaymentEvidence} pagamento(s) do ciclo anterior usado(s) somente na conferência; nenhum será importado.`:'';
-    validation.textContent=(a?`Detectado: ${type} (${pct}%). Convenção: ${sign}. Validação: ${engine}.${a.warnings?.length?' '+a.warnings.join(' '):''}`:'Prévia validada pelas regras locais.')+profile+(meta.length?` Documento: ${meta.join(' • ')}.`:'')+proof+scopeNote;
+    const ocrNote=draft.meta?.source==='image-ocr'?' Confira visualmente cada data, descrição e valor antes de importar.':'';
+    validation.textContent=(a?`Detectado: ${type} (${pct}%). Convenção: ${sign}. Validação: ${engine}.${a.warnings?.length?' '+a.warnings.join(' '):''}`:'Prévia validada pelas regras locais.')+profile+(meta.length?` Documento: ${meta.join(' • ')}.`:'')+proof+scopeNote+ocrNote;
   }
   const rowHtml=r=>`<tr><td>${dateObj(r.date).toLocaleDateString('pt-BR')}</td><td>${sfpEsc(r.desc)}</td><td class="${r.kind==='purchase'?'negative':'positive'}">${brl(r.kind==='purchase'?-r.amount:r.amount)}</td><td>${sfpEsc(cardImportNatureLabel(r))}</td><td>${r.duplicate?'Já importada':'Pronta para importar'}</td></tr>`;
   $('cardImportRows').innerHTML=draft.rows.map(rowHtml).join('');
@@ -10521,7 +10547,7 @@ function renderCardImportDraft(){
 }
 
 function readFileAsText(file){return new Promise((resolve,reject)=>{let rd=new FileReader();rd.onload=()=>resolve(String(rd.result||''));rd.onerror=()=>reject(Error('Não consegui abrir o arquivo.'));rd.readAsText(file,'UTF-8')})}
-function readFileAsDataUrl(file){return new Promise((resolve,reject)=>{let rd=new FileReader();rd.onload=()=>resolve(String(rd.result||''));rd.onerror=()=>reject(Error('Não consegui abrir o PDF.'));rd.readAsDataURL(file)})}
+function readFileAsDataUrl(file){return new Promise((resolve,reject)=>{let rd=new FileReader();rd.onload=()=>resolve(String(rd.result||''));rd.onerror=()=>reject(Error('Não consegui abrir o arquivo.'));rd.readAsDataURL(file)})}
 function pdfPasswordCancelledError(){let error=Error('Importação cancelada.');error.code='PDF_PASSWORD_CANCELLED';return error}
 function parsePdfBridgeResult(raw){try{return JSON.parse(raw)}catch{throw Error('O leitor local de PDF retornou uma resposta inválida.')}}
 async function extractPdfTextLocal(file){
@@ -10543,6 +10569,42 @@ async function extractPdfTextLocal(file){
     if(parsed?.passwordRequired||parsed?.errorCode==='invalid_password'){wrongPassword=true;continue}
     throw Error(parsed?.error||'Não foi possível extrair texto do PDF.');
   }
+}
+function imageBridgeResult(raw){try{return JSON.parse(raw)}catch{throw Error('O leitor local de imagem retornou uma resposta inválida.')}}
+async function extractImageTextLocal(file){
+  if(!window.AndroidBridge||typeof AndroidBridge.extractImageText!=='function')throw Error('A leitura de imagens está disponível no aplicativo Android.');
+  const dataUrl=await readFileAsDataUrl(file),base64=(dataUrl.split(',')[1]||'');
+  if(!base64)throw Error('Imagem vazia ou ilegível.');
+  const parsed=imageBridgeResult(AndroidBridge.extractImageText(base64));
+  if(!parsed?.ok)throw Error(parsed?.error||'Não foi possível reconhecer o texto desta imagem.');
+  return{...parsed,name:file.name||'Captura de fatura'};
+}
+function invoiceImageExtension(file){
+  const ext=(file?.name?.split('.').pop()||'').toLowerCase();return['jpg','jpeg','png','webp'].includes(ext)||/^image\/(?:jpeg|png|webp)$/i.test(file?.type||'');
+}
+async function importCardImages(files){
+  const selected=(files||[]).filter(Boolean);if(!selected.length)return;
+  try{
+    const pages=[];
+    for(let index=0;index<selected.length;index++){
+      toast(`Lendo captura ${index+1} de ${selected.length} no aparelho…`,'info');
+      pages.push(await extractImageTextLocal(selected[index]));
+    }
+    if(!window.SFPInvoiceImageEngine||typeof window.SFPInvoiceImageEngine.parse!=='function')throw Error('O motor de leitura de capturas não foi carregado.');
+    const parsedImage=window.SFPInvoiceImageEngine.parse(pages,{month:$('cardImportMonth').value});
+    if(!parsedImage.rows.length)throw Error('Não encontrei lançamentos completos com data, descrição e valor nas imagens.');
+    let analysis=localImportAnalysis({rows:parsedImage.rows,ext:'image',text:parsedImage.text,intendedType:'invoice'});
+    analysis.documentType='invoice';analysis.confidence=Math.max(Number(analysis.confidence)||0,Number(parsedImage.profile?.confidence)||0);analysis.validator='local-ocr';analysis.warnings=[];
+    const meta={...parsedImage.meta,profileId:parsedImage.profile.id,profileLabel:parsedImage.profile.label,integrity:parsedImage.integrity,imageCount:selected.length};
+    prepareCardImport(classifyInvoiceRows(parsedImage.rows,analysis),selected.length===1?selected[0].name:`${selected.length} capturas de fatura`,analysis,meta);
+  }catch(error){closeCardImportReview();toast('Não consegui ler a captura: '+error.message,'error')}finally{if($('cardImportFile'))$('cardImportFile').value=''}
+}
+async function importCardFiles(files){
+  const selected=(files||[]).filter(Boolean);if(!selected.length)return;
+  const images=selected.filter(invoiceImageExtension);
+  if(images.length===selected.length)return importCardImages(images);
+  if(selected.length===1)return importCardCsv(selected[0]);
+  toast('Selecione várias imagens ou apenas um arquivo CSV, OFX ou PDF por vez.','warning');if($('cardImportFile'))$('cardImportFile').value='';
 }
 function pdfImportDate(line,{month=null}={}){
   let m=String(line||'').match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?\b/);
@@ -10635,7 +10697,8 @@ function parsePdfFinancialText(text,{intendedType='statement',month=null}={}){
 async function importCardCsv(file){
   if(!file)return;
   let ext=(file.name.split('.').pop()||'').toLowerCase();
-  if(!['csv','ofx','pdf'].includes(ext)){toast('Selecione um arquivo CSV, OFX ou PDF de fatura.','warning');$('cardImportFile').value='';return}
+  if(invoiceImageExtension(file))return importCardImages([file]);
+  if(!['csv','ofx','pdf'].includes(ext)){toast('Selecione CSV, OFX, PDF, JPG, PNG ou WebP de fatura.','warning');$('cardImportFile').value='';return}
   try{
     let text=ext==='pdf'?await extractPdfTextLocal(file):await readFileAsText(file);
     let parsedPdf=ext==='pdf'?parseInvoicePdfDocument(text,{month:$('cardImportMonth').value}):null;
@@ -10650,13 +10713,13 @@ async function importCardCsv(file){
 }
 async function confirmCardImport(){
   let draft=cardImportDraft;if(!draft)return;
-  if(draft.integrity&&!draft.integrity.importAllowed){toast('Importação bloqueada: os valores do PDF não foram comprovados. Nenhum dado foi salvo.','error');return}
-  if(draft.context?.targetVerified===false||draft.context?.issuer&&cardIssuerFromName(card(draft.cardId)?.name)!==draft.context.issuer.id){toast('Importação bloqueada: o cartão de destino não corresponde ao emissor identificado no PDF.','error');return}
-  if(draft.meta?.dueDate&&draft.month!==String(draft.meta.dueDate).slice(0,7)){toast('Importação bloqueada: o mês da fatura não corresponde ao vencimento identificado no PDF.','error');return}
+  if(draft.integrity&&!draft.integrity.importAllowed){toast('Importação bloqueada: os valores do documento não foram comprovados. Nenhum dado foi salvo.','error');return}
+  if(draft.context?.targetVerified===false||draft.context?.issuer&&cardIssuerFromName(card(draft.cardId)?.name)!==draft.context.issuer.id){toast('Importação bloqueada: o cartão de destino não corresponde ao emissor identificado no arquivo.','error');return}
+  if(draft.meta?.dueDate&&draft.month!==String(draft.meta.dueDate).slice(0,7)){toast('Importação bloqueada: o mês da fatura não corresponde ao vencimento identificado no documento.','error');return}
   let before=clone(state);try{
     let purchasesAdded=0,paymentsAdded=0,creditsAdded=0,identityChanged=false;
     for(let r of draft.rows){
-      if(r.duplicate){identityChanged=attachInvoiceImportKey(r.duplicateMatch,r.importKey)||identityChanged;continue}
+      if(r.duplicate){identityChanged=attachInvoiceImportKey(r.duplicateMatch,r.importKey,r)||identityChanged;continue}
       if(r.kind==='payment'){
         let inv=ensureInvoice(draft.cardId,r.targetMonth);if((inv.payments||[]).some(p=>p.invoiceImportKey===r.importKey))continue;
         inv.payments.push({date:r.date,amount:r.amount,balanceImpact:false,targetMonth:r.targetMonth,sourceDesc:r.desc,invoiceImportKey:r.importKey,sourceFile:draft.file});
@@ -10667,14 +10730,14 @@ async function confirmCardImport(){
         state.invoiceAdjustments.push({id:uid(),cardId:draft.cardId,month:r.targetMonth,date:r.date,desc:r.desc,amount:-Math.abs(r.amount),source:'invoice-import',invoiceImportKey:r.importKey,sourceFile:draft.file});creditsAdded++;continue;
       }
       if(state.purchases.some(p=>p.invoiceImportKey===r.importKey))continue;
-      let sem=semanticClassify(r.desc,-Math.abs(r.total));state.purchases.push({id:uid(),cardId:draft.cardId,desc:r.desc,total:r.total,installments:r.installments,purchaseDate:r.date,firstMonth:r.firstMonth,category:sem.category||'Outros',status:'active',note:r.authoritativeInstallmentPlan?'Importado de fatura com cronograma conferido pelo próprio documento.':'Importado de fatura.',tags:['fatura-importada'],refunds:[],invoiceImportKey:r.importKey,sourceFile:draft.file,installmentSchedule:Array.isArray(r.installmentSchedule)?[...r.installmentSchedule]:undefined,documentInstallment:r.documentInstallment?{...r.documentInstallment}:undefined,semanticClass:sem.semanticClass||'unclassified',economicImpact:sem.economicImpact||'review',classificationConfidence:sem.confidence||null,classificationReason:sem.reason||null});purchasesAdded++;
+      let sem=semanticClassify(r.desc,-Math.abs(r.total));state.purchases.push({id:uid(),cardId:draft.cardId,desc:r.desc,total:r.total,installments:r.installments,purchaseDate:r.date,firstMonth:r.firstMonth,category:sem.category||'Outros',status:'active',note:r.authoritativeInstallmentPlan?'Importado de fatura com cronograma conferido pelo próprio documento.':r.importSource==='image-ocr'?'Importado de captura de fatura após conferência local por OCR.':'Importado de fatura.',tags:['fatura-importada'],refunds:[],invoiceImportKey:r.importKey,invoiceImportAliases:[],importSource:r.importSource||draft.meta?.source||null,sourceFile:draft.file,installmentSchedule:Array.isArray(r.installmentSchedule)?[...r.installmentSchedule]:undefined,documentInstallment:r.documentInstallment?{...r.documentInstallment}:undefined,semanticClass:sem.semanticClass||'unclassified',economicImpact:sem.economicImpact||'review',classificationConfidence:sem.confidence||null,classificationReason:sem.reason||null});purchasesAdded++;
     }
     let inv=ensureInvoice(draft.cardId,draft.month),metaChanged=applyInvoiceDocumentMeta(draft),calculated=invoiceCalculated(draft.cardId,draft.month),calculatedChanged=false;
     if(!Number.isFinite(Number(draft.meta?.officialTotal))&&!inv.closedAt&&!['closed','paid'].includes(inv.status)&&inv.officialTotalSource!=='document'&&(inv.officialTotal==null||Math.abs(Number(inv.officialTotal)-calculated)>=.01)){inv.officialTotal=calculated;inv.officialTotalSource='calculated-import';calculatedChanged=true}
     let uiChanged=state.ui.invoiceMonthByCard[draft.cardId]!==draft.month;state.ui.invoiceMonthByCard[draft.cardId]=draft.month;
     let changed=purchasesAdded>0||paymentsAdded>0||creditsAdded>0||identityChanged||metaChanged||calculatedChanged||uiChanged;
     if(!changed){closeCardImportReview();toast('Fatura já estava atualizada. Nenhuma duplicata foi criada.','info');return}
-    state.invoiceImports.push({id:uid(),cardId:draft.cardId,card:card(draft.cardId)?.name||'Cartão',month:draft.month,file:draft.file||'Fatura',count:purchasesAdded+paymentsAdded+creditsAdded,purchases:purchasesAdded,payments:paymentsAdded,credits:creditsAdded,duplicates:draft.rows.filter(r=>r.duplicate).length,officialTotal:Number.isFinite(Number(draft.meta?.officialTotal))?Number(draft.meta.officialTotal):null,dueDate:draft.meta?.dueDate||null,closingDate:draft.meta?.closingDate||null,documentProfile:draft.meta?.profileId||null,verificationStatus:draft.integrity?.status||null,importedAt:new Date().toISOString()});
+    state.invoiceImports.push({id:uid(),cardId:draft.cardId,card:card(draft.cardId)?.name||'Cartão',month:draft.month,file:draft.file||'Fatura',source:draft.meta?.source||null,imageCount:Number(draft.meta?.imageCount)||null,count:purchasesAdded+paymentsAdded+creditsAdded,purchases:purchasesAdded,payments:paymentsAdded,credits:creditsAdded,duplicates:draft.rows.filter(r=>r.duplicate).length,officialTotal:Number.isFinite(Number(draft.meta?.officialTotal))?Number(draft.meta.officialTotal):null,dueDate:draft.meta?.dueDate||null,closingDate:draft.meta?.closingDate||null,documentProfile:draft.meta?.profileId||null,verificationStatus:draft.integrity?.status||null,importedAt:new Date().toISOString()});
     await save('Importar fatura de cartão');closeCardImportReview();toast(`${purchasesAdded} débito(s), ${paymentsAdded} pagamento(s) e ${creditsAdded} crédito(s) novos. Fatura conciliada sem duplicar.`, 'success')
   }catch(e){state=before;lastSavedState=clone(before);renderAll();toast('Não foi possível importar a fatura. Nenhuma alteração foi aplicada.','error');console.error('Falha ao importar fatura:',e)}
 }

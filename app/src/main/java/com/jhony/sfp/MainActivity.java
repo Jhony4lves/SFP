@@ -95,6 +95,8 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("*/*");
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
+                        fileChooserParams.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE);
                 intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
                         "text/csv",
                         "application/csv",
@@ -105,6 +107,9 @@ public class MainActivity extends AppCompatActivity {
                         "application/x-ofx",
                         "application/ofx",
                         "application/pdf",
+                        "image/jpeg",
+                        "image/png",
+                        "image/webp",
                         "text/plain"
                 });
                 startActivityForResult(intent, FILE_CHOOSER_REQUEST);
@@ -133,8 +138,16 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == FILE_CHOOSER_REQUEST && fileChooserCallback != null) {
             Uri[] results = null;
-            if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
-                results = new Uri[]{data.getData()};
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                if (data.getClipData() != null && data.getClipData().getItemCount() > 0) {
+                    int count = data.getClipData().getItemCount();
+                    results = new Uri[count];
+                    for (int index = 0; index < count; index++) {
+                        results[index] = data.getClipData().getItemAt(index).getUri();
+                    }
+                } else if (data.getData() != null) {
+                    results = new Uri[]{data.getData()};
+                }
             }
             fileChooserCallback.onReceiveValue(results);
             fileChooserCallback = null;

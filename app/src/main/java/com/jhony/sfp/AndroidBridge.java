@@ -8,6 +8,9 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -20,8 +23,15 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.google.android.gms.tasks.Tasks;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 import com.tom_roush.pdfbox.pdmodel.PDDocument;
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException;
@@ -37,6 +47,7 @@ import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
+import java.util.concurrent.TimeUnit;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -45,6 +56,10 @@ import javax.crypto.spec.GCMParameterSpec;
 public class AndroidBridge {
     private static final String CHANNEL_ID = "sfp_important_alerts";
     private static final int NOTIFICATION_ID = 1001;
+    private static final int MAX_OCR_FILE_BYTES = 24 * 1024 * 1024;
+    private static final long MAX_OCR_PIXELS = 28_000_000L;
+    private static final int OCR_CORE_HEIGHT = 1800;
+    private static final int OCR_OVERLAP = 120;
     private final Context context;
 
     AndroidBridge(Context context) {
@@ -237,6 +252,136 @@ public class AndroidBridge {
             } catch (Exception ignored) {
                 return "{\"ok\":false,\"error\":\"Falha ao ler PDF.\"}";
             }
+        }
+    }
+
+    /**
+     * Extrai texto e coordenadas de capturas de fatura sem enviar a imagem para
+     * nenhum serviço. O modelo latino do ML Kit é empacotado no próprio APK.
+     * Capturas longas são divididas em faixas sobrepostas para evitar que uma
+     * linha cortada na borda desapareça do resultado.
+     */
+    @JavascriptInterface
+    public String extractImageText(String base64Image) {
+        JSONObject result = new JSONObject();
+        Bitmap bitmap = null;
+        TextRecognizer recognizer = null;
+        try {
+            if (base64Image == null || base64Image.trim().isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "Imagem vazia.");
+                return result.toString();
+            }
+
+            byte[] bytes = Base64.decode(base64Image, Base64.DEFAULT);
+            if (bytes.length == 0) {
+                result.put("ok", false);
+                result.put("error", "Imagem vazia.");
+                return result.toString();
+            }
+            if (bytes.length > MAX_OCR_FILE_BYTES) {
+                result.put("ok", false);
+                result.put("error", "Imagem maior que 24 MB. Use a captura com rolagem original ou divida em duas imagens.");
+                return result.toString();
+            }
+
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                result.put("ok", false);
+                result.put("error", "Formato de imagem inválido ou ilegível.");
+                return result.toString();
+            }
+
+            int sampleSize = 1;
+            while ((long) Math.ceil((double) bounds.outWidth / sampleSize)
+                    * (long) Math.ceil((double) bounds.outHeight / sampleSize) > MAX_OCR_PIXELS
+                    || bounds.outWidth / sampleSize > 2400) {
+                sampleSize *= 2;
+            }
+            BitmapFactory.Options decode = new BitmapFactory.Options();
+            decode.inSampleSize = sampleSize;
+            decode.inPreferredConfig = Bitmap.Config.ARGB_8888;
+            bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, decode);
+            if (bitmap == null || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0) {
+                result.put("ok", false);
+                result.put("error", "Não foi possível abrir esta imagem.");
+                return result.toString();
+            }
+
+            recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+            JSONArray lines = new JSONArray();
+            StringBuilder extractedText = new StringBuilder();
+            int width = bitmap.getWidth();
+            int height = bitmap.getHeight();
+
+            for (int coreTop = 0; coreTop < height; coreTop += OCR_CORE_HEIGHT) {
+                int coreBottom = Math.min(height, coreTop + OCR_CORE_HEIGHT);
+                int tileTop = Math.max(0, coreTop - OCR_OVERLAP);
+                int tileBottom = Math.min(height, coreBottom + OCR_OVERLAP);
+                Bitmap tile = Bitmap.createBitmap(bitmap, 0, tileTop, width, tileBottom - tileTop);
+                try {
+                    Text recognized = Tasks.await(
+                            recognizer.process(InputImage.fromBitmap(tile, 0)),
+                            45,
+                            TimeUnit.SECONDS);
+                    for (Text.TextBlock block : recognized.getTextBlocks()) {
+                        for (Text.Line line : block.getLines()) {
+                            String value = line.getText() == null ? "" : line.getText().trim();
+                            Rect box = line.getBoundingBox();
+                            if (value.isEmpty() || box == null) continue;
+                            int absoluteTop = box.top + tileTop;
+                            int absoluteBottom = box.bottom + tileTop;
+                            int center = absoluteTop + Math.max(1, absoluteBottom - absoluteTop) / 2;
+                            // Cada linha pertence ao núcleo de apenas uma faixa. A margem
+                            // sobreposta serve somente para o reconhecedor enxergar a linha inteira.
+                            if (center < coreTop || (center >= coreBottom && coreBottom < height)) continue;
+                            JSONObject item = new JSONObject();
+                            item.put("text", value);
+                            item.put("left", Math.max(0, box.left));
+                            item.put("top", Math.max(0, absoluteTop));
+                            item.put("right", Math.min(width, box.right));
+                            item.put("bottom", Math.min(height, absoluteBottom));
+                            lines.put(item);
+                            if (extractedText.length() > 0) extractedText.append('\n');
+                            extractedText.append(value);
+                        }
+                    }
+                } finally {
+                    if (tile != bitmap && !tile.isRecycled()) tile.recycle();
+                }
+            }
+
+            boolean ok = lines.length() > 0 && extractedText.toString().trim().length() > 0;
+            result.put("ok", ok);
+            result.put("text", extractedText.toString());
+            result.put("lines", lines);
+            result.put("width", width);
+            result.put("height", height);
+            result.put("sampleSize", sampleSize);
+            result.put("engine", "mlkit-latin-bundled");
+            if (!ok) result.put("error", "Não encontrei texto legível nesta imagem.");
+            return result.toString();
+        } catch (OutOfMemoryError error) {
+            try {
+                result.put("ok", false);
+                result.put("error", "A imagem é grande demais para leitura segura. Divida a captura em duas partes.");
+                return result.toString();
+            } catch (Exception ignored) {
+                return "{\"ok\":false,\"error\":\"Imagem grande demais.\"}";
+            }
+        } catch (Exception error) {
+            try {
+                result.put("ok", false);
+                result.put("error", "Não foi possível reconhecer o texto desta imagem.");
+                return result.toString();
+            } catch (Exception ignored) {
+                return "{\"ok\":false,\"error\":\"Falha ao ler imagem.\"}";
+            }
+        } finally {
+            if (recognizer != null) recognizer.close();
+            if (bitmap != null && !bitmap.isRecycled()) bitmap.recycle();
         }
     }
 
