@@ -17,6 +17,68 @@ test('inputs de extrato e fatura aceitam PDF',async({page})=>{
   expect(await page.locator('#cardImportFile').getAttribute('accept')).toContain('.pdf');
 });
 
+test('PDF protegido pede senha local, permite nova tentativa e não persiste o segredo',async({page})=>{
+  await boot(page);
+  await page.evaluate(()=>{
+    window.pdfPasswordCalls=[];
+    window.AndroidBridge={
+      extractPdfText:()=>JSON.stringify({ok:false,passwordRequired:true,errorCode:'password_required',error:'Este PDF é protegido por senha.'}),
+      extractPdfTextWithPassword:(_base64,password)=>{
+        window.pdfPasswordCalls.push(password);
+        if(password!=='senha-local-itau')return JSON.stringify({ok:false,passwordRequired:true,errorCode:'invalid_password',error:'Senha incorreta.'});
+        return JSON.stringify({ok:true,pages:2,text:'31/08/2026 Compra validada R$ 25,00'});
+      }
+    };
+    const file=new File(['pdf-protegido-sintetico'],'fatura-itau.pdf',{type:'application/pdf'});
+    window.pdfPasswordResult=extractPdfTextLocal(file);
+  });
+
+  const input=page.locator('#dialogPromptInput');
+  await expect(input).toHaveAttribute('type','password');
+  await expect(input).toHaveAttribute('autocomplete','off');
+  await expect(page.locator('#modalRoot')).toContainText('não será salva');
+  await input.fill('senha-errada');
+  await page.locator('#dialogConfirmBtn').click();
+
+  await expect(page.locator('#modalRoot')).toContainText('Senha incorreta');
+  await expect(page.locator('#dialogPromptInput')).toHaveValue('');
+  await page.locator('#dialogPromptInput').fill('senha-local-itau');
+  await page.locator('#dialogConfirmBtn').click();
+
+  const result=await page.evaluate(async()=>{
+    const text=await window.pdfPasswordResult;
+    const calls=[...window.pdfPasswordCalls];
+    delete window.pdfPasswordCalls;
+    const persisted=JSON.stringify({state,local:{...localStorage},session:{...sessionStorage}});
+    return {text,calls,persisted};
+  });
+  expect(result.text).toContain('Compra validada');
+  expect(result.calls).toEqual(['senha-errada','senha-local-itau']);
+  expect(result.persisted).not.toContain('senha-local-itau');
+  await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
+});
+
+test('cancelar senha de PDF encerra a importação sem alterar a fatura',async({page})=>{
+  await boot(page);
+  await page.evaluate(()=>{
+    window.AndroidBridge={
+      extractPdfText:()=>JSON.stringify({ok:false,passwordRequired:true,errorCode:'password_required'}),
+      extractPdfTextWithPassword:()=>JSON.stringify({ok:false,passwordRequired:true,errorCode:'invalid_password'})
+    };
+    document.querySelector('#cardImportCard').value=String(state.cards[0].id);
+    document.querySelector('#cardImportMonth').value='2026-09';
+    window.pdfCancelBefore=JSON.stringify({purchases:state.purchases,invoices:state.invoices,imports:state.invoiceImports,revision:state.persistenceMeta.revision});
+    window.pdfCancelResult=importCardCsv(new File(['pdf-protegido'],'fatura.pdf',{type:'application/pdf'}));
+  });
+  await expect(page.locator('#modalRoot')).toContainText('PDF protegido');
+  await page.locator('#dialogCancelBtn').click();
+  await page.evaluate(()=>window.pdfCancelResult);
+  const result=await page.evaluate(()=>({before:window.pdfCancelBefore,after:JSON.stringify({purchases:state.purchases,invoices:state.invoices,imports:state.invoiceImports,revision:state.persistenceMeta.revision}),draft:cardImportDraft,toastVisible:document.querySelector('#toast').classList.contains('show')}));
+  expect(result.after).toBe(result.before);
+  expect(result.draft).toBeNull();
+  expect(result.toastVisible).toBe(false);
+});
+
 test('parser local de PDF reconhece compra no débito e o classificador não exige revisão',async({page})=>{
   await boot(page);
   const result=await page.evaluate(()=>{

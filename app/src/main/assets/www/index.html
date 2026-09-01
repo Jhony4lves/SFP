@@ -3181,7 +3181,7 @@ button:active:not(:disabled){transform:translateY(1px)}
         <article class="panel">
           <div class="head"><div><h2>Importar extrato</h2><p>CSV, OFX ou PDF, com conferência antes de entrar</p></div><span class="badge">offline</span></div>
           <label>Conta do extrato<select id="stmtAccount"></select></label>
-          <div class="statement-drop" id="stmtDrop"><b>Solte o arquivo aqui</b><small>ou toque para escolher um CSV, OFX ou PDF. A leitura do PDF é local e nada sai do aparelho.</small><label class="btn2" style="display:inline-block;margin-top:10px;cursor:pointer">Selecionar<input id="stmtFile" type="file" accept=".csv,.ofx,.pdf,text/csv,application/x-ofx,application/ofx,application/pdf" hidden/></label></div>
+          <div class="statement-drop" id="stmtDrop"><b>Solte o arquivo aqui</b><small>ou toque para escolher um CSV, OFX ou PDF. A leitura é local; se o PDF tiver senha, o SFP pedirá apenas para desbloqueá-lo.</small><label class="btn2" style="display:inline-block;margin-top:10px;cursor:pointer">Selecionar<input id="stmtFile" type="file" accept=".csv,.ofx,.pdf,text/csv,application/x-ofx,application/ofx,application/pdf" hidden/></label></div>
           <div class="note">O sistema tenta conciliar com lançamentos existentes, evita duplicatas, aprende descrições já classificadas e trata transferências entre suas contas separadamente.</div>
         </article>
         <article class="panel"><div class="head"><div><h2>Histórico</h2><p>Extratos já importados</p></div></div><div id="stmtHistory" class="list"></div></article>
@@ -3225,7 +3225,7 @@ button:active:not(:disabled){transform:translateY(1px)}
       <div class="management-summary" aria-label="Resumo dos cartões"><div class="metric"><span>Limite total</span><strong id="cardsLimitTotal">R$ 0,00</strong><small>dos cartões cadastrados</small></div><div class="metric"><span>Obrigação atual</span><strong id="cardsOutstandingTotal">R$ 0,00</strong><small>limite comprometido</small></div></div>
       <div class="management-layout"><article class="panel management-list-panel"><div class="head"><div><h2>Seus cartões</h2><p>Limite e obrigação em uma visão rápida</p></div></div><div id="cardsGrid" class="cards"></div></article><article class="panel management-form-panel"><div class="head"><div><h2 id="cardFormTitle">Adicionar cartão</h2><p>Configure limite e ciclo da fatura</p></div><span class="management-mode" id="cardFormMode">Criação</span></div><form id="cardForm" class="management-form"><input id="cardId" type="hidden"/><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Essencial</h3><p class="form-section__description">Identificação e limite disponível.</p></div></div><div class="field-group field-group--two"><label>Nome<input id="cardName" required/></label><label class="money-field">Limite<input id="cardLimit" type="number" inputmode="decimal" step="0.01" required/></label></div></section><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Ciclo da fatura</h3><p class="form-section__description">Datas usadas para organizar as compras.</p></div></div><div class="field-group field-group--two"><label>Fechamento<input id="cardClose" type="number" inputmode="numeric" min="1" max="31" required/><small class="field-help">Compras após este dia entram normalmente na fatura seguinte.</small></label><label>Vencimento<input id="cardDue" type="number" inputmode="numeric" min="1" max="31" required/><small class="field-help">Dia previsto para pagar a fatura.</small></label></div></section><section class="form-section"><div class="form-section__header"><div><h3 class="form-section__title">Pagamento</h3><p class="form-section__description">Conta usada ao registrar o pagamento.</p></div></div><label>Conta pagadora<select id="cardPayAccount"></select></label></section><div class="section-actions"><button class="btn" id="cardSubmit">Salvar cartão</button></div></form></article></div>
       <article class="panel invoice-focus"><div class="head"><div><h2>Fatura atual</h2><p>Total, pagamento e compras da fatura selecionada</p></div><div class="actions"><button class="btn2 tiny" id="closeInvoice">Fechar fatura</button><button class="btn tiny" id="payInvoice">Registrar pagamento</button></div></div><div class="two"><label>Cartão<select id="invoiceCard"></select></label><label>Mês da fatura<input id="invoiceMonth" type="month"/></label></div><div class="invoice-summary"><div><small>Total da fatura</small><strong id="invoiceTotalView">R$ 0,00</strong></div><div><small>Pago</small><strong class="positive" id="invoicePaidView">R$ 0,00</strong></div><div><small>Falta pagar</small><strong class="warning" id="invoiceRemainingView">R$ 0,00</strong></div><div><small>Status</small><strong id="invoiceStatusView">Aberta</strong></div></div><div class="tablewrap desktop-table-mobile"><table><thead><tr><th>Compra</th><th>Parcela</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="invoiceTable"></tbody></table></div><div id="invoiceMobile" class="mobile-card-list"></div></article>
-      <article class="panel secondary-content"><div class="head"><div><h2>Importar fatura</h2><p>CSV, OFX ou PDF: reimporte o arquivo completo sem duplicar</p></div><span class="badge">incremental</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,.ofx,.pdf,text/csv,application/csv,text/comma-separated-values,application/x-ofx,application/ofx,application/pdf"/></label></div><div class="note" id="cardImportHint">O SFP reconhece cada ocorrência, importa somente linhas inéditas e, quando o PDF informa, concilia total oficial, vencimento, fechamento e limite. Estornos reduzem a fatura sem fingir pagamento bancário. Nada é salvo antes da sua confirmação.</div></article>
+      <article class="panel secondary-content"><div class="head"><div><h2>Importar fatura</h2><p>CSV, OFX ou PDF: reimporte o arquivo completo sem duplicar</p></div><span class="badge">incremental</span></div><div class="three"><label>Cartão<select id="cardImportCard"></select></label><label>Fatura<input id="cardImportMonth" type="month"/></label><label>Arquivo<input id="cardImportFile" type="file" accept=".csv,.ofx,.pdf,text/csv,application/csv,text/comma-separated-values,application/x-ofx,application/ofx,application/pdf"/></label></div><div class="note" id="cardImportHint">O SFP reconhece cada ocorrência, importa somente linhas inéditas e, quando o PDF informa, concilia total oficial, vencimento, fechamento e limite. PDFs protegidos são desbloqueados localmente e a senha não é salva. Estornos reduzem a fatura sem fingir pagamento bancário. Nada é salvo antes da sua confirmação.</div></article>
       <article class="panel secondary-content hidden" id="cardImportReview"><div class="head"><div><h2>Conferir fatura</h2><p id="cardImportSummary"></p></div><div class="actions"><button class="btn2" type="button" id="cardImportCancel">Cancelar</button><button class="btn" type="button" id="cardImportConfirm">Importar fatura</button></div></div><div class="note" id="cardImportValidation"></div><div class="tablewrap desktop-table-mobile"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Destino</th><th>Status</th></tr></thead><tbody id="cardImportRows"></tbody></table></div><div id="cardImportMobile" class="mobile-card-list"></div></article>
       <article class="panel secondary-content"><div class="head"><div><h2>Histórico do cartão</h2><p>Alterações de limite, pagamentos e estornos</p></div></div><label>Cartão<select id="cardHistorySelect"></select></label><div id="cardHistory" class="card-history"></div></article>
     </section>
@@ -3392,7 +3392,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 <script src="safe-spend.js"></script>
 <script src="safe-spend-ui.js"></script>
 <script>
-const VERSION=203, SCHEMA_VERSION=15, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
+const VERSION=204, SCHEMA_VERSION=15, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
 const EXPENSE_CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Educação','Saúde','Assinaturas','Dívida','Lazer','Casa','Contas','Trabalho','Investimentos','Cartão','Ajuste','Outros'];
 const INCOME_CATEGORIES=['Trabalho','Rendimentos','Reembolso','Venda','Benefícios','Investimentos','Ajuste','Outros'];
 const CATEGORIES=[...new Set([...EXPENSE_CATEGORIES,...INCOME_CATEGORIES])];
@@ -4372,10 +4372,11 @@ function sfpAlert({title='Aviso',message='',buttonText='Entendido',type='info'}=
 }
 window.sfpAlert=sfpAlert;
 
-function sfpPrompt({title='Entrada',message='',defaultValue='',placeholder='',confirmText='Confirmar',cancelText='Cancelar'}={}){
+function sfpPrompt({title='Entrada',message='',defaultValue='',placeholder='',confirmText='Confirmar',cancelText='Cancelar',inputType='text',sensitive=false}={}){
  return new Promise(resolve=>{
    let root=$('modalRoot');
    if(!root){resolve(window.prompt?window.prompt(message,defaultValue):defaultValue);return}
+   const safeInputType=inputType==='password'?'password':'text';
    root.className='modalback';
    root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
      <div class="sfp-dialog-head">
@@ -4388,7 +4389,7 @@ function sfpPrompt({title='Entrada',message='',defaultValue='',placeholder='',co
      </div>
      <div class="sfp-dialog-body">
        ${message?`<p style="margin:0 0 8px;font-size:13px">${sfpEsc(message).replace(/\n/g,'<br/>')}</p>`:''}
-       <input id="dialogPromptInput" value="${sfpEsc(String(defaultValue))}" placeholder="${sfpEsc(placeholder)}" style="width:100%"/>
+       <input id="dialogPromptInput" type="${safeInputType}" value="${sfpEsc(String(defaultValue))}" placeholder="${sfpEsc(placeholder)}" autocomplete="${sensitive?'off':'on'}" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:100%"/>
      </div>
      <div class="sfp-dialog-actions">
        <button class="btn2" id="dialogCancelBtn">${sfpEsc(cancelText)}</button>
@@ -4396,7 +4397,7 @@ function sfpPrompt({title='Entrada',message='',defaultValue='',placeholder='',co
      </div>
    </div>`;
    const input=$('dialogPromptInput');input.focus();input.select();
-   const finish=val=>{root.className='hidden';root.innerHTML='';window.removeEventListener('keydown',keyHandler);resolve(val)};
+   const finish=val=>{if(sensitive)input.value='';root.className='hidden';root.innerHTML='';window.removeEventListener('keydown',keyHandler);resolve(val)};
    const keyHandler=e=>{if(e.key==='Escape')finish(null);else if(e.key==='Enter')finish(input.value)};
    window.addEventListener('keydown',keyHandler);
    $('dialogCloseBtn').onclick=()=>finish(null);
@@ -10456,13 +10457,27 @@ function renderCardImportDraft(){
 
 function readFileAsText(file){return new Promise((resolve,reject)=>{let rd=new FileReader();rd.onload=()=>resolve(String(rd.result||''));rd.onerror=()=>reject(Error('Não consegui abrir o arquivo.'));rd.readAsText(file,'UTF-8')})}
 function readFileAsDataUrl(file){return new Promise((resolve,reject)=>{let rd=new FileReader();rd.onload=()=>resolve(String(rd.result||''));rd.onerror=()=>reject(Error('Não consegui abrir o PDF.'));rd.readAsDataURL(file)})}
+function pdfPasswordCancelledError(){let error=Error('Importação cancelada.');error.code='PDF_PASSWORD_CANCELLED';return error}
+function parsePdfBridgeResult(raw){try{return JSON.parse(raw)}catch{throw Error('O leitor local de PDF retornou uma resposta inválida.')}}
 async function extractPdfTextLocal(file){
   if(!window.AndroidBridge||typeof AndroidBridge.extractPdfText!=='function')throw Error('A leitura de PDF está disponível no aplicativo Android.');
   const dataUrl=await readFileAsDataUrl(file),base64=(dataUrl.split(',')[1]||'');
   if(!base64)throw Error('PDF vazio ou ilegível.');
-  let parsed;try{parsed=JSON.parse(AndroidBridge.extractPdfText(base64))}catch{throw Error('O leitor local de PDF retornou uma resposta inválida.')}
-  if(!parsed?.ok)throw Error(parsed?.error||'Não foi possível extrair texto do PDF.');
-  return String(parsed.text||'');
+  let parsed=parsePdfBridgeResult(AndroidBridge.extractPdfText(base64));
+  if(parsed?.ok)return String(parsed.text||'');
+  if(!parsed?.passwordRequired&&parsed?.errorCode!=='password_required')throw Error(parsed?.error||'Não foi possível extrair texto do PDF.');
+  if(typeof AndroidBridge.extractPdfTextWithPassword!=='function')throw Error('Este PDF é protegido por senha e esta versão do aplicativo não consegue desbloqueá-lo.');
+  let wrongPassword=false;
+  while(true){
+    let password=await sfpPrompt({title:'PDF protegido',message:wrongPassword?'Senha incorreta. Confira e tente novamente. A senha é usada somente para abrir este arquivo.':'Digite a senha deste PDF. Ela será usada somente neste aparelho, não será salva e não será enviada pela internet.',placeholder:'Senha do PDF',confirmText:'Desbloquear',cancelText:'Cancelar',inputType:'password',sensitive:true});
+    if(password==null)throw pdfPasswordCancelledError();
+    password=String(password);
+    if(!password){wrongPassword=true;continue}
+    try{parsed=parsePdfBridgeResult(AndroidBridge.extractPdfTextWithPassword(base64,password))}finally{password=''}
+    if(parsed?.ok)return String(parsed.text||'');
+    if(parsed?.passwordRequired||parsed?.errorCode==='invalid_password'){wrongPassword=true;continue}
+    throw Error(parsed?.error||'Não foi possível extrair texto do PDF.');
+  }
 }
 function pdfImportDate(line,{month=null}={}){
   let m=String(line||'').match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?\b/);
@@ -10559,7 +10574,7 @@ async function importCardCsv(file){
     if(analysis.documentType==='statement'&&analysis.confidence>=.8){let ok=await sfpConfirm({title:'Este arquivo parece ser um extrato',message:`A validação classificou o arquivo como extrato com ${Math.round(analysis.confidence*100)}% de confiança. Quer continuar mesmo assim como fatura?`,confirmText:'Continuar como fatura',cancelText:'Cancelar'});if(!ok)return;}
     let meta=invoiceDocumentMeta(text,ext,rows,$('cardImportMonth').value);
     prepareCardImport(classifyInvoiceRows(rows,analysis),file.name,analysis,meta);
-  }catch(e){cardImportDraft=null;$('cardImportReview').classList.add('hidden');toast('Não consegui ler a fatura: '+e.message,'error')}finally{$('cardImportFile').value=''}
+  }catch(e){cardImportDraft=null;$('cardImportReview').classList.add('hidden');if(e?.code!=='PDF_PASSWORD_CANCELLED')toast('Não consegui ler a fatura: '+e.message,'error')}finally{$('cardImportFile').value=''}
 }
 async function confirmCardImport(){
   let draft=cardImportDraft;if(!draft)return;let before=clone(state);try{
@@ -10599,7 +10614,7 @@ function readStmtFile(f){
    if(analysis.documentType==='invoice'&&analysis.confidence>=.8){let ok=await sfpConfirm({title:'Este arquivo parece ser uma fatura',message:`A validação classificou o arquivo como fatura com ${Math.round(analysis.confidence*100)}% de confiança. Quer continuar mesmo assim como extrato?`,confirmText:'Continuar como extrato',cancelText:'Cancelar'});if(!ok)return;}
    let meta=ext==='ofx'?rows.statementMeta:ext==='pdf'?statementBalanceMeta(text,'pdf',rows):null;
    prepareStatement(rows,f.name,meta);
- }catch(e){toast('Não consegui ler o extrato: '+e.message,'error')}finally{$('stmtFile').value=''}})();
+ }catch(e){if(e?.code!=='PDF_PASSWORD_CANCELLED')toast('Não consegui ler o extrato: '+e.message,'error')}finally{$('stmtFile').value=''}})();
 }
 function renderGlobalSearch(){let q=$('globalSearch').value.trim().toLowerCase();if(q.length<2)return $('globalResults').classList.add('hidden');let res=[];state.transactions.filter(t=>`${t.desc} ${t.category} ${(t.tags||[]).join(' ')}`.toLowerCase().includes(q)).slice(0,8).forEach(t=>res.push({title:t.desc,sub:`${t.date} • ${brl(t.amount)} • ${t.kind}`,page:'lancamentos'}));state.purchases.filter(p=>p.desc.toLowerCase().includes(q)).slice(0,5).forEach(p=>res.push({title:p.desc,sub:`Compra em ${card(p.cardId)?.name||'cartão'} • ${brl(p.total)}`,page:'cartoes'}));state.accounts.filter(a=>a.name.toLowerCase().includes(q)).forEach(a=>res.push({title:a.name,sub:`Conta • ${brl(accountBalance(a.id))}`,page:'contas'}));$('globalResults').innerHTML=res.length?res.map((r,i)=>`<div class="item" data-sr="${i}"><div><b>${r.title}</b><small>${r.sub}</small></div></div>`).join(''):'<div class="item"><span>Nada encontrado.</span></div>';$('globalResults').classList.remove('hidden');document.querySelectorAll('[data-sr]').forEach((el,i)=>el.onclick=()=>{setPage(res[i].page);$('globalResults').classList.add('hidden')})}
 
