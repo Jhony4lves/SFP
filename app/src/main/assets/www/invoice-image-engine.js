@@ -3,6 +3,7 @@
 
   const MONEY_SOURCE='(?:[+-]\\s*)?(?:R\\$\\s*)?(?:[+-]\\s*)?(?:\\d{1,3}(?:\\.\\d{3})+|\\d+)(?:,\\d{2}|\\.\\d{2})';
   const MONTHS={jan:1,janeiro:1,fev:2,fevereiro:2,mar:3,marco:3,abr:4,abril:4,mai:5,maio:5,jun:6,junho:6,jul:7,julho:7,ago:8,agosto:8,set:9,setembro:9,out:10,outubro:10,nov:11,novembro:11,dez:12,dezembro:12};
+  const MONTH_LABEL_SOURCE='jan(?:eiro)?|fev(?:ereiro)?|mar(?:co)?|abr(?:il)?|mai(?:o)?|jun(?:ho)?|jul(?:ho)?|ago(?:sto)?|set(?:embro)?|out(?:ubro)?|nov(?:embro)?|dez(?:embro)?';
 
   function normalize(value){
     return String(value||'').toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
@@ -114,6 +115,54 @@
     return /\b(fatura atual|fatura em aberto|valor da fatura|total da fatura|total atual|total a pagar|limite disponivel|limite total|melhor dia|pagamento minimo|data de vencimento|vencimento|fechamento|proxima fatura|saldo anterior)\b/.test(text);
   }
 
+  function positionedMatches(line,matcher){
+    const parts=line.parts?.length?line.parts:[line],output=[];
+    for(const part of parts){
+      const text=String(part.text||''),width=Math.max(1,(Number(part.right)||line.right)-(Number(part.left)||line.left)),left=Number(part.left)||line.left||0;
+      for(const match of matcher(text)){
+        const start=Math.max(0,Number(match.index)||0),length=Math.max(1,String(match.raw||'').length),center=left+width*((start+length/2)/Math.max(1,text.length));
+        output.push({...match,center,left:Math.max(left,left+width*(start/Math.max(1,text.length))),right:Math.min(left+width,left+width*((start+length)/Math.max(1,text.length)))});
+      }
+    }
+    return output;
+  }
+
+  function monthLabels(line){
+    return positionedMatches(line,text=>{
+      const plain=normalize(text),regex=new RegExp(`\\b(${MONTH_LABEL_SOURCE})\\b`,'gi'),matches=[];
+      for(const match of plain.matchAll(regex))matches.push({raw:match[0],index:match.index,month:MONTHS[match[1]]});
+      return matches;
+    });
+  }
+
+  function carouselTotal(lines,month,excluded){
+    const targetMonth=Number(String(month||'').slice(5,7));
+    if(!(targetMonth>=1&&targetMonth<=12))return null;
+    for(let index=0;index<lines.length;index++){
+      const labels=monthLabels(lines[index]),unique=[...new Set(labels.map(label=>label.month))];
+      if(unique.length<2||!unique.includes(targetMonth))continue;
+      const maxGap=Math.max(110,Math.min(260,(lines[index].pageHeight||1200)*.12));
+      const candidates=[];
+      for(let valueIndex=Math.max(0,index-1);valueIndex<Math.min(lines.length,index+4);valueIndex++){
+        const valueLine=lines[valueIndex];
+        if(valueLine.page!==lines[index].page||valueLine.top<lines[index].top-maxGap*.25||valueLine.top-lines[index].bottom>maxGap)continue;
+        const values=positionedMatches(valueLine,moneyMatches);
+        if(values.length>=2)candidates.push({index:valueIndex,line:valueLine,values,gap:Math.abs(valueLine.top-lines[index].bottom)});
+      }
+      const valueGroup=candidates.sort((a,b)=>a.gap-b.gap)[0];if(!valueGroup)continue;
+      const available=[...valueGroup.values],entries=[],year=/^\d{4}/.test(String(month||''))?String(month).slice(0,4):String(new Date().getFullYear());
+      for(const label of [...labels].sort((a,b)=>a.center-b.center)){
+        const value=available.sort((a,b)=>Math.abs(a.center-label.center)-Math.abs(b.center-label.center))[0];if(!value||!Number.isFinite(value.value))continue;
+        let entryYear=Number(year);if(label.month-targetMonth>6)entryYear--;else if(targetMonth-label.month>6)entryYear++;
+        entries.push({total:Math.abs(money(value.value)),month:`${entryYear}-${String(label.month).padStart(2,'0')}`,label:label.raw});available.splice(available.indexOf(value),1);
+      }
+      const selected=entries.find(entry=>Number(entry.month.slice(5,7))===targetMonth);if(!selected)continue;
+      excluded.add(index);excluded.add(valueGroup.index);
+      return{...selected,entries,headerLine:index,valueLine:valueGroup.index};
+    }
+    return null;
+  }
+
   function transactionNoise(value){
     const text=normalize(value);
     return !text||/^(?:hoje|ontem|lancamentos|compras|transacoes|detalhes|ver detalhes|mostrar mais|fatura|cartao|data|valor|estabelecimento)$/.test(text)||/\b(?:limite disponivel|limite total|melhor dia de compra|pagar fatura|parcelar fatura|vencimento|fechamento|total da fatura|fatura atual|fatura em aberto|valor da fatura|pagamento minimo)\b/.test(text);
@@ -156,7 +205,7 @@
     let output=String(value||'');
     output=removeMatches(output,moneyMatches(output));
     if(date?.raw)output=output.replace(date.raw,' ');
-    output=output.replace(/\b(?:compra )?(?:aprovada|processada|confirmada|pendente)\b/gi,' ').replace(/\bcart[aã]o\s+(?:final|terminado em)\s+\d+\b/gi,' ').replace(/^[\-–—|:;\s]+|[\-–—|:;\s]+$/g,' ').replace(/\s+/g,' ').trim();
+    output=output.replace(/\b(?:compra )?(?:aprovada|processada|confirmada|pendente)\b/gi,' ').replace(/\bcart[aã]o\s+(?:final|terminado em)\s+\d+\b/gi,' ').replace(/\bcart[aã]o\s+(?:f[ií]sico|virtual)\b/gi,' ').replace(/[>›]+/g,' ').replace(/^[\-–—|:;\s]+|[\-–—|:;\s]+$/g,' ').replace(/\s+/g,' ').trim();
     return transactionNoise(output)?'':output;
   }
 
@@ -188,7 +237,7 @@
       if(!text||summaryLabel(text)||moneyMatches(line.text).length&&text.length<2)continue;
       candidates.push({text,distance,top:line.top});
     }
-    const selected=candidates.sort((a,b)=>a.distance-b.distance||a.top-b.top).slice(0,2).sort((a,b)=>a.top-b.top),parts=[];
+    const selected=candidates.sort((a,b)=>a.distance-b.distance||a.top-b.top).slice(0,5).sort((a,b)=>a.top-b.top),parts=[];
     selected.forEach(candidate=>{if(!parts.some(part=>normalize(part)===normalize(candidate.text)))parts.push(candidate.text)});
     return parts.join(' ').replace(/\s+/g,' ').trim();
   }
@@ -215,8 +264,8 @@
     lines.forEach((line,index)=>{
       if(excluded.has(index)||summaryLabel(line.text))return;
       const matches=moneyMatches(line.text);if(!matches.length)return;
-      const center=(line.top+line.bottom)/2,dateCandidates=dates.filter(candidate=>candidate.page===line.page).map(candidate=>({...candidate,distance:Math.abs(candidate.center-center)})).filter(candidate=>candidate.distance<=maxDateDistance).sort((a,b)=>a.distance-b.distance);
-      const date=dateCandidates[0];if(!date)return;
+      const center=(line.top+line.bottom)/2,dateCandidates=dates.filter(candidate=>candidate.page===line.page).map(candidate=>({...candidate,distance:Math.abs(candidate.center-center)})).filter(candidate=>candidate.distance<=maxDateDistance),closeDistance=Math.max(70,medianHeight*3.2),close=dateCandidates.filter(candidate=>candidate.distance<=closeDistance).sort((a,b)=>a.distance-b.distance),preceding=dateCandidates.filter(candidate=>candidate.center<=center).sort((a,b)=>b.center-a.center);
+      const date=close[0]||preceding[0]||dateCandidates.sort((a,b)=>a.distance-b.distance)[0];if(!date)return;
       for(let matchIndex=0;matchIndex<matches.length;matchIndex++){
         const match=matches[matchIndex],token=`${index}:${match.index}`;if(usedCandidates.has(token))continue;
         const desc=descriptionFor(lines,index,date,medianHeight);if(!desc)continue;
@@ -243,12 +292,13 @@
   }
 
   function parse(input,{month=null}={}){
-    const pages=coercePages(input),lines=logicalLines(pages),fullText=lines.map(line=>line.text).join('\n'),excluded=new Set(),issuer=issuerOf(fullText),officialTotal=findTotal(lines,excluded),dueDate=findDueDate(lines,month,excluded),extracted=extractRows(lines,pages,excluded,{month:dueDate?.slice(0,7)||month});
-    const payments=extracted.rows.filter(row=>row.invoiceKind==='payment'),currentRows=extracted.rows.filter(row=>row.invoiceKind!=='payment'),currentNetCents=currentRows.reduce((sum,row)=>sum+(row.invoiceKind==='credit'?-Math.abs(cents(row.amount)):Math.abs(cents(row.amount))),0),checks=[];
+    const pages=coercePages(input),lines=logicalLines(pages),fullText=lines.map(line=>line.text).join('\n'),excluded=new Set(),issuer=issuerOf(fullText),carousel=carouselTotal(lines,month,excluded),labelledTotal=findTotal(lines,excluded),dueDate=findDueDate(lines,month,excluded),initialMonth=carousel?.month||dueDate?.slice(0,7)||month||null,extracted=extractRows(lines,pages,excluded,{month:initialMonth});
+    const payments=extracted.rows.filter(row=>row.invoiceKind==='payment'),currentRows=extracted.rows.filter(row=>row.invoiceKind!=='payment'),currentNetCents=currentRows.reduce((sum,row)=>sum+(row.invoiceKind==='credit'?-Math.abs(cents(row.amount)):Math.abs(cents(row.amount))),0),matchingMonths=carousel?.entries?.filter(entry=>cents(entry.total)===currentNetCents)||[],matchedMonth=matchingMonths.length===1?matchingMonths[0]:null,selectedCarousel=matchedMonth||carousel,officialTotal=labelledTotal??selectedCarousel?.total??null,invoiceMonth=selectedCarousel?.month||dueDate?.slice(0,7)||month||null,checks=[];
     checks.push({id:'ocr_rows',label:'Lançamentos reconhecidos na captura',status:currentRows.length?'pass':'fail',count:currentRows.length});
     if(Number.isFinite(Number(officialTotal)))checks.push({id:'official_total',label:'Total exibido na captura',status:currentNetCents===cents(officialTotal)?'pass':'fail',actual:money(currentNetCents/100),expected:money(officialTotal)});
     else checks.push({id:'official_total',label:'Total exibido na captura',status:'unknown',actual:money(currentNetCents/100)});
     checks.push({id:'ocr_local',label:'OCR executado localmente',status:'pass'});
+    if(carousel)checks.push({id:'invoice_month',label:'Mês da fatura localizado no seletor',status:'pass',value:invoiceMonth,matchedBySum:Boolean(matchedMonth)});
     checks.push({id:'due_date',label:'Vencimento localizado',status:dueDate?'pass':'unknown',value:dueDate||null});
     if(extracted.removed.length)checks.push({id:'overlap',label:'Sobreposição entre capturas removida',status:'pass',count:extracted.removed.length});
     if(payments.length)checks.push({id:'payments',label:'Pagamentos separados dos lançamentos atuais',status:'pass',count:payments.length});
@@ -260,7 +310,7 @@
         ?'Os lançamentos foram lidos, mas o total da fatura não apareceu na captura; a importação permanece bloqueada.'
         :`OCR conferido: ${currentRows.length} lançamento(s) somam R$ ${money(currentNetCents/100).toFixed(2).replace('.',',')} e fecham com o total exibido.`;
     const profile={id:issuer?`${issuer.id}-card-image-v1`:'card-image-v1',label:issuer?`Captura ${issuer.label}`:'Captura de fatura',confidence:issuer?.id==='itau'?.97:issuer?.id?.9:.82};
-    const meta={source:'image-ocr'};if(officialTotal!=null)meta.officialTotal=officialTotal;if(dueDate)meta.dueDate=dueDate;
+    const meta={source:'image-ocr'};if(officialTotal!=null)meta.officialTotal=officialTotal;if(dueDate)meta.dueDate=dueDate;if(selectedCarousel?.month)meta.invoiceMonth=selectedCarousel.month;
     return{profile,rows:currentRows,meta,integrity:{status,importAllowed,profileId:profile.id,reason,checks,currentRows:currentRows.length,payments:payments.length,futureRowsExcluded:0,currentNet:money(currentNetCents/100)},diagnostics:{payments,overlapDuplicates:extracted.removed,logicalLines:lines.length,pages:pages.length},text:fullText};
   }
 

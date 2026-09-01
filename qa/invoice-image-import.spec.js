@@ -28,12 +28,40 @@ function ocrResult({complete=true}={}){
   return JSON.stringify({ok:true,text:lines.map(line=>line.text).join('\n'),width:1080,height:2200,engine:'mlkit-latin-bundled',lines});
 }
 
+function itauCarouselOcrResult(){
+  const lines=[
+    {text:'Itaú Click M ••••6442',left:40,top:40,right:400,bottom:75},
+    {text:'Ago',left:80,top:120,right:150,bottom:155},{text:'Set',left:450,top:120,right:520,bottom:155},{text:'Out',left:800,top:120,right:870,bottom:155},
+    {text:'R$ 74,25',left:55,top:170,right:180,bottom:205},{text:'R$ 194,81',left:420,top:170,right:560,bottom:205},{text:'R$ 180,82',left:770,top:170,right:910,bottom:205},
+    {text:'29 de agosto',left:40,top:360,right:260,bottom:395},{text:'LADY DAY',left:40,top:430,right:300,bottom:465},{text:'R$ 13,98',left:800,top:430,right:1000,bottom:465},
+    {text:'10 de agosto',left:40,top:560,right:260,bottom:595},{text:'Pagamento pix',left:40,top:630,right:300,bottom:665},{text:'-R$ 74,25',left:800,top:630,right:1000,bottom:665},
+    {text:'LITE VIVO',left:40,top:800,right:300,bottom:835},{text:'R$ 40,00',left:800,top:800,right:1000,bottom:835},{text:'Parcela 1 de 12',left:40,top:850,right:300,bottom:885},
+    {text:'4 de agosto',left:40,top:1010,right:260,bottom:1045},{text:'PLAZA NITEROI',left:40,top:1080,right:320,bottom:1115},{text:'R$ 66,64',left:800,top:1080,right:1000,bottom:1115},{text:'Parcela 1 de 3',left:40,top:1130,right:300,bottom:1165},
+    {text:'28 de julho',left:40,top:1280,right:260,bottom:1315},{text:'MERCADO LIVRE',left:40,top:1350,right:340,bottom:1385},{text:'R$ 19,29',left:800,top:1350,right:1000,bottom:1385},{text:'Parcela 2 de 10',left:40,top:1400,right:300,bottom:1435},
+    {text:'6 de julho',left:40,top:1550,right:260,bottom:1585},{text:'AMAZON BR',left:40,top:1620,right:300,bottom:1655},{text:'R$ 54,90',left:800,top:1620,right:1000,bottom:1655},{text:'Parcela 2 de 10',left:40,top:1670,right:300,bottom:1705}
+  ];
+  return JSON.stringify({ok:true,text:lines.map(line=>line.text).join('\n'),width:1080,height:1900,engine:'mlkit-latin-bundled',lines});
+}
+
 test('seletor de fatura aceita imagens e várias capturas',async({page})=>{
   await boot(page);
   const input=page.locator('#cardImportFile');
   await expect(input).toHaveAttribute('multiple','');
   const accept=await input.getAttribute('accept');
   expect(accept).toContain('.jpg');expect(accept).toContain('.png');expect(accept).toContain('.webp');
+});
+
+test('carrossel Itaú usa Set como total de setembro e nunca vira lançamento',async({page})=>{
+  await boot(page);
+  const preview=await page.evaluate(async raw=>{
+    state.cards=[{...state.cards[0],id:2,name:'Itaú Click',limit:2040,closeDay:2,dueDay:10,history:[]}];state.purchases=[];state.invoices=[];state.invoiceImports=[];state.invoiceAdjustments=[];
+    renderSelects();renderCards();document.querySelector('#cardImportCard').value='2';document.querySelector('#cardImportMonth').value='2026-08';
+    window.AndroidBridge={extractImageText:()=>raw};await importCardFiles([new File(['imagem'],'fatura-setembro.png',{type:'image/png'})]);
+    return{month:cardImportDraft.month,total:cardImportDraft.meta.officialTotal,invoiceMonth:cardImportDraft.meta.invoiceMonth,status:cardImportDraft.integrity.status,payments:cardImportDraft.integrity.payments,rows:cardImportDraft.rows.map(row=>({date:row.date,desc:row.desc,amount:row.amount,kind:row.kind})),target:document.querySelector('#cardImportTarget').textContent,disabled:document.querySelector('#cardImportConfirm').disabled};
+  },itauCarouselOcrResult());
+  expect(preview).toMatchObject({month:'2026-09',invoiceMonth:'2026-09',total:194.81,status:'verified',payments:1,disabled:false});
+  expect(preview.rows).toHaveLength(5);expect(preview.rows.map(row=>row.amount)).toEqual([13.98,40,66.64,19.29,54.9]);expect(preview.rows.every(row=>row.kind==='purchase')).toBe(true);
+  expect(preview.rows.some(row=>/ago set out/i.test(row.desc))).toBe(false);expect(preview.rows[1].date).toBe('2026-08-10');expect(preview.target).toContain('Setembro de 2026');
 });
 
 test('captura Itaú passa por OCR local, escolhe destino e importa somente após conferência',async({page})=>{

@@ -10481,10 +10481,10 @@ function resolveInvoiceImportContext(meta){
     if(candidates.length!==1)throw Error(`O arquivo foi identificado como fatura ${issuer.label}, mas o cartão selecionado é ${selected.name}. Selecione o cartão correto e tente novamente.`);
     selected=candidates[0];cardAutoSelected=true;$('cardImportCard').value=String(selected.id);
   }
-  const dueDate=String(meta?.dueDate||''),documentMonth=validCivilImportDate(dueDate)?dueDate.slice(0,7):null;
+  const dueDate=String(meta?.dueDate||''),capturedMonth=/^\d{4}-(?:0[1-9]|1[0-2])$/.test(String(meta?.invoiceMonth||''))?String(meta.invoiceMonth):null,documentMonth=capturedMonth||(validCivilImportDate(dueDate)?dueDate.slice(0,7):null),monthSource=capturedMonth?'capture':documentMonth?'due-date':null;
   if(documentMonth&&documentMonth!==month){month=documentMonth;monthAutoSelected=true;$('cardImportMonth').value=month;}
   if($('cardHistorySelect')){$('cardHistorySelect').value=String(selected.id);renderCardHistory();}
-  return{cardId:selected.id,month,issuer,cardAutoSelected,monthAutoSelected,targetVerified:!issuer||cardIssuerFromName(selected.name)===issuer.id};
+  return{cardId:selected.id,month,issuer,cardAutoSelected,monthAutoSelected,monthSource,targetVerified:!issuer||cardIssuerFromName(selected.name)===issuer.id};
 }
 function setCardImportContextLocked(locked){
   if($('cardImportCard'))$('cardImportCard').disabled=Boolean(locked);
@@ -10527,7 +10527,7 @@ function renderCardImportDraft(){
   let a=draft.analysis,integrity=draft.integrity,validation=$('cardImportValidation'),confirm=$('cardImportConfirm');
   if(confirm){confirm.disabled=Boolean(integrity&&!integrity.importAllowed);confirm.textContent=integrity&&!integrity.importAllowed?'Importação bloqueada':draft.meta?.source==='image-ocr'?'Conferi e importar':'Importar fatura';}
   if($('cardImportTarget')){
-    const adjustments=[];if(draft.context?.cardAutoSelected)adjustments.push('cartão identificado pelo emissor');if(draft.context?.monthAutoSelected)adjustments.push('mês definido pelo vencimento');
+    const adjustments=[];if(draft.context?.cardAutoSelected)adjustments.push('cartão identificado pelo emissor');if(draft.context?.monthAutoSelected)adjustments.push(draft.context?.monthSource==='capture'?'mês identificado na captura':'mês definido pelo vencimento');
     $('cardImportTarget').textContent=`Destino confirmado: ${card(draft.cardId)?.name||'Cartão'} • fatura ${monthName(draft.month)}.${adjustments.length?` ${adjustments.join(' e ')}.`:''}`;
   }
   if(validation){
