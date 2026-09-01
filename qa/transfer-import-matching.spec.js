@@ -67,13 +67,15 @@ test.describe('Conciliação de transferências entre extratos', () => {
       transactions: state.transactions.length,
       transfers: state.transfers.length,
       balanceA: accountBalance(1),
+      total: allAccountBalance(),
       cash: cashView('2026-02')
     }))).toMatchObject({
       evidence: 1,
       evidenceAmount: -18.98,
       transactions: 0,
       transfers: 0,
-      balanceA: 981.02,
+      balanceA: 1000,
+      total: 1000,
       cash: { income: 0, expense: 0, net: 0 }
     });
 
@@ -84,6 +86,26 @@ test.describe('Conciliação de transferências entre extratos', () => {
     });
     expect(again).toEqual([{ duplicate: true, action: 'ignore' }]);
     expect(errors).toEqual([]);
+  });
+
+  test('evidências pendentes espelhadas não alteram saldos reais antes da confirmação', async ({ page }) => {
+    const value = fixture('Evidência espelhada P0');
+    addAccount(value, 2, 'Mercado Pago', 0);
+    await boot(page, value);
+
+    const result = await page.evaluate(() => {
+      state.transferEvidence.push(
+        { id: 9001, accountId: 1, amount: -746.39, status: 'pending', balanceImpact: true },
+        { id: 9002, accountId: 2, amount: 746.39, status: 'pending', balanceImpact: true }
+      );
+      return {
+        nubank: accountBalance(1),
+        mercadoPago: accountBalance(2),
+        total: allAccountBalance()
+      };
+    });
+
+    expect(result).toEqual({ nubank: 1000, mercadoPago: 0, total: 1000 });
   });
 
   test('segunda ponta liga as duas contas e vira uma única transferência, sem receita ou despesa', async ({ page }) => {
