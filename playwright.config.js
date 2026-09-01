@@ -5,6 +5,7 @@ module.exports = defineConfig({
   testDir: './qa',
   outputDir: 'build/reports/playwright-results',
   reporter: [['html', { outputFolder: 'build/reports/playwright-html', open: 'never' }], ['list']],
+  retries: process.env.CI ? 1 : 0,
   use: {
     baseURL: 'http://127.0.0.1:4173',
     trace: 'off',
