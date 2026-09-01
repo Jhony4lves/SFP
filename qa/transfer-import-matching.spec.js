@@ -75,7 +75,7 @@ test.describe('Conciliação de transferências entre extratos', () => {
       impact: state.transfers[0]?.balanceImpact,
       migration: state.transfers[0]?.balanceImpactMigratedAt
     }))).toEqual({
-      schemaVersion: 15,
+      schemaVersion: 16,
       nubank: 0,
       mercadoPago: 0,
       transferCount: 1,
@@ -84,7 +84,7 @@ test.describe('Conciliação de transferências entre extratos', () => {
     });
 
     await page.reload();
-    await expect.poll(() => page.evaluate(() => state?.schemaVersion)).toBe(15);
+    await expect.poll(() => page.evaluate(() => state?.schemaVersion)).toBe(16);
     expect(await page.evaluate(() => ({
       nubank: accountBalance(1),
       mercadoPago: accountBalance(2),

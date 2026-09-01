@@ -61,8 +61,8 @@ if (fs.existsSync(logoMasterPath)) {
 }
 
 // 5. Fonte única da versão de schema
-if (!source.includes('SCHEMA_VERSION=15')) {
-  problems.push('SCHEMA_VERSION única fonte de verdade divergente de 15');
+if (!source.includes('SCHEMA_VERSION=16')) {
+  problems.push('SCHEMA_VERSION única fonte de verdade divergente de 16');
 }
 
 // 6. UX-02 design system foundation
@@ -141,4 +141,4 @@ if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);
 }
-console.log('Static QA: Sintaxe JavaScript, IDs, logo, launcher, schema v15 e OCR local verificados com sucesso.');
+console.log('Static QA: Sintaxe JavaScript, IDs, logo, launcher, schema v16 e OCR local verificados com sucesso.');
