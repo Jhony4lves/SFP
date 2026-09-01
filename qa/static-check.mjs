@@ -26,6 +26,11 @@ while ((scriptMatch = scriptRegex.exec(source)) !== null) {
   }
   scriptIdx++;
 }
+for(const match of source.matchAll(/<script\b[^>]*\bsrc=["']([^"']+\.js)["'][^>]*><\/script>/gi)){
+  const scriptPath=path.join('app/src/main/assets/www',match[1]);
+  if(!fs.existsSync(scriptPath)){problems.push(`script externo ausente: ${match[1]}`);continue}
+  try{new vm.Script(fs.readFileSync(scriptPath,'utf8'),{filename:scriptPath})}catch(error){problems.push(`Erro de sintaxe JavaScript em ${match[1]}: ${error.message}`)}
+}
 
 // 2. IDs estáticos, conflitos e declarações
 for (const [name, count] of duplicates(staticHtml, /\bid=["']([^"']+)["']/g)) problems.push(`DOM id estático duplicado: ${name} (${count}x)`);
