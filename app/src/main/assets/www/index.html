@@ -3631,6 +3631,7 @@ window.hasPersistedUserData=hasPersistedUserData;
 function normalize(){
  state.version=VERSION;state.schemaVersion=SCHEMA_VERSION;state.baseDate??='2026-08-18';
  for(const k of ['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','transferEvidence','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'])state[k]??=[];
+ state.transfers.forEach(t=>{if((t.tags||[]).includes('extrato')&&t.statementKey&&t.date&&t.date<=state.baseDate&&t.balanceImpact===true)t.balanceImpact=false});
  state.settings??=clone(seed.settings);if(state.settings.onboardingDone!==true&&hasPersistedUserData(state))state.settings.onboardingDone=true;state.settings.theme=(state.settings.theme&&['dark','light','system'].includes(state.settings.theme))?state.settings.theme:'dark';state.categoryBudgets??={};state.mesAtual??=localCivilMonth();state.ui??={};state.ui.invoiceMonthByCard??={};
  state.cards.forEach(c=>c.history??=[]);state.purchases.forEach(p=>p.refunds??=[]);state.invoices.forEach(i=>{i.payments??=[];i.paidAmount??=0});state.recurring.forEach(r=>{if(isPayrollRecurring(r)){r.dateRule='business-day-before-anchor';r.payrollAnchor=+r.payrollAnchor||+r.day||1}});
  state.sophy??={personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},rollingSummary:'',settings:{proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true}};
