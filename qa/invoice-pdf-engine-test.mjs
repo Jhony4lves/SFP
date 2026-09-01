@@ -97,4 +97,13 @@ assert.equal(divergent.integrity.status,'blocked');
 assert.equal(divergent.integrity.importAllowed,false);
 assert.deepEqual(divergent.integrity.checks.find(check=>check.id==='official_total'),{id:'official_total',label:'Total oficial da fatura',status:'fail',actual:90,expected:100});
 
+const genericWithFuture=engine.parse(`Resumo da fatura
+Total da fatura R$ 50,00
+Vencimento 16/09/2026
+31/08/2026 Compra atual R$ 50,00
+Compras parceladas - próximas faturas
+30/09/2026 Parcela futura R$ 50,00`,{month:'2026-09'});
+assert.equal(genericWithFuture.integrity.status,'verified');
+assert.deepEqual(genericWithFuture.rows.map(row=>[row.desc,row.amount]),[['Compra atual',50]]);
+
 console.log('Invoice PDF Engine QA: seções, parcelas futuras e validação contábil verificadas.');

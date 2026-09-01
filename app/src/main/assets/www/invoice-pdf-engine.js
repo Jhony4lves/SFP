@@ -249,7 +249,7 @@
     if(futureRows.length)add('future_scope','Parcelas futuras separadas','pass',{excluded:futureRows.length,planVerified:installmentPlanVerified});
     if(payments.length)add('payment_scope','Pagamento anterior separado','pass',{count:payments.length});
     if(!structured)add('layout','Layout estrutural reconhecido','unknown');
-    const failed=checks.filter(check=>check.status==='fail'),unknownCore=checks.some(check=>['current_sum','official_total','due_date'].includes(check.id)&&check.status==='unknown');
+    const failed=checks.filter(check=>check.status==='fail'),officialCheck=checks.find(check=>check.id==='official_total'),unknownCore=checks.some(check=>['official_total','due_date'].includes(check.id)&&check.status==='unknown')||(checks.find(check=>check.id==='current_sum')?.status==='unknown'&&officialCheck?.status!=='pass');
     const status=failed.length?'blocked':unknownCore?'review':'verified',importAllowed=status==='verified';
     const reason=failed.length
       ?`Os valores extraídos não fecham com o documento (${failed.map(check=>check.label.toLowerCase()).join(', ')}).`
@@ -294,10 +294,12 @@
 
   function parseGeneric(lines,{month=null}={}){
     const meta=extractMeta(lines),context={invoiceMonth:month,dueDate:meta.dueDate};
-    const currentSection=section(lines,line=>/\b(lancamentos atuais|lancamentos: compras e saques|transacoes da fatura|detalhamento da fatura)\b/.test(line)&&!/^total\b/.test(line),[
+    const currentSection=section(lines,line=>(line==='lancamentos atuais'||/\b(lancamentos: compras e saques|transacoes da fatura|detalhamento da fatura)\b/.test(line))&&!/^total\b/.test(line),[
       line=>/\b(total dos lancamentos|compras parceladas|parcelas futuras|proximas faturas|pagamentos efetuados)\b/.test(line)
     ]);
-    const source=currentSection.length?currentSection:lines.filter(line=>!isGenericExcludedLine(normalize(line))&&!/\b(compras parceladas|parcelas futuras|proximas faturas)\b/.test(normalize(line)));
+    const fallback=[];
+    if(!currentSection.length){for(const line of lines){const normalized=normalize(line);if(/\b(compras parceladas|parcelas futuras|proximas faturas)\b/.test(normalized))break;if(!isGenericExcludedLine(normalized))fallback.push(line)}}
+    const source=currentSection.length?currentSection:fallback;
     const rows=parseDatedRows(source,{...context,allowContinuation:false}).filter(row=>row.invoiceKind!=='payment');
     for(const row of rows){if(row.installments>1)row.currentChargeOnly=true}
     const integrity=validateStructuredInvoice({rows,meta,profileId:'generic-invoice-v2',structured:Boolean(currentSection.length)});
