@@ -44,6 +44,74 @@ async function importRows(page, accountId, rows, file) {
 }
 
 test.describe('Conciliação de transferências entre extratos', () => {
+  test('upgrade RC5 repara automaticamente o saldo espelhado persistido sem apagar a transferência', async ({ page }) => {
+    const value = fixture('Migração RC5 para RC6');
+    value.schemaVersion = 12;
+    value.baseDate = '2026-08-18';
+    value.accounts[0].name = 'Nubank';
+    value.accounts[0].initial = 0;
+    value.accounts[0].balanceDate = '2026-08-18';
+    addAccount(value, 2, 'Mercado Pago', 0);
+    value.accounts[1].balanceDate = '2026-08-18';
+    value.transfers = [{
+      id: 74639,
+      desc: 'PIX ENTRE CONTAS PRÓPRIAS',
+      amount: 746.39,
+      date: '2026-08-17',
+      fromId: 1,
+      toId: 2,
+      tags: ['extrato', 'transferência'],
+      statementKey: '2|fit:MP-74639',
+      balanceImpact: true
+    }];
+
+    await boot(page, value);
+
+    expect(await page.evaluate(() => ({
+      schemaVersion: state.schemaVersion,
+      nubank: accountBalance(1),
+      mercadoPago: accountBalance(2),
+      transferCount: state.transfers.length,
+      impact: state.transfers[0]?.balanceImpact,
+      migration: state.transfers[0]?.balanceImpactMigratedAt
+    }))).toEqual({
+      schemaVersion: 13,
+      nubank: 0,
+      mercadoPago: 0,
+      transferCount: 1,
+      impact: false,
+      migration: 'schema-13'
+    });
+
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => state?.schemaVersion)).toBe(13);
+    expect(await page.evaluate(() => ({
+      nubank: accountBalance(1),
+      mercadoPago: accountBalance(2),
+      transferCount: state.transfers.length,
+      impact: state.transfers[0]?.balanceImpact
+    }))).toEqual({nubank: 0, mercadoPago: 0, transferCount: 1, impact: false});
+  });
+
+  test('migração não neutraliza transferência manual nem extrato posterior à data-base', async ({ page }) => {
+    const value = fixture('Guardrails da migração');
+    value.schemaVersion = 12;
+    value.baseDate = '2026-08-18';
+    addAccount(value, 2, 'Conta B', 0);
+    value.transfers = [
+      {id: 1, desc: 'Manual antiga', amount: 100, date: '2026-08-17', fromId: 1, toId: 2, balanceImpact: true},
+      {id: 2, desc: 'Extrato novo', amount: 50, date: '2026-08-19', fromId: 1, toId: 2, tags: ['extrato'], statementKey: '1|fit:new', balanceImpact: true}
+    ];
+
+    await boot(page, value);
+
+    expect(await page.evaluate(() => state.transfers.map(t => ({id: t.id, impact: t.balanceImpact})))).toEqual([
+      {id: 1, impact: true},
+      {id: 2, impact: true}
+    ]);
+    expect(await page.evaluate(() => [accountBalance(1), accountBalance(2)])).toEqual([850, 150]);
+  });
+
   test('primeira ponta fica pendente e neutra até chegar o extrato da outra conta', async ({ page }) => {
     const errors = monitor(page);
     const value = fixture('Transferência pendente');
