@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { fixture, monitor, expectBootComplete } = require('./helpers');
+const { fixture, monitor, expectBootComplete, writeIndexedDB } = require('./helpers');
 
 async function boot(page, value) {
   const errors = monitor(page);
@@ -87,6 +87,79 @@ test('CARD-04/05 pagamentos parcial e integral liquidam uma vez, sem competênci
   await page.reload(); await expectBootComplete(page, expect, 'Fixture QA');
   expect(await page.evaluate(() => ({ paid: state.invoices[0].paidAmount, remaining: invoiceRemaining(1, '2026-01'), payments: state.invoices[0].payments.length }))).toEqual({ paid: 100, remaining: 0, payments: 2 });
   expect(errors).toEqual([]);
+});
+
+test('CARD-05B pagamento no segundo cartão preserva cartão e mês exibidos após salvar', async ({ page }) => {
+  const value = cardFixture();
+  value.cards.push({ id: 2, name: 'Itaú Click', limit: 3000, closeDay: 2, dueDay: 10, payAccountId: 1, history: [] });
+  value.purchases = [
+    { id: 11, cardId: 2, desc: 'AMAZON BR', total: 54.90, installments: 1, firstMonth: '2026-08', purchaseDate: '2026-07-06', category: 'Assinaturas', status: 'active', refunds: [] },
+    { id: 12, cardId: 2, desc: 'MERCADO LIVRE', total: 19.35, installments: 1, firstMonth: '2026-08', purchaseDate: '2026-07-28', category: 'Outros', status: 'active', refunds: [] }
+  ];
+  value.invoices = [{ id: 22, cardId: 2, month: '2026-08', officialTotal: 74.25, paidAmount: 0, accountId: 1, payments: [], status: 'closed', closedAt: '2026-08-02T12:00:00Z' }];
+  value.ui.invoiceMonthByCard = { 2: '2026-08' };
+  const errors = await boot(page, value);
+
+  const payPromise = page.evaluate(async () => {
+    document.querySelector('#invoiceCard').value = '2';
+    document.querySelector('#invoiceMonth').value = '2026-08';
+    await document.querySelector('#payInvoice').onclick();
+  });
+  await page.locator('#dialogPromptInput').fill('74,25');
+  await page.locator('#dialogConfirmBtn').click();
+  await payPromise;
+
+  expect(await page.evaluate(() => ({
+    selectedCard: document.querySelector('#invoiceCard').value,
+    selectedMonth: document.querySelector('#invoiceMonth').value,
+    shownPaid: parseMoney(document.querySelector('#invoicePaidView').textContent),
+    paid: invoiceStatus(2, '2026-08').paidAmount,
+    remaining: invoiceRemaining(2, '2026-08')
+  }))).toEqual({ selectedCard: '2', selectedMonth: '2026-08', shownPaid: 74.25, paid: 74.25, remaining: 0 });
+  expect(errors).toEqual([]);
+});
+
+test('CARD-05C upgrade RC13 reconcilia Pago pelo ledger sem duplicar saída de caixa', async ({ page }) => {
+  const value = fixture('Migração RC13 para RC14');
+  value.schemaVersion = 15;
+  value.cards.push({ id: 2, name: 'Itaú Click', limit: 3000, closeDay: 2, dueDay: 10, payAccountId: 1, history: [] });
+  value.invoices = [{
+    id: 22,
+    cardId: 2,
+    month: '2026-08',
+    officialTotal: 74.25,
+    paidAmount: 0,
+    accountId: 1,
+    payments: [
+      { date: '2026-08-10', amount: 74.25, balanceImpact: true, targetMonth: '2026-08' },
+      { date: '2026-08-10', amount: 74.25, balanceImpact: true, targetMonth: '2026-08' },
+      { date: '2026-08-10', amount: 74.25, balanceImpact: true, targetMonth: '2026-08' }
+    ],
+    status: 'closed',
+    closedAt: '2026-08-02T12:00:00Z'
+  }];
+
+  await page.goto('/index.html');
+  await page.evaluate(() => localStorage.clear());
+  await writeIndexedDB(page, value);
+  await page.reload();
+  await expectBootComplete(page, expect, 'Migração RC13 para RC14');
+
+  expect(await page.evaluate(() => ({
+    schemaVersion: state.schemaVersion,
+    paid: invoiceStatus(2, '2026-08').paidAmount,
+    status: invoiceDisplayStatus(2, '2026-08'),
+    remaining: invoiceRemaining(2, '2026-08'),
+    payments: invoiceStatus(2, '2026-08').payments.length,
+    activePayments: invoiceStatus(2, '2026-08').payments.filter(p => p.countsTowardInvoice !== false && p.balanceImpact === true).length,
+    neutralized: invoiceStatus(2, '2026-08').payments.filter(p => p.duplicatePaymentNeutralizedAt === 'schema-16').length,
+    balance: accountBalance(1),
+    migration: invoiceStatus(2, '2026-08').paymentLedgerReconciledAt
+  }))).toEqual({ schemaVersion: 16, paid: 74.25, status: 'paid', remaining: 0, payments: 3, activePayments: 1, neutralized: 2, balance: 925.75, migration: 'schema-16' });
+
+  await page.reload();
+  await expectBootComplete(page, expect, 'Migração RC13 para RC14');
+  expect(await page.evaluate(() => ({ paid: invoiceStatus(2, '2026-08').paidAmount, payments: invoiceStatus(2, '2026-08').payments.length, activePayments: invoiceStatus(2, '2026-08').payments.filter(p => p.countsTowardInvoice !== false && p.balanceImpact === true).length, balance: accountBalance(1) }))).toEqual({ paid: 74.25, payments: 3, activePayments: 1, balance: 925.75 });
 });
 
 test('CARD-06 cancelamento preserva parcelas históricas e metadados e elimina somente futuras', async ({ page }) => {

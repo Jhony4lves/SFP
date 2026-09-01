@@ -3394,7 +3394,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 <script src="safe-spend.js"></script>
 <script src="safe-spend-ui.js"></script>
 <script>
-const VERSION=206, SCHEMA_VERSION=15, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
+const VERSION=207, SCHEMA_VERSION=16, DB_NAME='SFP_JHONY_STABLE', STORE='state', DB_KEY='main';
 const EXPENSE_CATEGORIES=['Essencial','Alimentação','Transporte','Faculdade','Educação','Saúde','Assinaturas','Dívida','Lazer','Casa','Contas','Trabalho','Investimentos','Cartão','Ajuste','Outros'];
 const INCOME_CATEGORIES=['Trabalho','Rendimentos','Reembolso','Venda','Benefícios','Investimentos','Ajuste','Outros'];
 const CATEGORIES=[...new Set([...EXPENSE_CATEGORIES,...INCOME_CATEGORIES])];
@@ -3640,6 +3640,55 @@ function migrateSchema(s){
   if(s.schemaVersion<15){
     s.invoiceImports??=[];
     s.schemaVersion=15;
+  }
+  if(s.schemaVersion<16){
+    // RC13 podia manter pagamentos no ledger da fatura enquanto o resumo
+    // legado permanecia em zero. O ledger é a evidência mais forte: recupera
+    // o resumo e neutraliza apenas repetições manuais idênticas que fariam a
+    // soma ultrapassar o total oficial, preservando-as para auditoria.
+    (s.invoices||[]).forEach(inv=>{
+      inv.payments??=[];
+      const official=Number(inv.officialTotal),officialCents=Number.isFinite(official)&&official>0?Math.round(official*100):null;
+      let countedCents=0,neutralizedDuplicate=false;
+      const seenManual=new Set;
+      inv.payments.forEach((p,index)=>{
+        const amountCents=Math.max(0,Math.round((Number(p?.amount)||0)*100));
+        if(!amountCents||p?.countsTowardInvoice===false)return;
+        const manualLike=p?.balanceImpact===true&&!p?.statementKey&&!p?.invoiceImportKey&&!p?.sourceDesc;
+        const fingerprint=manualLike?`${p?.date||''}|${amountCents}|${p?.targetMonth||inv.month}`:null;
+        const exactRepeat=manualLike&&seenManual.has(fingerprint);
+        if(exactRepeat&&officialCents!=null&&countedCents+amountCents>officialCents){
+          p.countsTowardInvoice=false;
+          p.balanceImpact=false;
+          p.duplicatePaymentNeutralizedAt='schema-16';
+          p.duplicatePaymentOriginalIndex=index;
+          neutralizedDuplicate=true;
+          return;
+        }
+        if(manualLike)seenManual.add(fingerprint);
+        countedCents+=amountCents;
+      });
+      const ledgerPaid=Math.round(inv.payments.reduce((sum,p)=>{
+        if(p?.countsTowardInvoice===false)return sum;
+        const amount=Number(p?.amount);
+        return sum+(Number.isFinite(amount)&&amount>0?amount:0);
+      },0)*100)/100;
+      const legacyPaid=Math.max(0,Number(inv.paidAmount)||0);
+      let reconciledPaid=Math.max(legacyPaid,ledgerPaid);
+      if(neutralizedDuplicate&&officialCents!=null)reconciledPaid=Math.min(reconciledPaid,officialCents/100);
+      if(Math.abs(reconciledPaid-legacyPaid)>.009){
+        inv.paidAmount=reconciledPaid;
+        inv.paymentLedgerReconciledAt='schema-16';
+      }
+      if(neutralizedDuplicate)inv.duplicatePaymentsNeutralizedAt='schema-16';
+      const paid=Math.max(0,Number(inv.paidAmount)||0);
+      if(paid>0){
+        inv.status=Number.isFinite(official)&&official>0&&paid>=official-.01?'paid':'partial';
+      }
+    });
+    s.ui??={};
+    s.ui.invoiceCardId??=null;
+    s.schemaVersion=16;
   }
   return s
 }
@@ -4736,11 +4785,18 @@ function contextualNew(page){
  else setKind('expense');
 }
 
+function replaceSelectOptions(el,html,preferredValue=null){
+ if(!el)return;
+ const previous=preferredValue??el.value;
+ el.innerHTML=html;
+ if(previous!==''&&previous!=null)el.value=String(previous)
+}
 function renderSelects(){
  let acc=state.accounts.map(a=>`<option value="${a.id}">${sfpEsc(a.name)}</option>`).join(''),transferAcc=state.accounts.map(a=>`<option value="${a.id}">${sfpEsc(a.name)} • ${state.settings?.privacy?'••••':brl(accountBalance(a.id))}</option>`).join(''),cards=state.cards.map(c=>`<option value="${c.id}">${sfpEsc(c.name)}</option>`).join('');
- ['txAccount','stmtAccount','cardPayAccount','recAccount','debtAccount','goalAccount'].forEach(id=>{if($(id))$(id).innerHTML=acc});
- ['txFrom','txTo'].forEach(id=>{if($(id))$(id).innerHTML=transferAcc});
- ['txCard','invoiceCard','cardImportCard'].forEach(id=>{if($(id))$(id).innerHTML=cards});
+ ['txAccount','stmtAccount','cardPayAccount','recAccount','debtAccount','goalAccount'].forEach(id=>replaceSelectOptions($(id),acc));
+ ['txFrom','txTo'].forEach(id=>replaceSelectOptions($(id),transferAcc));
+ ['txCard','cardImportCard'].forEach(id=>replaceSelectOptions($(id),cards));
+ replaceSelectOptions($('invoiceCard'),cards,state.ui?.invoiceCardId??$('invoiceCard')?.value);
  syncTxCategoryOptions();syncRecCategoryOptions();
  if($('catBudgetCategory'))setCategorySelectOptions($('catBudgetCategory'),EXPENSE_CATEGORIES,$('catBudgetCategory').value);
 }
@@ -6065,6 +6121,7 @@ function renderCards(){
   }
 
   $('invoiceCard').value=cid;
+  state.ui.invoiceCardId=cid;
 
   let c=card(cid);
 
@@ -9401,7 +9458,7 @@ window.deleteDebtPrompt=async id=>{let d=state.debts.find(x=>x.id===id);if(!d)re
 window.deleteGoalPrompt=async id=>{let g=state.goals.find(x=>x.id===id);if(!g)return;if(await sfpConfirm({title:'Excluir meta',message:`Deseja realmente excluir a meta "${g.name}"?`,confirmText:'Excluir meta',cancelText:'Cancelar',danger:true})){closeProgressive();await removeGoal(id)}};
 window.openAccountDetail=id=>{const a=account(id);if(!a)return;const movements=state.transactions.filter(t=>t.accountId==id).sort((x,y)=>y.date.localeCompare(x.date)).slice(0,8);showDetail(a.name,`${a.type} · ${a.reconciled?'Saldo conciliado':'Conciliação pendente'}`,`<div class="metric"><span>Saldo atual</span><strong>${brl(accountBalance(id))}</strong><small>${a.reconciled?`Última conciliação em ${a.reconciled.date}`:'Ainda não conciliada'}</small></div><div class="section-actions"><button class="btn" onclick="closeProgressive();reconcileAccount(${id})">Conciliar</button><button class="btn2" onclick="closeProgressive();editAccount(${id},true)">Editar</button><button class="danger" onclick="deleteAccountPrompt(${id})">Excluir</button></div><div class="head"><div><h3>Movimentações recentes</h3><p>Últimos lançamentos desta conta</p></div></div><div class="list">${movements.length?movements.map(t=>`<div class="item"><div><b>${sfpEsc(t.desc)}</b><small>${t.date} · ${sfpEsc(t.category||'Sem categoria')}</small></div><strong class="${t.kind==='income'?'positive':'negative'}">${brl(t.amount)}</strong></div>`).join(''):'<div class="empty-state"><b>Sem movimentações</b>Nenhum lançamento vinculado a esta conta.</div>'}</div>`)};
 window.openCardDetail=id=>{const c=card(id);if(!c)return;const m=currentInvoiceMonth(c),current=invoiceTotal(id,m),next=invoiceTotal(id,monthAdd(m,1)),free=Math.max(0,c.limit-cardOutstanding(id));showDetail(c.name,`Fecha dia ${c.closeDay} · vence dia ${c.dueDay}`,`<div class="metric-grid"><div class="metric"><span>Fatura atual</span><strong>${brl(current)}</strong><small>${monthName(m)}</small></div><div class="metric"><span>Próxima fatura</span><strong>${brl(next)}</strong><small>Limite disponível ${brl(free)}</small></div></div><div class="section-actions"><button class="btn" onclick="openInvoiceDetail(${id})">Abrir fatura</button><button class="btn2" onclick="closeProgressive();editCard(${id},true)">Editar cartão</button><button class="danger" onclick="deleteCardPrompt(${id})">Excluir</button></div>`)};
-window.openInvoiceDetail=id=>{closeProgressive();$('invoiceCard').value=id;const c=card(id),m=state.ui.invoiceMonthByCard?.[id]||currentInvoiceMonth(c);$('invoiceMonth').value=m;renderCards();showProgressivePanel(document.querySelector('#cartoes .invoice-focus'),`Fatura · ${c.name}`,()=>openCardDetail(id))};
+window.openInvoiceDetail=id=>{closeProgressive();state.ui.invoiceCardId=id;$('invoiceCard').value=id;const c=card(id),m=state.ui.invoiceMonthByCard?.[id]||currentInvoiceMonth(c);$('invoiceMonth').value=m;renderCards();showProgressivePanel(document.querySelector('#cartoes .invoice-focus'),`Fatura · ${c.name}`,()=>openCardDetail(id))};
 window.openDebtDetail=id=>{const d=state.debts.find(x=>x.id===id);if(!d)return;const hist=(d.history||[]).slice().reverse();showDetail(d.name,`${debtRateLabel(d)} · ${d.paidInstallments||0} de ${d.installments} parcelas`, `<div class="metric-grid"><div class="metric"><span>Saldo devedor</span><strong>${brl(d.balance)}</strong><small>Parcela ${brl(d.payment)}</small></div><div class="metric"><span>Próximo vencimento</span><strong>${d.firstDue||'—'}</strong><small>${debtMonths(d)} meses estimados</small></div></div><div class="section-actions"><button class="btn" onclick="closeProgressive();payDebtInstallment(${id})">Pagar parcela</button><button class="btn2" onclick="closeProgressive();amortize(${id})">Amortizar</button><button class="btn2" onclick="closeProgressive();editDebt(${id},true)">Editar</button><button class="danger" onclick="deleteDebtPrompt(${id})">Excluir</button></div><div class="head"><div><h3>Histórico</h3><p>Pagamentos e amortizações</p></div></div><div class="list">${hist.length?hist.map(h=>`<div class="item"><span>${h.date||new Date(h.at).toLocaleDateString('pt-BR')} · ${h.type==='extra'?'Amortização':'Pagamento'}</span><strong>${brl(h.amount)}</strong></div>`).join(''):'<div class="empty-state">Nenhum pagamento registrado.</div>'}</div>`)};
 window.openGoalDetail=id=>{const g=state.goals.find(x=>x.id===id);if(!g)return;const v=goalBalance(g),rest=Math.max(0,g.target-v),hist=(g.history||[]).slice().reverse();showDetail(g.name,account(g.accountId)?.name||'Sem conta vinculada',`<div class="metric-grid"><div class="metric"><span>Acumulado</span><strong>${brl(v)}</strong><small>Meta ${brl(g.target)}</small></div><div class="metric"><span>Falta</span><strong>${brl(rest)}</strong><small>${g.targetDate||'Sem prazo definido'}</small></div></div><div class="progress green" role="progressbar" aria-valuenow="${g.target?Math.min(100,v/g.target*100):0}" aria-valuemin="0" aria-valuemax="100"><div style="width:${g.target?Math.min(100,v/g.target*100):0}%"></div></div><div class="section-actions"><button class="btn" onclick="closeProgressive();goalTransfer(${id})">Fazer aporte</button><button class="btn2" onclick="closeProgressive();editGoal(${id},true)">Editar plano</button><button class="danger" onclick="deleteGoalPrompt(${id})">Excluir</button></div><div class="head"><div><h3>Histórico de aportes</h3></div></div><div class="list">${hist.length?hist.map(h=>`<div class="item"><span>${h.date}</span><strong>${brl(h.amount)}</strong></div>`).join(''):'<div class="empty-state">Nenhum aporte registrado.</div>'}</div>`)};
 const FAB_ACTIONS={sophy:['Falar com Sophy',()=>$('sophyInput')?.focus()],contas:['Nova conta',()=>openManagementAction('contas')],cartoes:['Novo cartão',()=>openManagementAction('cartoes')],dividas:['Nova dívida',()=>openManagementAction('dividas')],metas:['Nova meta',()=>openManagementAction('metas')],calendario:['Novo lançamento',()=>contextualNew('calendario')],lancamentos:['Novo lançamento',()=>{resetTxForm();$('txDesc').focus()}]};
@@ -10241,9 +10298,40 @@ function initOther(){
  if($('dcAudit'))$('dcAudit').onclick=()=>setPage('auditoria');
  if($('dcExportAll'))$('dcExportAll').onclick=()=>download(JSON.stringify(state,null,2),`sfp-completo-${localCivilDate()}.json`,'application/json');
  $('prevMonth').onclick=async()=>{state.mesAtual=monthAdd(state.mesAtual,-1);await dbSet(state);renderAll()};$('nextMonth').onclick=async()=>{state.mesAtual=monthAdd(state.mesAtual,1);await dbSet(state);renderAll()};
- $('txSearch').oninput=renderTx;$('txFilter').onchange=renderTx;$('txCancelEdit').onclick=resetTxForm;$('invoiceCard').onchange=()=>{let cid=+$('invoiceCard').value,m=state.ui.invoiceMonthByCard?.[cid]||currentInvoiceMonth(card(cid));if($('invoiceMonth'))$('invoiceMonth').value=m;renderCards()};if($('invoiceMonth'))$('invoiceMonth').onchange=()=>{let cid=+$('invoiceCard').value;state.ui.invoiceMonthByCard[cid]=$('invoiceMonth').value;renderCards()};if($('cardImportFile'))$('cardImportFile').onchange=e=>importCardFiles([...e.target.files]);if($('cardHistorySelect'))$('cardHistorySelect').onchange=renderCardHistory;
+ $('txSearch').oninput=renderTx;$('txFilter').onchange=renderTx;$('txCancelEdit').onclick=resetTxForm;$('invoiceCard').onchange=()=>{let cid=+$('invoiceCard').value;state.ui.invoiceCardId=cid;let m=state.ui.invoiceMonthByCard?.[cid]||currentInvoiceMonth(card(cid));if($('invoiceMonth'))$('invoiceMonth').value=m;renderCards()};if($('invoiceMonth'))$('invoiceMonth').onchange=()=>{let cid=+$('invoiceCard').value;state.ui.invoiceCardId=cid;state.ui.invoiceMonthByCard[cid]=$('invoiceMonth').value;renderCards()};if($('cardImportFile'))$('cardImportFile').onchange=e=>importCardFiles([...e.target.files]);if($('cardHistorySelect'))$('cardHistorySelect').onchange=renderCardHistory;
 $('closeInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoiceMonth')?.value||currentInvoiceMonth(card(cid)),total=invoiceTotal(cid,m);if(total<=0)return toast('Essa fatura está vazia.');let inv=ensureInvoice(cid,m);if(inv.closedAt)return toast('A fatura já está fechada.');inv.officialTotal=total;inv.closedAt=new Date().toISOString();inv.status='closed';addCardHistory(cid,'close',`Fatura ${monthName(m)} fechada`,total);await save('Fechar fatura')};
- $('payInvoice').onclick=async()=>{let cid=+$('invoiceCard').value,m=$('invoiceMonth')?.value||currentInvoiceMonth(card(cid)),total=invoiceRemaining(cid,m),cd=card(cid);if(total<=0)return toast('Essa fatura não tem saldo aberto.','info');let raw=await sfpPrompt({title:`Pagar fatura ${cd.name}`,message:`Fatura de ${monthName(m)}\nSaldo restante em aberto: ${brl(total)}\nInforme o valor do pagamento:`,defaultValue:total.toFixed(2),placeholder:'0,00'});if(raw==null||raw==='')return;let v=parseMoney(raw);if(!(v>0))return;if(v>total){let proceedExcess=await sfpConfirm({title:'Valor Superior',message:`O valor informado (${brl(v)}) é maior que o restante da fatura (${brl(total)}).\n\nDeseja registrar apenas ${brl(total)}?`,confirmText:`Registrar ${brl(total)}`,cancelText:'Cancelar'});if(!proceedExcess)return;v=total}let inv=state.invoices.find(i=>i.cardId==cid&&i.month===m);if(!inv){inv={id:uid(),cardId:cid,month:m,status:'open',paidAmount:0,accountId:cd.payAccountId,payments:[]};state.invoices.push(inv)}inv.paidAmount=Math.min(invoiceTotal(cid,m),Math.round(((inv.paidAmount||0)+v)*100)/100);inv.status=inv.paidAmount>=invoiceTotal(cid,m)-.01?'paid':'partial';inv.payments.push({date:localCivilDate(),amount:v,balanceImpact:true,targetMonth:m});addCardHistory(cid,'payment',`Pagamento da fatura ${monthName(m)}`,v);await save('Pagar fatura');toast('Pagamento registrado com sucesso.','success')};
+ $('payInvoice').onclick=async()=>{
+  const button=$('payInvoice');
+  if(button?.dataset.busy==='1')return;
+  let cid=+$('invoiceCard').value,m=$('invoiceMonth')?.value||currentInvoiceMonth(card(cid)),cd=card(cid);
+  if(!cd||!m)return toast('Selecione o cartão e o mês da fatura.','warning');
+  state.ui.invoiceCardId=cid;state.ui.invoiceMonthByCard[cid]=m;
+  let total=invoiceRemaining(cid,m);
+  if(total<=0)return toast('Essa fatura não tem saldo aberto.','info');
+  if(button)button.dataset.busy='1';
+  try{
+   let raw=await sfpPrompt({title:`Pagar fatura ${cd.name}`,message:`Fatura de ${monthName(m)}\nSaldo restante em aberto: ${brl(total)}\nInforme o valor do pagamento:`,defaultValue:total.toFixed(2),placeholder:'0,00'});
+   if(raw==null||raw==='')return;
+   let v=parseMoney(raw);if(!(v>0))return;
+   const currentRemaining=invoiceRemaining(cid,m);
+   if(currentRemaining<=0)return toast('Essa fatura já foi paga. Nenhum novo pagamento foi criado.','info');
+   total=currentRemaining;
+   if(v>total){let proceedExcess=await sfpConfirm({title:'Valor Superior',message:`O valor informado (${brl(v)}) é maior que o restante da fatura (${brl(total)}).\n\nDeseja registrar apenas ${brl(total)}?`,confirmText:`Registrar ${brl(total)}`,cancelText:'Cancelar'});if(!proceedExcess)return;v=total}
+   let inv=ensureInvoice(cid,m);inv.accountId??=cd.payAccountId||null;inv.payments??=[];
+   const payment={id:uid(),date:localCivilDate(),amount:v,balanceImpact:true,targetMonth:m,cardId:cid,source:'manual',createdAt:new Date().toISOString()};
+   inv.payments.push(payment);
+   inv.paidAmount=Math.min(invoiceTotal(cid,m),Math.round(((inv.paidAmount||0)+v)*100)/100);
+   inv.status=inv.paidAmount>=invoiceTotal(cid,m)-.01?'paid':'partial';
+   addCardHistory(cid,'payment',`Pagamento da fatura ${monthName(m)}`,v);
+   await save('Pagar fatura');
+   state.ui.invoiceCardId=cid;state.ui.invoiceMonthByCard[cid]=m;
+   if($('invoiceCard'))$('invoiceCard').value=String(cid);
+   if($('invoiceMonth'))$('invoiceMonth').value=m;
+   renderCards();
+   toast(`Pagamento de ${brl(v)} registrado em ${cd.name} · ${monthName(m)}.`,'success')
+  }catch(error){console.error('Falha ao registrar pagamento de fatura:',error);toast('Não foi possível salvar o pagamento. Nenhuma alteração foi aplicada.','error')}
+  finally{if(button)delete button.dataset.busy}
+ };
  $('budgetPreset').onchange=()=>{let p=$('budgetPreset').value,vals=p==='503020'?[50,30,20]:p==='601020'?[60,20,20]:null;if(vals){$('budgetNeeds').value=vals[0];$('budgetWants').value=vals[1];$('budgetSave').value=vals[2]}};
  $('saveBudget').onclick=async()=>{let a=+$('budgetNeeds').value,b=+$('budgetWants').value,c=+$('budgetSave').value;if($('budgetPreset').value!=='none'&&Math.round(a+b+c)!==100)return toast('Os percentuais precisam somar 100%.');Object.assign(state.settings,{budgetPreset:$('budgetPreset').value,needs:a,wants:b,save:c});await save('Salvar orçamento')};
  $('closeMonth').onclick=async()=>{if(state.snapshots.some(s=>s.month===state.mesAtual)&&!(await sfpConfirm({title:'Substituir Fechamento',message:`Já existe um fechamento registrado para ${monthName(state.mesAtual)}.\n\nDeseja substituir este fechamento?`,confirmText:'Substituir',cancelText:'Cancelar'})))return;let c=monthCalc(),snap={id:uid(),month:state.mesAtual,income:c.inc,expense:c.exp,result:c.result,assets:assetTotal(),debts:debtTotal(),netWorth:netWorth(),reserve:goalReserve(),closedAt:new Date().toISOString()};state.snapshots=state.snapshots.filter(s=>s.month!==state.mesAtual);state.snapshots.push(snap);await save('Fechar mês');toast('Mês fechado com sucesso.','success')};
