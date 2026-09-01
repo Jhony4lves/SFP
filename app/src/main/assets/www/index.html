@@ -9848,7 +9848,7 @@ function transferCandidateAllowed(row,peer,semantic){
  if(Math.abs(Math.round(Math.abs(a)*100)-Math.round(Math.abs(b)*100))!==0)return false;
  let days=Math.abs(dateObj(row.date)-dateObj(peer.date))/86400000;
  if(days>2)return false;
- let rowImpact=row.date>state.baseDate,peerImpact=peer.balanceImpact??(peer.date>state.baseDate);
+ let rowImpact=afterAccountSnapshot(row.accountId,row.date),peerImpact=peer.balanceImpact??afterAccountSnapshot(peer.accountId,peer.date);
  if(Boolean(rowImpact)!==Boolean(peerImpact))return false;
  if(peer.source==='transaction'){
    let rowSignal=transferImportSignal(row.desc)||semantic?.semanticClass==='possible_transfer';
@@ -9864,7 +9864,7 @@ function findStatementTransferMatch(r,accountId,reserved=new Set(),semantic=null
  let peers=[];
  (state.transferEvidence||[]).filter(e=>e.status!=='matched').forEach(e=>peers.push({
    source:'evidence',id:e.id,accountId:e.accountId,date:e.date,desc:e.desc,statementKey:e.statementKey,
-   signedAmount:Number(e.amount)||0,balanceImpact:e.balanceImpact,semanticClass:e.semanticClass||'possible_transfer',economicImpact:'neutral',file:e.file||null
+   signedAmount:Number(e.amount)||0,balanceImpact:e.snapshotImpact??afterAccountSnapshot(e.accountId,e.date),semanticClass:e.semanticClass||'possible_transfer',economicImpact:'neutral',file:e.file||null
  }));
  state.transactions.filter(t=>t.statementKey&&(t.tags||[]).includes('extrato')&&!t.recurringId&&(t.kind==='income'||t.kind==='expense')).forEach(t=>peers.push({
    source:'transaction',id:t.id,accountId:t.accountId,date:t.date,desc:t.statementDesc||t.desc,statementKey:t.statementKey,
@@ -9885,7 +9885,7 @@ function findStatementTransferMatch(r,accountId,reserved=new Set(),semantic=null
 function statementTransferPeer(r){
  if(r.transferMatchSource==='evidence'){
    let e=(state.transferEvidence||[]).find(x=>String(x.id)===String(r.transferMatchId)&&x.status!=='matched');
-   return e?{source:'evidence',id:e.id,accountId:e.accountId,date:e.date,desc:e.desc,statementKey:e.statementKey,signedAmount:Number(e.amount)||0,balanceImpact:e.balanceImpact,file:e.file||null}:null;
+   return e?{source:'evidence',id:e.id,accountId:e.accountId,date:e.date,desc:e.desc,statementKey:e.statementKey,signedAmount:Number(e.amount)||0,balanceImpact:e.snapshotImpact??afterAccountSnapshot(e.accountId,e.date),file:e.file||null}:null;
  }
  if(r.transferMatchSource==='transaction'){
    let t=state.transactions.find(x=>String(x.id)===String(r.transferMatchId));
@@ -9895,7 +9895,7 @@ function statementTransferPeer(r){
 }
 function finalizeStatementTransferMatch(r){
  let peer=statementTransferPeer(r);if(!peer)return null;
- let current={source:'current',accountId:r.accountId,date:r.date,desc:r.desc,statementKey:r.key,amount:Number(r.amount)||0,signedAmount:Number(r.amount)||0,balanceImpact:r.date>state.baseDate,file:r.file||null};
+ let current={source:'current',accountId:r.accountId,date:r.date,desc:r.desc,statementKey:r.key,amount:Number(r.amount)||0,signedAmount:Number(r.amount)||0,balanceImpact:afterAccountSnapshot(r.accountId,r.date),file:r.file||null};
  if(!transferCandidateAllowed(current,peer,{semanticClass:r.semanticClass,economicImpact:r.economicImpact}))return null;
  if(peer.source==='evidence')state.transferEvidence=state.transferEvidence.filter(e=>String(e.id)!==String(peer.id));
  else state.transactions=state.transactions.filter(t=>String(t.id)!==String(peer.id));
@@ -10183,7 +10183,7 @@ async function importStatement(){
   for(let r of draft){
    if(r.duplicate||r.action==='ignore'||used.has(r.key))continue;
    if(r.action==='pending_transfer'){
-    if(!(state.transferEvidence||[]).some(e=>e.statementKey===r.key))state.transferEvidence.push({id:uid(),statementKey:r.key,accountId:r.accountId,date:r.date,amount:Number(r.amount)||0,desc:r.desc,fitid:r.fitid||null,file:r.file||null,status:'pending',balanceImpact:false,semanticClass:'possible_transfer',createdAt:Date.now()});
+    if(!(state.transferEvidence||[]).some(e=>e.statementKey===r.key))state.transferEvidence.push({id:uid(),statementKey:r.key,accountId:r.accountId,date:r.date,amount:Number(r.amount)||0,desc:r.desc,fitid:r.fitid||null,file:r.file||null,status:'pending',balanceImpact:false,snapshotImpact:afterAccountSnapshot(r.accountId,r.date),semanticClass:'possible_transfer',createdAt:Date.now()});
     used.add(r.key);accepted.push(r);continue
    }
    if(r.action==='transfer_match'||(r.action==='transfer'&&r.transferMatchId&&r.transferAccountId==r.transferMatchAccountId)){
