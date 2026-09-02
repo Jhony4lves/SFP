@@ -29,12 +29,13 @@ write(fiPath,fi);
 const indexPath='app/src/main/assets/www/index.html';
 let s=read(indexPath);
 if(!s.includes('function sfpDatePt(value)')){
-  s=replaceOnce(s,/function brl\(/,
-    "function sfpDatePt(value){\n const m=String(value||'').match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\n return m ? m[3]+'/'+m[2]+'/'+m[1] : String(value||'—')\n}\nfunction brl(",
+  s=replaceOnce(s,
+    "const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});",
+    "function sfpDatePt(value){\n const m=String(value||'').match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\n return m ? m[3]+'/'+m[2]+'/'+m[1] : String(value||'—')\n}\nconst brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});",
     'civil date helper');
 }
 
-const nativeSavePattern=/if\(window\.AndroidBridge && typeof AndroidBridge\.saveTextFile === 'function'\)\{\s*try\{\s*AndroidBridge\.saveTextFile\(name,type \|\| 'text\/plain',String\(content\)\);\s*toast\('Arquivo salvo em Downloads\.'\);\s*return;\s*\}catch\(e\)\{\}\s*\}/;
+const nativeSavePattern=/if\(window\.AndroidBridge && typeof AndroidBridge\.saveTextFile === 'function'\)\s*\{?\s*try\s*\{\s*AndroidBridge\.saveTextFile\(name,type \|\| 'text\/plain',String\(content\)\);\s*toast\('Arquivo salvo em Downloads\.'\);\s*return;\s*\}\s*catch\s*\(e\)\s*\{\s*\}\s*\}?/;
 if(nativeSavePattern.test(s)){
   const replacement=[
 "if(window.AndroidBridge && typeof AndroidBridge.saveTextFile === 'function') {",
