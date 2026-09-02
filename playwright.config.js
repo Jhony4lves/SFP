@@ -8,8 +8,8 @@ module.exports = defineConfig({
   retries: process.env.CI ? 1 : 0,
   use: {
     baseURL: 'http://127.0.0.1:4173',
-    trace: 'off',
-    screenshot: 'off',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
     storageState: {
       cookies: [],
       origins: [{ origin: 'http://127.0.0.1:4173', localStorage: [{ name: 'sfp_final_fallback', value: JSON.stringify(fixture()) }] }]
