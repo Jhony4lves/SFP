@@ -17,9 +17,9 @@
   border-color: var(--color-border);
 }
 [data-theme="light"] .modal.sfp-dialog {
-  background: var(--color-surface-1) !important;
-  color: var(--color-text) !important;
-  border-color: var(--color-border) !important;
+  background: var(--color-surface-1);
+  color: var(--color-text);
+  border-color: var(--color-border);
 }
 [data-theme="light"] .sophy-proactive-brief[data-priority="critical"] {
   background: linear-gradient(180deg,var(--color-negative-bg),var(--color-surface-1) 78%);
