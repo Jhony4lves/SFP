@@ -346,3 +346,12 @@ body .safe-spend-foot button {
   body .sophy-brief-evidence { max-height:24px;overflow:auto; }
   body .sophy-brief-detail { max-height:48px;overflow:auto; }
 }
+
+
+/* Final AA semantic text hardening */
+[data-theme="light"] #auditoria .positive,
+[data-theme="light"] #dashboard .positive { color:#166534 !important; }
+[data-theme="light"] #auditoria .warning,
+[data-theme="light"] #dashboard .warning { color:#854d0e !important; }
+[data-theme="light"] #auditoria .negative,
+[data-theme="light"] #dashboard .negative { color:#b91c1c !important; }
