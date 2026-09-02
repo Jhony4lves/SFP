@@ -7,8 +7,6 @@
     txFilter: 'Filtrar lançamentos por tipo'
   };
   let dialogLayerSeq=0;
-  const pageHistory=[];
-  let suppressPageHistory=false;
 
   function textOfIds(ids){
     return String(ids||'').split(/\s+/).filter(Boolean).map(id=>document.getElementById(id)?.textContent||'').join(' ').trim().replace(/\s+/g,' ');
@@ -261,59 +259,38 @@
     }
   }
 
-  function installPageHistoryAndAndroidBack(){
-    const original=window.setPage;
-    if(typeof original==='function' && !original.__sfpHistoryWrapped){
-      const wrapped=function(page,...args){
-        const current=document.body?.dataset?.page;
-        if(!suppressPageHistory && current && page && page!==current){
-          if(pageHistory[pageHistory.length-1]!==current) pageHistory.push(current);
-          if(pageHistory.length>30) pageHistory.shift();
-        }
-        return original.call(this,page,...args);
-      };
-      wrapped.__sfpHistoryWrapped=true;
-      window.setPage=wrapped;
-    }
-
-    window.handleAndroidBack=function(){
+  function installAndroidBackBridge(){
+    const original=window.handleAndroidBack;
+    if(typeof original!=='function' || original.__sfpNestedAware) return;
+    const wrapped=function(){
       const nested=Array.from(document.querySelectorAll('.sfp-nested-dialog-layer')).filter(el=>el.getClientRects().length).pop();
       if(nested){
         const closer=nested.querySelector('#dialogCancelBtn,#dialogCloseBtn,.sfp-dialog-close,[data-close]');
         closer?.click();
         return true;
       }
-      const modal=document.getElementById('modalRoot');
-      if(modal && !modal.classList.contains('hidden') && modal.getClientRects().length){
-        const closer=modal.querySelector('#dialogCancelBtn,#dialogCloseBtn,.sfp-dialog-close,#closeModal,#closeAB,#closeMore,[data-close]');
-        if(closer) closer.click();
-        else {modal.className='hidden';modal.innerHTML='';}
-        return true;
-      }
-      const search=document.getElementById('globalResults');
-      if(search && !search.classList.contains('hidden')){search.classList.add('hidden');return true;}
-      const current=document.body?.dataset?.page;
-      while(pageHistory.length && pageHistory[pageHistory.length-1]===current) pageHistory.pop();
-      const previous=pageHistory.pop();
-      if(previous && typeof window.setPage==='function'){
-        suppressPageHistory=true;
-        try{window.setPage(previous);}finally{suppressPageHistory=false;}
-        return true;
-      }
-      if(current && current!=='hoje' && typeof window.setPage==='function'){
-        suppressPageHistory=true;
-        try{window.setPage('hoje');}finally{suppressPageHistory=false;}
-        return true;
-      }
-      return false;
+      return original.apply(this,arguments);
     };
+    wrapped.__sfpNestedAware=true;
+    window.handleAndroidBack=wrapped;
+  }
+
+  function installPseudoButtonKeyboard(){
+    document.addEventListener('keydown',event=>{
+      if(event.key!=='Enter' && event.key!==' ') return;
+      const target=event.target?.closest?.('.category-row[role="button"][tabindex="0"],#dashboard .item[role="button"][tabindex="0"]');
+      if(!target) return;
+      event.preventDefault();
+      target.click();
+    });
   }
 
   function install(){
     applyAccessibleNames(document);
     normalizeTransactionToolbar();
     installDialogs();
-    installPageHistoryAndAndroidBack();
+    installAndroidBackBridge();
+    installPseudoButtonKeyboard();
 
     const observer=new MutationObserver(records=>{
       for(const record of records){
