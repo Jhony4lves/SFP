@@ -8539,6 +8539,12 @@ function renderPatrimony(){
     : `<div class="empty-chart-state"><svg class="empty-chart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><p>Faça fechamentos mensais para criar histórico.</p></div>`;
 }
 
+function calendarCompactAmount(value){
+ const n=Math.abs(Number(value)||0);
+ if(n>=1000000)return `${(n/1000000).toLocaleString('pt-BR',{maximumFractionDigits:1})}M`;
+ if(n>=1000)return `${(n/1000).toLocaleString('pt-BR',{maximumFractionDigits:n>=100000?0:1})}k`;
+ return Math.round(n).toLocaleString('pt-BR');
+}
 function renderCalendar(){
   let[y,m]=state.mesAtual.split('-').map(Number),first=new Date(y,m-1,1),days=new Date(y,m,0).getDate(),start=first.getDay(),ev=financialCalendarEvents();
   let h=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(x=>`<div class="calhead">${x}</div>`).join('');
@@ -8546,7 +8552,7 @@ function renderCalendar(){
   for(let d=1;d<=days;d++){
     let ds=`${state.mesAtual}-${String(d).padStart(2,'0')}`,e=ev.filter(x=>x.date===ds),inc=e.filter(x=>x.type==='income').reduce((a,x)=>a+x.amount,0),exp=e.filter(x=>x.type==='expense').reduce((a,x)=>a+x.amount,0),hasRealized=e.some(x=>x.realization==='realized'),hasProjected=e.some(x=>x.realization==='projected'),dots=`${hasRealized?'<i class="cal-dot realized" title="Realizado"></i>':''}${hasProjected?'<i class="cal-dot projected" title="Previsto"></i>':''}`;
     let label=e.length?`Dia ${d}, ${e.length} evento${e.length>1?'s':''}${inc?`, receita de ${brl(inc)}`:''}${exp?`, despesa de ${brl(exp)}`:''}${hasProjected?' (com previsão)':''}`:`Dia ${d}, sem eventos`;
-    h+=`<button type="button" class="day${e.length?' has-events':''}" onclick="openCalendarDay('${ds}')" aria-label="${label}"><div class="daytop"><span class="daynum">${d}</span>${dots?`<div class="cal-indicators">${dots}</div>`:''}</div>${inc?`<span class="cal-flow inc">+ ${brl(inc)}</span>`:''}${exp?`<span class="cal-flow exp">− ${brl(exp)}</span>`:''}${e.length?`<span class="cal-count">${e.length} ${e.length===1?'evento':'eventos'}</span>`:''}</button>`
+    h+=`<button type="button" class="day${e.length?' has-events':''}" onclick="openCalendarDay('${ds}')" aria-label="${sfpEsc(label)}"><div class="daytop"><span class="daynum">${d}</span>${dots?`<div class="cal-indicators">${dots}</div>`:''}</div>${inc?`<span class="cal-flow inc" title="${sfpEsc('+ '+brl(inc))}"><span class="cal-flow-full" aria-hidden="true">+ ${brl(inc)}</span><span class="cal-flow-compact" aria-hidden="true">+${calendarCompactAmount(inc)}</span></span>`:''}${exp?`<span class="cal-flow exp" title="${sfpEsc('− '+brl(exp))}"><span class="cal-flow-full" aria-hidden="true">− ${brl(exp)}</span><span class="cal-flow-compact" aria-hidden="true">−${calendarCompactAmount(exp)}</span></span>`:''}${e.length?`<span class="cal-count">${e.length} ${e.length===1?'evento':'eventos'}</span>`:''}</button>`
   }
   $('calendar').innerHTML=h
 }

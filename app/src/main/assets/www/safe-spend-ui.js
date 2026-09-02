@@ -71,7 +71,7 @@
 
   function renderEvents(report){
     const events=(report?.projection?.timeline||[]).filter(e=>e.type!=='opening');if(!events.length)return '<div class="safe-spend-event"><span class="safe-spend-event-date">—</span><span class="safe-spend-event-desc">Nenhum evento conhecido na janela</span></div>';
-    return events.slice(0,10).map(event=>{const sign=event.type==='income'?'+':'−';return `<div class="safe-spend-event" data-type="${escapeHtml(event.type)}"><span class="safe-spend-event-date">${escapeHtml(datePt(event.date))}</span><span class="safe-spend-event-desc" data-money>${sign} ${money(event.amountCents)} · ${escapeHtml(event.origin||'evento')}</span><span class="safe-spend-event-balance" data-money>${money(event.balanceCents)}</span></div>`;}).join('')+(events.length>10?`<small class="muted">+ ${events.length-10} evento(s) na projeção.</small>`:'');
+    return events.slice(0,10).map(event=>{const sign=event.type==='income'?'+':'−',detail=`${sign} ${money(event.amountCents)} · ${event.origin||'evento'}`;return `<div class="safe-spend-event" data-type="${escapeHtml(event.type)}"><span class="safe-spend-event-date">${escapeHtml(datePt(event.date))}</span><span class="safe-spend-event-desc" data-money title="${escapeHtml(detail)}">${escapeHtml(detail)}</span><span class="safe-spend-event-balance" data-money>${money(event.balanceCents)}</span></div>`;}).join('')+(events.length>10?`<small class="muted">+ ${events.length-10} evento(s) na projeção.</small>`:'');
   }
 
   function snapshot(){if(typeof global.financialContextSnapshot!=='function'||!global.SFPSafeSpend?.analyze)return null;const core=global.financialContextSnapshot({months:3});return global.SFPSafeSpend.analyze({snapshot:core,projectionDays:30});}
