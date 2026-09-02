@@ -1,9 +1,12 @@
 const { test, expect } = require('@playwright/test');
-const { expectBootComplete } = require('./helpers');
+const { fixture, expectBootComplete, writeIndexedDB } = require('./helpers');
 
 async function boot(page,width=390,height=844){
   await page.setViewportSize({width,height});
   await page.goto('/index.html');
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
+  await writeIndexedDB(page,fixture('Fixture QA'));
+  await page.reload();
   await expectBootComplete(page,expect,'Fixture QA');
 }
 
