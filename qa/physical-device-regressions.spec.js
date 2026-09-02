@@ -21,7 +21,13 @@ test('PHYS-144 Android picker: OFX/CSV usam seletor amplo sem filtro MIME destru
   expect(activity).toContain('requiresBroadFinancialPicker');
   expect(activity).toContain('type.equals(".ofx")');
   expect(activity).toContain('type.equals(".csv")');
-  expect(activity).toMatch(/if (broadFinancialPicker) {[\s\S]*?intent.setType("\*\/\*");[\s\S]*?} else if/);
+  const broadStart=activity.indexOf('if (broadFinancialPicker) {');
+  const broadEnd=activity.indexOf('} else if (acceptedMimeTypes.length == 1)',broadStart);
+  expect(broadStart).toBeGreaterThanOrEqual(0);
+  expect(broadEnd).toBeGreaterThan(broadStart);
+  const broadBranch=activity.slice(broadStart,broadEnd);
+  expect(broadBranch).toContain('intent.setType("*/*");');
+  expect(broadBranch).not.toContain('EXTRA_MIME_TYPES');
 });
 
 test('PHYS-145 Três visões: rótulo, moeda e resumo não colidem no Galaxy S24',async({page})=>{
