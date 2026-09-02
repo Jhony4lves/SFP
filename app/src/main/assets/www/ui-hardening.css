@@ -1,4 +1,4 @@
-/* SFP UI hardening — fixes from deep UI audit #90-#93.
+/* SFP UI hardening — fixes from deep UI audit #90-#107.
    Keep this file semantic and narrow: no financial rules live here. */
 
 /* Theme-safe surfaces: eliminate dark hardcoded islands in light mode. */
@@ -49,6 +49,22 @@
 [data-theme="light"] .toast-success { color:#166534; border-color:rgba(22,101,52,.35); }
 [data-theme="light"] .toast-error { color:#b91c1c; border-color:rgba(185,28,28,.35); }
 [data-theme="light"] .toast-warning { color:#854d0e; border-color:rgba(133,77,14,.35); }
+[data-theme="light"] .safe-spend-event[data-type="income"] .safe-spend-event-desc,
+[data-theme="light"] .cal-flow.inc { color:#166534 !important; }
+[data-theme="light"] .safe-spend-event[data-type="expense"] .safe-spend-event-desc { color:#854d0e !important; }
+[data-theme="light"] .cal-flow.exp { color:#b91c1c !important; }
+[data-theme="light"] .origin-chip.origin-real { color:#166534 !important; }
+
+/* Secondary functional text needs AA contrast even at compact sizes. */
+.safe-spend-eyebrow,
+.safe-spend-equation small,
+.safe-spend-event-date,
+.financial-insight-severity,
+.sophy-msg-time,
+.field-help,
+.cal-count {
+  color: var(--color-text-secondary);
+}
 
 /* Long custom-select values remain readable. */
 body .sfp-select-option {
@@ -101,6 +117,43 @@ body .safe-spend-foot button {
   font-size: 11px;
 }
 
+/* Large financial values must be allowed to shrink their grid track instead of widening it. */
+.sfp-card-v2-main {
+  grid-template-columns: minmax(0,1.4fr) minmax(0,1fr);
+}
+.sfp-card-v2-main > *,
+.sfp-card-v2-side,
+.sfp-card-v2-stat,
+.sfp-card-v2-primary,
+.sfp-view-grid,
+.sfp-view-card,
+.sfp-view-card > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.sfp-card-v2-stat strong,
+.sfp-card-v2-primary strong,
+.sfp-view-card strong,
+.sfp-view-card span {
+  overflow-wrap: anywhere;
+}
+
+/* Progressive invoice detail cannot inherit a 400px min-content width on narrow phones. */
+#progressiveSlot,
+.modal .progressive-panel,
+.invoice-focus,
+.invoice-focus > *,
+.sfp-invoice-v2,
+.sfp-invoice-v2 > *,
+.sfp-invoice-v2-head,
+.sfp-invoice-v2-head > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Calendar compact amount is visible only on narrow cells; aria-label/title keep the exact value. */
+.cal-flow-compact { display:none; }
+
 /* Toast stays above the bottom navigation and Android safe area. */
 @media (max-width: 650px) {
   .toast {
@@ -116,24 +169,29 @@ body .safe-spend-foot button {
     overflow-wrap: anywhere;
   }
 
-  /* Calendar values remain visible; narrow cells may use two lines instead of ellipsis. */
-  .day {
-    min-height: 72px;
-  }
+  .day { min-height:72px; }
+  .cal-flow-full { display:none; }
+  .cal-flow-compact { display:inline; }
   .cal-flow,
   .cal-count {
-    white-space: normal;
+    white-space: nowrap;
     overflow: visible;
     text-overflow: clip;
-    overflow-wrap: anywhere;
   }
 
-  .period-selector button {
-    min-height: 44px;
+  .sfp-view-grid {
+    grid-template-columns: minmax(0,1fr) !important;
   }
+  .sfp-card-v2-main {
+    grid-template-columns: minmax(0,1fr);
+  }
+  .sfp-card-v2-side {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .period-selector button { min-height:44px; }
 }
 
-/* Lançamentos: filters stack before they can collide around 320px. */
+/* Lançamentos: filters and invoice actions stack before they can collide around 320px. */
 @media (max-width: 480px) {
   #lancamentos .head > .actions {
     width: 100%;
@@ -145,6 +203,31 @@ body .safe-spend-foot button {
   #txFilter {
     width: 100%;
     min-width: 0;
+  }
+  .modalback {
+    padding-left: max(12px,var(--safe-left));
+    padding-right: max(12px,var(--safe-right));
+  }
+  .modalback > .modal {
+    width: 100%;
+    max-width: calc(100vw - var(--safe-left) - var(--safe-right) - 24px);
+    min-width: 0;
+  }
+  .invoice-focus > .head {
+    display: grid;
+    grid-template-columns: minmax(0,1fr);
+  }
+  .invoice-focus .head > .actions {
+    width: 100%;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .invoice-focus .two { grid-template-columns:minmax(0,1fr); }
+  #payInvoice,
+  #closeInvoice {
+    min-width: 0;
+    max-width: 100%;
+    padding-left: 8px;
+    padding-right: 8px;
   }
 }
 
@@ -166,8 +249,20 @@ body .safe-spend-foot button {
   }
 }
 
-/* Short landscape keeps the brief available while the whole Sophy stack fits the viewport. */
+/* Short landscape keeps Safe Spend information complete without blind ellipsis. */
 @media (orientation: landscape) and (max-height: 520px) {
+  .safe-spend-event {
+    grid-template-columns: 70px minmax(0,1fr);
+    align-items: start;
+  }
+  .safe-spend-event-desc {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+  .safe-spend-event-balance { grid-column:2; }
+
   body[data-page="sophy"] main {
     height: 100dvh;
     max-height: 100dvh;
@@ -178,9 +273,7 @@ body .safe-spend-foot button {
     flex-direction: column;
     overflow: hidden;
   }
-  body[data-page="sophy"] main > .top {
-    display: none !important;
-  }
+  body[data-page="sophy"] main > .top { display:none !important; }
   body[data-page="sophy"] #sophy {
     flex: 1 1 0;
     min-height: 0;
@@ -204,16 +297,9 @@ body .safe-spend-foot button {
     flex: 1 1 auto;
     gap: 7px;
   }
-  body[data-page="sophy"] .sophy-avatar-wrap {
-    width: 34px;
-    height: 34px;
-  }
-  body[data-page="sophy"] .sophy-avatar-emoji {
-    font-size: 16px;
-  }
-  body[data-page="sophy"] .sophy-meta {
-    min-width: 0;
-  }
+  body[data-page="sophy"] .sophy-avatar-wrap { width:34px;height:34px; }
+  body[data-page="sophy"] .sophy-avatar-emoji { font-size:16px; }
+  body[data-page="sophy"] .sophy-meta { min-width:0; }
   body[data-page="sophy"] .sophy-meta h2 {
     margin: 0;
     font-size: 14px;
@@ -221,13 +307,8 @@ body .safe-spend-foot button {
   }
   body[data-page="sophy"] #sophySubtitle,
   body[data-page="sophy"] .sophy-mood-tag,
-  body[data-page="sophy"] #sophyCoreTag {
-    display: none;
-  }
-  body[data-page="sophy"] .sophy-badges {
-    margin-top: 2px;
-    min-width: 0;
-  }
+  body[data-page="sophy"] #sophyCoreTag { display:none; }
+  body[data-page="sophy"] .sophy-badges { margin-top:2px;min-width:0; }
   body[data-page="sophy"] #sophyNetworkTag {
     font-size: 9px;
     padding: 1px 6px;
@@ -248,9 +329,7 @@ body .safe-spend-foot button {
     align-items: center;
     justify-content: center;
   }
-  body[data-page="sophy"] .sophy-header-actions > button > span {
-    display: none;
-  }
+  body[data-page="sophy"] .sophy-header-actions > button > span { display:none; }
   body .sophy-proactive-brief {
     display: grid;
     padding: 4px 7px;
@@ -264,12 +343,6 @@ body .safe-spend-foot button {
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  body .sophy-brief-evidence {
-    max-height: 24px;
-    overflow: auto;
-  }
-  body .sophy-brief-detail {
-    max-height: 48px;
-    overflow: auto;
-  }
+  body .sophy-brief-evidence { max-height:24px;overflow:auto; }
+  body .sophy-brief-detail { max-height:48px;overflow:auto; }
 }
