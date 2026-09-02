@@ -49,6 +49,12 @@ Evitar por padrão. É aceitável apenas quando uma regra histórica com `!impor
 
 Quando uma correção toca um `!important` histórico, preferir remover/reduzir a declaração na fonte em vez de adicionar outra declaração ainda mais específica.
 
+### Marco da auditoria 2026-09-02
+
+A etapa de hardening começou com 14 declarações `!important` na folha transversal. Três overrides redundantes dos diálogos em tema claro foram removidos, deixando o teto em **11**. `qa/ui-style-guardrails.spec.js` transforma esse teto em contrato: novos patches não podem fazer a dívida voltar a crescer sem primeiro reduzir ou justificar uma regra existente.
+
+Os `!important` restantes neutralizam regras legadas cuja prioridade ainda é necessária para preservar o comportamento comprovado nos breakpoints/temas cobertos. Eles devem ser removidos nas extrações graduais do módulo proprietário, e não substituídos por seletores globais mais agressivos.
+
 ## 5. Responsividade
 
 Breakpoints obrigatórios de regressão visual:
