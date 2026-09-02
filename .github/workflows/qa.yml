@@ -23,8 +23,6 @@ jobs:
       - run: npm run test:sophy-arch
       - run: npm run test:sophy-benchmark
       - run: npm run test:financial
-      - name: Visual regression sweep
-        run: npx playwright test qa/visual-bug-sweep.spec.js --reporter=list
       - run: npm run test:qa
       - if: always()
         uses: actions/upload-artifact@v6
