@@ -1,0 +1,37 @@
+name: Apply Presentation Audit Fixes
+
+on:
+  push:
+    branches:
+      - qa/bug-zero-sweep-2026-09-02
+    paths:
+      - tools/apply-presentation-audit-fixes.js
+      - .github/workflows/apply-presentation-audit-fixes.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/bug-zero-sweep-2026-09-02
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/apply-presentation-audit-fixes.js
+      - name: Commit presentation fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/index.html app/src/main/assets/www/financial-intelligence.js
+          if git diff --cached --quiet; then
+            echo "No presentation source changes."
+          else
+            git commit -m "fix(ui): localize money dates and harden native export feedback"
+            git push origin HEAD:qa/bug-zero-sweep-2026-09-02
+          fi
