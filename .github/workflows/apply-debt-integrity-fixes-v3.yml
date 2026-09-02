@@ -1,0 +1,30 @@
+name: Apply Debt Integrity Fixes v3
+on:
+  push:
+    branches: [qa/bug-zero-sweep-2026-09-02]
+    paths:
+      - tools/apply-debt-integrity-fixes-v3.js
+      - .github/workflows/apply-debt-integrity-fixes-v3.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/bug-zero-sweep-2026-09-02
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply debt integrity patch safely
+        run: node tools/apply-debt-integrity-fixes-v3.js
+      - name: Commit debt integrity fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "fix(debts): synchronize cash liability and projections"
+          git push origin HEAD:qa/bug-zero-sweep-2026-09-02
