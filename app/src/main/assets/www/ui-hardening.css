@@ -380,7 +380,6 @@ body .safe-spend-foot button {
     white-space: normal;
     overflow-wrap: anywhere;
   }
-  .sfp-select-menu { transition: none !important; }
 }
 
 #modalRoot .invoice-focus,
