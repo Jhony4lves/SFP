@@ -1,0 +1,32 @@
+name: Trim Physical Hardening Override
+
+on:
+  push:
+    branches:
+      - fix/physical-regressions-2026-09-02
+    paths:
+      - tools/trim-physical-hardening.js
+      - .github/workflows/trim-physical-hardening.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/physical-regressions-2026-09-02
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: node tools/trim-physical-hardening.js
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/ui-hardening.css
+          git diff --cached --check
+          git commit -m "fix(ui): keep hardening override debt within guardrail"
+          git push origin HEAD:fix/physical-regressions-2026-09-02
