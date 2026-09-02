@@ -76,11 +76,10 @@ test('confirmação aninhada preserva modal pai quando é cancelada',async({page
   await expect(page.locator('#parentAction')).toBeFocused();
 });
 
-test('Android back contract consome modal e navegação SPA antes de permitir saída',async({page})=>{
+test('Android back contract usa a pilha SPA nativa antes de permitir saída',async({page})=>{
   await boot(page);
   expect(await page.evaluate(()=>typeof window.handleAndroidBack)).toBe('function');
-
-  await page.evaluate(()=>window.setPage('dashboard'));
+  await page.evaluate(()=>{window.sfpNavigation?.reset('hoje');window.setPage('dashboard');});
   await expect(page.locator('#pageTitle')).toHaveText('Dashboard');
   expect(await page.evaluate(()=>window.handleAndroidBack())).toBe(true);
   await expect(page.locator('#pageTitle')).toHaveText('Hoje');
@@ -91,4 +90,20 @@ test('Android back contract consome modal e navegação SPA antes de permitir sa
   await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
 
   expect(await page.evaluate(()=>window.handleAndroidBack())).toBe(false);
+});
+
+test('pseudo-botões do Dashboard respondem a Enter e Espaço',async({page})=>{
+  await boot(page);
+  await page.evaluate(()=>{
+    const host=document.getElementById('dashboard');
+    const el=document.createElement('div');
+    el.id='qaPseudoButton';el.className='category-row';el.setAttribute('role','button');el.tabIndex=0;
+    el.onclick=()=>window.__qaPseudoClicks=(window.__qaPseudoClicks||0)+1;
+    host.appendChild(el);
+  });
+  const target=page.locator('#qaPseudoButton');
+  await target.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Space');
+  expect(await page.evaluate(()=>window.__qaPseudoClicks||0)).toBe(2);
 });
