@@ -26,6 +26,11 @@ while ((scriptMatch = scriptRegex.exec(source)) !== null) {
   }
   scriptIdx++;
 }
+for(const match of source.matchAll(/<script\b[^>]*\bsrc=["']([^"']+\.js)["'][^>]*><\/script>/gi)){
+  const scriptPath=path.join('app/src/main/assets/www',match[1]);
+  if(!fs.existsSync(scriptPath)){problems.push(`script externo ausente: ${match[1]}`);continue}
+  try{new vm.Script(fs.readFileSync(scriptPath,'utf8'),{filename:scriptPath})}catch(error){problems.push(`Erro de sintaxe JavaScript em ${match[1]}: ${error.message}`)}
+}
 
 // 2. IDs estáticos, conflitos e declarações
 for (const [name, count] of duplicates(staticHtml, /\bid=["']([^"']+)["']/g)) problems.push(`DOM id estático duplicado: ${name} (${count}x)`);
@@ -56,8 +61,8 @@ if (fs.existsSync(logoMasterPath)) {
 }
 
 // 5. Fonte única da versão de schema
-if (!source.includes('SCHEMA_VERSION=12')) {
-  problems.push('SCHEMA_VERSION única fonte de verdade divergente de 12');
+if (!source.includes('SCHEMA_VERSION=16')) {
+  problems.push('SCHEMA_VERSION única fonte de verdade divergente de 16');
 }
 
 // 6. UX-02 design system foundation
@@ -112,9 +117,28 @@ for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
   }
 }
 
+// 8. OCR local de capturas de fatura
+const bridgePath = 'app/src/main/java/com/jhony/sfp/AndroidBridge.java';
+const activityPath = 'app/src/main/java/com/jhony/sfp/MainActivity.java';
+const appGradlePath = 'app/build.gradle';
+const bridge = fs.existsSync(bridgePath) ? fs.readFileSync(bridgePath, 'utf8') : '';
+const activity = fs.existsSync(activityPath) ? fs.readFileSync(activityPath, 'utf8') : '';
+const appGradle = fs.existsSync(appGradlePath) ? fs.readFileSync(appGradlePath, 'utf8') : '';
+for (const contract of [
+  [source.includes('invoice-image-engine.js'), 'motor de importação por imagem não carregado'],
+  [source.includes('.jpg,.jpeg,.png,.webp'), 'seletor de fatura não aceita imagens'],
+  [source.includes('multiple accept='), 'seletor de fatura não aceita várias capturas'],
+  [bridge.includes('extractImageText'), 'bridge Android de OCR ausente'],
+  [bridge.includes('mlkit-latin-bundled'), 'OCR não declara modelo local embarcado'],
+  [activity.includes('image/jpeg') && activity.includes('image/png') && activity.includes('image/webp'), 'seletor Android não anuncia formatos de imagem'],
+  [appGradle.includes("com.google.mlkit:text-recognition:16.0.1"), 'dependência embarcada de OCR ausente'],
+  [!appGradle.includes('play-services-mlkit-text-recognition'), 'OCR não pode depender de download dinâmico']
+]) {
+  if (!contract[0]) problems.push(contract[1]);
+}
+
 if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);
 }
-console.log('Static QA: Sintaxe JavaScript, IDs estáticos, logo oficial SHA-256, launcher icons, schema v12 e contratos verificados com sucesso.');
-
+console.log('Static QA: Sintaxe JavaScript, IDs, logo, launcher, schema v16 e OCR local verificados com sucesso.');

@@ -220,12 +220,15 @@ test.describe('Integridade do Reset do Sistema (Zerar Sistema)', () => {
       await expect(page.locator('#toast')).toHaveText('Sistema restaurado');
     }
 
-    const finalState = await page.evaluate(() => state);
+    const { finalState, runtime } = await page.evaluate(() => ({
+      finalState: state,
+      runtime: { version: VERSION, schemaVersion: SCHEMA_VERSION }
+    }));
     expect(finalState.accounts).toEqual([]);
     expect(finalState.cards).toEqual([]);
     expect(finalState.transactions).toEqual([]);
-    expect(finalState.version).toBe(202);
-    expect(finalState.schemaVersion).toBe(12);
+    expect(finalState.version).toBe(runtime.version);
+    expect(finalState.schemaVersion).toBe(runtime.schemaVersion);
     expect(await page.evaluate(() => validPersistedState(state))).toBe(true);
 
     expect(errors).toEqual([]);

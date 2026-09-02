@@ -14,6 +14,28 @@ async function readDebt(page, id) {
   return page.evaluate(id => structuredClone(state.debts.find(debt => debt.id === id)), id);
 }
 
+async function amortizeThroughDialog(page, debtId, amount) {
+  await page.evaluate(debtId => {
+    window.__qaDebtAmortizePromise = amortize(debtId);
+  }, debtId);
+  await page.locator('#dialogPromptInput').fill(String(amount));
+  await page.locator('#dialogConfirmBtn').click();
+  await page.evaluate(async () => {
+    await window.__qaDebtAmortizePromise;
+    delete window.__qaDebtAmortizePromise;
+  });
+}
+
+async function payDebtInstallmentStable(page, debtId) {
+  await page.evaluate(debtId => {
+    window.__qaDebtPaymentPromise = payDebtInstallment(debtId);
+  }, debtId);
+  await page.evaluate(async () => {
+    await window.__qaDebtPaymentPromise;
+    delete window.__qaDebtPaymentPromise;
+  });
+}
+
 function payrollDebt() {
   return {
     id: 501,
@@ -126,27 +148,21 @@ test('amortizações e pagamentos sucessivos nunca aumentam saldo e limitam paid
   await loadState(page, value);
   const errors = monitor(page);
 
-  const amortizePromise = page.evaluate(() => amortize(501));
-  await page.locator('#dialogPromptInput').fill('250');
-  await page.locator('#dialogConfirmBtn').click();
-  await amortizePromise;
+  await amortizeThroughDialog(page, 501, '250');
   await expect.poll(() => page.evaluate(() => state.debts[0].balance)).toBe(750);
-  await page.evaluate(() => payDebtInstallment(501));
+  await payDebtInstallmentStable(page, 501);
   await expect.poll(() => page.evaluate(() => state.debts[0].balance)).toBe(650);
 
   await page.evaluate(() => { state.mesAtual = '2026-10'; renderAll(); });
-  const amortizePromise2 = page.evaluate(() => amortize(501));
-  await page.locator('#dialogPromptInput').fill('75');
-  await page.locator('#dialogConfirmBtn').click();
-  await amortizePromise2;
+  await amortizeThroughDialog(page, 501, '75');
   await expect.poll(() => page.evaluate(() => state.debts[0].balance)).toBe(575);
-  await page.evaluate(() => payDebtInstallment(501));
+  await payDebtInstallmentStable(page, 501);
   await expect.poll(() => page.evaluate(() => state.debts[0].balance)).toBe(475);
 
   await page.evaluate(() => { state.mesAtual = '2026-11'; renderAll(); });
-  await page.evaluate(() => payDebtInstallment(501));
+  await payDebtInstallmentStable(page, 501);
   await expect.poll(() => page.evaluate(() => state.debts[0].balance)).toBe(375);
-  await page.evaluate(() => payDebtInstallment(501));
+  await payDebtInstallmentStable(page, 501);
 
   await page.reload();
   await expectBootComplete(page, expect, 'Amortização QA');

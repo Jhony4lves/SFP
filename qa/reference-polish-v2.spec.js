@@ -430,7 +430,7 @@ test.describe('SFP Reference Alignment + Physical Polish V2 Suite (POLISH-01 - P
     });
 
     expect(constants.dbName).toBe('SFP_JHONY_STABLE');
-    expect(constants.schemaVersion).toBe(12);
+    expect(constants.schemaVersion).toBe(16);
 
     expect(errors).toEqual([]);
   });
@@ -660,4 +660,3 @@ test.describe('SFP Reference Alignment + Physical Polish V2 Suite (POLISH-01 - P
   });
 
 });
-

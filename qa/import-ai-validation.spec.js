@@ -49,7 +49,7 @@ test('fatura OFX realista do Nubank: negativos são débitos da fatura e Pagamen
   expect(result.amounts).toEqual([8, 8.96, 94.36, 59.99]);
   expect(result.totals).toEqual([8, 8.96, 283.08]);
   expect(result.paymentTarget).toBe('2026-07');
-  expect(result.summary).toContain('3 débito(s) de fatura, 1 pagamento(s)/crédito(s)');
+  expect(result.summary).toContain('3 débito(s), 1 pagamento(s)');
   expect(result.validation).toContain('débitos negativos');
   expect(result.mobileText).toContain('Pix no crédito • débito na fatura');
   expect(result.mobileText).not.toContain('Pix no Crédito • Compra');
