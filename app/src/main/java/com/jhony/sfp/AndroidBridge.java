@@ -489,18 +489,21 @@ public class AndroidBridge {
                 String ciphertextB64 = Base64.encodeToString(ciphertext, Base64.NO_WRAP);
                 String ivB64 = Base64.encodeToString(iv, Base64.NO_WRAP);
 
-                boolean persisted = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
-                        .edit()
+                SharedPreferences vaultPrefs = context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE);
+                boolean persisted = vaultPrefs.edit()
                         .putString(KEY_CIPHERTEXT, ciphertextB64)
                         .putString(KEY_IV, ivB64)
                         .putString(KEY_VERSION, "v3-keystore-gcm")
-                        .remove(LEGACY_KEY_GROQ_SECRET)
                         .commit();
                 if (!persisted) return false;
 
                 String verified = getDecryptedApiKeyInternal(false);
                 boolean ok = trimmed.equals(verified);
                 verified = null;
+                if (ok) {
+                    // Remove the recoverable legacy copy only after the new vault was verified.
+                    vaultPrefs.edit().remove(LEGACY_KEY_GROQ_SECRET).commit();
+                }
                 return ok;
             } catch (Exception e) {
                 if (attempt == 0) {
@@ -517,20 +520,35 @@ public class AndroidBridge {
 
     private void migrateLegacyKeyIfNeeded(SharedPreferences prefs) {
         String legacyKey = prefs.getString(LEGACY_KEY_GROQ_SECRET, null);
-        if (legacyKey == null) {
+        if (legacyKey == null) return;
+        String trimmed = legacyKey.trim();
+        if (trimmed.isEmpty()) {
+            prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).commit();
             return;
         }
-        try {
-            String trimmed = legacyKey.trim();
-            if (!trimmed.isEmpty()) {
-                encryptAndSaveApiKey(trimmed);
-            }
-        } catch (Exception ignored) {
-            // Fail-secure: migration failure leaves API key unconfigured
-        } finally {
-            // Legacy plaintext must never remain on disk, even if migration fails.
-            prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).apply();
+
+        // If an already-encrypted value is healthy, the legacy copy is no longer needed.
+        String existing = getDecryptedApiKeyInternal(false);
+        if (existing != null && !existing.trim().isEmpty()) {
+            existing = null;
+            prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).commit();
+            return;
         }
+        existing = null;
+
+        // Failure is recoverable: keep the app-private legacy copy and retry on next access/boot.
+        // It is never exported to the SFP state/backups and Auto Backup is disabled by policy.
+        if (encryptAndSaveApiKey(trimmed)) {
+            prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).commit();
+        }
+    }
+
+    private boolean stageLegacyApiKeyForRetry(String rawKey) {
+        if (rawKey == null || rawKey.trim().isEmpty()) return false;
+        return context.getSharedPreferences(PREF_SECURE_VAULT, Context.MODE_PRIVATE)
+                .edit()
+                .putString(LEGACY_KEY_GROQ_SECRET, rawKey.trim())
+                .commit();
     }
 
     private String getDecryptedApiKeyInternal() {
@@ -571,7 +589,11 @@ public class AndroidBridge {
 
     @JavascriptInterface
     public boolean setSophyApiKey(String key) {
-        return encryptAndSaveApiKey(key);
+        if (encryptAndSaveApiKey(key)) return true;
+        // During an upgrade a transient/invalidated Keystore can fail once. Preserve a private
+        // recovery copy so the next boot can retry instead of silently losing the user's key.
+        stageLegacyApiKeyForRetry(key);
+        return false;
     }
 
     @JavascriptInterface

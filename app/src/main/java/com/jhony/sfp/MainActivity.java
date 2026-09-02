@@ -122,9 +122,14 @@ public class MainActivity extends AppCompatActivity {
                 fileChooserCallback = filePathCallback;
 
                 String[] acceptedMimeTypes = resolveAcceptMimeTypes(fileChooserParams);
+                boolean broadFinancialPicker = requiresBroadFinancialPicker(fileChooserParams);
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                if (acceptedMimeTypes.length == 1) {
+                if (broadFinancialPicker) {
+                    // Samsung/Android providers commonly expose OFX/QFX/CSV as application/octet-stream
+                    // or with no reliable MIME. MIME filtering would grey out perfectly valid files.
+                    intent.setType("*/*");
+                } else if (acceptedMimeTypes.length == 1) {
                     intent.setType(acceptedMimeTypes[0]);
                 } else {
                     intent.setType("*/*");
@@ -165,6 +170,21 @@ public class MainActivity extends AppCompatActivity {
             case "sfp": return "application/octet-stream";
             default: return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
         }
+    }
+
+    static boolean requiresBroadFinancialPicker(@Nullable WebChromeClient.FileChooserParams params) {
+        if (params == null || params.getAcceptTypes() == null) return false;
+        for (String rawGroup : params.getAcceptTypes()) {
+            if (rawGroup == null) continue;
+            for (String raw : rawGroup.split(",")) {
+                String type = raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
+                if (type.equals(".ofx") || type.equals(".qfx") || type.equals(".csv") || type.equals(".sfp") ||
+                        type.contains("/ofx") || type.contains("csv") || type.equals("application/octet-stream")) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     static String[] resolveAcceptMimeTypes(@Nullable WebChromeClient.FileChooserParams params) {

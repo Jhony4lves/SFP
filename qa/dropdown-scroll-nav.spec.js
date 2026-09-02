@@ -59,7 +59,7 @@ test('open portrait dropdown never enters bottom nav while the page scrolls',asy
 });
 
 
-test('portrait dropdown placement change is animated and resists threshold thrash',async({page})=>{
+test('portrait dropdown placement change is stable, motionless and resists threshold thrash',async({page})=>{
   await page.emulateMedia({reducedMotion:'no-preference'});
   await boot(page);
   await page.evaluate(()=>{
@@ -104,8 +104,8 @@ test('portrait dropdown placement change is animated and resists threshold thras
   }
   expect(changed).not.toBe(initial);
 
-  const hasMotion=await menu.evaluate(el=>el.getAnimations().some(animation=>Number(animation.effect?.getTiming?.().duration||0)>=160));
-  expect(hasMotion).toBe(true);
+  const hasMotion=await menu.evaluate(el=>el.getAnimations().some(animation=>Number(animation.effect?.getTiming?.().duration||0)>0));
+  expect(hasMotion).toBe(false);
 
   await page.evaluate(step=>window.scrollBy(0,step),-direction*16);
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
