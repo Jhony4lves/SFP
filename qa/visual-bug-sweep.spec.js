@@ -152,7 +152,7 @@ test('visual sweep Galaxy S24: seletor customizado de conta fica tematizado e co
   const menu = host.locator('.sfp-select-menu');
   await expect(menu).toBeVisible();
   const box = await menu.boundingBox();
-  expect(box.left).toBeGreaterThanOrEqual(0);
+  expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(vp.width + 1);
   expect(box.y).toBeGreaterThanOrEqual(0);
   expect(box.y + box.height).toBeLessThanOrEqual(vp.height + 1);
@@ -166,6 +166,7 @@ test('visual sweep Galaxy S24: campo monetário seleciona zero e normaliza duas 
   await page.evaluate(() => { window.setPage('contas', { mode: 'replace' }); window.openManagementAction('contas'); });
   const field = page.locator('#accountInitial');
   await field.fill('0,00');
+  await field.blur();
   await field.focus();
   const selected = await field.evaluate(el => el.selectionStart === 0 && el.selectionEnd === el.value.length);
   expect(selected).toBe(true);
