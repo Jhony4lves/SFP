@@ -13,18 +13,18 @@ if (!source.includes(landscapeReplacement)) {
   changed = true;
 }
 
-const baseMarker = ':root{--sfp-mobile-control-height:46px}\n    @media(max-width:650px) and (orientation:portrait){';
-const baseReplacement = ':root{--sfp-mobile-control-height:46px}\n    .sfp-view-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}\n    .sfp-view-card,.sfp-view-card>*{min-width:0}\n    .sfp-view-card span{overflow-wrap:anywhere}\n    @media(max-width:650px) and (orientation:portrait){';
+const tabletFix = '@media(min-width:651px){.sfp-view-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.sfp-view-card,.sfp-view-card>*{min-width:0}.sfp-view-card span{overflow-wrap:anywhere}}';
+const tabletAnchor = '@media(max-width:720px){.sfp-select-menu{padding:8px;border-radius:16px}';
 
-if (!source.includes(baseReplacement)) {
-  if (!source.includes(baseMarker)) throw new Error('Expected base visual-polish marker was not found; refusing a blind patch.');
-  source = source.replace(baseMarker, baseReplacement);
+if (!source.includes(tabletFix)) {
+  if (!source.includes(tabletAnchor)) throw new Error('Expected product-polish media anchor was not found; refusing a blind patch.');
+  source = source.replace(tabletAnchor, `${tabletFix}\n    ${tabletAnchor}`);
   changed = true;
 }
 
 if (changed) {
   fs.writeFileSync(target, source);
-  console.log('Applied overview grid containment across intermediate and landscape widths.');
+  console.log('Applied overview grid containment for intermediate widths without overriding portrait mobile layout.');
 } else {
   console.log('Overview grid fixes already applied.');
 }
