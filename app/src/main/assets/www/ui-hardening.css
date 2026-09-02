@@ -151,7 +151,7 @@ body .safe-spend-foot button {
   }
 }
 
-/* Short landscape keeps the brief available and gives the chat the actual viewport height. */
+/* Short landscape keeps the brief available while the whole Sophy stack fits the viewport. */
 @media (orientation: landscape) and (max-height: 520px) {
   body[data-page="sophy"] main {
     height: 100dvh;
@@ -163,7 +163,17 @@ body .safe-spend-foot button {
     flex-direction: column;
     overflow: hidden;
   }
-  body[data-page="sophy"] #sophy,
+  /* The global top duplicates navigation/context already present in the Sophy header.
+     Removing it only in very short landscape gives the chat its missing ~48px. */
+  body[data-page="sophy"] main > .top {
+    display: none !important;
+  }
+  body[data-page="sophy"] #sophy {
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
+    overflow: hidden;
+  }
   body[data-page="sophy"] .sophy-container {
     flex: 1 1 0;
     min-height: 0;
