@@ -6,6 +6,9 @@
     txSearch: 'Buscar lançamentos',
     txFilter: 'Filtrar lançamentos por tipo'
   };
+  let dialogLayerSeq=0;
+  const pageHistory=[];
+  let suppressPageHistory=false;
 
   function textOfIds(ids){
     return String(ids||'').split(/\s+/).filter(Boolean).map(id=>document.getElementById(id)?.textContent||'').join(' ').trim().replace(/\s+/g,' ');
@@ -26,6 +29,31 @@
     return (wrapping?.textContent||'').trim().replace(/\s+/g,' ');
   }
 
+  function redirectSelectLabel(select,host){
+    if(!select||!host) return;
+    const id=select.id;
+    const focusVisible=()=>{
+      const button=host.querySelector('.sfp-select-button');
+      if(button && !button.hasAttribute('disabled')) button.focus();
+    };
+    select.tabIndex=-1;
+    select.setAttribute('aria-hidden','true');
+    if(select.dataset.sfpFocusRedirect!=='1'){
+      select.dataset.sfpFocusRedirect='1';
+      select.addEventListener('focus',focusVisible);
+    }
+    const labels=select.labels?Array.from(select.labels):id?Array.from(document.querySelectorAll(`label[for="${CSS.escape(id)}"]`)):[];
+    labels.forEach(label=>{
+      if(label.dataset.sfpSelectRedirect==='1') return;
+      label.dataset.sfpSelectRedirect='1';
+      label.addEventListener('click',event=>{
+        if(event.target.closest?.('.sfp-select,button,input,textarea,a')) return;
+        event.preventDefault();
+        focusVisible();
+      });
+    });
+  }
+
   function hardenCustomSelect(host){
     if(!host?.matches?.('.sfp-select')) return;
     const id=host.dataset.forSelect;
@@ -37,6 +65,7 @@
     const accessible=label&&value?`${label}: ${value}`:label||value||'Selecionar opção';
     button.setAttribute('aria-label',accessible);
     if(value) button.setAttribute('title',value);
+    redirectSelectLabel(select,host);
   }
 
   function applyAccessibleNames(root=document){
@@ -71,9 +100,220 @@
     filter?.style.removeProperty('margin');
   }
 
+  function esc(value){
+    return String(value??'').replace(/[&<>"']/g,ch=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+    })[ch]);
+  }
+
+  function focusables(root){
+    if(!root) return [];
+    return Array.from(root.querySelectorAll('button:not([disabled]),[href],input:not([disabled]),select:not([disabled]):not([aria-hidden="true"]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'))
+      .filter(el=>el.getClientRects().length>0 && getComputedStyle(el).visibility!=='hidden');
+  }
+
+  function trapTab(event,dialog){
+    if(event.key!=='Tab') return false;
+    const items=focusables(dialog);
+    if(!items.length){event.preventDefault();dialog.focus?.();return true;}
+    const first=items[0],last=items[items.length-1],active=document.activeElement;
+    if(event.shiftKey && (active===first || !dialog.contains(active))){event.preventDefault();last.focus();return true;}
+    if(!event.shiftKey && (active===last || !dialog.contains(active))){event.preventDefault();first.focus();return true;}
+    return false;
+  }
+
+  function acquireDialogLayer(){
+    const base=document.getElementById('modalRoot');
+    if(!base) return null;
+    const nested=!base.classList.contains('hidden') && !!base.querySelector('.modal');
+    if(!nested){
+      base.className='modalback';
+      return {root:base,nested:false};
+    }
+    const root=document.createElement('div');
+    root.className='modalback sfp-nested-dialog-layer';
+    root.dataset.sfpDialogLayer=String(++dialogLayerSeq);
+    document.body.appendChild(root);
+    return {root,nested:true};
+  }
+
+  function releaseDialogLayer(layer,opener){
+    if(!layer) return;
+    if(layer.nested) layer.root.remove();
+    else {layer.root.className='hidden';layer.root.innerHTML='';}
+    requestAnimationFrame(()=>{
+      if(opener?.isConnected && typeof opener.focus==='function') opener.focus({preventScroll:true});
+    });
+  }
+
+  function installDialogs(){
+    if(typeof window.sfpConfirm==='function' && !window.sfpConfirm.__sfpHardened){
+      const hardenedConfirm=function({title='Confirmação',message='Deseja prosseguir com esta ação?',confirmText='Confirmar',cancelText='Cancelar',danger=false}={}){
+        return new Promise(resolve=>{
+          const opener=document.activeElement;
+          const layer=acquireDialogLayer();
+          if(!layer){resolve(window.confirm?window.confirm(message):true);return;}
+          const iconSvg=danger
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+          layer.root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+            <div class="sfp-dialog-head">
+              <div class="sfp-dialog-badge ${danger?'danger':'confirmation'}">${iconSvg}</div>
+              <div class="sfp-dialog-title"><h2 id="dialogTitle">${esc(title)}</h2><p>${danger?'Ação destrutiva ou de atenção':'Confirmação necessária'}</p></div>
+              <button class="sfp-dialog-close icon-button" id="dialogCloseBtn" aria-label="Fechar">×</button>
+            </div>
+            <div class="sfp-dialog-body">${esc(message).replace(/\n/g,'<br>')}</div>
+            <div class="sfp-dialog-actions">
+              <button class="btn2" id="dialogCancelBtn">${esc(cancelText)}</button>
+              <button class="${danger?'danger':'btn'}" id="dialogConfirmBtn">${esc(confirmText)}</button>
+            </div>
+          </div>`;
+          const dialog=layer.root.querySelector('.sfp-dialog');
+          const closeBtn=layer.root.querySelector('#dialogCloseBtn');
+          const cancelBtn=layer.root.querySelector('#dialogCancelBtn');
+          const confirmBtn=layer.root.querySelector('#dialogConfirmBtn');
+          let done=false;
+          const finish=result=>{
+            if(done)return;done=true;
+            window.removeEventListener('keydown',onKey,true);
+            releaseDialogLayer(layer,opener);
+            resolve(result);
+          };
+          const onKey=event=>{
+            if(!layer.root.isConnected && layer.nested) return;
+            if(trapTab(event,dialog)) return;
+            if(event.key==='Escape'){
+              event.preventDefault();event.stopPropagation();finish(false);return;
+            }
+            if(event.key!=='Enter') return;
+            const active=document.activeElement;
+            if(active===cancelBtn || active===closeBtn){
+              event.preventDefault();event.stopPropagation();finish(false);
+            }else if(active===confirmBtn){
+              event.preventDefault();event.stopPropagation();finish(true);
+            }
+          };
+          window.addEventListener('keydown',onKey,true);
+          closeBtn.onclick=()=>finish(false);
+          cancelBtn.onclick=()=>finish(false);
+          confirmBtn.onclick=()=>finish(true);
+          confirmBtn.focus();
+        });
+      };
+      hardenedConfirm.__sfpHardened=true;
+      window.sfpConfirm=hardenedConfirm;
+    }
+
+    if(typeof window.sfpPrompt==='function' && !window.sfpPrompt.__sfpHardened){
+      const hardenedPrompt=function({title='Informe um valor',message='',defaultValue='',confirmText='Confirmar',cancelText='Cancelar',inputType='text',sensitive=false}={}){
+        return new Promise(resolve=>{
+          const opener=document.activeElement;
+          const layer=acquireDialogLayer();
+          if(!layer){resolve(window.prompt?window.prompt(message,defaultValue):defaultValue);return;}
+          const safeType=inputType==='password'?'password':'text';
+          layer.root.innerHTML=`<div class="modal sfp-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+            <div class="sfp-dialog-head">
+              <div class="sfp-dialog-badge info">i</div>
+              <div class="sfp-dialog-title"><h2 id="dialogTitle">${esc(title)}</h2><p>Preencha para continuar</p></div>
+              <button class="sfp-dialog-close icon-button" id="dialogCloseBtn" aria-label="Fechar">×</button>
+            </div>
+            <div class="sfp-dialog-body">${message?`<p>${esc(message).replace(/\n/g,'<br>')}</p>`:''}<input id="dialogPromptInput" type="${safeType}" value="${esc(defaultValue)}" autocomplete="${sensitive?'off':'on'}"></div>
+            <div class="sfp-dialog-actions">
+              <button class="btn2" id="dialogCancelBtn">${esc(cancelText)}</button>
+              <button class="btn" id="dialogConfirmBtn">${esc(confirmText)}</button>
+            </div>
+          </div>`;
+          const dialog=layer.root.querySelector('.sfp-dialog');
+          const input=layer.root.querySelector('#dialogPromptInput');
+          const closeBtn=layer.root.querySelector('#dialogCloseBtn');
+          const cancelBtn=layer.root.querySelector('#dialogCancelBtn');
+          const confirmBtn=layer.root.querySelector('#dialogConfirmBtn');
+          let done=false;
+          const finish=value=>{
+            if(done)return;done=true;
+            window.removeEventListener('keydown',onKey,true);
+            if(sensitive)input.value='';
+            releaseDialogLayer(layer,opener);
+            resolve(value);
+          };
+          const onKey=event=>{
+            if(trapTab(event,dialog)) return;
+            if(event.key==='Escape'){
+              event.preventDefault();event.stopPropagation();finish(null);return;
+            }
+            if(event.key!=='Enter') return;
+            const active=document.activeElement;
+            if(active===cancelBtn || active===closeBtn){
+              event.preventDefault();event.stopPropagation();finish(null);
+            }else if(active===confirmBtn || active===input){
+              event.preventDefault();event.stopPropagation();finish(input.value);
+            }
+          };
+          window.addEventListener('keydown',onKey,true);
+          closeBtn.onclick=()=>finish(null);
+          cancelBtn.onclick=()=>finish(null);
+          confirmBtn.onclick=()=>finish(input.value);
+          input.focus();input.select();
+        });
+      };
+      hardenedPrompt.__sfpHardened=true;
+      window.sfpPrompt=hardenedPrompt;
+    }
+  }
+
+  function installPageHistoryAndAndroidBack(){
+    const original=window.setPage;
+    if(typeof original==='function' && !original.__sfpHistoryWrapped){
+      const wrapped=function(page,...args){
+        const current=document.body?.dataset?.page;
+        if(!suppressPageHistory && current && page && page!==current){
+          if(pageHistory[pageHistory.length-1]!==current) pageHistory.push(current);
+          if(pageHistory.length>30) pageHistory.shift();
+        }
+        return original.call(this,page,...args);
+      };
+      wrapped.__sfpHistoryWrapped=true;
+      window.setPage=wrapped;
+    }
+
+    window.handleAndroidBack=function(){
+      const nested=Array.from(document.querySelectorAll('.sfp-nested-dialog-layer')).filter(el=>el.getClientRects().length).pop();
+      if(nested){
+        const closer=nested.querySelector('#dialogCancelBtn,#dialogCloseBtn,.sfp-dialog-close,[data-close]');
+        closer?.click();
+        return true;
+      }
+      const modal=document.getElementById('modalRoot');
+      if(modal && !modal.classList.contains('hidden') && modal.getClientRects().length){
+        const closer=modal.querySelector('#dialogCancelBtn,#dialogCloseBtn,.sfp-dialog-close,#closeModal,#closeAB,#closeMore,[data-close]');
+        if(closer) closer.click();
+        else {modal.className='hidden';modal.innerHTML='';}
+        return true;
+      }
+      const search=document.getElementById('globalResults');
+      if(search && !search.classList.contains('hidden')){search.classList.add('hidden');return true;}
+      const current=document.body?.dataset?.page;
+      while(pageHistory.length && pageHistory[pageHistory.length-1]===current) pageHistory.pop();
+      const previous=pageHistory.pop();
+      if(previous && typeof window.setPage==='function'){
+        suppressPageHistory=true;
+        try{window.setPage(previous);}finally{suppressPageHistory=false;}
+        return true;
+      }
+      if(current && current!=='hoje' && typeof window.setPage==='function'){
+        suppressPageHistory=true;
+        try{window.setPage('hoje');}finally{suppressPageHistory=false;}
+        return true;
+      }
+      return false;
+    };
+  }
+
   function install(){
     applyAccessibleNames(document);
     normalizeTransactionToolbar();
+    installDialogs();
+    installPageHistoryAndAndroidBack();
 
     const observer=new MutationObserver(records=>{
       for(const record of records){
