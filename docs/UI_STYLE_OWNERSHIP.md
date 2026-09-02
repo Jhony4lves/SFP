@@ -84,3 +84,7 @@ Antes de mergear:
 ## 7. Migração gradual
 
 A refatoração do CSS histórico deve ocorrer por módulo, com QA verde a cada etapa. Não fazer uma reescrita única do `index.html`: o risco de regressão supera o ganho. Cada extração deve remover as regras antigas equivalentes no mesmo PR, evitando manter duas fontes de verdade.
+
+## 8. Higiene do candidato bug-zero
+
+Workflows/scripts usados apenas para aplicar patches de auditoria são descartáveis e não fazem parte do produto. Antes da validação final, eles devem ser removidos; o candidato deve depender somente dos workflows permanentes de build/QA e dos testes de regressão que documentam o comportamento corrigido.
