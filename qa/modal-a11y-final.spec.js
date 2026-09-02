@@ -76,6 +76,8 @@ test('progressive panel e Lixeira não deixam foco atrás do overlay',async({pag
 
   await page.evaluate(()=>window.setPage('config',{mode:'replace'}));
   const trash=page.locator('#trashBtn');
+  await trash.evaluate(el=>{const details=el.closest('details');if(details)details.open=true;});
+  await expect(trash).toBeVisible();
   await trash.focus();
   await trash.click();
   await expectFocusInsideModal(page);

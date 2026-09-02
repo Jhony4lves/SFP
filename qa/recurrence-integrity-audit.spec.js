@@ -88,7 +88,7 @@ test('REC-AUD-05 Sophy não zera despesas fixas e não duplica materialização 
   ];
   await boot(page,value);
   const response=await page.evaluate(() => {
-    const fn=typeof sophyDeterministicAnswer==='function'?sophyDeterministicAnswer:(typeof localSophyAnswer==='function'?localSophyAnswer:null);
+    const fn=typeof sophyOfflineCore!=='undefined'&&typeof sophyOfflineCore.process==='function'?prompt=>sophyOfflineCore.process(prompt):null;
     return fn?fn('despesas fixas e variáveis'):null;
   });
   expect(response).toBeTruthy();

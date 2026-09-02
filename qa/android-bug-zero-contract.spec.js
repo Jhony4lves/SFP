@@ -18,7 +18,9 @@ test('notificação usa ícone próprio, permissão contextual e redação BRL c
   expect(bridge).toContain('ensureNotificationPermissionForContextualAlert()');
   expect(main).toContain('Manifest.permission.POST_NOTIFICATIONS');
   expect(main).toContain('NOTIFICATION_PERMISSION_REQUEST');
-  expect(bridge).toMatch(/\\d\{1,3\}.*\\\.\\d\{3\}.*\\,\\d\{2\}/s);
+  const redaction = bridge.match(/static String redactFinancialValues[\s\S]*?\n    }/i)?.[0] || '';
+  expect(redaction).toContain('\\\\d{1,3}(?:\\\\.\\\\d{3})+');
+  expect(redaction).toContain('(?:,\\\\d{2})?');
   expect(bridge).toContain('safeTitle = redactFinancialValues(safeTitle)');
   expect(bridge).toContain('safeMessage = redactFinancialValues(safeMessage)');
 });

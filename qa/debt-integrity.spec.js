@@ -20,6 +20,8 @@ async function amortizeThroughDialog(page, debtId, amount) {
   }, debtId);
   await page.locator('#dialogPromptInput').fill(String(amount));
   await page.locator('#dialogConfirmBtn').click();
+  await expect(page.getByRole('heading', { name: 'Conta para amortização' })).toBeVisible();
+  await page.locator('#dialogConfirmBtn').click();
   await page.evaluate(async () => {
     await window.__qaDebtAmortizePromise;
     delete window.__qaDebtAmortizePromise;

@@ -94,6 +94,7 @@ test('Android back contract usa a pilha SPA nativa antes de permitir saída',asy
 
 test('pseudo-botões do Dashboard respondem a Enter e Espaço',async({page})=>{
   await boot(page);
+  await page.evaluate(()=>window.setPage('dashboard',{mode:'replace'}));
   await page.evaluate(()=>{
     const host=document.getElementById('dashboard');
     const el=document.createElement('div');

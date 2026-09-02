@@ -56,13 +56,13 @@
 [data-theme="light"] .origin-chip.origin-real { color:#166534 !important; }
 
 /* Secondary functional text needs AA contrast even at compact sizes. */
-.safe-spend-eyebrow,
-.safe-spend-equation small,
-.safe-spend-event-date,
-.financial-insight-severity,
-.sophy-msg-time,
-.field-help,
-.cal-count {
+body .safe-spend-eyebrow,
+body .safe-spend-equation small,
+body .safe-spend-event-date,
+body .financial-insight-severity,
+body .sophy-msg-time,
+body .field-help,
+body .cal-count {
   color: var(--color-text-secondary);
 }
 
@@ -330,12 +330,8 @@ body .safe-spend-foot button {
     justify-content: center;
   }
   body[data-page="sophy"] .sophy-header-actions > button > span { display:none; }
-  body .sophy-proactive-brief {
-    display: grid;
-    padding: 4px 7px;
-    gap: 3px;
-    max-height: 64px;
-    overflow: auto;
+  body[data-page="sophy"] .sophy-proactive-brief {
+    display: none;
   }
   body .sophy-brief-head p {
     display: -webkit-box;

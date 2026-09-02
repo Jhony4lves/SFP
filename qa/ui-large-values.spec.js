@@ -11,7 +11,7 @@ function largeFixture(){
     {id:7102,date:'2026-01-08',kind:'expense',desc:'Pagamento extraordinário de valor muito alto',amount:135802.45,category:'Casa',accountId:1,status:'paid',balanceImpact:true,tags:[]}
   ];
   value.purchases=[{id:7201,cardId:1,desc:'Compra extensa para estresse de fatura',total:135802.45,installments:1,firstMonth:'2026-01',purchaseDate:'2026-01-02',category:'Outros',status:'active',refunds:[]}];
-  value.recurring=[{id:7301,desc:'Compromisso recorrente com origem extremamente longa para teste de layout',amount:12345.67,kind:'expense',type:'expense',category:'Casa',day:20,accountId:1,active:true,skippedMonths:[]}];
+  value.recurring=[{id:7301,desc:'Compromisso recorrente com origem extremamente longa para teste de layout',amount:12345.67,kind:'expense',type:'expense',category:'Casa',day:20,accountId:1,start:'2026-01',end:'',active:true,skips:[]}];
   value.ui.invoiceMonthByCard={1:'2026-01'};
   return value;
 }
