@@ -26,6 +26,12 @@ test('UI guardrail: hardening não contém regras financeiras nem seletores glob
   expect(broad,`ui-hardening.css deve ser escopado; seletores amplos encontrados:\n${broad.join('\n')}`).toEqual([]);
 });
 
+test('UI guardrail: dívida de !important da camada de hardening não volta a crescer',()=>{
+  const importantCount=matches(hardening,/!important\b/g).length;
+  expect(importantCount,'ui-hardening.css deve manter no máximo os overrides cuja cascata legada ainda exige !important').toBeLessThanOrEqual(11);
+  expect(hardening).not.toMatch(/\.modal\.sfp-dialog\s*\{[^}]*!important/si);
+});
+
 test('UI guardrail: módulos novos não redefinem o shell sem escopo',()=>{
   const moduleFiles=['financial-insights-ui.js','safe-spend-ui.js','sophy-proactive-brief.js','what-if-ui.js'];
   const violations=[];
