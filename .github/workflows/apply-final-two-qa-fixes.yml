@@ -1,0 +1,31 @@
+name: Apply final two QA fixes
+
+on:
+  push:
+    branches:
+      - qa/bug-zero-sweep-2026-09-02
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: contains(github.event.head_commit.message, 'stage final QA workflow')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: qa/bug-zero-sweep-2026-09-02
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Apply fixes and self-clean
+        run: node tools/apply-final-two-qa-fixes.js
+      - name: Commit final fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(ui): close final landscape QA regressions"
+          git push origin HEAD:qa/bug-zero-sweep-2026-09-02
