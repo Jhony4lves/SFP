@@ -178,8 +178,6 @@ body .safe-spend-foot button {
     flex-direction: column;
     overflow: hidden;
   }
-  /* The global top duplicates navigation/context already present in the Sophy header.
-     Removing it only in very short landscape gives the chat its missing ~48px. */
   body[data-page="sophy"] main > .top {
     display: none !important;
   }
@@ -193,16 +191,71 @@ body .safe-spend-foot button {
     flex: 1 1 0;
     min-height: 0;
     height: 100%;
+    gap: 6px;
   }
   body[data-page="sophy"] .sophy-header-card {
-    padding: 5px 8px;
+    padding: 4px 7px;
     gap: 6px;
+    flex-wrap: nowrap;
+    min-height: 48px;
+  }
+  body[data-page="sophy"] .sophy-identity-group {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 7px;
+  }
+  body[data-page="sophy"] .sophy-avatar-wrap {
+    width: 34px;
+    height: 34px;
+  }
+  body[data-page="sophy"] .sophy-avatar-emoji {
+    font-size: 16px;
+  }
+  body[data-page="sophy"] .sophy-meta {
+    min-width: 0;
+  }
+  body[data-page="sophy"] .sophy-meta h2 {
+    margin: 0;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  body[data-page="sophy"] #sophySubtitle,
+  body[data-page="sophy"] .sophy-mood-tag,
+  body[data-page="sophy"] #sophyCoreTag {
+    display: none;
+  }
+  body[data-page="sophy"] .sophy-badges {
+    margin-top: 2px;
+    min-width: 0;
+  }
+  body[data-page="sophy"] #sophyNetworkTag {
+    font-size: 9px;
+    padding: 1px 6px;
+    white-space: nowrap;
+  }
+  body[data-page="sophy"] .sophy-header-actions {
+    flex: 0 0 auto;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  body[data-page="sophy"] .sophy-header-actions > button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  body[data-page="sophy"] .sophy-header-actions > button > span {
+    display: none;
   }
   body .sophy-proactive-brief {
     display: grid;
-    padding: 5px 8px;
-    gap: 4px;
-    max-height: 86px;
+    padding: 4px 7px;
+    gap: 3px;
+    max-height: 64px;
     overflow: auto;
   }
   body .sophy-brief-head p {
@@ -212,11 +265,11 @@ body .safe-spend-foot button {
     overflow: hidden;
   }
   body .sophy-brief-evidence {
-    max-height: 30px;
+    max-height: 24px;
     overflow: auto;
   }
   body .sophy-brief-detail {
-    max-height: 60px;
+    max-height: 48px;
     overflow: auto;
   }
 }
