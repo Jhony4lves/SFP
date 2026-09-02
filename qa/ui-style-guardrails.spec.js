@@ -8,10 +8,13 @@ const hardening=fs.readFileSync(`${root}/ui-hardening.css`,'utf8');
 function matches(text,regex){return [...text.matchAll(regex)].map(m=>m[0]);}
 
 test('UI guardrail: shell não mascara overflow horizontal global',()=>{
+  // Only forbid an exact global body/main selector. Scoped containment such as
+  // body[data-page="sophy"] main { overflow:hidden } is allowed when it is local
+  // to a component/page and does not hide overflow across the application shell.
   const forbidden=[
-    /body\s*,\s*main\s*\{[^}]*overflow-x\s*:\s*hidden/gi,
-    /body\s*\{[^}]*overflow-x\s*:\s*hidden/gi,
-    /main\s*\{[^}]*overflow-x\s*:\s*hidden/gi,
+    /(?:^|})\s*body\s*,\s*main\s*\{[^}]*overflow-x\s*:\s*hidden/gi,
+    /(?:^|})\s*body\s*\{[^}]*overflow-x\s*:\s*hidden/gi,
+    /(?:^|})\s*main\s*\{[^}]*overflow-x\s*:\s*hidden/gi,
   ];
   const hits=forbidden.flatMap(rx=>matches(index,rx));
   expect(hits,`Não mascarar clipping global:\n${hits.join('\n')}`).toEqual([]);
