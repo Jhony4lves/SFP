@@ -165,16 +165,16 @@ test('microtexto funcional possui piso de 11px', async ({page})=>{
   for(const item of sizes)expect(item.size,`${item.text} font=${item.size}`).toBeGreaterThanOrEqual(11);
 });
 
-test('landscape baixo: brief da Sophy permanece disponível e composer cabe no viewport', async ({page})=>{
+test('landscape baixo: brief da Sophy recolhe e composer cabe no viewport', async ({page})=>{
   await boot(page,740,360);
   await page.evaluate(()=>window.setPage('sophy',{mode:'replace'}));
   const brief=page.locator('#sophyProactiveBrief');
-  await expect(brief).toBeVisible();
+  await expect(brief).toBeHidden();
   const boxes=await page.evaluate(()=>{
     const brief=document.getElementById('sophyProactiveBrief')?.getBoundingClientRect();
     const form=document.getElementById('sophyChatForm')?.getBoundingClientRect();
     return {brief:brief&&{height:brief.height},form:form&&{bottom:form.bottom},vh:innerHeight};
   });
-  expect(boxes.brief.height).toBeGreaterThan(0);
+  expect(boxes.brief.height).toBe(0);
   expect(boxes.form.bottom).toBeLessThanOrEqual(boxes.vh+2);
 });

@@ -255,7 +255,7 @@ body .safe-spend-foot button {
     grid-template-columns: 70px minmax(0,1fr);
     align-items: start;
   }
-  .safe-spend-event-desc {
+  body .safe-spend-event .safe-spend-event-desc {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
