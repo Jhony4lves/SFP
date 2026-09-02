@@ -133,25 +133,65 @@ body .safe-spend-foot button {
   }
 }
 
-/* Short landscape keeps the brief available rather than deleting information. */
+/* Sophy controls reflow on narrow phones instead of pushing the last action off-screen. */
+@media (max-width: 360px) {
+  #sophy .sophy-header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 6px;
+  }
+  #sophy .sophy-header-actions > button {
+    min-width: 0;
+    width: 100%;
+    padding-left: 5px;
+    padding-right: 5px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+}
+
+/* Short landscape keeps the brief available and gives the chat the actual viewport height. */
 @media (orientation: landscape) and (max-height: 520px) {
+  body[data-page="sophy"] main {
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  body[data-page="sophy"] #sophy,
+  body[data-page="sophy"] .sophy-container {
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
+  }
+  body[data-page="sophy"] .sophy-header-card {
+    padding: 5px 8px;
+    gap: 6px;
+  }
   body .sophy-proactive-brief {
     display: grid;
-    padding: 6px 9px;
-    gap: 5px;
+    padding: 5px 8px;
+    gap: 4px;
+    max-height: 86px;
+    overflow: auto;
   }
   body .sophy-brief-head p {
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
   body .sophy-brief-evidence {
-    max-height: 38px;
+    max-height: 30px;
     overflow: auto;
   }
   body .sophy-brief-detail {
-    max-height: 76px;
+    max-height: 60px;
     overflow: auto;
   }
 }
