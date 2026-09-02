@@ -1,5 +1,6 @@
 package com.jhony.sfp;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -7,6 +8,7 @@ import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -23,6 +25,7 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -124,23 +127,44 @@ public class AndroidBridge {
         }
     }
 
+    static String redactFinancialValues(String value) {
+        if (value == null) return "";
+        return value.replaceAll(
+                "(?i)(?:[-−+]\\s*)?R\\$[\\s\\u00A0]*(?:(?:\\d{1,3}(?:\\.\\d{3})+)(?:,\\d{2})?|\\d+(?:[.,]\\d{2})?)",
+                "***");
+    }
+
+    @JavascriptInterface
+    public String getNotificationPermissionState() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return "not_required";
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return "denied";
+        return NotificationManagerCompat.from(context).areNotificationsEnabled() ? "granted" : "disabled";
+    }
+
     @JavascriptInterface
     public void showNotification(String title, String message) {
         try {
             String safeTitle = (title != null && !title.trim().isEmpty()) ? title.trim() : "Smart Financial Planner";
             String safeMessage = (message != null && !message.trim().isEmpty()) ? message.trim() : "Há uma atualização importante no Smart Financial Planner.";
-            safeMessage = safeMessage.replaceAll("R\\$\\s*[0-9]+([.,][0-9]{2})?", "***");
+            safeTitle = redactFinancialValues(safeTitle);
+            safeMessage = redactFinancialValues(safeMessage);
+
+            if (context instanceof MainActivity) {
+                MainActivity activity = (MainActivity) context;
+                if (!activity.ensureNotificationPermissionForContextualAlert()) {
+                    Toast.makeText(context, "Autorize as notificações do Android para receber este aviso fora do SFP.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
 
             Intent intent = new Intent(context, MainActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                pendingFlags |= PendingIntent.FLAG_IMMUTABLE;
-            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) pendingFlags |= PendingIntent.FLAG_IMMUTABLE;
             PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, pendingFlags);
 
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setSmallIcon(R.drawable.ic_notification_small)
                     .setContentTitle(safeTitle)
                     .setContentText(safeMessage)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -148,21 +172,20 @@ public class AndroidBridge {
                     .setAutoCancel(true);
 
             NotificationManagerCompat manager = NotificationManagerCompat.from(context);
-            if (manager.areNotificationsEnabled()) {
-                manager.notify(NOTIFICATION_ID, builder.build());
-            } else {
-                Toast.makeText(context, safeTitle + ": " + safeMessage, Toast.LENGTH_SHORT).show();
-            }
+            if (manager.areNotificationsEnabled()) manager.notify(NOTIFICATION_ID, builder.build());
+            else Toast.makeText(context, "Notificações do Android estão desativadas. O aviso continua disponível dentro do SFP.", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            Toast.makeText(context, title != null ? title : "Aviso do Smart Financial Planner", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, title != null ? redactFinancialValues(title) : "Aviso do Smart Financial Planner", Toast.LENGTH_SHORT).show();
         }
     }
 
     @JavascriptInterface
-    public void saveTextFile(String filename, String mimeType, String content) {
+    public String saveTextFile(String filename, String mimeType, String content) {
+        JSONObject result = new JSONObject();
         try {
             OutputStream out;
-
+            String location;
+            boolean publicDownloads;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.Downloads.DISPLAY_NAME, filename);
@@ -171,21 +194,33 @@ public class AndroidBridge {
                 Uri uri = context.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
                 if (uri == null) throw new Exception("Não foi possível criar o arquivo.");
                 out = context.getContentResolver().openOutputStream(uri);
+                location = "Downloads/SFP/" + filename;
+                publicDownloads = true;
             } else {
                 File dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-                if (dir == null) throw new Exception("Pasta Downloads indisponível.");
+                if (dir == null) throw new Exception("Armazenamento externo do aplicativo indisponível.");
                 File file = new File(dir, filename);
                 out = new FileOutputStream(file);
+                location = file.getAbsolutePath();
+                publicDownloads = false;
             }
-
             if (out == null) throw new Exception("Não foi possível abrir o arquivo.");
-            out.write(content.getBytes(StandardCharsets.UTF_8));
-            out.flush();
-            out.close();
-
-            Toast.makeText(context, "Salvo em Downloads/SFP", Toast.LENGTH_SHORT).show();
+            try (OutputStream target = out) {
+                target.write((content == null ? "" : content).getBytes(StandardCharsets.UTF_8));
+                target.flush();
+            }
+            result.put("ok", true);
+            result.put("location", location);
+            result.put("publicDownloads", publicDownloads);
+            return result.toString();
         } catch (Exception e) {
-            Toast.makeText(context, "Falha ao salvar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            try {
+                result.put("ok", false);
+                result.put("error", e.getMessage() == null ? "Falha ao salvar arquivo." : e.getMessage());
+                return result.toString();
+            } catch (Exception ignored) {
+                return "{\"ok\":false,\"error\":\"Falha ao salvar arquivo.\"}";
+            }
         }
     }
 

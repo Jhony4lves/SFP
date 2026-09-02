@@ -149,6 +149,24 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
     }
 
+    static String mapAcceptExtension(String extension) {
+        if (extension == null) return null;
+        switch (extension.toLowerCase(Locale.ROOT)) {
+            case "csv": return "text/csv";
+            case "ofx": return "application/x-ofx";
+            case "qfx": return "application/x-ofx";
+            case "json": return "application/json";
+            case "pdf": return "application/pdf";
+            case "jpg":
+            case "jpeg": return "image/jpeg";
+            case "png": return "image/png";
+            case "webp": return "image/webp";
+            case "txt": return "text/plain";
+            case "sfp": return "application/octet-stream";
+            default: return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        }
+    }
+
     static String[] resolveAcceptMimeTypes(@Nullable WebChromeClient.FileChooserParams params) {
         Set<String> types = new LinkedHashSet<>();
         if (params != null && params.getAcceptTypes() != null) {
@@ -159,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
                     if (type.isEmpty()) continue;
                     if (type.startsWith(".")) {
                         String extension = type.substring(1);
-                        String mapped = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+                        String mapped = mapAcceptExtension(extension);
                         if (mapped != null && !mapped.trim().isEmpty()) types.add(mapped);
                     } else if (type.contains("/")) {
                         types.add(type);
