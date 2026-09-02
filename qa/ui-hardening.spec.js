@@ -37,8 +37,17 @@ for(const vp of [
         const root=document.querySelector(`#${CSS.escape(pageId)}.tab.active`)||document.body;
         const out=[];
         const visible=el=>{const cs=getComputedStyle(el),r=el.getBoundingClientRect();return cs.display!=='none'&&cs.visibility!=='hidden'&&r.width>0&&r.height>0};
+        const intentionallyScrollable=el=>{
+          let node=el.parentElement;
+          while(node&&node!==document.body){
+            const cs=getComputedStyle(node);
+            if(/(auto|scroll)/.test(cs.overflowX)&&node.scrollWidth>node.clientWidth+2)return true;
+            node=node.parentElement;
+          }
+          return false;
+        };
         root.querySelectorAll('button,input,select,textarea,a,[role="button"],.sfp-select-button').forEach(el=>{
-          if(!visible(el))return;
+          if(!visible(el)||intentionallyScrollable(el))return;
           const r=el.getBoundingClientRect();
           if(r.left<-2||r.right>vw+2)out.push(`${pageId}: ${(el.id&&'#'+el.id)||el.className||el.tagName} ${Math.round(r.left)}..${Math.round(r.right)} / ${vw}`);
         });
@@ -132,11 +141,16 @@ test('microtexto funcional possui piso de 11px', async ({page})=>{
   for(const item of sizes)expect(item.size,`${item.text} font=${item.size}`).toBeGreaterThanOrEqual(11);
 });
 
-test('landscape baixo: brief da Sophy permanece disponível', async ({page})=>{
+test('landscape baixo: brief da Sophy permanece disponível e composer cabe no viewport', async ({page})=>{
   await boot(page,740,360);
   await page.evaluate(()=>window.setPage('sophy',{mode:'replace'}));
   const brief=page.locator('#sophyProactiveBrief');
   await expect(brief).toBeVisible();
-  const box=await brief.boundingBox();
-  expect(box.height).toBeGreaterThan(0);
+  const boxes=await page.evaluate(()=>{
+    const brief=document.getElementById('sophyProactiveBrief')?.getBoundingClientRect();
+    const form=document.getElementById('sophyChatForm')?.getBoundingClientRect();
+    return {brief:brief&&{height:brief.height},form:form&&{bottom:form.bottom},vh:innerHeight};
+  });
+  expect(boxes.brief.height).toBeGreaterThan(0);
+  expect(boxes.form.bottom).toBeLessThanOrEqual(boxes.vh+2);
 });
