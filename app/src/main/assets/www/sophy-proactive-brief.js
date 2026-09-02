@@ -144,7 +144,7 @@
       .sophy-brief-actions{display:flex;gap:5px;flex:0 0 auto}.sophy-brief-actions button{min-height:30px;padding:5px 9px;font-size:9.5px}
       .sophy-brief-detail{display:none;border-top:1px solid var(--color-border);padding-top:8px;white-space:pre-line;color:var(--color-text-secondary);font-size:9.5px;line-height:1.5}.sophy-brief-detail.is-open{display:block}
       @media(max-width:650px){.sophy-proactive-brief{padding:8px 10px;gap:6px}.sophy-brief-head p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.sophy-brief-evidence{overflow-x:auto;flex-wrap:nowrap;padding-bottom:1px}.sophy-brief-foot{align-items:flex-end}.sophy-brief-actions button:first-child{display:none}}
-      @media(orientation:landscape) and (max-height:520px){.sophy-proactive-brief{display:none!important}}
+      @media(orientation:landscape) and (max-height:520px){.sophy-proactive-brief{padding:6px 9px;gap:5px}.sophy-brief-head p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.sophy-brief-evidence{max-height:38px;overflow:auto}.sophy-brief-detail{max-height:76px;overflow:auto}}
     `;document.head.appendChild(style);
   }
 
