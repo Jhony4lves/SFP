@@ -4,7 +4,10 @@ const { expectBootComplete } = require('./helpers');
 const VIEWPORTS = [
   { name: 'mobile-360', width: 360, height: 800 },
   { name: 'galaxy-s24', width: 390, height: 844 },
+  { name: 'mobile-412', width: 412, height: 915 },
+  { name: 'compact-landscape', width: 740, height: 360 },
   { name: 'landscape-s24', width: 844, height: 390 },
+  { name: 'tablet-768', width: 768, height: 1024 },
   { name: 'desktop', width: 1280, height: 720 },
 ];
 
@@ -70,7 +73,7 @@ async function inspectVisualState(page, pageId, viewportName) {
       }
     });
 
-    root.querySelectorAll('.grid2,.grid3,.metric-grid,.two,.three,.management-layout,.management-card,.panel,.item,.head,.actions,.section-actions,.tileactions').forEach(el => {
+    root.querySelectorAll('.grid2,.grid3,.metric-grid,.two,.three,.management-layout,.management-card,.panel,.item,.head,.actions,.section-actions,.tileactions,.sfp-view-grid,.sfp-view-card').forEach(el => {
       if (!visible(el)) return;
       const minWidth = parseFloat(getComputedStyle(el).minWidth || '0');
       if (minWidth > vw && !hasScrollableAncestor(el)) {
@@ -135,4 +138,38 @@ test('visual sweep Galaxy S24: formulários progressivos e diálogos permanecem 
     await page.evaluate(() => { if (typeof window.closeProgressive === 'function') window.closeProgressive(false); const root=document.querySelector('#modalRoot'); if(root) root.classList.add('hidden'); });
   }
   expect(all, all.join('\n')).toEqual([]);
+});
+
+test('visual sweep Galaxy S24: seletor customizado de conta fica tematizado e contido', async ({ page }) => {
+  const vp = VIEWPORTS.find(x => x.name === 'galaxy-s24');
+  await boot(page, vp);
+  await page.evaluate(() => { window.setPage('contas', { mode: 'replace' }); window.openManagementAction('contas'); });
+  const select = page.locator('#accountType');
+  await expect(select).toHaveClass(/sfp-review-native-select/);
+  const host = page.locator('.sfp-select[data-for-select="accountType"]');
+  await expect(host).toBeVisible();
+  await host.locator('.sfp-select-button').click();
+  const menu = host.locator('.sfp-select-menu');
+  await expect(menu).toBeVisible();
+  const box = await menu.boundingBox();
+  expect(box.left).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(vp.width + 1);
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(vp.height + 1);
+  const background = await menu.evaluate(el => getComputedStyle(el).backgroundColor);
+  expect(background).not.toBe('rgb(255, 255, 255)');
+});
+
+test('visual sweep Galaxy S24: campo monetário seleciona zero e normaliza duas casas', async ({ page }) => {
+  const vp = VIEWPORTS.find(x => x.name === 'galaxy-s24');
+  await boot(page, vp);
+  await page.evaluate(() => { window.setPage('contas', { mode: 'replace' }); window.openManagementAction('contas'); });
+  const field = page.locator('#accountInitial');
+  await field.fill('0,00');
+  await field.focus();
+  const selected = await field.evaluate(el => el.selectionStart === 0 && el.selectionEnd === el.value.length);
+  expect(selected).toBe(true);
+  await field.fill('25');
+  await field.blur();
+  await expect(field).toHaveValue(/25(?:,|\.)00/);
 });
