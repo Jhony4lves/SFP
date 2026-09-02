@@ -1,0 +1,13 @@
+const fs=require('fs');
+const path='app/src/main/assets/www/financial-insights-ui.js';
+let s=fs.readFileSync(path,'utf8');
+const oldOpen=`if(opening)requestAnimationFrame(()=>{positionMenu(host);menu.querySelector('[aria-selected="true"]')?.focus();});`;
+const newOpen=`if(opening)requestAnimationFrame(()=>{positionMenu(host);if(!global.matchMedia?.('(max-width:650px)').matches)menu.querySelector('[aria-selected="true"]')?.focus({preventScroll:true});});`;
+if(!s.includes(oldOpen))throw new Error('opening focus anchor not found');
+s=s.replace(oldOpen,newOpen);
+const oldEscape=`else if(event.key==='Escape'){menu.hidden=true;button.setAttribute('aria-expanded','false');button.focus();}`;
+const newEscape=`else if(event.key==='Escape'){menu.hidden=true;button.setAttribute('aria-expanded','false');button.focus({preventScroll:true});}`;
+if(!s.includes(oldEscape))throw new Error('escape focus anchor not found');
+s=s.replace(oldEscape,newEscape);
+fs.writeFileSync(path,s);
+console.log('Select focus follow-up applied');
