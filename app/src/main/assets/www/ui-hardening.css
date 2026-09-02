@@ -1,0 +1,157 @@
+/* SFP UI hardening — fixes from deep UI audit #90-#93.
+   Keep this file semantic and narrow: no financial rules live here. */
+
+/* Theme-safe surfaces: eliminate dark hardcoded islands in light mode. */
+[data-theme="light"] .sophy-proactive-brief,
+[data-theme="light"] .sophy-header-card,
+[data-theme="light"] .sophy-chat-card,
+[data-theme="light"] .sophy-suggestions-bar,
+[data-theme="light"] .sfp-invoice-item,
+[data-theme="light"] .sfp-invoice-piece,
+[data-theme="light"] .sfp-drill-row,
+[data-theme="light"] .projection-card,
+[data-theme="light"] .series-key {
+  background: var(--color-surface-1);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+[data-theme="light"] .sophy-proactive-brief[data-priority="critical"] {
+  background: linear-gradient(180deg,var(--color-negative-bg),var(--color-surface-1) 78%);
+}
+[data-theme="light"] .sophy-proactive-brief[data-priority="warning"] {
+  background: linear-gradient(180deg,var(--color-warning-bg),var(--color-surface-1) 78%);
+}
+[data-theme="light"] .sophy-brief-evidence span,
+[data-theme="light"] .sophy-msg-row.sophy .sophy-bubble,
+[data-theme="light"] .sophy-chip {
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+[data-theme="light"] .sfp-invoice-piece small,
+[data-theme="light"] .sfp-invoice-piece span,
+[data-theme="light"] .sfp-invoice-item-top small,
+[data-theme="light"] .sfp-drill-row small {
+  color: var(--color-text-secondary);
+}
+
+/* Long custom-select values remain readable. */
+body .sfp-select-option {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  align-items: flex-start;
+  line-height: 1.35;
+}
+
+/* Mobile touch-target floor. Visual density can stay compact inside the 44px hit area. */
+.month-nav-btn,
+.icon-button,
+.period-selector button,
+.sophy-chip,
+body .financial-insight-actions button,
+body .sophy-brief-actions button,
+body .safe-spend-foot button {
+  min-height: 44px;
+}
+.month-nav-btn,
+.icon-button {
+  min-width: 44px;
+}
+
+/* Functional microcopy must remain readable. */
+.sfp-invoice-chip,
+.sfp-invoice-piece small,
+.sfp-invoice-piece span,
+.sfp-invoice-item-top small,
+.safe-spend-eyebrow,
+.safe-spend-equation small,
+.safe-spend-min,
+.safe-spend-projection-head small,
+.safe-spend-event,
+.safe-spend-foot p,
+.financial-insight-severity,
+.financial-insight-copy p,
+.financial-insight-details summary,
+.financial-insight-details p,
+.sophy-brief-head p,
+.sophy-brief-evidence span,
+.sophy-brief-foot details,
+.sophy-brief-detail {
+  font-size: 11px;
+}
+body .financial-insight-actions button,
+body .sophy-brief-actions button,
+body .safe-spend-foot button {
+  font-size: 11px;
+}
+
+/* Toast stays above the bottom navigation and Android safe area. */
+@media (max-width: 650px) {
+  .toast {
+    bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 14px);
+    max-width: calc(100vw - var(--safe-left) - var(--safe-right) - 28px);
+  }
+
+  /* Header text may wrap instead of being silently amputated. */
+  body .top p {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  /* Calendar values remain visible; narrow cells may use two lines instead of ellipsis. */
+  .day {
+    min-height: 72px;
+  }
+  .cal-flow,
+  .cal-count {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  .period-selector button {
+    min-height: 44px;
+  }
+}
+
+/* Lançamentos: filters stack before they can collide around 320px. */
+@media (max-width: 480px) {
+  #lancamentos .head > .actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  #txSearch,
+  #txFilter {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Short landscape keeps the brief available rather than deleting information. */
+@media (orientation: landscape) and (max-height: 520px) {
+  body .sophy-proactive-brief {
+    display: grid;
+    padding: 6px 9px;
+    gap: 5px;
+  }
+  body .sophy-brief-head p {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  body .sophy-brief-evidence {
+    max-height: 38px;
+    overflow: auto;
+  }
+  body .sophy-brief-detail {
+    max-height: 76px;
+    overflow: auto;
+  }
+}
