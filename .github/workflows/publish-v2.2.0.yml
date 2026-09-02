@@ -1,0 +1,73 @@
+name: Publish SFP v2.2.0
+
+on:
+  push:
+    branches: [ "ops/publish-v2.2.0" ]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    if: github.event.head_commit.message == 'ops: publish SFP v2.2.0 release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download validated stable artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 33586790953 \
+            --repo "${{ github.repository }}" \
+            --name SFP-2.2.0-release \
+            --dir dist
+          test -f dist/SFP-2.2.0.apk
+          test -f dist/SFP-2.2.0.aab
+          test -f dist/SHA256SUMS.txt
+          test -f dist/SIGNING-CERT.txt
+          test -f dist/RELEASE-METADATA.txt
+
+      - name: Publish stable GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v2.2.0
+          TARGET=91dc93ac091ce6a46054a68e1d7587d052c61410
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber --repo "${{ github.repository }}"
+          else
+            gh release create "$TAG" dist/* \
+              --repo "${{ github.repository }}" \
+              --target "$TARGET" \
+              --title "SFP 2.2.0" \
+              --notes-file <(cat <<'EOF'
+# SFP 2.2.0
+
+Release estável promovida a partir da RC14 fisicamente validada no Galaxy S24.
+
+## Destaques
+- importação de extratos CSV, OFX e PDF textual;
+- importação de faturas por PDF e imagens JPG/JPEG/PNG/WebP com OCR local;
+- conciliação estrutural de faturas e bloqueio de cartão/mês incompatíveis;
+- correção definitiva do contexto de pagamento da fatura;
+- reconciliação segura do ledger de pagamentos e neutralização de duplicidades;
+- Sophy A3 proativa e explicável;
+- motor read-only de cenários “E se?”;
+- preservação de dados e migrações não destrutivas.
+
+## Validação
+- RC14 instalada por cima da RC13 sem limpar dados;
+- Itaú Click / Agosto de 2026 permaneceu no cartão e mês corretos;
+- pagamento de R$ 74,25 reconciliado corretamente;
+- Web QA e Android QA completos verdes;
+- build release assinada #110 aprovada.
+
+## Android
+- versionName: 2.2.0
+- versionCode: 24
+- package: com.jhony.sfp
+EOF
+              )
+          fi
