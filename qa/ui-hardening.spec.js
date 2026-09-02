@@ -113,6 +113,30 @@ test('custom select: opções longas quebram linha e expõem conteúdo completo'
   expect(style.title).toBeTruthy();
 });
 
+test('custom select: nome acessível inclui contexto e teclado controla o menu', async ({page})=>{
+  await boot(page,390,844);
+  await page.evaluate(()=>{window.setPage('contas',{mode:'replace'});window.openManagementAction('contas');});
+  const button=page.locator('.sfp-select[data-for-select="accountType"] .sfp-select-button');
+  const context=await page.evaluate(()=>{
+    const select=document.getElementById('accountType');
+    const label=select?.id?document.querySelector(`label[for="${CSS.escape(select.id)}"]`):null;
+    return {label:(label?.textContent||'').trim().replace(/\s+/g,' '),value:select?.options?.[select.selectedIndex]?.textContent||''};
+  });
+  const accessible=await button.getAttribute('aria-label');
+  expect(accessible).toContain(context.value.trim());
+  if(context.label) expect(accessible).toContain(context.label);
+  await button.focus();
+  await page.keyboard.press('ArrowDown');
+  const menu=page.locator('.sfp-select[data-for-select="accountType"] .sfp-select-menu');
+  await expect(menu).toBeVisible();
+  const activeIsOption=await page.evaluate(()=>document.activeElement?.classList?.contains('sfp-select-option'));
+  expect(activeIsOption).toBe(true);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(menu).toBeHidden();
+  await expect(button).toBeFocused();
+});
+
 test('light theme: superfícies críticas usam contraste legível', async ({page})=>{
   await boot(page,390,844);
   await page.evaluate(()=>{
