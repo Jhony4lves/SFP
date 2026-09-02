@@ -9,6 +9,8 @@ on:
       - "app/src/main/assets/www/index.html"
       - "app/src/main/assets/www/sophy-proactive-brief.js"
       - "qa/ui-hardening.spec.js"
+      - "qa/ui-long-content.spec.js"
+      - "qa/ui-theme-contract.spec.js"
       - "qa/_tmp-sophy-layout-diagnostic.spec.js"
       - ".github/workflows/ui-hardening-focus.yml"
   workflow_dispatch:
@@ -24,4 +26,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test qa/_tmp-sophy-layout-diagnostic.spec.js qa/ui-hardening.spec.js qa/visual-bug-sweep.spec.js --reporter=list
+      - run: npx playwright test qa/_tmp-sophy-layout-diagnostic.spec.js qa/ui-hardening.spec.js qa/ui-long-content.spec.js qa/ui-theme-contract.spec.js qa/visual-bug-sweep.spec.js --reporter=list
