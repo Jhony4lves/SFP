@@ -10,10 +10,16 @@
 [data-theme="light"] .sfp-invoice-piece,
 [data-theme="light"] .sfp-drill-row,
 [data-theme="light"] .projection-card,
-[data-theme="light"] .series-key {
+[data-theme="light"] .series-key,
+[data-theme="light"] .modal {
   background: var(--color-surface-1);
   color: var(--color-text);
   border-color: var(--color-border);
+}
+[data-theme="light"] .modal.sfp-dialog {
+  background: var(--color-surface-1) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
 }
 [data-theme="light"] .sophy-proactive-brief[data-priority="critical"] {
   background: linear-gradient(180deg,var(--color-negative-bg),var(--color-surface-1) 78%);
@@ -34,6 +40,15 @@
 [data-theme="light"] .sfp-drill-row small {
   color: var(--color-text-secondary);
 }
+[data-theme="light"] .toast {
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-lg);
+}
+[data-theme="light"] .toast-success { color:#166534; border-color:rgba(22,101,52,.35); }
+[data-theme="light"] .toast-error { color:#b91c1c; border-color:rgba(185,28,28,.35); }
+[data-theme="light"] .toast-warning { color:#854d0e; border-color:rgba(133,77,14,.35); }
 
 /* Long custom-select values remain readable. */
 body .sfp-select-option {
