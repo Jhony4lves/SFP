@@ -14,6 +14,8 @@
 
   const safeArray = value => Array.isArray(value) ? value : [];
   const cents = value => Math.round(Number(value) || 0);
+  const moneyCents = value => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(cents(value)/100);
+  const civilDate = value => { const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3]+'/'+m[2]+'/'+m[1] : String(value||'—'); };
   const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
   const normalizeText = value => String(value || '')
     .toLowerCase()
@@ -124,7 +126,7 @@
         severity:'critical',
         confidence:1,
         title:`Risco de saldo negativo em até ${risky.days} dias`,
-        message:`A projeção determinística encontra saldo mínimo de ${(cents(risky.minBalanceCents)/100).toFixed(2)} antes do fim da janela.`,
+        message:`A projeção determinística encontra saldo mínimo de ${moneyCents(risky.minBalanceCents)} antes do fim da janela.`,
         explanation:'Saldo atual + entradas previstas − saídas previstas; o menor ponto da trajetória ficou abaixo de zero.',
         evidence:{days:risky.days,availableCents:cents(risky.availableCents),projectedCents:cents(risky.projectedCents),minBalanceCents:cents(risky.minBalanceCents),minDate:risky.minDate,events:safeArray(risky.events)}
       }));
@@ -147,7 +149,7 @@
         severity:'info',
         confidence:1,
         title:`${upcoming.length} compromisso${upcoming.length===1?'':'s'} nos próximos ${thresholds.upcomingWindowDays} dias`,
-        message:`Total conhecido de ${(totalCents/100).toFixed(2)} nessa janela.`,
+        message:`Total conhecido de ${moneyCents(totalCents)} nessa janela.`,
         explanation:'Considera apenas obrigações futuras conhecidas e ainda não realizadas no Local Financial Core.',
         evidence:{windowDays:thresholds.upcomingWindowDays,totalCents,events:upcoming.map(e=>({date:e.date,desc:e.desc||'',origin:e.source||e.origin||'',amountCents:cents(e.amountCents ?? Math.round((Number(e.amount)||0)*100))}))}
       }));
@@ -175,7 +177,7 @@
         severity:'warning',
         confidence:d.confidence,
         title:'Possível lançamento duplicado',
-        message:`Duas movimentações idênticas de ${(d.amountCents/100).toFixed(2)} foram encontradas em ${d.date}.`,
+        message:`Duas movimentações idênticas de ${moneyCents(d.amountCents)} foram encontradas em ${civilDate(d.date)}.`,
         explanation:d.reason,
         evidence:d,
         actions:['review_transactions']

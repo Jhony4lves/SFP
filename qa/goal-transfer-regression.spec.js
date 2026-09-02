@@ -21,6 +21,8 @@ test('GOAL-TRANSFER-01 aporte usa outra conta como origem quando ela existe', as
   const contribution = page.evaluate(() => goalTransfer(3));
   await page.locator('#dialogPromptInput').fill('250');
   await page.locator('#dialogConfirmBtn').click();
+  await expect(page.getByRole('heading', { name: 'Confirmar conta de origem' })).toBeVisible();
+  await page.locator('#dialogConfirmBtn').click();
   await contribution;
 
   expect(await page.evaluate(() => ({
@@ -45,6 +47,8 @@ test('GOAL-TRANSFER-02 aporte sem saldo exige confirmação antes de debitar', a
 
   const contribution = page.evaluate(() => goalTransfer(3));
   await page.locator('#dialogPromptInput').fill('250');
+  await page.locator('#dialogConfirmBtn').click();
+  await expect(page.getByRole('heading', { name: 'Confirmar conta de origem' })).toBeVisible();
   await page.locator('#dialogConfirmBtn').click();
   await expect(page.getByRole('heading', { name: 'Saldo Negativo' })).toBeVisible();
   await page.locator('#dialogCancelBtn').click();

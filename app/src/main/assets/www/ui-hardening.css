@@ -1,0 +1,353 @@
+/* SFP UI hardening — fixes from deep UI audit #90-#107.
+   Keep this file semantic and narrow: no financial rules live here. */
+
+/* Theme-safe surfaces: eliminate dark hardcoded islands in light mode. */
+[data-theme="light"] .sophy-proactive-brief,
+[data-theme="light"] .sophy-header-card,
+[data-theme="light"] .sophy-chat-card,
+[data-theme="light"] .sophy-suggestions-bar,
+[data-theme="light"] .sfp-invoice-item,
+[data-theme="light"] .sfp-invoice-piece,
+[data-theme="light"] .sfp-drill-row,
+[data-theme="light"] .projection-card,
+[data-theme="light"] .series-key,
+[data-theme="light"] .modal {
+  background: var(--color-surface-1);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+[data-theme="light"] .modal.sfp-dialog {
+  background: var(--color-surface-1);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+[data-theme="light"] .sophy-proactive-brief[data-priority="critical"] {
+  background: linear-gradient(180deg,var(--color-negative-bg),var(--color-surface-1) 78%);
+}
+[data-theme="light"] .sophy-proactive-brief[data-priority="warning"] {
+  background: linear-gradient(180deg,var(--color-warning-bg),var(--color-surface-1) 78%);
+}
+[data-theme="light"] .sophy-brief-evidence span,
+[data-theme="light"] .sophy-msg-row.sophy .sophy-bubble,
+[data-theme="light"] .sophy-chip {
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+[data-theme="light"] .sfp-invoice-piece small,
+[data-theme="light"] .sfp-invoice-piece span,
+[data-theme="light"] .sfp-invoice-item-top small,
+[data-theme="light"] .sfp-drill-row small {
+  color: var(--color-text-secondary);
+}
+[data-theme="light"] .toast {
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-lg);
+}
+[data-theme="light"] .toast-success { color:#166534; border-color:rgba(22,101,52,.35); }
+[data-theme="light"] .toast-error { color:#b91c1c; border-color:rgba(185,28,28,.35); }
+[data-theme="light"] .toast-warning { color:#854d0e; border-color:rgba(133,77,14,.35); }
+[data-theme="light"] .safe-spend-event[data-type="income"] .safe-spend-event-desc,
+[data-theme="light"] .cal-flow.inc { color:#166534 !important; }
+[data-theme="light"] .safe-spend-event[data-type="expense"] .safe-spend-event-desc { color:#854d0e !important; }
+[data-theme="light"] .cal-flow.exp { color:#b91c1c !important; }
+[data-theme="light"] .origin-chip.origin-real { color:#166534 !important; }
+
+/* Secondary functional text needs AA contrast even at compact sizes. */
+body .safe-spend-eyebrow,
+body .safe-spend-equation small,
+body .safe-spend-event-date,
+body .financial-insight-severity,
+body .sophy-msg-time,
+body .field-help,
+body .cal-count {
+  color: var(--color-text-secondary);
+}
+
+/* Long custom-select values remain readable. */
+body .sfp-select-option {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  align-items: flex-start;
+  line-height: 1.35;
+}
+
+/* Mobile touch-target floor. Visual density can stay compact inside the 44px hit area. */
+.month-nav-btn,
+.icon-button,
+.period-selector button,
+.sophy-chip,
+body .financial-insight-actions button,
+body .sophy-brief-actions button,
+body .safe-spend-foot button {
+  min-height: 44px;
+}
+.month-nav-btn,
+.icon-button {
+  min-width: 44px;
+}
+
+/* Functional microcopy must remain readable. */
+.sfp-invoice-chip,
+.sfp-invoice-piece small,
+.sfp-invoice-piece span,
+.sfp-invoice-item-top small,
+.safe-spend-eyebrow,
+.safe-spend-equation small,
+.safe-spend-min,
+.safe-spend-projection-head small,
+.safe-spend-event,
+.safe-spend-foot p,
+.financial-insight-severity,
+.financial-insight-copy p,
+.financial-insight-details summary,
+.financial-insight-details p,
+.sophy-brief-head p,
+.sophy-brief-evidence span,
+.sophy-brief-foot details,
+.sophy-brief-detail {
+  font-size: 11px;
+}
+body .financial-insight-actions button,
+body .sophy-brief-actions button,
+body .safe-spend-foot button {
+  font-size: 11px;
+}
+
+/* Large financial values must be allowed to shrink their grid track instead of widening it. */
+.sfp-card-v2-main {
+  grid-template-columns: minmax(0,1.4fr) minmax(0,1fr);
+}
+.sfp-card-v2-main > *,
+.sfp-card-v2-side,
+.sfp-card-v2-stat,
+.sfp-card-v2-primary,
+.sfp-view-grid,
+.sfp-view-card,
+.sfp-view-card > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.sfp-card-v2-stat strong,
+.sfp-card-v2-primary strong,
+.sfp-view-card strong,
+.sfp-view-card span {
+  overflow-wrap: anywhere;
+}
+
+/* Progressive invoice detail cannot inherit a 400px min-content width on narrow phones. */
+#progressiveSlot,
+.modal .progressive-panel,
+.invoice-focus,
+.invoice-focus > *,
+.sfp-invoice-v2,
+.sfp-invoice-v2 > *,
+.sfp-invoice-v2-head,
+.sfp-invoice-v2-head > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Calendar compact amount is visible only on narrow cells; aria-label/title keep the exact value. */
+.cal-flow-compact { display:none; }
+
+/* Toast stays above the bottom navigation and Android safe area. */
+@media (max-width: 650px) {
+  .toast {
+    bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 14px);
+    max-width: calc(100vw - var(--safe-left) - var(--safe-right) - 28px);
+  }
+
+  /* Header text may wrap instead of being silently amputated. */
+  body .top p {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  .day { min-height:72px; }
+  .cal-flow-full { display:none; }
+  .cal-flow-compact { display:inline; }
+  .cal-flow,
+  .cal-count {
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .sfp-view-grid {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  .sfp-card-v2-main {
+    grid-template-columns: minmax(0,1fr);
+  }
+  .sfp-card-v2-side {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .period-selector button { min-height:44px; }
+}
+
+/* Lançamentos: filters and invoice actions stack before they can collide around 320px. */
+@media (max-width: 480px) {
+  #lancamentos .head > .actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  #txSearch,
+  #txFilter {
+    width: 100%;
+    min-width: 0;
+  }
+  .modalback {
+    padding-left: max(12px,var(--safe-left));
+    padding-right: max(12px,var(--safe-right));
+  }
+  .modalback > .modal {
+    width: 100%;
+    max-width: calc(100vw - var(--safe-left) - var(--safe-right) - 24px);
+    min-width: 0;
+  }
+  .invoice-focus > .head {
+    display: grid;
+    grid-template-columns: minmax(0,1fr);
+  }
+  .invoice-focus .head > .actions {
+    width: 100%;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .invoice-focus .two { grid-template-columns:minmax(0,1fr); }
+  #payInvoice,
+  #closeInvoice {
+    min-width: 0;
+    max-width: 100%;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+/* Sophy controls reflow on narrow phones instead of pushing the last action off-screen. */
+@media (max-width: 360px) {
+  #sophy .sophy-header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 6px;
+  }
+  #sophy .sophy-header-actions > button {
+    min-width: 0;
+    width: 100%;
+    padding-left: 5px;
+    padding-right: 5px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+}
+
+/* Short landscape keeps Safe Spend information complete without blind ellipsis. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .safe-spend-event {
+    grid-template-columns: 70px minmax(0,1fr);
+    align-items: start;
+  }
+  body .safe-spend-event .safe-spend-event-desc {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+  .safe-spend-event-balance { grid-column:2; }
+
+  body[data-page="sophy"] main {
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  body[data-page="sophy"] main > .top { display:none !important; }
+  body[data-page="sophy"] #sophy {
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
+    overflow: hidden;
+  }
+  body[data-page="sophy"] .sophy-container {
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
+    gap: 6px;
+  }
+  body[data-page="sophy"] .sophy-header-card {
+    padding: 4px 7px;
+    gap: 6px;
+    flex-wrap: nowrap;
+    min-height: 48px;
+  }
+  body[data-page="sophy"] .sophy-identity-group {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 7px;
+  }
+  body[data-page="sophy"] .sophy-avatar-wrap { width:34px;height:34px; }
+  body[data-page="sophy"] .sophy-avatar-emoji { font-size:16px; }
+  body[data-page="sophy"] .sophy-meta { min-width:0; }
+  body[data-page="sophy"] .sophy-meta h2 {
+    margin: 0;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  body[data-page="sophy"] #sophySubtitle,
+  body[data-page="sophy"] .sophy-mood-tag,
+  body[data-page="sophy"] #sophyCoreTag { display:none; }
+  body[data-page="sophy"] .sophy-badges { margin-top:2px;min-width:0; }
+  body[data-page="sophy"] #sophyNetworkTag {
+    font-size: 9px;
+    padding: 1px 6px;
+    white-space: nowrap;
+  }
+  body[data-page="sophy"] .sophy-header-actions {
+    flex: 0 0 auto;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  body[data-page="sophy"] .sophy-header-actions > button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  body[data-page="sophy"] .sophy-header-actions > button > span { display:none; }
+  body[data-page="sophy"] .sophy-proactive-brief {
+    display: none;
+  }
+  body .sophy-brief-head p {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  body .sophy-brief-evidence { max-height:24px;overflow:auto; }
+  body .sophy-brief-detail { max-height:48px;overflow:auto; }
+}
+
+
+/* Final AA semantic text hardening */
+[data-theme="light"] #auditoria .positive,
+[data-theme="light"] #dashboard .positive { color:#166534 !important; }
+[data-theme="light"] #auditoria .warning,
+[data-theme="light"] #dashboard .warning { color:#854d0e !important; }
+[data-theme="light"] #auditoria .negative,
+[data-theme="light"] #dashboard .negative { color:#b91c1c !important; }
