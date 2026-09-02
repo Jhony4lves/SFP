@@ -1,0 +1,44 @@
+name: Apply Audit Wave 1
+
+on:
+  push:
+    branches:
+      - qa/bug-zero-sweep-2026-09-02
+    paths:
+      - tools/apply-audit-wave1.js
+      - .github/workflows/apply-audit-wave1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/bug-zero-sweep-2026-09-02
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply consolidated audit fixes
+        run: node tools/apply-audit-wave1.js
+      - name: Commit source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/AndroidManifest.xml \
+                  app/src/main/java/com/jhony/sfp/AndroidBridge.java \
+                  app/src/main/java/com/jhony/sfp/MainActivity.java \
+                  app/src/main/res/drawable/ic_notification_small.xml \
+                  app/src/main/assets/www/index.html \
+                  app/src/main/assets/www/financial-intelligence.js \
+                  app/src/main/assets/www/ui-hardening.js
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+          else
+            git commit -m "fix(audit): privacy accessibility locale and Android hardening"
+            git push origin HEAD:qa/bug-zero-sweep-2026-09-02
+          fi
