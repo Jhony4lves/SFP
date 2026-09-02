@@ -1,0 +1,10 @@
+const fs=require('fs');
+const cp=require('child_process');
+const patcher='tools/apply-debt-integrity-fixes.js';
+let source=fs.readFileSync(patcher,'utf8');
+const needle="return p.months===1?'1 mês estimado':\\`${p.months} meses estimados\\`;";
+const replacement="return p.months===1?'1 mês estimado':\\`\\${p.months} meses estimados\\`;";
+if(!source.includes(needle))throw new Error('Debt patcher interpolation pattern not found');
+source=source.replace(needle,replacement);
+fs.writeFileSync(patcher,source);
+cp.execFileSync(process.execPath,[patcher],{stdio:'inherit'});
