@@ -1,11 +1,14 @@
 const { test, expect }=require('@playwright/test');
-const { expectBootComplete }=require('./helpers');
+const { fixture, expectBootComplete, writeIndexedDB }=require('./helpers');
 
 function rgb(value){const m=String(value).match(/rgba?\((\d+)[, ]+(\d+)[, ]+(\d+)/i);return m?[+m[1],+m[2],+m[3]]:null}
 function lum(c){const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(c[0])+.7152*f(c[1])+.0722*f(c[2])}
 function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
 async function boot(page,theme){
   await page.goto('/index.html');
+  await page.waitForFunction(() => typeof state !== 'undefined' && state && typeof lastSavedState !== 'undefined' && lastSavedState);
+  await writeIndexedDB(page,fixture('Fixture QA'));
+  await page.reload();
   await expectBootComplete(page,expect,'Fixture QA');
   await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;document.body.dataset.theme=theme},theme);
 }
