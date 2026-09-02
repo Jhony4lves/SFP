@@ -6,6 +6,10 @@ on:
     branches: ["qa/**"]
   workflow_dispatch:
 
+concurrency:
+  group: sfp-qa-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   web-qa:
     runs-on: ubuntu-latest
