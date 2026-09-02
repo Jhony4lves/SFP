@@ -1,0 +1,34 @@
+name: Apply SFP Visual Fixes
+
+on:
+  push:
+    branches: ["qa/visual-bug-fix-sweep-2026-09-02"]
+    paths:
+      - "tools/apply-visual-fixes.js"
+      - ".github/workflows/apply-visual-fixes.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Apply visual patches
+        run: node tools/apply-visual-fixes.js
+      - name: Commit generated app changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/www/financial-insights-ui.js app/src/main/assets/www/index.html
+          if git diff --cached --quiet; then
+            echo "No app changes to commit."
+            exit 0
+          fi
+          git commit -m "fix: contain overview cards in short landscape"
+          git push
