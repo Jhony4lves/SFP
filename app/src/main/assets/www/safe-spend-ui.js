@@ -210,42 +210,6 @@ document.addEventListener('click',event=>{
     return !!global.matchMedia?.('(max-width:650px) and (orientation:portrait)').matches;
   }
 
-  function clampOpenSelectMenus(){
-    if(!isPriorityPortrait()) return;
-    const nav=document.querySelector('.sidebar .nav');
-    const navRect=nav?.getBoundingClientRect();
-    const viewportWidth=document.documentElement.clientWidth;
-    const viewportHeight=global.innerHeight||document.documentElement.clientHeight;
-    const usableBottom=navRect&&navRect.top>0&&navRect.top<viewportHeight?navRect.top:viewportHeight;
-    const margin=8,gap=6;
-    document.querySelectorAll('.sfp-select-menu:not([hidden])').forEach(menu=>{
-      const host=menu.closest('.sfp-select');
-      const button=host?.querySelector('.sfp-select-button');
-      if(!button) return;
-      const buttonRect=button.getBoundingClientRect();
-      const optionWidth=Array.from(menu.querySelectorAll('.sfp-select-option')).reduce((max,item)=>Math.max(max,item.scrollWidth||0),0);
-      const width=Math.min(Math.max(buttonRect.width,optionWidth+16,180),viewportWidth-margin*2);
-      const left=Math.max(margin,Math.min(buttonRect.left,viewportWidth-margin-width));
-      menu.style.width=`${width}px`;
-      menu.style.maxWidth=`${viewportWidth-margin*2}px`;
-      menu.style.left=`${left}px`;
-      menu.style.right='auto';
-      const current=menu.getBoundingClientRect();
-      const maxBottom=usableBottom-margin;
-      if(current.bottom>maxBottom){
-        const availableAbove=Math.max(72,buttonRect.top-gap-margin);
-        menu.style.maxHeight=`${Math.min(menu.scrollHeight||330,330,availableAbove)}px`;
-        const measured=menu.getBoundingClientRect().height;
-        menu.style.top=`${Math.max(margin,Math.min(buttonRect.top-gap-measured,maxBottom-measured))}px`;
-        menu.style.bottom='auto';
-      }
-      const adjusted=menu.getBoundingClientRect();
-      if(adjusted.bottom>maxBottom){
-        menu.style.top=`${Math.max(margin,maxBottom-adjusted.height)}px`;
-      }
-    });
-  }
-
   function installNavigation(){
     ensureStyles();
     const more=document.getElementById('moreNavBtn');
@@ -256,14 +220,6 @@ document.addEventListener('click',event=>{
     if(nav&&!nav.dataset.sfpPriorityObserved){
       nav.dataset.sfpPriorityObserved='1';
       new MutationObserver(syncMoreActive).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
-    }
-    if(!document.documentElement.dataset.sfpSelectClamp){
-      document.documentElement.dataset.sfpSelectClamp='1';
-      document.addEventListener('click',event=>{if(event.target.closest?.('.sfp-select-button')) global.requestAnimationFrame(clampOpenSelectMenus);});
-      document.addEventListener('scroll',clampOpenSelectMenus,true);
-      global.addEventListener('resize',clampOpenSelectMenus,{passive:true});
-      global.visualViewport?.addEventListener('resize',clampOpenSelectMenus,{passive:true});
-      global.visualViewport?.addEventListener('scroll',clampOpenSelectMenus,{passive:true});
     }
   }
 

@@ -236,21 +236,20 @@ export async function runArchitectureTests() {
     assert(mockSharedPreferencesVault.sophy_groq_ciphertext, 'Contract K: Ciphertext deve ser persistido após migração');
     assert.equal(mockKeystore.decrypt(), 'gsk_legacy_plain_key_success_123', 'Contract K: Chave migrada deve ser decifrável');
 
-    // Contract L: Legacy Plaintext Migration Failure -> Legacy MESMO ASSIM purgado incondicionalmente
+    // Contract L: Legacy migration failure is recoverable; private pending copy survives for retry.
     let mockVaultL = { sophy_groq_api_key: 'gsk_legacy_plain_key_failure_999' };
     let mockVaultLResultCipher = null;
     const migrateFnLFailure = () => {
       const legacyKey = mockVaultL.sophy_groq_api_key;
-      if (legacyKey) {
-        try {
-          throw new Error('Simulated Keystore Exception on encrypt');
-        } finally {
-          delete mockVaultL.sophy_groq_api_key; // Unconditional purge in finally
-        }
+      if (!legacyKey) return;
+      try {
+        throw new Error('Simulated Keystore Exception on encrypt');
+      } catch (ignored) {
+        // Keep only the app-private pending migration copy; state/backups remain sanitized.
       }
     };
-    try { migrateFnLFailure(); } catch (ignored) {}
-    assert(!mockVaultL.sophy_groq_api_key, 'Contract L: Chave legada DEVE ser removida mesmo se criptografia falhar');
+    migrateFnLFailure();
+    assert.equal(mockVaultL.sophy_groq_api_key, 'gsk_legacy_plain_key_failure_999', 'Contract L: falha transitória não pode destruir a única cópia recuperável');
     assert(!mockVaultLResultCipher, 'Contract L: Em falha de migração, nenhum ciphertext inválido deve ser considerado');
 
     // Contract M: Ciphertext/IV corrompidos ou inválidos -> hasSophyApiKey deve retornar false
@@ -277,21 +276,17 @@ export async function runArchitectureTests() {
     const corruptedVault = { sophy_groq_ciphertext: 'corrupted_base64_garbage', sophy_groq_iv: 'invalid_iv' };
     assert.equal(mockCorruptedKeystore.hasValidApiKey(corruptedVault), false, 'Contract M: hasSophyApiKey deve retornar false para ciphertext/IV corrompidos');
 
-    // Contract N: Nenhum caminho deixa plaintext persistido
+    // Contract N: a pending private copy is removed immediately after a successful retry.
     let mockVaultN = { sophy_groq_api_key: 'gsk_temporary_unmigrated_key' };
-    const simulatedGetDecrypted = (vault) => {
+    const simulatedRetryMigration = (vault) => {
       const legacy = vault.sophy_groq_api_key;
-      if (legacy) {
-        try {
-          mockKeystore.encrypt(legacy);
-        } finally {
-          delete vault.sophy_groq_api_key;
-        }
-      }
+      if (!legacy) return mockKeystore.decrypt();
+      mockKeystore.encrypt(legacy);
+      delete vault.sophy_groq_api_key;
       return mockKeystore.decrypt();
     };
-    simulatedGetDecrypted(mockVaultN);
-    assert(!('sophy_groq_api_key' in mockVaultN), 'Contract N: Plaintext nunca é mantido no vault após acesso');
+    assert.equal(simulatedRetryMigration(mockVaultN), 'gsk_temporary_unmigrated_key', 'Contract N: retry deve recuperar a chave exata');
+    assert(!('sophy_groq_api_key' in mockVaultN), 'Contract N: cópia pendente deve ser purgada após migração verificada');
 
     console.log('  ✓ PASS: Todos os 14 contratos de segurança Keystore (A-N) validados com sucesso.');
     passed++;
@@ -313,10 +308,11 @@ export async function runArchitectureTests() {
     assert(bridgeJava.includes('"AES/GCM/NoPadding"'), 'AndroidBridge deve usar transformação AES/GCM/NoPadding');
     assert(bridgeJava.includes('.setKeySize(256)'), 'AndroidBridge deve gerar chave AES de 256 bits');
 
-    // 2. Zero gravação de plaintext e purga incondicional
-    assert(!bridgeJava.includes('putString(LEGACY_KEY_GROQ_SECRET'), 'AndroidBridge NUNCA deve gravar chave em plaintext');
-    assert(!bridgeJava.includes('putString("sophy_groq_api_key"'), 'AndroidBridge NUNCA deve gravar chave em plaintext');
-    assert(bridgeJava.includes('prefs.edit().remove(LEGACY_KEY_GROQ_SECRET).apply()'), 'AndroidBridge deve purgar chave legada incondicionalmente');
+    // 2. Pending migration is app-private/recoverable and is purged only after verified encryption.
+    assert(bridgeJava.includes('stageLegacyApiKeyForRetry'), 'AndroidBridge deve preservar migração pendente quando Keystore falhar');
+    assert(bridgeJava.includes('.putString(LEGACY_KEY_GROQ_SECRET, rawKey.trim())'), 'Cópia pendente deve ficar apenas no SharedPreferences privado do vault');
+    assert(bridgeJava.includes('if (encryptAndSaveApiKey(trimmed))'), 'Migração deve verificar sucesso antes de purgar a cópia pendente');
+    assert(bridgeJava.includes('vaultPrefs.edit().remove(LEGACY_KEY_GROQ_SECRET).commit()'), 'Cópia pendente deve ser purgada após verificação');
 
     // 3. hasSophyApiKey centralizado e fail-secure
     assert(bridgeJava.includes('private void migrateLegacyKeyIfNeeded('), 'AndroidBridge deve conter método privado centralizado migrateLegacyKeyIfNeeded');
