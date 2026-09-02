@@ -66,11 +66,9 @@ const patch=`
       if(document.querySelector('.sfp-nested-dialog-layer .sfp-dialog')) return;
       if(event.key==='Escape'){
         const closer=passiveModalCloser(root,dialog);
-        if(closer){
-          event.preventDefault();event.stopPropagation();closer.click();
-        }else{
-          event.preventDefault();event.stopPropagation();root.dispatchEvent(new MouseEvent('click',{bubbles:true}));
-        }
+        event.preventDefault();event.stopPropagation();
+        if(closer) closer.click();
+        else root.dispatchEvent(new MouseEvent('click',{bubbles:true}));
         return;
       }
       trapTab(event,dialog);
@@ -92,7 +90,6 @@ const patch=`
       if(passiveModalSession) releasePassiveModal({restore:true});
       return;
     }
-    if(current.dialog.matches('.sfp-dialog')) return;
     if(passiveModalSession?.dialog===current.dialog) return;
     const opener=passiveModalSession?.opener || (current.root.contains(document.activeElement)?null:document.activeElement);
     activatePassiveModal(current.root,current.dialog,opener);
@@ -100,10 +97,9 @@ const patch=`
 
 `;
 s=s.replace(anchor,patch+anchor);
-s=s.replace('    installPseudoButtonKeyboard();\n','    installPseudoButtonKeyboard();\n    syncPassiveModal();\n');
-s=s.replace('      for(const record of records){\n','      for(const record of records){\n');
-s=s.replace('      }\n    });\n    observer.observe(document.documentElement',{ 'toString':()=>'' });
-// Insert modal synchronization once per mutation batch.
+const installAnchor='    installPseudoButtonKeyboard();\n';
+if(!s.includes(installAnchor)) throw new Error('install call anchor not found');
+s=s.replace(installAnchor,installAnchor+'    syncPassiveModal();\n');
 const observerAnchor='      }\n    });\n    observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});';
 if(!s.includes(observerAnchor)) throw new Error('observer anchor not found');
 s=s.replace(observerAnchor,'      }\n      syncPassiveModal();\n    });\n    observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});');
