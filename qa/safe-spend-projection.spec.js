@@ -28,7 +28,7 @@ function snapshot(overrides={}){
 test.describe('Safe-to-spend + Cashflow Projection',()=>{
   test('motor carrega com contrato versionado',async({page})=>{
     await boot(page);
-    expect(await page.evaluate(()=>({version:window.SFPSafeSpend?.version,analyze:typeof window.SFPSafeSpend?.analyze}))).toEqual({version:1,analyze:'function'});
+    expect(await page.evaluate(()=>({version:window.SFPSafeSpend?.version,analyze:typeof window.SFPSafeSpend?.analyze}))).toEqual({version:2,analyze:'function'});
   });
 
   test('gasto seguro usa somente disponível menos reservado conhecido',async({page})=>{
