@@ -1,0 +1,41 @@
+name: Apply debt contract-total patch
+
+on:
+  push:
+    branches:
+      - feat/debt-contract-total
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/debt-contract-total
+          fetch-depth: 0
+
+      - name: Apply targeted patch
+        run: python3 tools/apply_debt_contract_total.py
+
+      - name: Verify patch markers
+        run: |
+          grep -q 'value="contract-total"' app/src/main/assets/www/index.html
+          grep -q 'debtPrincipalReceived' app/src/main/assets/www/index.html
+          grep -q 'debtContractTotal' app/src/main/assets/www/index.html
+          test -f qa/debt-contract-total.spec.js
+          test ! -f tools/apply_debt_contract_total.py
+          test ! -f .github/workflows/debt-contract-total-patch.yml
+          git diff --check
+
+      - name: Commit implementation
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'feat: support debts with known received and total amounts'
+          git push origin HEAD:feat/debt-contract-total
