@@ -329,6 +329,23 @@
     host.appendChild(row);
   }
 
+  function installDebtSchemaCompatibility(){
+    const original = window.save;
+    if(typeof original !== 'function' || original.__sfpDebtSchemaCompatibility) return;
+    const wrapped = async function(){
+      if(typeof state !== 'undefined' && Array.isArray(state?.debts)){
+        for(const debt of state.debts){
+          if(debt?.amortizationMethod !== 'contract-total' && debt?.rateKnown === true){
+            delete debt.rateKnown;
+          }
+        }
+      }
+      return original.apply(this, arguments);
+    };
+    wrapped.__sfpDebtSchemaCompatibility = true;
+    window.save = wrapped;
+  }
+
   function install(){
     installOfxCreditSemantics();
     installLiveFeedback();
@@ -336,6 +353,7 @@
     installPrivacyCoverage();
     installSecondaryModalManager();
     installNotificationPermissionStatus();
+    installDebtSchemaCompatibility();
   }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true });
