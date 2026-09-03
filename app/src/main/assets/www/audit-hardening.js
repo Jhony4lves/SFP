@@ -346,6 +346,143 @@
     window.save = wrapped;
   }
 
+  function installInvoiceInstallmentProjection(){
+    const prepareOriginal=window.prepareCardImport;
+    const matchOriginal=window.existingInvoiceImportMatch;
+    const attachOriginal=window.attachInvoiceImportKey;
+    const installmentOriginal=window.purchaseInstallment;
+    const natureOriginal=window.cardImportNatureLabel;
+    if(typeof prepareOriginal!=='function'||prepareOriginal.__sfpFutureInstallments||typeof matchOriginal!=='function'||typeof attachOriginal!=='function'||typeof installmentOriginal!=='function')return;
+
+    const roundMoney=value=>Math.round((Number(value)||0)*100)/100;
+    const validMonth=value=>/^\d{4}-(?:0[1-9]|1[0-2])$/.test(String(value||''));
+    const monthDistance=(start,end)=>{
+      if(!validMonth(start)||!validMonth(end))return null;
+      let current=start;
+      for(let distance=0;distance<=120;distance++){
+        if(current===end)return distance;
+        current=monthAdd(current,1);
+      }
+      return null;
+    };
+    const merchant=value=>{
+      if(typeof window.invoiceMerchantIdentity==='function')return window.invoiceMerchantIdentity(value);
+      return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\b(?:parcela\s*)?\d+\s*(?:\/|de)\s*\d+\b/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+    };
+    const documentInstallment=row=>{
+      const marker=row?.sfpDocumentInstallment||row?.documentInstallment;
+      if(Number.isInteger(Number(marker?.installment))&&Number.isInteger(Number(marker?.installments)))return{installment:Number(marker.installment),installments:Number(marker.installments)};
+      if(row?.authoritativeInstallmentPlan&&Number.isInteger(Number(row.installment))&&Number.isInteger(Number(row.installments)))return{installment:Number(row.installment),installments:Number(row.installments)};
+      return null;
+    };
+    const makeEstimatedInput=row=>{
+      if(!row||row.authoritativeInstallmentPlan||!row.currentChargeOnly)return row;
+      const current=Math.trunc(Number(row.installment)),total=Math.trunc(Number(row.installments)),amount=roundMoney(Math.abs(Number(row.amount)||0));
+      if(!Number.isInteger(current)||!Number.isInteger(total)||current<1||total<2||current>total||total>120||!(amount>0))return row;
+      const remaining=total-current+1;
+      return{...row,currentChargeOnly:false,installment:1,installments:remaining,installmentSchedule:Array(remaining).fill(amount),authoritativeInstallmentPlan:true,sfpEstimatedInstallmentProjection:true,sfpDocumentInstallment:{installment:current,installments:total}};
+    };
+
+    const matchWrapped=function(cardId,row,reserved=new Set()){
+      const direct=matchOriginal.apply(this,arguments);
+      if(direct||row?.kind!=='purchase'||typeof state==='undefined'||!Array.isArray(state?.purchases))return direct;
+      const doc=documentInstallment(row),invoiceMonth=row.invoiceMonth||row.targetMonth||row.firstMonth;
+      if(!doc||!validMonth(invoiceMonth)||doc.installments<2)return null;
+      const candidate=state.purchases.find(p=>{
+        const saved=p?.documentInstallment;
+        if(p?.cardId!==cardId||saved?.projection!=='estimated-current-value'||Number(saved.installments)!==doc.installments)return false;
+        if(merchant(p.desc)!==merchant(row.desc))return false;
+        if(p.purchaseDate&&row.date&&p.purchaseDate!==row.date)return false;
+        const distance=monthDistance(p.firstMonth,invoiceMonth);
+        return distance!=null&&Number(saved.installment)+distance===doc.installment&&!reserved.has(`purchase:${p.id}`);
+      });
+      return candidate?{source:'purchase',id:candidate.id,token:`purchase:${candidate.id}`,legacy:false,crossSource:true,projectionReconcile:true}:null;
+    };
+    matchWrapped.__sfpFutureInstallments=true;
+    window.existingInvoiceImportMatch=matchWrapped;
+
+    const attachWrapped=function(match,key,row=null){
+      let changed=attachOriginal.apply(this,arguments);
+      if(!match||match.source!=='purchase'||!row||typeof state==='undefined')return changed;
+      const p=state.purchases.find(item=>String(item.id)===String(match.id));
+      if(!p||p.documentInstallment?.projection!=='estimated-current-value')return changed;
+
+      if(row.authoritativeInstallmentPlan&&Array.isArray(row.installmentSchedule)&&row.installmentSchedule.length===Number(row.installments)){
+        p.total=roundMoney(row.total);
+        p.installments=Number(row.installments);
+        p.firstMonth=row.firstMonth;
+        p.installmentSchedule=row.installmentSchedule.map(roundMoney);
+        p.documentInstallment={installment:Number(row.installment)||1,installments:Number(row.installments),projection:'document-verified'};
+        p.note='Projeção de parcelas futuras substituída pelo cronograma conferido do documento.';
+        if(String(p.importSource||'').includes('image'))p.importSource='image-ocr+document';
+        else if(row.importSource)p.importSource=row.importSource;
+        return true;
+      }
+
+      if(row.sfpEstimatedInstallmentProjection){
+        const invoiceMonth=row.invoiceMonth||row.targetMonth||row.firstMonth,distance=monthDistance(p.firstMonth,invoiceMonth),observed=roundMoney(Math.abs(Number(row.amount)||0));
+        if(distance!=null&&distance>=0&&distance<Number(p.installments)&&observed>0){
+          const currentSchedule=Array.isArray(p.installmentSchedule)&&p.installmentSchedule.length===Number(p.installments)?p.installmentSchedule.map(roundMoney):null;
+          if(currentSchedule){
+            const next=[...currentSchedule];for(let index=distance;index<next.length;index++)next[index]=observed;
+            const nextTotal=roundMoney(next.reduce((sum,value)=>sum+value,0));
+            const differs=next.some((value,index)=>Math.abs(value-currentSchedule[index])>.009)||Math.abs(nextTotal-Number(p.total||0))>.009;
+            if(differs){
+              p.installmentSchedule=next;p.total=nextTotal;
+              p.note=`Projeção de parcelas futuras atualizada pela fatura de ${invoiceMonth}; meses seguintes usam o último valor observado até nova confirmação.`;
+              changed=true;
+            }
+          }
+        }
+      }
+      return changed;
+    };
+    attachWrapped.__sfpFutureInstallments=true;
+    window.attachInvoiceImportKey=attachWrapped;
+
+    const installmentWrapped=function(p,m){
+      const result=installmentOriginal.apply(this,arguments);
+      const doc=p?.documentInstallment;
+      if(!result||doc?.projection!=='estimated-current-value')return result;
+      const base=Math.trunc(Number(doc.installment)),total=Math.trunc(Number(doc.installments));
+      if(!Number.isInteger(base)||!Number.isInteger(total)||base<1||total<base)return result;
+      return{...result,n:base+result.n-1,total,projectionEstimate:true};
+    };
+    installmentWrapped.__sfpFutureInstallments=true;
+    window.purchaseInstallment=installmentWrapped;
+
+    if(typeof natureOriginal==='function'){
+      const natureWrapped=function(r,options){
+        const label=natureOriginal.apply(this,arguments);
+        return r?.documentInstallment?.projection==='estimated-current-value'?String(label).replace('(só a cobrança atual)','(futuras estimadas pelo valor atual)'):label;
+      };
+      natureWrapped.__sfpFutureInstallments=true;
+      window.cardImportNatureLabel=natureWrapped;
+    }
+
+    const prepareWrapped=function(rows){
+      const projected=Array.isArray(rows)?rows.map(makeEstimatedInput):rows;
+      if(Array.isArray(projected)&&rows&&Object.prototype.hasOwnProperty.call(rows,'invalid'))projected.invalid=rows.invalid;
+      const args=[...arguments];args[0]=projected;
+      const result=prepareOriginal.apply(this,args);
+      if(typeof cardImportDraft!=='undefined'&&cardImportDraft?.rows){
+        let changed=false;
+        for(const row of cardImportDraft.rows){
+          if(!row.sfpEstimatedInstallmentProjection)continue;
+          const doc=row.sfpDocumentInstallment;
+          row.authoritativeInstallmentPlan=false;
+          row.documentInstallment={installment:Number(doc?.installment)||1,installments:Number(doc?.installments)||Number(row.installments),projection:'estimated-current-value'};
+          row.projectionEstimate=true;
+          changed=true;
+        }
+        if(changed&&typeof renderCardImportDraft==='function')renderCardImportDraft();
+      }
+      return result;
+    };
+    prepareWrapped.__sfpFutureInstallments=true;
+    window.prepareCardImport=prepareWrapped;
+  }
+
   function install(){
     installOfxCreditSemantics();
     installLiveFeedback();
@@ -354,6 +491,7 @@
     installSecondaryModalManager();
     installNotificationPermissionStatus();
     installDebtSchemaCompatibility();
+    installInvoiceInstallmentProjection();
   }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true });
