@@ -352,6 +352,7 @@
     const attachOriginal=window.attachInvoiceImportKey;
     const installmentOriginal=window.purchaseInstallment;
     const natureOriginal=window.cardImportNatureLabel;
+    const normalizeOriginal=window.normalize;
     if(typeof prepareOriginal!=='function'||prepareOriginal.__sfpFutureInstallments||typeof matchOriginal!=='function'||typeof attachOriginal!=='function'||typeof installmentOriginal!=='function')return;
 
     const roundMoney=value=>Math.round((Number(value)||0)*100)/100;
@@ -375,6 +376,27 @@
       if(row?.authoritativeInstallmentPlan&&Number.isInteger(Number(row.installment))&&Number.isInteger(Number(row.installments)))return{installment:Number(row.installment),installments:Number(row.installments)};
       return null;
     };
+    const legacyProjectionInfo=p=>{
+      const marker=p?.documentInstallment,current=Math.trunc(Number(marker?.installment)),total=Math.trunc(Number(marker?.installments));
+      const schedule=Array.isArray(p?.installmentSchedule)?p.installmentSchedule:null;
+      const amount=roundMoney(schedule?.length===1?schedule[0]:p?.total);
+      if(marker?.projection!=='not-inferred'||Number(p?.installments)!==1||!validMonth(p?.firstMonth)||!Number.isInteger(current)||!Number.isInteger(total)||current<1||total<2||current>=total||total>120||!(amount>0))return null;
+      return{current,total,amount,remaining:total-current+1};
+    };
+    const promoteLegacyPurchase=p=>{
+      const legacy=legacyProjectionInfo(p);if(!legacy)return false;
+      p.total=roundMoney(legacy.amount*legacy.remaining);
+      p.installments=legacy.remaining;
+      p.installmentSchedule=Array(legacy.remaining).fill(legacy.amount);
+      p.documentInstallment={installment:legacy.current,installments:legacy.total,projection:'estimated-current-value'};
+      const suffix='Parcelas futuras estimadas a partir do valor documental já importado; uma fatura posterior pode refinar a projeção.';
+      const note=String(p.note||'').trim();if(!note.includes(suffix))p.note=note?`${note} ${suffix}`:suffix;
+      return true;
+    };
+    const promoteLegacyState=()=>{
+      if(typeof state==='undefined'||!Array.isArray(state?.purchases))return false;
+      let changed=false;for(const purchase of state.purchases)changed=promoteLegacyPurchase(purchase)||changed;return changed;
+    };
     const makeEstimatedInput=row=>{
       if(!row||row.authoritativeInstallmentPlan||!row.currentChargeOnly)return row;
       const current=Math.trunc(Number(row.installment)),total=Math.trunc(Number(row.installments)),amount=roundMoney(Math.abs(Number(row.amount)||0));
@@ -383,6 +405,16 @@
       return{...row,currentChargeOnly:false,installment:1,installments:remaining,installmentSchedule:Array(remaining).fill(amount),authoritativeInstallmentPlan:true,sfpEstimatedInstallmentProjection:true,sfpDocumentInstallment:{installment:current,installments:total}};
     };
 
+    if(typeof normalizeOriginal==='function'&&!normalizeOriginal.__sfpFutureInstallmentMigration){
+      const normalizeWrapped=function(){
+        const output=normalizeOriginal.apply(this,arguments);
+        promoteLegacyState();
+        return output;
+      };
+      normalizeWrapped.__sfpFutureInstallmentMigration=true;
+      window.normalize=normalizeWrapped;
+    }
+
     const matchWrapped=function(cardId,row,reserved=new Set()){
       const direct=matchOriginal.apply(this,arguments);
       if(direct||row?.kind!=='purchase'||typeof state==='undefined'||!Array.isArray(state?.purchases))return direct;
@@ -390,34 +422,49 @@
       if(!doc||!validMonth(invoiceMonth)||doc.installments<2)return null;
       const candidate=state.purchases.find(p=>{
         const saved=p?.documentInstallment;
-        if(p?.cardId!==cardId||saved?.projection!=='estimated-current-value'||Number(saved.installments)!==doc.installments)return false;
+        if(p?.cardId!==cardId||Number(saved?.installments)!==doc.installments)return false;
         if(merchant(p.desc)!==merchant(row.desc))return false;
         if(p.purchaseDate&&row.date&&p.purchaseDate!==row.date)return false;
-        const distance=monthDistance(p.firstMonth,invoiceMonth);
-        return distance!=null&&Number(saved.installment)+distance===doc.installment&&!reserved.has(`purchase:${p.id}`);
+        if(saved?.projection==='estimated-current-value'){
+          const distance=monthDistance(p.firstMonth,invoiceMonth);
+          return distance!=null&&Number(saved.installment)+distance===doc.installment&&!reserved.has(`purchase:${p.id}`);
+        }
+        if(saved?.projection==='not-inferred'){
+          return Number(p.installments)===1&&p.firstMonth===invoiceMonth&&Number(saved.installment)===doc.installment&&Math.abs(roundMoney(p.total)-roundMoney(Math.abs(Number(row.amount)||0)))<.01&&!reserved.has(`purchase:${p.id}`);
+        }
+        return false;
       });
-      return candidate?{source:'purchase',id:candidate.id,token:`purchase:${candidate.id}`,legacy:false,crossSource:true,projectionReconcile:true}:null;
+      return candidate?{source:'purchase',id:candidate.id,token:`purchase:${candidate.id}`,legacy:false,crossSource:true,projectionReconcile:true,legacyProjection:candidate.documentInstallment?.projection==='not-inferred'}:null;
     };
     matchWrapped.__sfpFutureInstallments=true;
     window.existingInvoiceImportMatch=matchWrapped;
+
+    const applyVerifiedPlan=(p,row)=>{
+      if(!row?.authoritativeInstallmentPlan||!Array.isArray(row.installmentSchedule)||row.installmentSchedule.length!==Number(row.installments))return false;
+      p.total=roundMoney(row.total);
+      p.installments=Number(row.installments);
+      p.firstMonth=row.firstMonth;
+      p.installmentSchedule=row.installmentSchedule.map(roundMoney);
+      p.documentInstallment={installment:Number(row.installment)||1,installments:Number(row.installments),projection:'document-verified'};
+      p.note='Projeção de parcelas futuras substituída pelo cronograma conferido do documento.';
+      if(String(p.importSource||'').includes('image'))p.importSource='image-ocr+document';
+      else if(row.importSource)p.importSource=row.importSource;
+      return true;
+    };
 
     const attachWrapped=function(match,key,row=null){
       let changed=attachOriginal.apply(this,arguments);
       if(!match||match.source!=='purchase'||!row||typeof state==='undefined')return changed;
       const p=state.purchases.find(item=>String(item.id)===String(match.id));
-      if(!p||p.documentInstallment?.projection!=='estimated-current-value')return changed;
+      if(!p)return changed;
 
-      if(row.authoritativeInstallmentPlan&&Array.isArray(row.installmentSchedule)&&row.installmentSchedule.length===Number(row.installments)){
-        p.total=roundMoney(row.total);
-        p.installments=Number(row.installments);
-        p.firstMonth=row.firstMonth;
-        p.installmentSchedule=row.installmentSchedule.map(roundMoney);
-        p.documentInstallment={installment:Number(row.installment)||1,installments:Number(row.installments),projection:'document-verified'};
-        p.note='Projeção de parcelas futuras substituída pelo cronograma conferido do documento.';
-        if(String(p.importSource||'').includes('image'))p.importSource='image-ocr+document';
-        else if(row.importSource)p.importSource=row.importSource;
-        return true;
+      if(p.documentInstallment?.projection==='not-inferred'){
+        if(row.sfpEstimatedInstallmentProjection)changed=promoteLegacyPurchase(p)||changed;
+        else if(applyVerifiedPlan(p,row))return true;
       }
+      if(p.documentInstallment?.projection!=='estimated-current-value')return changed;
+
+      if(row.authoritativeInstallmentPlan&&!row.sfpEstimatedInstallmentProjection&&applyVerifiedPlan(p,row))return true;
 
       if(row.sfpEstimatedInstallmentProjection){
         const invoiceMonth=row.invoiceMonth||row.targetMonth||row.firstMonth,distance=monthDistance(p.firstMonth,invoiceMonth),observed=roundMoney(Math.abs(Number(row.amount)||0));
