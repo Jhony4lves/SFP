@@ -157,3 +157,12 @@
 
   setTimeout(install,0);
 })();
+
+(function loadFinancialIntegrityV2(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-financial-integrity-v2="1"]'))return;
+  const script=document.createElement('script');
+  script.src='financial-integrity-v2.js';
+  script.async=false;
+  script.dataset.sfpFinancialIntegrityV2='1';
+  document.head.appendChild(script);
+})();
