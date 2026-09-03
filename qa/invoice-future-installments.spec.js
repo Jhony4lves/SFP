@@ -1,13 +1,17 @@
 const {test,expect}=require('@playwright/test');
 const {fixture,writeIndexedDB}=require('./helpers');
 
-async function boot(page){
+async function bootValue(page,value){
   await page.goto('/index.html');
   await page.waitForFunction(()=>typeof state!=='undefined'&&state&&typeof lastSavedState!=='undefined'&&lastSavedState);
-  await writeIndexedDB(page,fixture('Parcelas futuras de fatura'));
+  await writeIndexedDB(page,value);
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await page.waitForFunction(()=>typeof state!=='undefined'&&state&&typeof lastSavedState!=='undefined'&&lastSavedState&&typeof prepareCardImport==='function');
+}
+
+async function boot(page){
+  await bootValue(page,fixture('Parcelas futuras de fatura'));
 }
 
 function verifiedMeta({month='2026-08',source='pdf'}={}){
@@ -33,6 +37,60 @@ async function resetItau(page,month='2026-08'){
     document.querySelector('#cardImportMonth').value=month;
   },month);
 }
+
+function legacyItauState(){
+  const value=fixture('Parcelas antigas do Itaú');
+  const payAccountId=value.accounts[0]?.id||null;
+  value.mesAtual='2026-09';
+  value.cards=[{id:2,name:'Itaú Click',limit:2090,closeDay:13,dueDay:20,payAccountId,history:[]}];
+  value.purchases=[
+    {id:201,cardId:2,desc:'Lite *vivoeasyanualsaopaulobra',total:40,installments:1,purchaseDate:'2026-08-10',firstMonth:'2026-09',category:'Assinaturas',status:'active',note:'Importado de captura de fatura após conferência local por OCR.',tags:['fatura-importada'],refunds:[],invoiceImportKey:'legacy-lite',invoiceImportAliases:[],importSource:'image-ocr',documentInstallment:{installment:1,installments:12,projection:'not-inferred'}},
+    {id:202,cardId:2,desc:'00037 sh niteroi plazniteroibra',total:66.64,installments:1,purchaseDate:'2026-08-04',firstMonth:'2026-09',category:'Outros',status:'active',note:'Importado de captura de fatura após conferência local por OCR.',tags:['fatura-importada'],refunds:[],invoiceImportKey:'legacy-plaza',invoiceImportAliases:[],importSource:'image-ocr',documentInstallment:{installment:1,installments:3,projection:'not-inferred'}},
+    {id:203,cardId:2,desc:'Mercado*mercadolivre limeirabra',total:19.29,installments:1,purchaseDate:'2026-07-28',firstMonth:'2026-09',category:'Outros',status:'active',note:'Importado de captura de fatura após conferência local por OCR.',tags:['fatura-importada'],refunds:[],invoiceImportKey:'legacy-mercado',invoiceImportAliases:[],importSource:'image-ocr',documentInstallment:{installment:2,installments:10,projection:'not-inferred'}},
+    {id:204,cardId:2,desc:'Amazon br sao paulo bra',total:54.9,installments:1,purchaseDate:'2026-07-06',firstMonth:'2026-09',category:'Outros',status:'active',note:'Importado de captura de fatura após conferência local por OCR.',tags:['fatura-importada'],refunds:[],invoiceImportKey:'legacy-amazon',invoiceImportAliases:[],importSource:'image-ocr',documentInstallment:{installment:2,installments:10,projection:'not-inferred'}}
+  ];
+  value.invoices=[{id:301,cardId:2,month:'2026-09',status:'open',paidAmount:0,payments:[],officialTotal:222.38,officialTotalSource:'document'}];
+  value.invoiceImports=[{id:401,cardId:2,card:'Itaú Click',month:'2026-09',file:'fatura-setembro.png',source:'image-ocr',count:7,purchases:7,payments:0,credits:0,duplicates:0,officialTotal:222.38,verificationStatus:'verified',importedAt:'2026-09-03T12:00:00.000Z'}];
+  value.invoiceAdjustments=[];
+  value.ui={...(value.ui||{}),invoiceMonthByCard:{2:'2026-09'},invoiceCardId:2};
+  return value;
+}
+
+test('atualização promove parcelamentos legados no boot sem exigir reimportação',async({page})=>{
+  await bootValue(page,legacyItauState());
+  const first=await page.evaluate(()=>({
+    next:invoiceTotal(2,'2026-10'),
+    calculated:invoiceCalculated(2,'2026-10'),
+    committed:cardOutstanding(2,new Date('2026-09-03T12:00:00')),
+    purchases:state.purchases.map(p=>({id:p.id,total:p.total,installments:p.installments,firstMonth:p.firstMonth,schedule:p.installmentSchedule,documentInstallment:p.documentInstallment}))
+  }));
+  expect(first.next).toBe(180.83);
+  expect(first.calculated).toBe(180.83);
+  expect(first.committed).toBeGreaterThan(222.38);
+  expect(first.purchases.map(p=>p.documentInstallment.projection)).toEqual(Array(4).fill('estimated-current-value'));
+  expect(first.purchases.map(p=>p.installments)).toEqual([12,3,9,9]);
+  expect(first.purchases[0].schedule).toEqual(Array(12).fill(40));
+  expect(first.purchases[2].schedule).toEqual(Array(9).fill(19.29));
+
+  await page.reload();
+  await page.waitForFunction(()=>typeof state!=='undefined'&&state&&typeof lastSavedState!=='undefined'&&lastSavedState&&typeof prepareCardImport==='function');
+  const afterReload=await page.evaluate(()=>({next:invoiceTotal(2,'2026-10'),projections:state.purchases.map(p=>p.documentInstallment?.projection),installments:state.purchases.map(p=>p.installments)}));
+  expect(afterReload).toEqual({next:180.83,projections:Array(4).fill('estimated-current-value'),installments:[12,3,9,9]});
+});
+
+test('reimportação também promove registro legado sem duplicar a compra',async({page})=>{
+  await boot(page);await resetItau(page,'2026-09');
+  const result=await page.evaluate(async meta=>{
+    state.purchases=[{id:900,cardId:2,desc:'AMAZON BR',total:54.9,installments:1,purchaseDate:'2026-07-06',firstMonth:'2026-09',category:'Outros',status:'active',note:'Importado de fatura.',tags:['fatura-importada'],refunds:[],invoiceImportKey:'legacy-key',invoiceImportAliases:[],importSource:'pdf',documentInstallment:{installment:2,installments:10,projection:'not-inferred'}}];
+    const rows=[{date:'2026-07-06',desc:'AMAZON BR',amount:54.9,invoiceKind:'purchase',installment:2,installments:10,currentChargeOnly:true}];
+    prepareCardImport(rows,'itau-setembro.pdf',{documentType:'invoice',confidence:.99,signConvention:'debitPositive',signConfidence:.99,validator:'local'},meta);
+    const duplicate=cardImportDraft.rows[0].duplicate;
+    await confirmCardImport();
+    const p=state.purchases[0];
+    return{duplicate,count:state.purchases.length,total:p.total,installments:p.installments,firstMonth:p.firstMonth,projection:p.documentInstallment?.projection,next:invoiceCalculated(2,'2026-10')};
+  },verifiedMeta({month:'2026-09'}));
+  expect(result).toEqual({duplicate:true,count:1,total:494.1,installments:9,firstMonth:'2026-09',projection:'estimated-current-value',next:54.9});
+});
 
 test('fatura de agosto 1/10 projeta setembro e outubro sem tratá-los como zero',async({page})=>{
   await boot(page);await resetItau(page,'2026-08');
