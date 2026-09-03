@@ -85,7 +85,7 @@ test('captura Itaú passa por OCR local, escolhe destino e importa somente após
   expect(preview).toMatchObject({card:2,month:'2026-08',source:'image-ocr',button:'Conferi e importar',disabled:false});
   expect(preview.integrity).toMatchObject({status:'verified',importAllowed:true,currentNet:74.25});
   expect(preview.rows).toEqual([
-    {desc:'AMAZON BR',amount:54.9,duplicate:false,documentInstallment:{installment:1,installments:10,projection:'not-inferred'}},
+    {desc:'AMAZON BR',amount:54.9,duplicate:false,documentInstallment:{installment:1,installments:10,projection:'estimated-current-value'}},
     {desc:'MERCADO*MERCAD outros LIMEIRA',amount:19.35,duplicate:false,documentInstallment:undefined}
   ]);
   expect(preview.target).toContain('Itaú Click');expect(preview.target).toContain('Agosto de 2026');
@@ -94,10 +94,12 @@ test('captura Itaú passa por OCR local, escolhe destino e importa somente após
   const persisted=await page.evaluate(async()=>{
     await confirmCardImport();
     const inv=state.invoices.find(invoice=>invoice.cardId===2&&invoice.month==='2026-08');
-    return{purchases:state.purchases.map(p=>({desc:p.desc,total:p.total,installments:p.installments,source:p.importSource,note:p.note})),invoice:inv.officialTotal,source:state.invoiceImports[0].source,imports:state.invoiceImports.length};
+    const amazon=state.purchases.find(p=>p.desc==='AMAZON BR');
+    return{purchases:state.purchases.map(p=>({desc:p.desc,total:p.total,installments:p.installments,source:p.importSource,note:p.note,projection:p.documentInstallment?.projection})),invoice:inv.officialTotal,source:state.invoiceImports[0].source,imports:state.invoiceImports.length,amazonFuture:{sep:invoiceCalculated(2,'2026-09'),oct:invoiceCalculated(2,'2026-10'),octPart:purchaseInstallment(amazon,'2026-10')}};
   });
   expect(persisted.invoice).toBe(74.25);expect(persisted.source).toBe('image-ocr');expect(persisted.imports).toBe(1);
-  expect(persisted.purchases).toHaveLength(2);expect(persisted.purchases[0]).toMatchObject({desc:'AMAZON BR',total:54.9,installments:1,source:'image-ocr'});
+  expect(persisted.purchases).toHaveLength(2);expect(persisted.purchases[0]).toMatchObject({desc:'AMAZON BR',total:549,installments:10,source:'image-ocr',projection:'estimated-current-value'});
+  expect(persisted.amazonFuture.sep).toBe(54.9);expect(persisted.amazonFuture.oct).toBe(54.9);expect([persisted.amazonFuture.octPart.n,persisted.amazonFuture.octPart.total]).toEqual([3,10]);
 
   const reconciliation=await page.evaluate(async raw=>{
     await importCardFiles([new File(['imagem'],'fatura-aberta.png',{type:'image/png'})]);
@@ -111,13 +113,13 @@ test('captura Itaú passa por OCR local, escolhe destino e importa somente após
     prepareCardImport(rows,'fatura-fechada.pdf',{documentType:'invoice',confidence:.99,signConvention:'debitPositive',signConfidence:.99,validator:'local'},{source:'pdf',profileId:'itau-card-v1',profileLabel:'Fatura Itaú',officialTotal:74.25,dueDate:'2026-08-10',integrity});
     const pdfDuplicates=cardImportDraft.rows.map(row=>row.duplicate);await confirmCardImport();
     const amazon=state.purchases.find(p=>p.desc==='AMAZON BR');
-    return{imageDuplicates,pdfDuplicates,count:state.purchases.length,imports:state.invoiceImports.length,amazon:{total:amazon.total,installments:amazon.installments,schedule:amazon.installmentSchedule,aliases:amazon.invoiceImportAliases,projection:amazon.documentInstallment?.projection,source:amazon.importSource}};
+    return{imageDuplicates,pdfDuplicates,count:state.purchases.length,imports:state.invoiceImports.length,amazon:{total:amazon.total,installments:amazon.installments,schedule:amazon.installmentSchedule,aliases:amazon.invoiceImportAliases||[],projection:amazon.documentInstallment?.projection,source:amazon.importSource}};
   },ocrResult());
   expect(reconciliation.imageDuplicates).toEqual([true,true]);
   expect(reconciliation.pdfDuplicates).toEqual([true,true]);
   expect(reconciliation.count).toBe(2);
   expect(reconciliation.amazon).toMatchObject({total:549,installments:10,projection:'document-verified',source:'image-ocr+document'});
-  expect(reconciliation.amazon.schedule).toHaveLength(10);expect(reconciliation.amazon.aliases).toHaveLength(1);
+  expect(reconciliation.amazon.schedule).toHaveLength(10);expect(reconciliation.amazon.aliases).toHaveLength(0);
 });
 
 test('captura incompleta falha fechada e não grava dinheiro',async({page})=>{
