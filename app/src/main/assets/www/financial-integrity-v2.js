@@ -18,6 +18,7 @@
   const monthDistance=(a,b)=>{const [ay,am]=String(a).split('-').map(Number),[by,bm]=String(b).split('-').map(Number);return (by-ay)*12+(bm-am)};
   const idKey=e=>`${e.source||'event'}:${e.sourceId??e.id??`${e.date}:${e.type}:${e.desc}:${e.amount}`}`;
   const isPaid=status=>status==='paid'||status==='closed';
+  const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 
   let originals=null;
   let installed=false;
@@ -208,7 +209,7 @@
 
   function installTimeAndLiquidityCore(){
     originals={upcomingEvents:global.upcomingEvents,pendingUpcomingEvents:global.pendingUpcomingEvents,nextIncomeEvent:global.nextIncomeEvent,commitmentUntilNextIncome:global.commitmentUntilNextIncome,projectionFor:global.projectionFor,financialContextSnapshot:global.financialContextSnapshot,statusLabel:global.statusLabel,renderToday:global.renderToday,renderTop:global.renderTop,renderCreditFacilities:global.renderCreditFacilities,renderSafeSpendProjection:global.renderSafeSpendProjection,renderAll:global.renderAll};
-    const upcoming=function(days=75,reference=new Date()){const end=addDays(isoDate(reference),days);return baseEconomicEvents(days,reference).filter(e=>e.overdue||String(e.date)<=end).map(e=>({...e,date:e.dueDate||e.date})).sort(eventComparator)};
+    const upcoming=function(days=75,reference=new Date()){const today=isoDate(reference),end=addDays(today,days);return baseEconomicEvents(days,reference).filter(e=>!e.overdue&&String(e.date)>=today&&String(e.date)<=end).map(e=>({...e,date:e.dueDate||e.date})).sort(eventComparator)};
     const pending=function(days=7,reference=new Date()){return upcoming(days,reference).filter(e=>e.type==='expense'?e.status!=='paid':true)};
     const nextIncome=function(reference=new Date(),days=HORIZON_DAYS){const today=isoDate(reference);return baseEconomicEvents(days,reference).filter(e=>e.type==='income'&&!e.overdue&&!e.cashIgnored&&String(e.date)>=today).sort(eventComparator)[0]||null};
     const projection=function(days=HORIZON_DAYS,reference=new Date()){return buildProjection(days,reference)};
@@ -250,12 +251,12 @@
     if(l.overdueEvents.length)messages.push(`${l.overdueEvents.length} obrigação(ões) atrasada(s) já reduzem o gasto seguro.`);
     if(l.accountRisks.length){const first=l.accountRisks[0];messages.push(`Há cobertura global, mas ${first.accountName} pode faltar ${typeof global.brl==='function'?global.brl(first.requiredTransferCents/100):money(first.requiredTransferCents/100)} antes de ${first.minDate}. Planeje uma transferência.`)}
     if(l.unresolvedCreditCents>0)messages.push('Existe crédito utilizado sem cronograma vinculado. O SFP preserva esse valor até a dívida ser detalhada.');
-    if(!messages.length)return;const node=document.createElement('div');node.dataset.sfpIntegrityWarning='1';node.className='note warning';node.style.marginTop='10px';node.innerHTML=`<b>Atenção de liquidez</b><br>${messages.map(m=>String(m).replace(/[<>]/g,'')).join('<br>')}`;panel.appendChild(node);
+    if(!messages.length)return;const node=document.createElement('div');node.dataset.sfpIntegrityWarning='1';node.className='note warning';node.style.marginTop='10px';node.innerHTML=`<b>Atenção de liquidez</b><br>${messages.map(escapeHtml).join('<br>')}`;panel.appendChild(node);
   }
 
   function enhanceCreditFacilities(){
     const root=document.getElementById('creditFacilities');if(!root)return;const items=global.state?.creditFacilities||[];if(!items.length)return;
-    root.innerHTML=items.map(f=>{const used=Math.max(0,Number(f.used)||0),available=Math.max(0,(Number(f.limit)||0)-used),linked=linkedFacility(f);const label=used>0?`Utilizado ${typeof global.brl==='function'?global.brl(used):used.toFixed(2)}${linked?' • vinculado à dívida':' • passivo sem cronograma'}`:'Disponível; não entra no saldo nem no patrimônio';return `<div class="item"><div><b>${String(f.institution||'').replace(/[<>]/g,'')} • ${String(f.name||'').replace(/[<>]/g,'')}</b><small>${label}</small></div><strong>${typeof global.brl==='function'?global.brl(available):available.toFixed(2)}</strong></div>`}).join('');
+    root.innerHTML=items.map(f=>{const used=Math.max(0,Number(f.used)||0),available=Math.max(0,(Number(f.limit)||0)-used),linked=linkedFacility(f);const label=used>0?`Utilizado ${typeof global.brl==='function'?global.brl(used):used.toFixed(2)}${linked?' • vinculado à dívida':' • passivo sem cronograma'}`:'Disponível; não entra no saldo nem no patrimônio';return `<div class="item"><div><b>${escapeHtml(f.institution||'')} • ${escapeHtml(f.name||'')}</b><small>${label}</small></div><strong>${typeof global.brl==='function'?global.brl(available):available.toFixed(2)}</strong></div>`}).join('');
   }
 
   function ensureSettingsPanel(){
@@ -266,7 +267,7 @@
 
   function refreshAccountSettings(){
     const root=document.getElementById('spendableAccountsV2');if(!root)return;const accounts=global.state?.accounts||[];
-    root.innerHTML=accounts.length?accounts.map(a=>{const checked=spendableAccount(a)?'checked':'';return `<label class="item" style="cursor:pointer"><div><b>${String(a.name||'Conta').replace(/[<>]/g,'')}</b><small>${String(a.type||'').replace(/[<>]/g,'')} • ${checked?'participa do dinheiro operacional':'protegida do gasto seguro'}</small></div><input type="checkbox" data-spendable-account="${String(a.id).replace(/"/g,'')}" ${checked} style="width:auto;min-height:auto;margin:0"></label>`}).join(''):'<div class="empty-state"><b>Nenhuma conta cadastrada</b></div>';
+    root.innerHTML=accounts.length?accounts.map(a=>{const checked=spendableAccount(a)?'checked':'';return `<label class="item" style="cursor:pointer"><div><b>${escapeHtml(a.name||'Conta')}</b><small>${escapeHtml(a.type||'')} • ${checked?'participa do dinheiro operacional':'protegida do gasto seguro'}</small></div><input type="checkbox" data-spendable-account="${escapeHtml(a.id)}" ${checked} style="width:auto;min-height:auto;margin:0"></label>`}).join(''):'<div class="empty-state"><b>Nenhuma conta cadastrada</b></div>';
     root.querySelectorAll('[data-spendable-account]').forEach(input=>input.onchange=async()=>{const a=(global.state?.accounts||[]).find(x=>String(x.id)===String(input.dataset.spendableAccount));if(!a)return;a.spendable=!!input.checked;if(typeof global.save==='function')await global.save('Configurar liquidez da conta');else if(typeof global.dbSet==='function')await global.dbSet(global.state);global.renderAll?.()});
   }
 
