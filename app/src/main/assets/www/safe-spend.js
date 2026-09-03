@@ -166,3 +166,12 @@
   script.dataset.sfpFinancialIntegrityV2='1';
   document.head.appendChild(script);
 })();
+
+(function loadManualInvoiceReconciliation(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-manual-invoice-reconciliation="1"]'))return;
+  const script=document.createElement('script');
+  script.src='invoice-manual-reconciliation.js';
+  script.async=false;
+  script.dataset.sfpManualInvoiceReconciliation='1';
+  document.head.appendChild(script);
+})();
