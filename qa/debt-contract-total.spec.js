@@ -91,3 +91,19 @@ test('total contratado menor que o recebido é rejeitado', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => state.debts.some(d => d.name === 'Contrato inválido'))).toBe(false);
   await expect(page.locator('#toast')).toContainText(/não pode ser menor/i);
 });
+
+test('data de recebimento posterior ao primeiro vencimento é rejeitada', async ({ page }) => {
+  await boot(page, fixture('Crédito com datas inválidas'));
+  await page.evaluate(() => openManagementAction('dividas'));
+  await page.locator('#debtName').fill('Contrato com datas inválidas');
+  await page.locator('#debtAmortization').selectOption('contract-total');
+  await page.locator('#debtPrincipalReceived').fill('104.60');
+  await page.locator('#debtContractTotal').fill('120.48');
+  await page.locator('#debtPrincipalDate').fill('2026-09-25');
+  await page.locator('#debtInstallments').fill('1');
+  await page.locator('#debtFirstDue').fill('2026-09-24');
+  await page.locator('#debtForm').evaluate(form => form.requestSubmit());
+
+  await expect.poll(() => page.evaluate(() => state.debts.some(d => d.name === 'Contrato com datas inválidas'))).toBe(false);
+  await expect(page.locator('#toast')).toContainText(/data do recebimento não pode ser posterior/i);
+});
