@@ -36,6 +36,46 @@
     return false;
   }
 
+  function installOfxCreditSemantics(){
+    const original = window.parseOFX;
+    if(typeof original !== 'function' || original.__sfpOfxCreditSemantics) return;
+
+    const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+    const readTag = (block, name) => {
+      const match = String(block || '').match(new RegExp(`<${name}>\\s*([^<\\r\\n]+)`, 'i'));
+      return match ? match[1].trim() : '';
+    };
+    const paymentHint = desc => /\b(pagamento recebido|pagamento da fatura|pagamento de fatura|payment received|pagamento cartao)\b/.test(normalize(desc));
+
+    const wrapped = function(text){
+      const rows = original.apply(this, arguments);
+      if(!Array.isArray(rows) || !text) return rows;
+
+      const blocks = String(text).match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/gi) || String(text).split(/<STMTTRN>/i).slice(1);
+      const typeByFitid = new Map();
+      for(const block of blocks){
+        const fitid = readTag(block, 'FITID');
+        const type = readTag(block, 'TRNTYPE').toUpperCase();
+        if(fitid && type) typeByFitid.set(fitid, type);
+      }
+
+      for(const row of rows){
+        const type = typeByFitid.get(String(row.fitid || '').trim());
+        if(!type) continue;
+        row.ofxType = type;
+        if(type !== 'CREDIT') continue;
+
+        const semanticHint = typeof window.invoiceSemanticHint === 'function' ? window.invoiceSemanticHint(row.desc) : null;
+        row.invoiceKind = semanticHint === 'payment' || paymentHint(row.desc) ? 'payment' : 'credit';
+        row.extractionConfidence = 1;
+      }
+      return rows;
+    };
+
+    wrapped.__sfpOfxCreditSemantics = true;
+    window.parseOFX = wrapped;
+  }
+
   function installLiveFeedback(){
     const sync = el => {
       if(!el) return;
@@ -290,6 +330,7 @@
   }
 
   function install(){
+    installOfxCreditSemantics();
     installLiveFeedback();
     installGlobalSearchA11y();
     installPrivacyCoverage();
