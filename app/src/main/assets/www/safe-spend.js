@@ -184,3 +184,12 @@
   script.dataset.sfpOpenFinancePersonal='1';
   document.head.appendChild(script);
 })();
+
+(function loadOpenFinanceItemRefs(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-item-refs="1"]'))return;
+  const script=document.createElement('script');
+  script.src='open-finance-item-refs.js';
+  script.async=false;
+  script.dataset.sfpOpenFinanceItemRefs='1';
+  document.head.appendChild(script);
+})();
