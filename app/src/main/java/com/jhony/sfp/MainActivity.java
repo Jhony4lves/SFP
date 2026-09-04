@@ -149,6 +149,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.addJavascriptInterface(new AndroidBridge(this), "AndroidBridge");
+        webView.addJavascriptInterface(new PluggyBridge(this), "PluggyBridge");
         // Always rebuild the document from the APK bundle. IndexedDB/local storage remain intact,
         // while stale WebView DOM/cache from an older APK can no longer resurrect old navigation.
         webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
