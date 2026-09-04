@@ -3,7 +3,7 @@ name: Build SFP Android
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "feat/2.2-integration" ]
+    branches: [ "main", "feat/2.2-integration", "package/open-finance-poc" ]
     tags: [ "v*" ]
 
 permissions:
