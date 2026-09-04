@@ -13,7 +13,7 @@ async function installBridgeMock(page, { configured = false } = {}) {
       configurable: true,
       value: {
         getCredentialStatus() {
-          return JSON.stringify({ ok: true, configured: isConfigured, clientIdMasked: isConfigured ? '11111111…1111' : '' });
+          return JSON.stringify({ ok: true, configured: isConfigured, clientIdMasked: isConfigured ? '11111111…1111' : '', itemReferenceCount: 3 });
         },
         saveCredentials(clientId, clientSecret) {
           window.__pluggyMock.saveCalls += 1;
@@ -29,17 +29,60 @@ async function installBridgeMock(page, { configured = false } = {}) {
             provider: 'pluggy-personal',
             readOnly: true,
             itemCount: 3,
+            accountCount: 6,
+            transactionPreviewCount: 5,
+            transactionWindowDays: 45,
             items: [
-              { id: '11111111-1111-4111-8111-111111111111', connectorName: 'MeuPluggy', status: 'UPDATED', accounts: [
-                { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', type: 'BANK', subtype: 'CHECKING_ACCOUNT', name: 'Nubank', balance: 321.45, currencyCode: 'BRL', number: '•••• 1234' }
-              ] },
-              { id: '22222222-2222-4222-8222-222222222222', connectorName: 'MeuPluggy', status: 'UPDATED', accounts: [
-                { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', type: 'BANK', subtype: 'CHECKING_ACCOUNT', name: 'Mercado Pago', balance: 80, currencyCode: 'BRL' },
-                { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', type: 'CREDIT', subtype: 'CREDIT_CARD', name: 'Mercado Pago', balance: 0, currencyCode: 'BRL', number: '0300' }
-              ] },
-              { id: '33333333-3333-4333-8333-333333333333', connectorName: 'MeuPluggy', status: 'UPDATED', accounts: [
-                { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', type: 'BANK', subtype: 'CHECKING_ACCOUNT', name: 'Itaú', balance: 144.9, currencyCode: 'BRL' }
-              ] }
+              {
+                id: '11111111-1111-4111-8111-111111111111', connectorName: 'MeuPluggy', status: 'UPDATED', accounts: [
+                  {
+                    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', type: 'BANK', subtype: 'CHECKING_ACCOUNT',
+                    name: 'Nubank', presentationName: 'Nubank', balance: 321.45, currencyCode: 'BRL', number: '00001234', lastFour: '1234',
+                    transactionWindowDays: 45, transactions: [
+                      { id: 'a0000000-0000-4000-8000-000000000001', date: '2026-09-03T12:00:00.000Z', description: 'Padaria Central', amount: 20, type: 'DEBIT', status: 'POSTED', currencyCode: 'BRL' },
+                      { id: 'a0000000-0000-4000-8000-000000000002', date: '2026-09-04T12:00:00.000Z', description: 'PIX recebido', amount: 80, type: 'CREDIT', status: 'POSTED', currencyCode: 'BRL' }
+                    ]
+                  },
+                  {
+                    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab', type: 'CREDIT', subtype: 'CREDIT_CARD',
+                    name: 'null', marketingName: null, presentationName: 'Cartão de crédito • final 4415', balance: 359.54, currencyCode: 'BRL', number: '4415', lastFour: '4415',
+                    creditData: { availableCreditLimit: 1640.46, creditLimit: 2000 }, transactionWindowDays: 45, transactions: []
+                  }
+                ]
+              },
+              {
+                id: '22222222-2222-4222-8222-222222222222', connectorName: 'MeuPluggy', status: 'UPDATED', accounts: [
+                  {
+                    id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', type: 'BANK', subtype: 'PREPAID_ACCOUNT',
+                    name: 'Mercado Pago (Conta Pré-paga)', presentationName: 'Mercado Pago (Conta Pré-paga)', balance: 80, currencyCode: 'BRL', lastFour: '5387',
+                    transactionWindowDays: 45, transactions: []
+                  },
+                  {
+                    id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', type: 'CREDIT', subtype: 'CREDIT_CARD',
+                    name: 'Mercado Pago', presentationName: 'Mercado Pago', balance: 0, currencyCode: 'BRL', number: '0300', lastFour: '0300',
+                    transactionWindowDays: 45, transactions: [
+                      { id: 'c0000000-0000-4000-8000-000000000001', date: '2026-09-02T12:00:00.000Z', description: 'Mercado do Bairro', amount: 50, type: 'DEBIT', status: 'POSTED', currencyCode: 'BRL' },
+                      { id: 'c0000000-0000-4000-8000-000000000002', date: '2026-09-04T12:00:00.000Z', description: 'Pagamento de fatura', amount: -100, type: 'CREDIT', status: 'POSTED', currencyCode: 'BRL' }
+                    ]
+                  }
+                ]
+              },
+              {
+                id: '33333333-3333-4333-8333-333333333333', connectorName: 'MeuPluggy', status: 'UPDATED', accounts: [
+                  {
+                    id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', type: 'BANK', subtype: 'CHECKING_ACCOUNT',
+                    name: null, marketingName: null, presentationName: 'Conta corrente • final 8849', balance: 144.9, currencyCode: 'BRL', number: '00078849', lastFour: '8849',
+                    transactionWindowDays: 45, transactions: [
+                      { id: 'd0000000-0000-4000-8000-000000000001', date: '2026-09-04T08:00:00.000Z', description: 'TED exemplo', amount: 30, type: 'DEBIT', status: 'POSTED', currencyCode: 'BRL' }
+                    ]
+                  },
+                  {
+                    id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', type: 'CREDIT', subtype: 'CREDIT_CARD',
+                    name: 'null', marketingName: 'null', presentationName: 'Cartão de crédito • final 6442', balance: 1428.26, currencyCode: 'BRL', number: '6442', lastFour: '6442',
+                    transactionWindowDays: 45, transactions: []
+                  }
+                ]
+              }
             ]
           });
         },
@@ -94,19 +137,38 @@ test('OPEN-FINANCE-01 credenciais passam somente pela bridge nativa e somem do f
   expect(errors).toEqual([]);
 });
 
-test('OPEN-FINANCE-02 prévia repetida é somente leitura e idempotente para o estado SFP', async ({ page }) => {
+test('OPEN-FINANCE-02 staging lê 3 Items/6 contas/transações sem mutar o estado e sem renderizar null', async ({ page }) => {
   const errors = monitor(page);
   await installBridgeMock(page, { configured: true });
   const value = fixture('Open Finance Preview');
-  value.accounts[0].initial = 987.65;
+  value.accounts = [
+    { id: 1, name: 'Nubank', type: 'Conta corrente', initial: 987.65, balanceMode: 'snapshot', balanceDate: '2026-09-01' },
+    { id: 2, name: 'Mercado Pago', type: 'Conta corrente', initial: 80, balanceMode: 'snapshot', balanceDate: '2026-09-01' },
+    { id: 3, name: 'Itaú', type: 'Conta corrente', initial: 100, balanceMode: 'snapshot', balanceDate: '2026-09-01' }
+  ];
+  value.cards = [
+    { id: 1, name: 'Nubank Platinum', limit: 2000, closeDay: 10, dueDay: 17, payAccountId: 1, history: [] },
+    { id: 2, name: 'Mercado Pago', limit: 1000, closeDay: 10, dueDay: 17, payAccountId: 2, history: [] },
+    { id: 3, name: 'Itaú Click', limit: 3000, closeDay: 10, dueDay: 17, payAccountId: 3, history: [] }
+  ];
+  value.transactions.push({ id: 10, kind: 'expense', desc: 'Padaria Central', amount: 20, date: '2026-09-03', accountId: 1, status: 'paid', balanceImpact: true });
+  value.purchases.push({ id: 20, cardId: 2, desc: 'Mercado do Bairro', total: 50, purchaseDate: '2026-09-02', installments: 1, firstMonth: '2026-09', status: 'active', refunds: [] });
   await boot(page, value);
 
   const before = await page.evaluate(() => JSON.stringify(state));
   await page.locator('#openFinancePreviewBtn').click();
-  await expect(page.locator('#openFinancePreview')).toContainText('3 Item(s) e 4 conta(s)/cartão(ões)');
+
+  await expect(page.locator('#openFinancePreview')).toContainText('3 Item(s), 6 conta(s)/cartão(ões) e 5 transação(ões) recentes');
   await expect(page.locator('#openFinancePreview')).toContainText('Nubank');
   await expect(page.locator('#openFinancePreview')).toContainText('Mercado Pago');
-  await expect(page.locator('#openFinancePreview')).toContainText('Itaú');
+  await expect(page.locator('#openFinancePreview')).toContainText('Conta corrente • final 8849');
+  await expect(page.locator('#openFinancePreview')).toContainText('Cartão de crédito • final 6442');
+  await expect(page.locator('#openFinancePreview')).toContainText('provável lançamento já existente');
+  await expect(page.locator('#openFinancePreview')).toContainText('crédito/pagamento • revisar');
+  await expect(page.locator('#openFinanceStagingSummary')).toContainText('Nada foi importado');
+
+  const rendered = await page.locator('#openFinancePreview').innerText();
+  expect(rendered).not.toMatch(/\bnull\b/i);
 
   await page.locator('#openFinancePreviewBtn').click();
   const after = await page.evaluate(() => JSON.stringify(state));
@@ -128,7 +190,7 @@ test('OPEN-FINANCE-03 versão web não tenta guardar segredo nem simular a bridg
   expect(errors).toEqual([]);
 });
 
-test('OPEN-FINANCE-04 bridge nativa mantém segredos no Keystore e API key só em memória', async () => {
+test('OPEN-FINANCE-04 bridge nativa mantém segredos no Keystore, API key em memória e transações read-only allowlisted', async () => {
   const bridge = fs.readFileSync('app/src/main/java/com/jhony/sfp/PluggyBridge.java', 'utf8');
   const activity = fs.readFileSync('app/src/main/java/com/jhony/sfp/MainActivity.java', 'utf8');
 
@@ -141,6 +203,11 @@ test('OPEN-FINANCE-04 bridge nativa mantém segredos no Keystore e API key só e
   expect(bridge).not.toMatch(/@JavascriptInterface\s+public\s+String\s+get[^\n]*Secret/i);
   expect(bridge).toContain('setInstanceFollowRedirects(false)');
   expect(bridge).toContain('"api.pluggy.ai".equalsIgnoreCase(url.getHost())');
-  expect(bridge).toContain('"/auth".equals(path) || "/items".equals(path) || "/accounts".equals(path)');
+  expect(bridge).toContain('"/v2/transactions".equals(path)');
+  expect(bridge).toContain('TRANSACTION_WINDOW_DAYS = 45');
+  expect(bridge).toContain('MAX_TRANSACTION_PREVIEW_PER_ACCOUNT = 30');
+  expect(bridge).toContain('cleanString(JSONObject object, String key)');
+  expect(bridge).toContain('creditData');
+  expect(bridge).not.toContain('paymentData');
   expect(activity).toContain('addJavascriptInterface(new PluggyBridge(this), "PluggyBridge")');
 });
