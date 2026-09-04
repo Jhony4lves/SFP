@@ -175,3 +175,12 @@
   script.dataset.sfpManualInvoiceReconciliation='1';
   document.head.appendChild(script);
 })();
+
+(function loadOpenFinancePersonal(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-personal="1"]'))return;
+  const script=document.createElement('script');
+  script.src='open-finance-personal.js';
+  script.async=false;
+  script.dataset.sfpOpenFinancePersonal='1';
+  document.head.appendChild(script);
+})();
