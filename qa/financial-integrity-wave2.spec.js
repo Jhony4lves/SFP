@@ -117,7 +117,7 @@ test.describe('Financial integrity v2 — #153..#161',()=>{
     expect(result.safeToSpendCents).toBe(10000);
   });
 
-  test('#160 cobertura global não esconde falta na conta pagadora',async({page})=>{
+  test('#160 cobertura global sem transferência não vira dinheiro livre; transferência programada libera o excedente',async({page})=>{
     await boot(page);
     const v=base();v.accounts=[
       {id:1,name:'Conta do débito',type:'Conta corrente',initial:0,balanceMode:'snapshot',balanceDate:'2026-09-01'},
@@ -125,10 +125,19 @@ test.describe('Financial integrity v2 — #153..#161',()=>{
     ];
     v.transactions=[tx(1,'expense',400,'2026-09-11',1)];
     await useState(page,v);
-    const result=await page.evaluate(()=>SFPFinancialIntegrityV2.liquiditySnapshot({reference:new Date(2026,8,10)}));
-    expect(result.safeToSpendCents).toBe(10000);
-    expect(result.accountRisks).toHaveLength(1);
-    expect(result.accountRisks[0]).toMatchObject({accountId:1,requiredTransferCents:40000});
+    const uncovered=await page.evaluate(()=>SFPFinancialIntegrityV2.liquiditySnapshot({reference:new Date(2026,8,10)}));
+    expect(uncovered.safeToSpendCents).toBe(0);
+    expect(uncovered.negativeRisk ?? uncovered.projection.negativeRisk).toBe(true);
+    expect(uncovered.accountRisks).toHaveLength(1);
+    expect(uncovered.accountRisks[0]).toMatchObject({accountId:1,requiredTransferCents:40000});
+
+    await page.evaluate(()=>{
+      state.transfers=[{id:90,desc:'Cobertura da conta pagadora',amount:400,date:'2026-09-10',fromId:2,toId:1,balanceImpact:true}];
+      renderAll();
+    });
+    const covered=await page.evaluate(()=>SFPFinancialIntegrityV2.liquiditySnapshot({reference:new Date(2026,8,10)}));
+    expect(covered.accountRisks).toHaveLength(0);
+    expect(covered.safeToSpendCents).toBe(10000);
   });
 
   test('#161 crédito utilizado sem dívida vinculada vira passivo e reserva conservadora',async({page})=>{
