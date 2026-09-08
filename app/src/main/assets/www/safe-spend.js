@@ -112,49 +112,26 @@
   document.head.appendChild(script);
 })();
 
-/*
- * SFP_BALANCE_EVIDENCE_GUARD_V1
- *
- * transferEvidence é somente evidência de uma possível transferência.
- * Enquanto não houver pareamento/confirmação, ela não representa dinheiro
- * efetivamente debitado ou creditado no saldo oficial da conta.
- *
- * O core legado ainda soma evidências pendentes em accountBalance(). Este
- * guard neutraliza apenas essa parcela e se auto-desativa quando o core for
- * refatorado para remover transferEvidence da função nativa.
- */
 (function installTransferEvidenceBalanceGuard(){
   if(typeof document==='undefined')return;
-
   const install=()=>{
     try{
-      if(typeof accountBalance!=='function'||typeof state==='undefined'){
-        setTimeout(install,0);
-        return;
-      }
+      if(typeof accountBalance!=='function'||typeof state==='undefined'){setTimeout(install,0);return;}
       if(accountBalance.__sfpTransferEvidenceNeutral===true)return;
-
       const source=Function.prototype.toString.call(accountBalance);
       if(!source.includes('transferEvidence'))return;
-
       const original=accountBalance;
       const guarded=function(id){
         let value=Number(original(id)||0);
-        (state.transferEvidence||[])
-          .filter(e=>e.accountId==id&&e.status!=='matched'&&e.balanceImpact===true)
-          .forEach(e=>value-=Number(e.amount)||0);
+        (state.transferEvidence||[]).filter(e=>e.accountId==id&&e.status!=='matched'&&e.balanceImpact===true).forEach(e=>value-=Number(e.amount)||0);
         return Math.round(value*100)/100;
       };
-
       Object.defineProperty(guarded,'__sfpTransferEvidenceNeutral',{value:true});
       Object.defineProperty(guarded,'__sfpOriginalAccountBalance',{value:original});
       accountBalance=guarded;
       if(typeof window!=='undefined')window.accountBalance=guarded;
-    }catch(error){
-      console.error('SFP balance evidence guard:',error);
-    }
+    }catch(error){console.error('SFP balance evidence guard:',error);}
   };
-
   setTimeout(install,0);
 })();
 
@@ -176,72 +153,41 @@
   document.head.appendChild(script);
 })();
 
-/*
- * SFP_DEBT_INSTALLMENT_FLOOR_GUARD_V1
- *
- * Uma edição de contrato não pode apagar implicitamente a existência de
- * parcelas que já possuem pagamento persistido. O histórico explícito é a
- * fonte mais forte; paidInstallments permanece como piso para estados legados.
- */
 (function installDebtInstallmentFloorGuard(){
   if(typeof document==='undefined')return;
-
   const install=()=>{
     const form=document.getElementById('debtForm');
     if(!form){setTimeout(install,0);return}
     if(form.dataset.sfpDebtInstallmentFloor==='1')return;
     form.dataset.sfpDebtInstallmentFloor='1';
-
     form.addEventListener('submit',event=>{
       try{
         const id=Number(document.getElementById('debtId')?.value||0);
         if(!id||typeof state==='undefined')return;
         const debt=(state.debts||[]).find(item=>Number(item.id)===id);
         if(!debt)return;
-
         const requested=Math.trunc(Number(document.getElementById('debtInstallments')?.value));
         if(!Number.isInteger(requested)||requested<1)return;
-
-        const explicitMax=(debt.history||[])
-          .filter(item=>item?.type==='payment'&&Number.isInteger(Number(item.installment)))
-          .reduce((max,item)=>Math.max(max,Number(item.installment)),0);
+        const explicitMax=(debt.history||[]).filter(item=>item?.type==='payment'&&Number.isInteger(Number(item.installment))).reduce((max,item)=>Math.max(max,Number(item.installment)),0);
         const legacyPaid=Math.max(0,Math.trunc(Number(debt.paidInstallments)||0));
         const minimum=Math.max(explicitMax,legacyPaid);
         if(requested>=minimum)return;
-
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        const message=minimum===1
-          ? 'Esta dívida já possui 1 parcela paga. O contrato não pode ser reduzido para menos de 1 parcela.'
-          : `Esta dívida já possui pagamentos vinculados até a parcela ${minimum}. O contrato não pode ter menos de ${minimum} parcelas.`;
+        event.preventDefault();event.stopImmediatePropagation();
+        const message=minimum===1?'Esta dívida já possui 1 parcela paga. O contrato não pode ser reduzido para menos de 1 parcela.':`Esta dívida já possui pagamentos vinculados até a parcela ${minimum}. O contrato não pode ter menos de ${minimum} parcelas.`;
         if(typeof toast==='function')toast(message,'warning');
-      }catch(error){
-        console.error('SFP debt installment floor guard:',error);
-      }
+      }catch(error){console.error('SFP debt installment floor guard:',error);}
     },true);
   };
-
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
-  else install();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
 
-/*
- * SFP_GOAL_ACCOUNT_LOCK_GUARD_V1
- *
- * Trocar apenas o accountId de uma meta não move os aportes já realizados.
- * Depois do primeiro aporte real, a conta vinculada passa a fazer parte da
- * identidade financeira da meta. Uma futura migração deve mover o dinheiro
- * explicitamente; edição cadastral simples não pode fingir que isso ocorreu.
- */
 (function installGoalAccountLockGuard(){
   if(typeof document==='undefined')return;
-
   const install=()=>{
     const form=document.getElementById('goalForm');
     if(!form){setTimeout(install,0);return}
     if(form.dataset.sfpGoalAccountLock==='1')return;
     form.dataset.sfpGoalAccountLock='1';
-
     form.addEventListener('submit',event=>{
       try{
         const id=Number(document.getElementById('goalId')?.value||0);
@@ -252,16 +198,19 @@
         if(!requested||Number(goal.accountId)===requested)return;
         const hasContributions=(state.transfers||[]).some(t=>Number(t.goalId)===id);
         if(!hasContributions)return;
-
-        event.preventDefault();
-        event.stopImmediatePropagation();
+        event.preventDefault();event.stopImmediatePropagation();
         if(typeof toast==='function')toast('Esta meta já possui aportes. Para trocar a conta vinculada, mova o dinheiro explicitamente em vez de alterar apenas o cadastro.','warning');
-      }catch(error){
-        console.error('SFP goal account lock guard:',error);
-      }
+      }catch(error){console.error('SFP goal account lock guard:',error);}
     },true);
   };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
-  else install();
+(function loadFinancialRootIntegrity(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-financial-root-integrity="1"]'))return;
+  const script=document.createElement('script');
+  script.src='financial-root-integrity.js';
+  script.async=false;
+  script.dataset.sfpFinancialRootIntegrity='1';
+  document.head.appendChild(script);
 })();
