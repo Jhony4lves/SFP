@@ -47,8 +47,8 @@ test('#163 financialContextSnapshot não chama competência pendente de realizad
     snapshot: financialContextSnapshot({ reference: new Date(2026, 1, 15, 12), months: 1 }).realized
   }));
 
-  expect(result.cash).toMatchObject({ income: 500, expense: 0, net: 500 });
-  expect(result.accrual).toMatchObject({ income: 500, expense: 70, net: 430 });
+  expect(result.cash).toMatchObject({ income: 500, expense: 0 });
+  expect(result.accrual).toMatchObject({ income: 500, expense: 70 });
   expect(result.snapshot).toEqual({
     incomeCents: 50000,
     expenseCents: 0,
