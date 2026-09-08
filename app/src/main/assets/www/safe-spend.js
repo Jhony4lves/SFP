@@ -224,3 +224,44 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
 })();
+
+/*
+ * SFP_GOAL_ACCOUNT_LOCK_GUARD_V1
+ *
+ * Trocar apenas o accountId de uma meta não move os aportes já realizados.
+ * Depois do primeiro aporte real, a conta vinculada passa a fazer parte da
+ * identidade financeira da meta. Uma futura migração deve mover o dinheiro
+ * explicitamente; edição cadastral simples não pode fingir que isso ocorreu.
+ */
+(function installGoalAccountLockGuard(){
+  if(typeof document==='undefined')return;
+
+  const install=()=>{
+    const form=document.getElementById('goalForm');
+    if(!form){setTimeout(install,0);return}
+    if(form.dataset.sfpGoalAccountLock==='1')return;
+    form.dataset.sfpGoalAccountLock='1';
+
+    form.addEventListener('submit',event=>{
+      try{
+        const id=Number(document.getElementById('goalId')?.value||0);
+        if(!id||typeof state==='undefined')return;
+        const goal=(state.goals||[]).find(item=>Number(item.id)===id);
+        if(!goal)return;
+        const requested=Number(document.getElementById('goalAccount')?.value||0);
+        if(!requested||Number(goal.accountId)===requested)return;
+        const hasContributions=(state.transfers||[]).some(t=>Number(t.goalId)===id);
+        if(!hasContributions)return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if(typeof toast==='function')toast('Esta meta já possui aportes. Para trocar a conta vinculada, mova o dinheiro explicitamente em vez de alterar apenas o cadastro.','warning');
+      }catch(error){
+        console.error('SFP goal account lock guard:',error);
+      }
+    },true);
+  };
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
+  else install();
+})();
