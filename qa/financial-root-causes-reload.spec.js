@@ -121,35 +121,39 @@ test('#163 realizado continua caixa após reload do IndexedDB', async ({ page })
   expect(errors).toEqual([]);
 });
 
-test('#164 poupança realizada não muda após reload', async ({ page }) => {
-  const future = fixture('Reload #164 futura');
-  future.mesAtual = '2099-01';
-  future.accounts = [
+test('#164 transferência futura continua fora da poupança realizada após reload', async ({ page }) => {
+  const value = fixture('Reload #164 futura');
+  value.mesAtual = '2099-01';
+  value.accounts = [
     { id:1, name:'Conta', type:'Conta corrente', initial:1000, balanceMode:'snapshot', balanceDate:'2098-12-31' },
     { id:2, name:'Reserva', type:'Reserva', initial:0, balanceMode:'snapshot', balanceDate:'2098-12-31' },
     { id:3, name:'Investimento', type:'Investimento', initial:0, balanceMode:'snapshot', balanceDate:'2098-12-31' }
   ];
-  future.transfers = [{ id:1, amount:500, date:'2099-01-20', fromId:1, toId:2, balanceImpact:false }];
-  let errors = await boot(page, future);
+  value.transfers = [{ id:1, amount:500, date:'2099-01-20', fromId:1, toId:2, balanceImpact:false }];
+  const errors = await boot(page, value);
+
   expect(await page.evaluate(() => actualSavings('2099-01'))).toBe(0);
-  await reload(page, future.settings.name);
+  await reload(page, value.settings.name);
   expect(await page.evaluate(() => actualSavings('2099-01'))).toBe(0);
   expect(errors).toEqual([]);
+});
 
-  const realized = fixture('Reload #164 realizada');
-  realized.mesAtual = '2000-01';
-  realized.accounts = [
+test('#164 transferência entre contas protegidas não duplica poupança após reload', async ({ page }) => {
+  const value = fixture('Reload #164 realizada');
+  value.mesAtual = '2000-01';
+  value.accounts = [
     { id:1, name:'Conta', type:'Conta corrente', initial:1000, balanceMode:'snapshot', balanceDate:'1999-12-31' },
     { id:2, name:'Reserva', type:'Reserva', initial:0, balanceMode:'snapshot', balanceDate:'1999-12-31' },
     { id:3, name:'Investimento', type:'Investimento', initial:0, balanceMode:'snapshot', balanceDate:'1999-12-31' }
   ];
-  realized.transfers = [
+  value.transfers = [
     { id:11, amount:100, date:'2000-01-10', fromId:1, toId:2, balanceImpact:true },
     { id:12, amount:100, date:'2000-01-11', fromId:2, toId:3, balanceImpact:true }
   ];
-  errors = await boot(page, realized);
+  const errors = await boot(page, value);
+
   expect(await page.evaluate(() => actualSavings('2000-01'))).toBe(100);
-  await reload(page, realized.settings.name);
+  await reload(page, value.settings.name);
   expect(await page.evaluate(() => actualSavings('2000-01'))).toBe(100);
   expect(errors).toEqual([]);
 });
