@@ -172,14 +172,19 @@
     });
 
     const accountRisks=[...accountState.values()].filter(a=>a.minBalanceCents<0).map(a=>({accountId:a.id,accountName:a.name,minBalanceCents:a.minBalanceCents,minDate:a.minDate,requiredTransferCents:-a.minBalanceCents}));
-    const safeToSpendCents=clamp0(Math.min(openingCents,minBalance));
+    // "Gasto seguro" significa dinheiro que pode sair agora sem deixar nenhuma
+    // conta operacional conhecida negativa na trajetória. Cobertura global em
+    // outra conta não é autorização implícita para gastar: a transferência que
+    // resolve o risco precisa existir no cronograma antes do vencimento.
+    const accountRisk=accountRisks.length>0;
+    const safeToSpendCents=accountRisk?0:clamp0(Math.min(openingCents,minBalance));
     const shortfallCents=clamp0(-minBalance);
-    return {days,referenceDate,availableCents:openingCents,projectedCents:balance,minBalanceCents:minBalance,minDate,negativeRisk:minBalance<0,safeToSpendCents,shortfallCents,preserveCents:clamp0(openingCents-safeToSpendCents),events:trace,accountRisks,protectedCents:cents(protectedBalances()),unresolvedCreditCents:cents(unresolvedCreditUsed()),overdueEvents:economic.filter(e=>e.overdue),allEvents:economic};
+    return {days,referenceDate,availableCents:openingCents,projectedCents:balance,minBalanceCents:minBalance,minDate,negativeRisk:minBalance<0||accountRisk,accountRisk,safeToSpendCents,shortfallCents,preserveCents:clamp0(openingCents-safeToSpendCents),events:trace,accountRisks,protectedCents:cents(protectedBalances()),unresolvedCreditCents:cents(unresolvedCreditUsed()),overdueEvents:economic.filter(e=>e.overdue),allEvents:economic};
   }
 
   function liquiditySnapshot({reference=new Date(),days=HORIZON_DAYS}={}){
     const projection=buildProjection(days,reference),nextIncome=baseEconomicEvents(days,reference).filter(e=>e.type==='income'&&!e.overdue&&!e.cashIgnored&&String(e.date)>=isoDate(reference)).sort(eventComparator)[0]||null;
-    return {version:VERSION,horizonDays:days,referenceDate:isoDate(reference),totalAccountCents:cents(allBalances()),operationalAvailableCents:projection.availableCents,protectedCents:projection.protectedCents,safeToSpendCents:projection.safeToSpendCents,preserveCents:projection.preserveCents,shortfallCents:projection.shortfallCents,nextIncome:nextIncome?{...nextIncome,amountCents:cents(nextIncome.amount)}:null,overdueEvents:projection.overdueEvents.map(e=>({...e,amountCents:cents(e.amount)})),accountRisks:projection.accountRisks,unresolvedCreditCents:projection.unresolvedCreditCents,projection};
+    return {version:VERSION,horizonDays:days,referenceDate:isoDate(reference),totalAccountCents:cents(allBalances()),operationalAvailableCents:projection.availableCents,protectedCents:projection.protectedCents,safeToSpendCents:projection.safeToSpendCents,preserveCents:projection.preserveCents,shortfallCents:projection.shortfallCents,nextIncome:nextIncome?{...nextIncome,amountCents:cents(nextIncome.amount)}:null,overdueEvents:projection.overdueEvents.map(e=>({...e,amountCents:cents(e.amount)})),accountRisks:projection.accountRisks,accountRisk:projection.accountRisk,unresolvedCreditCents:projection.unresolvedCreditCents,projection};
   }
 
   function installTemporalBalanceGuard(){
@@ -219,7 +224,7 @@
       const liquidity=liquiditySnapshot({reference,days:HORIZON_DAYS});
       const projections=[7,30,60,90,120,HORIZON_DAYS].filter((v,i,a)=>a.indexOf(v)===i).map(days=>buildProjection(days,reference));
       const commitments=baseEconomicEvents(HORIZON_DAYS,reference).filter(e=>e.type==='expense'&&!e.cashIgnored);
-      return {...base,availableCents:liquidity.operationalAvailableCents,protected:{status:'known',amountCents:liquidity.protectedCents},commitments:{totalCents:commitments.reduce((s,e)=>s+cents(e.amount),0),events:commitments.map(e=>({...e,amountCents:cents(e.amount)}))},nextIncome:liquidity.nextIncome,projections,reserved:{status:'known',amountCents:liquidity.preserveCents,reasons:commitments.map(e=>({id:e.id,date:e.dueDate||e.date,amountCents:cents(e.amount),origin:e.source,overdue:!!e.overdue}))},free:{status:'known',amountCents:liquidity.safeToSpendCents,formula:'MIN_OPERATIONAL_BALANCE_WITHIN_HORIZON'},negativeRisk:liquidity.shortfallCents>0||projections.some(p=>p.negativeRisk),liquidity};
+      return {...base,availableCents:liquidity.operationalAvailableCents,protected:{status:'known',amountCents:liquidity.protectedCents},commitments:{totalCents:commitments.reduce((s,e)=>s+cents(e.amount),0),events:commitments.map(e=>({...e,amountCents:cents(e.amount)}))},nextIncome:liquidity.nextIncome,projections,reserved:{status:'known',amountCents:liquidity.preserveCents,reasons:commitments.map(e=>({id:e.id,date:e.dueDate||e.date,amountCents:cents(e.amount),origin:e.source,overdue:!!e.overdue}))},free:{status:'known',amountCents:liquidity.safeToSpendCents,formula:'MIN_OPERATIONAL_BALANCE_WITHIN_HORIZON'},negativeRisk:liquidity.shortfallCents>0||liquidity.accountRisks.length>0||projections.some(p=>p.negativeRisk),liquidity};
     };
     const status=function(value){if(value==='overdue')return'Atrasado';if(value==='scheduled')return'Agendado';return originals.statusLabel?originals.statusLabel(value):value||'—'};
     global.upcomingEvents=upcoming;global.pendingUpcomingEvents=pending;global.nextIncomeEvent=nextIncome;global.commitmentUntilNextIncome=preserve;global.projectionFor=projection;global.financialContextSnapshot=context;global.sfpFinancialContextSnapshot=context;global.statusLabel=status;
@@ -234,8 +239,8 @@
       report.availableCents=liquidity.operationalAvailableCents;report.reservedCents=liquidity.preserveCents;report.freeCents=liquidity.safeToSpendCents;report.safeToSpendCents=liquidity.safeToSpendCents;report.shortfallCents=liquidity.shortfallCents;
       report.coverageRatio=liquidity.operationalAvailableCents>0?Math.max(0,Math.min(1,(liquidity.operationalAvailableCents-liquidity.shortfallCents)/liquidity.operationalAvailableCents)):liquidity.shortfallCents?0:1;
       if(liquidity.shortfallCents>0)report.status='critical';else if((liquidity.accountRisks||[]).length||liquidity.preserveCents>0)report.status='tight';else report.status='healthy';
-      report.formula='SAFE_TO_SPEND = MAX(0, menor saldo operacional projetado na janela)';
-      report.basis=`Trajetória determinística de ${liquidity.horizonDays} dias, incluindo atrasados, entradas e saídas conhecidas. Reservas/Investimentos protegidos ficam fora do dinheiro operacional.`;
+      report.formula='SAFE_TO_SPEND = 0 se uma conta operacional ficar negativa; caso contrário, MAX(0, menor saldo operacional global projetado)';
+      report.basis=`Trajetória determinística de ${liquidity.horizonDays} dias, incluindo atrasados, entradas, saídas conhecidas e cobertura por conta. Reservas/Investimentos protegidos ficam fora do dinheiro operacional.`;
       report.protectedCents=liquidity.protectedCents;report.accountRisks=liquidity.accountRisks||[];report.overdueEvents=liquidity.overdueEvents||[];report.unresolvedCreditCents=liquidity.unresolvedCreditCents||0;return report;
     }});
   }
@@ -243,6 +248,15 @@
   function updateTodayLabels(){
     const committed=document.getElementById('todayCommitted');if(committed){const metric=committed.closest('.metric'),label=metric?.querySelector('span'),hint=metric?.querySelector('small');if(label)label.textContent='Preservar agora';if(hint)hint.textContent='Obrigações + valores protegidos'}
     const sideHint=document.getElementById('sideHint');if(sideHint)sideHint.textContent='Após preservar obrigações e reservas';
+    try{
+      const l=liquiditySnapshot({days:HORIZON_DAYS});
+      if(l.accountRisks.length){
+        const first=l.accountRisks[0],value=typeof global.brl==='function'?global.brl(first.requiredTransferCents/100):money(first.requiredTransferCents/100),date=typeof global.sfpDatePt==='function'?global.sfpDatePt(first.minDate):first.minDate;
+        const free=document.getElementById('todayFree');if(free)free.className='cockpit-hero-value warning';
+        const status=document.getElementById('todayFreeStatus');if(status){status.textContent='Atenção';status.className='badge warning'}
+        const hint=document.getElementById('todayFreeHint');if(hint)hint.textContent=`Gasto livre zerado: ${first.accountName||'uma conta'} precisa de ${value} até ${date}. Programe a transferência antes de considerar dinheiro disponível.`;
+      }
+    }catch(error){console.error('SFP liquidity label:',error)}
   }
 
   function renderLiquidityWarnings(){
