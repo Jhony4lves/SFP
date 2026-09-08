@@ -27,16 +27,16 @@
     if(importStatement.__sfpStatementClosingInvariant===true)return true;
     const original=importStatement;
 
-    const balanceAtDate=(accountId,closingDate)=>{
+    const bankBackedBalanceAtDate=(accountId,closingDate)=>{
       const a=(state.accounts||[]).find(x=>sameId(x.id,accountId));
       if(!a)return 0;
       const anchor=isoDate(a.balanceDate||state.baseDate||'');
       let value=Number(a.initial)||0;
-      (state.transactions||[]).filter(t=>sameId(t.accountId,accountId)&&t.status==='paid'&&t.balanceImpact===true).forEach(t=>{
-        const date=isoDate(t.date);if(anchor&&date<=anchor||date>closingDate)return;
+      (state.transactions||[]).filter(t=>sameId(t.accountId,accountId)&&t.status==='paid'&&t.balanceImpact===true&&t.statementKey).forEach(t=>{
+        const date=isoDate(t.date);if((anchor&&date<=anchor)||date>closingDate)return;
         value+=t.kind==='income'?Number(t.amount)||0:-(Number(t.amount)||0);
       });
-      (state.transfers||[]).forEach(t=>{
+      (state.transfers||[]).filter(t=>t.statementKey||(t.statementKeys||[]).length).forEach(t=>{
         const applies=t.balanceImpactByAccount?.[accountId]??t.balanceImpactByAccount?.[String(accountId)]??(t.balanceImpact!==false);
         if(!applies)return;
         if(sameId(t.fromId,accountId)){
@@ -46,10 +46,10 @@
           const date=isoDate(t.settledDate||t.date);if((!anchor||date>anchor)&&date<=closingDate)value+=Number(t.amount)||0;
         }
       });
-      (state.invoices||[]).filter(i=>sameId(i.accountId,accountId)).forEach(i=>(i.payments||[]).filter(p=>p.balanceImpact===true).forEach(p=>{
+      (state.invoices||[]).filter(i=>sameId(i.accountId,accountId)).forEach(i=>(i.payments||[]).filter(p=>p.balanceImpact===true&&p.statementKey).forEach(p=>{
         const date=isoDate(p.date);if((!anchor||date>anchor)&&date<=closingDate)value-=Number(p.amount)||0;
       }));
-      (state.transferEvidence||[]).filter(e=>sameId(e.accountId,accountId)&&e.status!=='matched'&&e.balanceImpact===true).forEach(e=>{
+      (state.transferEvidence||[]).filter(e=>sameId(e.accountId,accountId)&&e.status!=='matched'&&e.balanceImpact===true&&e.statementKey).forEach(e=>{
         const date=isoDate(e.date);if((!anchor||date>anchor)&&date<=closingDate)value+=Number(e.amount)||0;
       });
       return round2(value);
@@ -68,9 +68,10 @@
           const accepted=(draft||[]).filter(r=>{
             if(r?.duplicate||r?.action==='ignore'||used.has(r?.key))return false;
             if(r?.action==='transfer'&&(!r.transferAccountId||sameId(r.transferAccountId,r.accountId)))return false;
-            return isoDate(r?.date)>isoDate(a.balanceDate)&&isoDate(r?.date)<=closingDate;
+            const date=isoDate(r?.date);
+            return date>isoDate(a.balanceDate)&&date<=closingDate;
           });
-          const expected=round2(balanceAtDate(accountId,closingDate)+accepted.reduce((sum,row)=>sum+(Number(row.amount)||0),0));
+          const expected=round2(bankBackedBalanceAtDate(accountId,closingDate)+accepted.reduce((sum,row)=>sum+(Number(row.amount)||0),0));
           const difference=round2(closingBalance-expected);
           if(Math.abs(difference)>.009){
             if(typeof toast==='function')toast(`Extrato inconsistente: o saldo final informado pelo banco diverge em ${typeof brl==='function'?brl(difference):difference.toFixed(2)} dos movimentos aceitos. Revise o arquivo antes de importar.`,'warning');
