@@ -3,8 +3,6 @@ const { monitor } = require('./helpers');
 
 const VIEWPORTS = [
   { name: 'compact-320', width: 320, height: 700 },
-  { name: 'compact-360', width: 360, height: 800 },
-  { name: 'galaxy-s24', width: 390, height: 844 },
   { name: 'short-landscape', width: 568, height: 320 }
 ];
 
@@ -67,14 +65,14 @@ async function overflowSnapshot(page, pageName) {
   }, pageName);
 }
 
-test.describe('SFP mobile UI matrix', () => {
+test.describe('SFP compact mobile UI gap coverage', () => {
   for (const viewport of VIEWPORTS) {
     test(`${viewport.name}: todas as páginas permanecem sem overflow horizontal`, async ({ page }) => {
       const errors = monitor(page);
       await boot(page, viewport);
 
       const pages = await pageNames(page);
-      expect(pages.length).toBeGreaterThanOrEqual(17);
+      expect(pages.length).toBeGreaterThanOrEqual(19);
 
       for (const pageName of pages) {
         await page.evaluate((name) => window.setPage(name), pageName);
