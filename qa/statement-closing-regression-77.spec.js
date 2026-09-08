@@ -45,7 +45,6 @@ test('#77 extrato com saldo final incompatível não pode ser persistido silenci
 
     return {
       meta,
-      preview: statementDraft.map(r => ({ action: r.action, amount: r.amount, duplicate: r.duplicate })),
       before,
       after: {
         balance: accountBalance(1),
@@ -57,7 +56,7 @@ test('#77 extrato com saldo final incompatível não pode ser persistido silenci
     };
   });
 
-  expect(result.meta?.balance).toBe(900);
+  expect(result.meta).toMatchObject({ closingBalance: 900, closingDate: '2026-01-31', source: 'ofx' });
   expect(result.before).toEqual({
     balance: 1000,
     initial: 1000,
