@@ -69,6 +69,18 @@ jobs:
           echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
+      - name: Validate version tag
+        shell: bash
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          EXPECTED_TAG="v${VERSION_NAME}"
+          if [ "$GITHUB_REF_NAME" != "$EXPECTED_TAG" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} não corresponde ao versionName ${VERSION_NAME}. Esperado: ${EXPECTED_TAG}."
+            exit 1
+          fi
+
       - name: Validate signing configuration
         shell: bash
         run: |
@@ -138,12 +150,6 @@ jobs:
           VERSION_NAME: ${{ steps.version.outputs.name }}
         run: |
           set -euo pipefail
-          EXPECTED_TAG="v${VERSION_NAME}"
-          if [ "$GITHUB_REF_NAME" != "$EXPECTED_TAG" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} não corresponde ao versionName ${VERSION_NAME}. Esperado: ${EXPECTED_TAG}."
-            exit 1
-          fi
-
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" dist/* --clobber
           else
