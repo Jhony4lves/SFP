@@ -6,6 +6,12 @@
   const sameId=(a,b)=>String(a)===String(b);
   const isoDate=value=>String(value||'').slice(0,10);
   const isoMonth=value=>isoDate(value).slice(0,7);
+  const nextIsoDay=value=>{
+    const [year,month,day]=isoDate(value).split('-').map(Number);
+    if(!year||!month||!day)return '';
+    const d=new Date(Date.UTC(year,month-1,day+1));
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+  };
   const monthAdd=(month,delta)=>{
     const [year,number]=String(month||'').split('-').map(Number);
     const d=new Date(year,(number||1)-1+delta,1);
@@ -65,17 +71,23 @@
         const closingBalance=Number(meta?.closingBalance);
         if(a&&a.balanceDate&&closingDate&&Number.isFinite(closingBalance)&&closingDate>=isoDate(a.balanceDate)){
           const used=typeof existingStmtKeys==='function'?existingStmtKeys():new Set();
+          const anchorDate=isoDate(a.balanceDate);
           const accepted=(draft||[]).filter(r=>{
             if(r?.duplicate||r?.action==='ignore'||used.has(r?.key))return false;
             if(r?.action==='transfer'&&(!r.transferAccountId||sameId(r.transferAccountId,r.accountId)))return false;
             const date=isoDate(r?.date);
-            return date>isoDate(a.balanceDate)&&date<=closingDate;
+            return date>anchorDate&&date<=closingDate;
           });
-          const expected=round2(bankBackedBalanceAtDate(accountId,closingDate)+accepted.reduce((sum,row)=>sum+(Number(row.amount)||0),0));
-          const difference=round2(closingBalance-expected);
-          if(Math.abs(difference)>.009){
-            if(typeof toast==='function')toast(`Extrato inconsistente: o saldo final informado pelo banco diverge em ${typeof brl==='function'?brl(difference):difference.toFixed(2)} dos movimentos aceitos. Revise o arquivo antes de importar.`,'warning');
-            return false;
+          const firstAcceptedDate=accepted.map(row=>isoDate(row?.date)).filter(Boolean).sort()[0]||'';
+          const continuationDate=nextIsoDay(anchorDate);
+          const closesWithoutGap=accepted.length>0?firstAcceptedDate===continuationDate:closingDate===continuationDate;
+          if(closesWithoutGap){
+            const expected=round2(bankBackedBalanceAtDate(accountId,closingDate)+accepted.reduce((sum,row)=>sum+(Number(row.amount)||0),0));
+            const difference=round2(closingBalance-expected);
+            if(Math.abs(difference)>.009){
+              if(typeof toast==='function')toast(`Extrato inconsistente: o saldo final informado pelo banco diverge em ${typeof brl==='function'?brl(difference):difference.toFixed(2)} dos movimentos aceitos. Revise o arquivo antes de importar.`,'warning');
+              return false;
+            }
           }
         }
       }catch(error){
