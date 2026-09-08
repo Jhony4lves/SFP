@@ -17,13 +17,18 @@ async function visibleFeedback(page) {
       document.querySelector('#toast'),
       document.querySelector('#inAppBanner')
     ].filter(Boolean);
-    const shown = candidates.filter(el => {
-      const cs = getComputedStyle(el);
-      const rect = el.getBoundingClientRect();
-      return cs.display !== 'none' && cs.visibility !== 'hidden' && rect.width > 0 && rect.height > 0 &&
-        (el.classList.contains('show') || !el.classList.contains('hidden'));
-    });
-    return shown.map(el => ({ id: el.id, text: (el.textContent || '').trim().replace(/\s+/g, ' ') }));
+
+    return candidates
+      .filter(el => {
+        const cs = getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        if (cs.display === 'none' || cs.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) return false;
+        if (el.id === 'feedbackCard' || el.id === 'toast') return el.classList.contains('show');
+        if (el.id === 'inAppBanner') return !el.classList.contains('hidden');
+        return false;
+      })
+      .map(el => ({ id: el.id, text: (el.textContent || '').trim().replace(/\s+/g, ' ') }))
+      .filter(item => item.text.length > 0);
   });
 }
 
@@ -61,9 +66,6 @@ test('criar dívida gera feedback visual único e fecha o fluxo', async ({ page 
   await page.locator('#debtPayment').fill('100');
   await page.locator('#debtFirstDue').fill('2026-10-10');
   await page.locator('#debtInstallments').fill('10');
-  await page.locator('#debtDay').fill('10');
-  const account = page.locator('#debtAccount');
-  if (await account.locator('option').count()) await account.selectOption({ index: 0 });
   await page.locator('#debtForm button[type="submit"], #debtSubmit').first().click();
 
   await expect.poll(() => page.evaluate(() => state.debts.some(d => d.name === 'Dívida Feedback'))).toBe(true);
