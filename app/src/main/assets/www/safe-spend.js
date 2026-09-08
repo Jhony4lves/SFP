@@ -175,3 +175,52 @@
   script.dataset.sfpManualInvoiceReconciliation='1';
   document.head.appendChild(script);
 })();
+
+/*
+ * SFP_DEBT_INSTALLMENT_FLOOR_GUARD_V1
+ *
+ * Uma edição de contrato não pode apagar implicitamente a existência de
+ * parcelas que já possuem pagamento persistido. O histórico explícito é a
+ * fonte mais forte; paidInstallments permanece como piso para estados legados.
+ */
+(function installDebtInstallmentFloorGuard(){
+  if(typeof document==='undefined')return;
+
+  const install=()=>{
+    const form=document.getElementById('debtForm');
+    if(!form){setTimeout(install,0);return}
+    if(form.dataset.sfpDebtInstallmentFloor==='1')return;
+    form.dataset.sfpDebtInstallmentFloor='1';
+
+    form.addEventListener('submit',event=>{
+      try{
+        const id=Number(document.getElementById('debtId')?.value||0);
+        if(!id||typeof state==='undefined')return;
+        const debt=(state.debts||[]).find(item=>Number(item.id)===id);
+        if(!debt)return;
+
+        const requested=Math.trunc(Number(document.getElementById('debtInstallments')?.value));
+        if(!Number.isInteger(requested)||requested<1)return;
+
+        const explicitMax=(debt.history||[])
+          .filter(item=>item?.type==='payment'&&Number.isInteger(Number(item.installment)))
+          .reduce((max,item)=>Math.max(max,Number(item.installment)),0);
+        const legacyPaid=Math.max(0,Math.trunc(Number(debt.paidInstallments)||0));
+        const minimum=Math.max(explicitMax,legacyPaid);
+        if(requested>=minimum)return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const message=minimum===1
+          ? 'Esta dívida já possui 1 parcela paga. O contrato não pode ser reduzido para menos de 1 parcela.'
+          : `Esta dívida já possui pagamentos vinculados até a parcela ${minimum}. O contrato não pode ter menos de ${minimum} parcelas.`;
+        if(typeof toast==='function')toast(message,'warning');
+      }catch(error){
+        console.error('SFP debt installment floor guard:',error);
+      }
+    },true);
+  };
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
+  else install();
+})();
