@@ -175,3 +175,12 @@
   script.dataset.sfpManualInvoiceReconciliation='1';
   document.head.appendChild(script);
 })();
+
+(function loadInvoiceImageAIValidator(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-invoice-image-ai-validator="1"]'))return;
+  const script=document.createElement('script');
+  script.src='invoice-image-ai-validator.js';
+  script.async=false;
+  script.dataset.sfpInvoiceImageAiValidator='1';
+  document.head.appendChild(script);
+})();
