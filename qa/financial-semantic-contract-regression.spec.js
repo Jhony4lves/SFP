@@ -4,7 +4,7 @@ const { fixture, monitor, expectBootComplete } = require('./helpers');
 async function loadFixture(page, value) {
   const errors = monitor(page);
   await page.goto('/index.html');
-  await expectBootComplete(page, expect, 'Regressão semântica financeira');
+  await expectBootComplete(page, expect, 'Fixture QA');
   await page.evaluate(next => {
     state = next;
     normalize();
