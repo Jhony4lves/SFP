@@ -32,11 +32,12 @@ async function visibleFeedback(page) {
   });
 }
 
-async function expectSingleMeaningfulFeedback(page, label) {
+async function expectSingleMeaningfulFeedback(page, label, expectedText) {
   await expect.poll(() => visibleFeedback(page), { message: `${label} deve gerar feedback visual` })
     .toHaveLength(1);
   const feedback = await visibleFeedback(page);
   expect(feedback[0].text.length, `${label} não pode gerar feedback vazio`).toBeGreaterThan(3);
+  if (expectedText) expect(feedback[0].text).toContain(expectedText);
 }
 
 test('criar conta gera feedback visual único e fecha o fluxo', async ({ page }) => {
@@ -51,7 +52,22 @@ test('criar conta gera feedback visual único e fecha o fluxo', async ({ page })
 
   await expect.poll(() => page.evaluate(() => state.accounts.some(a => a.name === 'Conta Feedback'))).toBe(true);
   await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
-  await expectSingleMeaningfulFeedback(page, 'criação de conta');
+  await expectSingleMeaningfulFeedback(page, 'criação de conta', 'Conta salva com sucesso.');
+});
+
+test('editar conta gera feedback visual único sem criar duplicata', async ({ page }) => {
+  const value = fixture('Feedback edição conta QA');
+  value.accounts = [{ id: 81, name: 'Conta Antiga', type: 'Conta corrente', initial: 100, balanceMode: 'snapshot', balanceDate: '2026-09-01' }];
+  await boot(page, value);
+
+  await page.evaluate(() => editAccount(81));
+  await page.locator('#accountName').fill('Conta Editada');
+  await page.locator('#accountForm button[type="submit"], #accountSubmit').first().click();
+
+  await expect.poll(() => page.evaluate(() => state.accounts.find(a => a.id === 81)?.name)).toBe('Conta Editada');
+  await expect.poll(() => page.evaluate(() => state.accounts.length)).toBe(1);
+  await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
+  await expectSingleMeaningfulFeedback(page, 'edição de conta', 'Conta atualizada com sucesso.');
 });
 
 test('criar dívida gera feedback visual único e fecha o fluxo', async ({ page }) => {
@@ -70,7 +86,22 @@ test('criar dívida gera feedback visual único e fecha o fluxo', async ({ page 
 
   await expect.poll(() => page.evaluate(() => state.debts.some(d => d.name === 'Dívida Feedback'))).toBe(true);
   await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
-  await expectSingleMeaningfulFeedback(page, 'criação de dívida');
+  await expectSingleMeaningfulFeedback(page, 'criação de dívida', 'Dívida salva com sucesso.');
+});
+
+test('editar dívida gera feedback visual único sem criar duplicata', async ({ page }) => {
+  const value = fixture('Feedback edição dívida QA');
+  value.debts = [{ id: 82, name: 'Dívida Antiga', balance: 1000, rate: 1, payment: 100, firstDue: '2026-10-10', installments: 10, paidInstallments: 0, paymentMethod: 'bank', history: [] }];
+  await boot(page, value);
+
+  await page.evaluate(() => editDebt(82));
+  await page.locator('#debtName').fill('Dívida Editada');
+  await page.locator('#debtForm button[type="submit"], #debtSubmit').first().click();
+
+  await expect.poll(() => page.evaluate(() => state.debts.find(d => d.id === 82)?.name)).toBe('Dívida Editada');
+  await expect.poll(() => page.evaluate(() => state.debts.length)).toBe(1);
+  await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
+  await expectSingleMeaningfulFeedback(page, 'edição de dívida', 'Dívida atualizada com sucesso.');
 });
 
 test('criar recorrência gera feedback visual único e atualiza a lista', async ({ page }) => {
@@ -88,5 +119,21 @@ test('criar recorrência gera feedback visual único e atualiza a lista', async 
   await expect.poll(() => page.evaluate(() => state.recurring.some(r => r.desc === 'Internet Feedback'))).toBe(true);
   await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
   await expect(page.locator('#recList')).toContainText('Internet Feedback');
-  await expectSingleMeaningfulFeedback(page, 'criação de recorrência');
+  await expectSingleMeaningfulFeedback(page, 'criação de recorrência', 'Recorrência salva com sucesso.');
+});
+
+test('editar recorrência gera feedback visual único sem criar duplicata', async ({ page }) => {
+  const value = fixture('Feedback edição recorrência QA');
+  value.recurring = [{ id: 83, desc: 'Recorrência Antiga', amount: 120, day: 8, start: '2026-09', kind: 'expense', active: true }];
+  await boot(page, value);
+
+  await page.evaluate(() => editRecurring(83));
+  await page.locator('#recDesc').fill('Recorrência Editada');
+  await page.locator('#recForm button[type="submit"], #recForm button').first().click();
+
+  await expect.poll(() => page.evaluate(() => state.recurring.find(r => r.id === 83)?.desc)).toBe('Recorrência Editada');
+  await expect.poll(() => page.evaluate(() => state.recurring.length)).toBe(1);
+  await expect(page.locator('#modalRoot')).toHaveClass(/hidden/);
+  await expect(page.locator('#recList')).toContainText('Recorrência Editada');
+  await expectSingleMeaningfulFeedback(page, 'edição de recorrência', 'Recorrência atualizada com sucesso.');
 });
