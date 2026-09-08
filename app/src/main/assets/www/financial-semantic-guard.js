@@ -3,8 +3,12 @@
 
   if(typeof document==='undefined')return;
 
+  const validDate=value=>{
+    const d=value instanceof Date?new Date(value.getTime()):new Date(value||Date.now());
+    return Number.isNaN(d.getTime())?new Date():d;
+  };
   const isoDate=value=>{
-    const d=value instanceof Date?value:new Date(value||Date.now());
+    const d=validDate(value);
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   };
   const isoMonth=value=>String(value||'').slice(0,7);
@@ -51,7 +55,7 @@
     const original=global.financialContextSnapshot;
     const guarded=function(options={}){
       const base=original(options)||{};
-      const reference=options.reference instanceof Date?options.reference:new Date();
+      const reference=validDate(options.reference);
       const months=Math.max(1,Math.trunc(Number(options.months)||3));
       const endMonth=isoMonth(isoDate(reference));
       const monthList=Array.from({length:months},(_,index)=>monthAdd(endMonth,index-months+1));
