@@ -217,7 +217,10 @@ test('OPEN-FINANCE-04 bridge nativa mantém segredos no Keystore, API key em mem
   expect(bridge).toContain('"api.pluggy.ai".equalsIgnoreCase(url.getHost())');
   expect(bridge).toContain('"/v2/transactions".equals(path)');
   expect(bridge).toContain('TRANSACTION_WINDOW_DAYS = 45');
-  expect(bridge).toContain('MAX_TRANSACTION_PREVIEW_PER_ACCOUNT = 30');
+  expect(bridge).toContain('MAX_TRANSACTION_PAGES_PER_ACCOUNT = 12');
+  expect(bridge).toContain('MAX_TRANSACTIONS_PER_ACCOUNT = 5000');
+  expect(bridge).toContain('cleanString(root, \"next\")');
+  expect(bridge).toContain('next.startsWith(\"?\")');
   expect(bridge).toContain('cleanString(JSONObject object, String key)');
   expect(bridge).toContain('creditData');
   expect(bridge).not.toContain('paymentData');
@@ -232,7 +235,7 @@ test('OPEN-FINANCE-05 atualizar faturas importa compra nova, concilia existente 
 
   const beforeCount = await page.evaluate(() => state.purchases.length);
   await page.locator('#openFinanceSyncBtn').click();
-  await expect(page.locator('#openFinanceStatus')).toContainText('Faturas atualizadas pelo Open Finance');
+  await expect(page.locator('#openFinanceStatus')).toContainText('Contas e faturas sincronizadas pelo Open Finance');
 
   const first = await page.evaluate(() => ({
     count: state.purchases.length,
@@ -256,7 +259,7 @@ test('OPEN-FINANCE-05 atualizar faturas importa compra nova, concilia existente 
   expect(first.invoiceSep).toBeGreaterThanOrEqual(35.9);
 
   await page.locator('#openFinanceSyncBtn').click();
-  await expect(page.locator('#openFinanceStatus')).toContainText('Faturas atualizadas pelo Open Finance');
+  await expect(page.locator('#openFinanceStatus')).toContainText('Contas e faturas sincronizadas pelo Open Finance');
   const second = await page.evaluate(() => ({
     count: state.purchases.length,
     streaming: state.purchases.filter(p => p.desc === 'Streaming QA').length,
@@ -278,7 +281,7 @@ test('OPEN-FINANCE-06 leitura parcial aborta o lote inteiro sem alterar faturas'
 
   const before = await page.evaluate(() => JSON.stringify(state));
   await page.locator('#openFinanceSyncBtn').click();
-  await expect(page.locator('#openFinanceStatus')).toContainText('Faturas não foram alteradas');
+  await expect(page.locator('#openFinanceStatus')).toContainText('Open Finance não foi alterado');
   await expect(page.locator('#openFinanceStatus')).toContainText('leitura parcial');
   const after = await page.evaluate(() => JSON.stringify(state));
 
