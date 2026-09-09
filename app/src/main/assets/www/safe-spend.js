@@ -193,3 +193,12 @@
   script.dataset.sfpOpenFinanceItemRefs='1';
   document.head.appendChild(script);
 })();
+
+(function loadOpenFinanceUnifiedSync(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-unified-sync="1"]'))return;
+  const script=document.createElement('script');
+  script.src='open-finance-sync-accounts.js';
+  script.async=false;
+  script.dataset.sfpOpenFinanceUnifiedSync='1';
+  document.head.appendChild(script);
+})();
