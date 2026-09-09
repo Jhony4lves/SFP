@@ -49,12 +49,18 @@ async function boot(page,value){
   await page.waitForFunction(()=>window.SFPOpenFinanceBills?.version===1);
 }
 
+async function openOpenFinance(page){
+  await page.evaluate(()=>setPage('config'));
+  await expect(page.locator('#openFinancePersonalPanel')).toBeVisible();
+  await expect(page.locator('#openFinanceSyncBtn')).toBeVisible();
+}
+
 test('#207 fatura aberta concilia pelo limite usado menos compromissos futuros',async({page})=>{
   await installBridge(page);
   await boot(page,stateFor('Open Finance Bills inferência #207'));
   const before=await page.evaluate(()=>({invoice:invoiceTotal(1,'2026-09'),outstanding:cardOutstanding(1)}));
   expect(before).toEqual({invoice:222.38,outstanding:1389.18});
-  await page.evaluate(()=>setPage('dados'));
+  await openOpenFinance(page);
   await page.locator('#openFinanceSyncBtn').click();
   await expect.poll(()=>page.evaluate(()=>invoiceTotal(1,'2026-09'))).toBe(306.78);
   const after=await page.evaluate(()=>({invoice:invoiceStatus(1,'2026-09'),outstanding:cardOutstanding(1),card:card(1)}));
@@ -67,7 +73,7 @@ test('#207 fatura aberta concilia pelo limite usado menos compromissos futuros',
 test('#207 Bill oficial prevalece sobre inferência da fatura aberta',async({page})=>{
   await installBridge(page,{bill:true});
   await boot(page,stateFor('Open Finance Bill oficial #207'));
-  await page.evaluate(()=>setPage('dados'));
+  await openOpenFinance(page);
   await page.locator('#openFinanceSyncBtn').click();
   await expect.poll(()=>page.evaluate(()=>invoiceTotal(1,'2026-09'))).toBe(306.80);
   const inv=await page.evaluate(()=>invoiceStatus(1,'2026-09'));
@@ -88,7 +94,7 @@ test('#207 leitura parcial não usa inferência do limite',async({page})=>{
 test('#208 exporta diagnóstico da fatura sem credenciais ou identidade',async({page})=>{
   await installBridge(page,{bill:true});
   await boot(page,stateFor('Diagnóstico de fatura #208'));
-  await page.evaluate(()=>setPage('dados'));
+  await openOpenFinance(page);
   await page.locator('#openFinanceSyncBtn').click();
   await page.evaluate(()=>setPage('cartoes'));
   await page.evaluate(()=>openInvoiceDetail(1));
