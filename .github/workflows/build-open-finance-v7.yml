@@ -1,0 +1,78 @@
+name: Build Open Finance POC v7
+
+on:
+  push:
+    branches: [ "package/open-finance-poc-v7" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    env:
+      SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}
+      SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
+      SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
+      SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v4
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "8.11.1"
+
+      - run: yes | sdkmanager --licenses >/dev/null || true
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Validate signing configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for var in SFP_KEYSTORE_BASE64 SFP_KEYSTORE_PASSWORD SFP_KEY_ALIAS SFP_KEY_PASSWORD; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::$var não está configurado nos GitHub Actions secrets."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Restore signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-release.jks"
+          test -s "$RUNNER_TEMP/sfp-release.jks"
+
+      - name: Build signed release APK
+        env:
+          SFP_KEYSTORE_PATH: ${{ runner.temp }}/sfp-release.jks
+          SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
+          SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
+          SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease
+
+      - name: Prepare APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk dist/SFP-2.2.0-openfinance.7.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs dist/SFP-2.2.0-openfinance.7.apk
+          sha256sum dist/SFP-2.2.0-openfinance.7.apk > dist/SHA256SUMS.txt
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: SFP-2.2.0-openfinance.7-signed
+          path: dist/*
+          if-no-files-found: error
