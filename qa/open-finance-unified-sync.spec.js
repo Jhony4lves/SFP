@@ -130,9 +130,19 @@ test('#203 separa prévia, importa conta + cartão, concilia existente e permane
   expect(errors).toEqual([]);
 });
 
-test('#203 leitura parcial continua bloqueando o lote inteiro', async ({ page }) => {
+test('#203 conta bancária parcial processa apenas registros recebidos e avisa cobertura parcial', async ({ page }) => {
   await installBridge(page, { partialBank:true });
-  const value = stateFor('Open Finance parcial #203');
+  const value = stateFor('Open Finance banco parcial #203');
+  await boot(page, value);
+  await page.locator('#openFinanceSyncBtn').click();
+  await expect.poll(() => page.evaluate(() => state.transactions.some(t => t.desc === 'FACULDADE UNILASALLE'))).toBe(true);
+  await expect(page.locator('#openFinanceStatus')).toContainText('cobertura parcial');
+  expect(await page.evaluate(() => state.transactions.filter(t => t.desc === 'FACULDADE UNILASALLE').length)).toBe(1);
+});
+
+test('#203 cartão parcial continua bloqueando o lote inteiro', async ({ page }) => {
+  await installBridge(page, { partialCard:true });
+  const value = stateFor('Open Finance cartão parcial #203');
   await boot(page, value);
   const before = await page.evaluate(() => JSON.stringify(state));
   await page.locator('#openFinanceSyncBtn').click();
