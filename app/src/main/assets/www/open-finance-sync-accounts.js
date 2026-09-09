@@ -5,7 +5,6 @@
   const INSTALL_FLAG='__SFP_OPEN_FINANCE_UNIFIED_SYNC_V1';
   const $=id=>document.getElementById(id);
   const clean=value=>value==null?'':String(value).trim();
-  const round2=value=>Math.round((Number(value)||0)*100)/100;
   const dateOnly=value=>clean(value).slice(0,10);
   const sameId=(a,b)=>String(a)===String(b);
 
@@ -202,7 +201,7 @@
         const suggestion=api?.suggestSfpEntity?.(account,name);
         if(!suggestion){plan.unmapped++;continue;}
         if(account?.transactionsError){plan.errors++;continue;}
-        if(account?.transactionPreviewHasMore){plan.partial++;continue;}
+        if(account?.transactionPreviewHasMore)plan.partial++;
 
         for(const transaction of Array.isArray(account?.transactions)?account.transactions:[]){
           const amount=Math.abs(Number(transaction?.amount));
@@ -255,11 +254,17 @@
       if(bank.pending)bankBits.push(`${bank.pending} pendente(s)`);
       if(bank.review)bankBits.push(`${bank.review} em revisão`);
       if(bank.unmapped)bankBits.push(`${bank.unmapped} conta(s) sem vínculo`);
-      if(bank.partial)bankBits.push(`${bank.partial} conta(s) com leitura parcial`);
+      if(bank.partial)bankBits.push(`${bank.partial} conta(s) com cobertura parcial`);
       box.textContent=`Faturas: ${cardBits.join(' • ')}. Contas: ${bankBits.join(' • ')}.`;
     }
     document.querySelectorAll('#openFinancePreview .note').forEach(note=>{
-      if(note.textContent.includes('Por segurança, este cartão não será alterado'))note.textContent=note.textContent.replace('este cartão','esta conta/cartão');
+      if(!note.textContent.includes('A consulta retornou apenas parte das transações recentes'))return;
+      const block=note.parentElement;
+      if(block?.textContent.includes('CREDIT')){
+        note.textContent='A consulta retornou apenas parte das transações recentes. Por segurança, este cartão não será alterado até a leitura vir completa.';
+      }else{
+        note.textContent='A consulta retornou parte das transações recentes desta conta. As transações confirmadas recebidas podem ser sincronizadas individualmente sem presumir que a cobertura está completa.';
+      }
     });
     return{card,bank};
   }
@@ -290,9 +295,7 @@
 
   function applyCardPlan(card){
     let linked=0,created=0;
-    for(const row of card.link||[]){
-      if(markLinked(row.purchase,row.account,row.item,row.transaction))linked++;
-    }
+    for(const row of card.link||[]){if(markLinked(row.purchase,row.account,row.item,row.transaction))linked++}
     for(const purchase of card.create||[]){global.state.purchases.push(purchase);created++}
     return{created,linked};
   }
@@ -335,11 +338,10 @@
       }
       const plans=decoratePreview(result)||summaryFor(result);
       const {card,bank}=plans;
-      if(card.partial>0||bank.partial>0){
-        const total=card.partial+bank.partial;
-        const message=`A Pluggy ainda informou leitura parcial em ${total} conta(s)/cartão(ões). Nenhum dado foi alterado para evitar sincronização incompleta.`;
+      if(card.partial>0){
+        const message=`A Pluggy ainda informou leitura parcial em ${card.partial} cartão(ões). Nenhuma fatura ou conta foi alterada para evitar uma fatura incompleta.`;
         setStatus('error','Open Finance não foi alterado',message);notify(message,'error');
-        return{ok:false,code:'PARTIAL_TRANSACTION_WINDOW',message,card,bank};
+        return{ok:false,code:'PARTIAL_CARD_TRANSACTION_WINDOW',message,card,bank};
       }
       if(card.errors>0||bank.errors>0){
         const message=`A Pluggy não conseguiu ler transações de ${card.errors+bank.errors} conta(s)/cartão(ões). Nenhum dado foi alterado.`;
@@ -366,11 +368,12 @@
         if(card.pending+bank.pending)detail.push(`${card.pending+bank.pending} pendente(s) aguardando confirmação`);
         if(card.review+bank.review)detail.push(`${card.review+bank.review} item(ns) mantido(s) em revisão`);
         if(card.unmapped+bank.unmapped)detail.push(`${card.unmapped+bank.unmapped} conta(s)/cartão(ões) sem vínculo seguro`);
-        setStatus('success','Contas e faturas sincronizadas pelo Open Finance',detail.join(' • '));
+        if(bank.partial)detail.push(`${bank.partial} conta(s) bancária(s) com cobertura parcial; somente os registros recebidos foram processados`);
+        setStatus(bank.partial?'warning':'success','Contas e faturas sincronizadas pelo Open Finance',detail.join(' • '));
         const added=cardApplied.created+bankApplied.created+bankApplied.transfers;
         if(added)notify(`${added} novo(s) registro(s) adicionado(s) pelo Open Finance.`,'success');
         else if(cardApplied.linked+bankApplied.linked)notify('Dados conciliados sem criar duplicatas.','success');
-        else notify('Tudo já estava sincronizado.','success');
+        else notify(bank.partial?'Nada novo entre as transações recebidas; a cobertura bancária ainda é parcial.':'Tudo já estava sincronizado.',bank.partial?'info':'success');
         return{ok:true,card,bank,cardApplied,bankApplied};
       }catch(error){
         try{global.state=before;if(typeof global.renderAll==='function')global.renderAll()}catch(_){}
@@ -396,7 +399,7 @@
     if(subtitle)subtitle.textContent='Meu Pluggy • Conector 200 • sincronização de contas e faturas';
     const notes=panel.querySelectorAll(':scope > .note');
     const finalNote=notes[notes.length-1];
-    if(finalNote)finalNote.textContent='A sincronização importa compras confirmadas de cartões e movimentações confirmadas de contas vinculadas com segurança ao SFP. Registros já cadastrados são conciliados em vez de duplicados; pagamentos de fatura, créditos de cartão e transações pendentes ficam em revisão. Leituras parciais ou com falha bloqueiam o lote inteiro.';
+    if(finalNote)finalNote.textContent='A sincronização importa compras confirmadas de cartões e movimentações confirmadas de contas vinculadas com segurança ao SFP. Registros já cadastrados são conciliados em vez de duplicados; pagamentos de fatura, créditos de cartão e transações pendentes ficam em revisão. Leitura parcial de cartão bloqueia o lote; conta bancária parcial processa somente os lançamentos confirmados que a Pluggy realmente retornou, sem presumir cobertura completa.';
 
     preview.addEventListener('click',event=>{
       event.preventDefault();event.stopImmediatePropagation();previewOnly();
