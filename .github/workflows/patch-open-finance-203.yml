@@ -1,0 +1,153 @@
+name: Patch Open Finance 203
+
+on:
+  push:
+    branches:
+      - fix/open-finance-sync-203
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/open-finance-sync-203
+          fetch-depth: 0
+
+      - name: Apply cursor pagination and QA contract
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          bridge_path = Path('app/src/main/java/com/jhony/sfp/PluggyBridge.java')
+          source = bridge_path.read_text()
+
+          old_const = '    private static final int MAX_TRANSACTION_PREVIEW_PER_ACCOUNT = 30;'
+          new_const = '''    // /v2/transactions usa cursor e páginas de até 500 registros. Estes limites são
+              // somente guardas de segurança locais; não truncam silenciosamente a primeira página.
+              private static final int MAX_TRANSACTION_PAGES_PER_ACCOUNT = 12;
+              private static final int MAX_TRANSACTIONS_PER_ACCOUNT = 5000;'''
+          if old_const not in source:
+              raise SystemExit('Constante antiga de transações não encontrada')
+          source = source.replace(old_const, new_const, 1)
+
+          start_marker = '    private JSONObject listRecentTransactionsInternal(String key, String accountId) throws Exception {'
+          end_marker = '\n    private JSONArray itemsFromSavedReferences(String key) throws Exception {'
+          start = source.index(start_marker)
+          end = source.index(end_marker, start)
+          method = r'''    private JSONObject listRecentTransactionsInternal(String key, String accountId) throws Exception {
+              if (!UUID_PATTERN.matcher(accountId).matches()) throw new IllegalArgumentException("INVALID_ACCOUNT_ID");
+
+              LocalDate today = LocalDate.now(ZoneOffset.UTC);
+              LocalDate from = today.minusDays(TRANSACTION_WINDOW_DAYS);
+              String currentQuery = "accountId=" + URLEncoder.encode(accountId, StandardCharsets.UTF_8.name())
+                      + "&dateFrom=" + URLEncoder.encode(from.toString(), StandardCharsets.UTF_8.name())
+                      + "&dateTo=" + URLEncoder.encode(today.toString(), StandardCharsets.UTF_8.name());
+
+              JSONArray transactions = new JSONArray();
+              Set<String> visitedQueries = new LinkedHashSet<>();
+              boolean hasMore = false;
+              int pageCount = 0;
+
+              while (currentQuery != null && !currentQuery.isEmpty()) {
+                  if (!visitedQueries.add(currentQuery)) {
+                      hasMore = true;
+                      break;
+                  }
+                  if (pageCount >= MAX_TRANSACTION_PAGES_PER_ACCOUNT
+                          || transactions.length() >= MAX_TRANSACTIONS_PER_ACCOUNT) {
+                      hasMore = true;
+                      break;
+                  }
+
+                  HttpResult response = request("GET", "/v2/transactions", currentQuery, null, key);
+                  if (response.status == 401) {
+                      apiKey = null;
+                      apiKeyExpiresAtMs = 0L;
+                      throw new SecurityException("API_KEY_REJECTED");
+                  }
+                  if (response.status == 403) throw new SecurityException("TRANSACTION_ACCESS_FORBIDDEN");
+                  if (response.status < 200 || response.status >= 300) {
+                      throw new IllegalStateException("TRANSACTIONS_HTTP_" + response.status);
+                  }
+                  pageCount++;
+
+                  JSONArray page = extractCollection(response.body);
+                  for (int index = 0; index < page.length(); index++) {
+                      if (transactions.length() >= MAX_TRANSACTIONS_PER_ACCOUNT) {
+                          hasMore = true;
+                          break;
+                      }
+                      JSONObject transaction = page.optJSONObject(index);
+                      if (transaction != null) transactions.put(summarizeTransaction(transaction));
+                  }
+                  if (hasMore && transactions.length() >= MAX_TRANSACTIONS_PER_ACCOUNT) break;
+
+                  String next = "";
+                  try {
+                      JSONObject root = new JSONObject(response.body);
+                      next = cleanString(root, "next");
+                  } catch (Exception ignored) {
+                  }
+
+                  if (next.isEmpty()) {
+                      hasMore = false;
+                      break;
+                  }
+                  if (pageCount >= MAX_TRANSACTION_PAGES_PER_ACCOUNT) {
+                      hasMore = true;
+                      break;
+                  }
+                  if (!next.startsWith("?")) throw new SecurityException("TRANSACTION_CURSOR_INVALID");
+                  String nextQuery = next.substring(1);
+                  if (nextQuery.isEmpty() || nextQuery.contains("://") || nextQuery.contains("#")) {
+                      throw new SecurityException("TRANSACTION_CURSOR_INVALID");
+                  }
+                  currentQuery = nextQuery;
+                  hasMore = true;
+              }
+
+              JSONObject result = new JSONObject();
+              result.put("transactions", transactions);
+              result.put("previewCount", transactions.length());
+              result.put("hasMore", hasMore);
+              result.put("pageCount", pageCount);
+              result.put("windowDays", TRANSACTION_WINDOW_DAYS);
+              result.put("dateFrom", from.toString());
+              result.put("dateTo", today.toString());
+              return result;
+          }
+          '''
+          source = source[:start] + method + source[end:]
+          bridge_path.write_text(source)
+
+          qa_path = Path('qa/open-finance-personal.spec.js')
+          qa = qa_path.read_text()
+          qa = qa.replace(
+              "  expect(bridge).toContain('MAX_TRANSACTION_PREVIEW_PER_ACCOUNT = 30');",
+              "  expect(bridge).toContain('MAX_TRANSACTION_PAGES_PER_ACCOUNT = 12');\n"
+              "  expect(bridge).toContain('MAX_TRANSACTIONS_PER_ACCOUNT = 5000');\n"
+              "  expect(bridge).toContain('cleanString(root, \\\"next\\\")');\n"
+              "  expect(bridge).toContain('next.startsWith(\\\"?\\\")');"
+          )
+          qa = qa.replace("toContainText('Faturas atualizadas pelo Open Finance')", "toContainText('Contas e faturas sincronizadas pelo Open Finance')")
+          qa = qa.replace("toContainText('Faturas não foram alteradas')", "toContainText('Open Finance não foi alterado')")
+          qa_path.write_text(qa)
+          PY
+
+      - name: Remove one-shot workflow and commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/patch-open-finance-203.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'fix(open-finance): paginar transações Pluggy por cursor'
+          git push origin HEAD:fix/open-finance-sync-203
