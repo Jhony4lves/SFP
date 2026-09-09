@@ -1,10 +1,12 @@
 (function installOpenFinanceRecurringReconcile(global){
   'use strict';
 
-  const VERSION=1;
-  const INSTALL_FLAG='__SFP_OPEN_FINANCE_RECURRING_RECONCILE_V1';
+  const VERSION=2;
+  const INSTALL_FLAG='__SFP_OPEN_FINANCE_RECURRING_RECONCILE_V2';
   const SAFE_WINDOW_DAYS=3;
+  const SYNC_WINDOW_MS=180000;
   let syncWindowUntil=0;
+  let lastPreviewResult=null;
   let originalSave=null;
   let originalRenderAll=null;
 
@@ -89,11 +91,29 @@
     return unique;
   }
 
+  function externalKeyFromSource(transaction){
+    const id=clean(transaction?.id);return id?`pluggy:${id}`:'';
+  }
+
   function externalKeys(transaction){
     const keys=[];
     if(clean(transaction?.externalId))keys.push(clean(transaction.externalId));
     for(const key of Array.isArray(transaction?.openFinanceExternalIds)?transaction.openFinanceExternalIds:[])if(clean(key))keys.push(clean(key));
     return[...new Set(keys)];
+  }
+
+  function previewBankRows(){
+    const rows=[];
+    for(const item of Array.isArray(lastPreviewResult?.items)?lastPreviewResult.items:[]){
+      for(const account of Array.isArray(item?.accounts)?item.accounts:[]){
+        if(account?.type==='CREDIT')continue;
+        for(const transaction of Array.isArray(account?.transactions)?account.transactions:[]){
+          const key=externalKeyFromSource(transaction);if(!key)continue;
+          rows.push({key,item,account,transaction});
+        }
+      }
+    }
+    return rows;
   }
 
   function mergeTags(a,b){return[...new Set([...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[]),'recorrente','open-finance','pluggy'])]}
@@ -103,6 +123,11 @@
     for(const key of keys)if(source?.[key]!=null&&source[key]!=='')target[key]=source[key];
     const ids=[...new Set([...externalKeys(target),...externalKeys(source)])];
     if(ids.length){target.openFinanceExternalIds=ids;if(!clean(target.externalId))target.externalId=ids[0]}
+  }
+
+  function recalcBalanceImpact(transaction,date){
+    try{if(typeof global.afterAccountSnapshot==='function')return global.afterAccountSnapshot(transaction?.accountId,date)===true}catch(_){}
+    return transaction?.balanceImpact;
   }
 
   function convertToRecurring(transaction,match){
@@ -137,9 +162,40 @@
     existing.openFinanceRecurringReconciledAt=new Date().toISOString();
   }
 
+  function alignAlreadyLinkedRecurring(){
+    const state=global.state;if(!state||!lastPreviewResult?.ok)return 0;
+    const sourceRows=previewBankRows();if(!sourceRows.length)return 0;
+    const byKey=new Map();for(const row of sourceRows)if(!byKey.has(row.key))byKey.set(row.key,row);
+    let changed=0;
+    for(const record of state.transactions||[]){
+      if(!record?.recurringId)continue;
+      const source=externalKeys(record).map(key=>byKey.get(key)).find(Boolean);if(!source)continue;
+      if(record.openFinanceAccountId&&!sameId(record.openFinanceAccountId,source.account?.id))continue;
+      const rule=(state.recurring||[]).find(item=>sameId(item?.id,record.recurringId));if(!rule)continue;
+      const month=occurrenceMonth(record);if(!month)continue;
+      const dueDate=recurringDate(rule,month),actualDate=dateOnly(source.transaction?.date);
+      if(!actualDate||dayDiff(dueDate,actualDate)>SAFE_WINDOW_DAYS)continue;
+      if(Math.abs(Math.abs(Number(rule?.amount))-Math.abs(Number(source.transaction?.amount)))>.011)continue;
+      const synthetic={desc:source.transaction?.description,category:record.category};
+      if(!semanticMatch(rule,synthetic))continue;
+      if(record.date===actualDate&&record.scheduledDate===dueDate)continue;
+      record.openFinanceDescription=record.openFinanceDescription||source.transaction?.description||record.desc;
+      record.scheduledDate=record.scheduledDate||dueDate;
+      record.date=actualDate;
+      record.dueDay=Number(dueDate.slice(8,10))||record.dueDay||null;
+      record.status='paid';
+      record.balanceImpact=recalcBalanceImpact(record,actualDate);
+      record.tags=mergeTags(record.tags,[]);
+      record.openFinanceRecurringReconciledAt=new Date().toISOString();
+      changed++;
+    }
+    return changed;
+  }
+
   function reconcile(){
-    const state=global.state;if(!state||!Array.isArray(state.transactions))return{changed:false,converted:0,merged:0,ambiguous:0};
-    let changed=false,converted=0,merged=0,ambiguous=0;
+    const state=global.state;if(!state||!Array.isArray(state.transactions))return{changed:false,converted:0,merged:0,realigned:0,ambiguous:0};
+    let converted=0,merged=0,ambiguous=0;
+    const realigned=alignAlreadyLinkedRecurring();
     const reserved=new Set();
     const bankTransactions=state.transactions.filter(isOpenFinanceBankTransaction);
 
@@ -153,29 +209,49 @@
       if(materialized.length===1){
         mergeIntoMaterialized(materialized[0],bankTransaction,match);
         state.transactions=state.transactions.filter(entry=>entry!==bankTransaction);
-        changed=true;merged++;
+        merged++;
       }else{
         convertToRecurring(bankTransaction,match);
-        changed=true;converted++;
+        converted++;
       }
     }
 
-    return{changed,converted,merged,ambiguous};
+    return{changed:Boolean(converted||merged||realigned),converted,merged,realigned,ambiguous};
   }
 
   function syncActive(){return Date.now()<=syncWindowUntil}
 
   function notifyReport(report){
     if(!report?.changed)return;
-    const total=report.converted+report.merged;
+    const total=report.converted+report.merged+report.realigned;
     try{if(typeof global.toast==='function')global.toast(`${total} recorrência(s) conciliada(s) pela data real do banco.`,'success')}catch(_){}
+  }
+
+  function capturePreview(result){
+    if(result&&typeof result.then==='function')return result.then(value=>{if(value?.ok)lastPreviewResult=value;return value});
+    if(result?.ok)lastPreviewResult=result;
+    return result;
+  }
+
+  function wrapPersonalApi(){
+    const api=global.SFPOpenFinancePersonal;
+    if(!api||api.__sfpRecurringPreviewCapture)return Boolean(api);
+    if(typeof api.preview!=='function')return false;
+    try{
+      const wrapped={...api,preview:(...args)=>capturePreview(api.preview(...args))};
+      Object.defineProperty(wrapped,'__sfpRecurringPreviewCapture',{value:true});
+      global.SFPOpenFinancePersonal=Object.freeze(wrapped);
+      return true;
+    }catch(error){
+      console.error('Open Finance recurring preview capture:',error);return false;
+    }
   }
 
   function wrapSave(){
     if(typeof global.save!=='function'||global.save.__sfpOpenFinanceRecurringReconcile)return false;
     originalSave=global.save;
     const wrapped=async function(reason,...args){
-      const shouldReconcile=reason==='Sincronizar Open Finance'||syncActive();
+      const shouldReconcile=reason==='Sincronizar Open Finance';
       const report=shouldReconcile?reconcile():null;
       const result=await originalSave.call(this,reason,...args);
       if(shouldReconcile){syncWindowUntil=0;notifyReport(report)}
@@ -190,7 +266,7 @@
     if(typeof global.renderAll!=='function'||global.renderAll.__sfpOpenFinanceRecurringReconcile)return false;
     originalRenderAll=global.renderAll;
     const wrapped=function(...args){
-      if(!syncActive())return originalRenderAll.apply(this,args);
+      if(!syncActive()||!lastPreviewResult?.ok)return originalRenderAll.apply(this,args);
       const report=reconcile();
       const result=originalRenderAll.apply(this,args);
       if(report.changed&&typeof originalSave==='function'){
@@ -206,15 +282,28 @@
     return true;
   }
 
+  function observeFinalStatus(){
+    const status=document.getElementById('openFinanceStatus');if(!status)return;
+    const observer=new MutationObserver(()=>{
+      if(!syncActive())return;
+      const text=clean(status.textContent);
+      if(/Open Finance não foi alterado|Sincronização não concluída|Nenhum dado foi alterado/i.test(text))syncWindowUntil=0;
+    });
+    observer.observe(status,{subtree:true,childList:true,characterData:true});
+  }
+
   function install(){
     if(global[INSTALL_FLAG])return;
     if(typeof document==='undefined'||typeof global.state==='undefined'){setTimeout(install,50);return;}
-    wrapSave();wrapRenderAll();
-    if(typeof global.save!=='function'||typeof global.renderAll!=='function'){setTimeout(install,50);return;}
+    const apiReady=wrapPersonalApi();
+    const saveReady=wrapSave();
+    const renderReady=wrapRenderAll();
+    if(!apiReady||!saveReady||!renderReady){setTimeout(install,50);return;}
     document.addEventListener('click',event=>{
       const target=event.target?.closest?.('#openFinanceSyncBtn');
-      if(target)syncWindowUntil=Date.now()+30000;
+      if(target){syncWindowUntil=Date.now()+SYNC_WINDOW_MS;lastPreviewResult=null}
     },true);
+    observeFinalStatus();
     global[INSTALL_FLAG]=true;
     global.SFPOpenFinanceRecurringReconcile=Object.freeze({version:VERSION,reconcile});
   }
