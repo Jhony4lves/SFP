@@ -61,7 +61,10 @@ public final class PluggyBridge {
     // API key: 2h documentadas; renova com 10 min de margem.
     private static final long API_KEY_CACHE_MS = 110L * 60L * 1000L;
     private static final int TRANSACTION_WINDOW_DAYS = 45;
-    private static final int MAX_TRANSACTION_PREVIEW_PER_ACCOUNT = 30;
+    // /v2/transactions usa cursor e páginas de até 500 registros. Estes limites são
+    // somente guardas de segurança locais; não truncam silenciosamente a primeira página.
+    private static final int MAX_TRANSACTION_PAGES_PER_ACCOUNT = 12;
+    private static final int MAX_TRANSACTIONS_PER_ACCOUNT = 5000;
 
     private final Context context;
     private volatile String apiKey;
@@ -629,15 +632,31 @@ public final class PluggyBridge {
     }
 
     private JSONObject listRecentTransactionsInternal(String key, String accountId) throws Exception {
-        if (!UUID_PATTERN.matcher(accountId).matches()) throw new IllegalArgumentException("INVALID_ACCOUNT_ID");
+    if (!UUID_PATTERN.matcher(accountId).matches()) throw new IllegalArgumentException("INVALID_ACCOUNT_ID");
 
-        LocalDate today = LocalDate.now(ZoneOffset.UTC);
-        LocalDate from = today.minusDays(TRANSACTION_WINDOW_DAYS);
-        String query = "accountId=" + URLEncoder.encode(accountId, StandardCharsets.UTF_8.name())
-                + "&dateFrom=" + URLEncoder.encode(from.toString(), StandardCharsets.UTF_8.name())
-                + "&dateTo=" + URLEncoder.encode(today.toString(), StandardCharsets.UTF_8.name());
+    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+    LocalDate from = today.minusDays(TRANSACTION_WINDOW_DAYS);
+    String currentQuery = "accountId=" + URLEncoder.encode(accountId, StandardCharsets.UTF_8.name())
+            + "&dateFrom=" + URLEncoder.encode(from.toString(), StandardCharsets.UTF_8.name())
+            + "&dateTo=" + URLEncoder.encode(today.toString(), StandardCharsets.UTF_8.name());
 
-        HttpResult response = request("GET", "/v2/transactions", query, null, key);
+    JSONArray transactions = new JSONArray();
+    Set<String> visitedQueries = new LinkedHashSet<>();
+    boolean hasMore = false;
+    int pageCount = 0;
+
+    while (currentQuery != null && !currentQuery.isEmpty()) {
+        if (!visitedQueries.add(currentQuery)) {
+            hasMore = true;
+            break;
+        }
+        if (pageCount >= MAX_TRANSACTION_PAGES_PER_ACCOUNT
+                || transactions.length() >= MAX_TRANSACTIONS_PER_ACCOUNT) {
+            hasMore = true;
+            break;
+        }
+
+        HttpResult response = request("GET", "/v2/transactions", currentQuery, null, key);
         if (response.status == 401) {
             apiKey = null;
             apiKeyExpiresAtMs = 0L;
@@ -647,32 +666,53 @@ public final class PluggyBridge {
         if (response.status < 200 || response.status >= 300) {
             throw new IllegalStateException("TRANSACTIONS_HTTP_" + response.status);
         }
+        pageCount++;
 
-        JSONArray source = extractCollection(response.body);
-        JSONArray transactions = new JSONArray();
-        int limit = Math.min(source.length(), MAX_TRANSACTION_PREVIEW_PER_ACCOUNT);
-        for (int index = 0; index < limit; index++) {
-            JSONObject transaction = source.optJSONObject(index);
+        JSONArray page = extractCollection(response.body);
+        for (int index = 0; index < page.length(); index++) {
+            if (transactions.length() >= MAX_TRANSACTIONS_PER_ACCOUNT) {
+                hasMore = true;
+                break;
+            }
+            JSONObject transaction = page.optJSONObject(index);
             if (transaction != null) transactions.put(summarizeTransaction(transaction));
         }
+        if (hasMore && transactions.length() >= MAX_TRANSACTIONS_PER_ACCOUNT) break;
 
-        boolean hasMore = false;
+        String next = "";
         try {
             JSONObject root = new JSONObject(response.body);
-            hasMore = !cleanString(root, "next").isEmpty() || source.length() > limit;
+            next = cleanString(root, "next");
         } catch (Exception ignored) {
-            hasMore = source.length() > limit;
         }
 
-        JSONObject result = new JSONObject();
-        result.put("transactions", transactions);
-        result.put("previewCount", transactions.length());
-        result.put("hasMore", hasMore);
-        result.put("windowDays", TRANSACTION_WINDOW_DAYS);
-        result.put("dateFrom", from.toString());
-        result.put("dateTo", today.toString());
-        return result;
+        if (next.isEmpty()) {
+            hasMore = false;
+            break;
+        }
+        if (pageCount >= MAX_TRANSACTION_PAGES_PER_ACCOUNT) {
+            hasMore = true;
+            break;
+        }
+        if (!next.startsWith("?")) throw new SecurityException("TRANSACTION_CURSOR_INVALID");
+        String nextQuery = next.substring(1);
+        if (nextQuery.isEmpty() || nextQuery.contains("://") || nextQuery.contains("#")) {
+            throw new SecurityException("TRANSACTION_CURSOR_INVALID");
+        }
+        currentQuery = nextQuery;
+        hasMore = true;
     }
+
+    JSONObject result = new JSONObject();
+    result.put("transactions", transactions);
+    result.put("previewCount", transactions.length());
+    result.put("hasMore", hasMore);
+    result.put("pageCount", pageCount);
+    result.put("windowDays", TRANSACTION_WINDOW_DAYS);
+    result.put("dateFrom", from.toString());
+    result.put("dateTo", today.toString());
+    return result;
+}
 
     private JSONArray itemsFromSavedReferences(String key) throws Exception {
         JSONArray result = new JSONArray();
