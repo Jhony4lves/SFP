@@ -202,3 +202,12 @@
   script.dataset.sfpOpenFinanceUnifiedSync='1';
   document.head.appendChild(script);
 })();
+
+(function loadOpenFinanceRecurringReconcile(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-recurring-reconcile="1"]'))return;
+  const script=document.createElement('script');
+  script.src='open-finance-recurring-reconcile.js';
+  script.async=false;
+  script.dataset.sfpOpenFinanceRecurringReconcile='1';
+  document.head.appendChild(script);
+})();
