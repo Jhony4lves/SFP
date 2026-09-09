@@ -235,7 +235,8 @@
 
   function wrapPersonalApi(){
     const api=global.SFPOpenFinancePersonal;
-    if(!api||api.__sfpRecurringPreviewCapture)return Boolean(api);
+    if(!api)return false;
+    if(api.__sfpRecurringPreviewCapture)return true;
     if(typeof api.preview!=='function')return false;
     try{
       const wrapped={...api,preview:(...args)=>capturePreview(api.preview(...args))};
@@ -248,7 +249,8 @@
   }
 
   function wrapSave(){
-    if(typeof global.save!=='function'||global.save.__sfpOpenFinanceRecurringReconcile)return false;
+    if(typeof global.save!=='function')return false;
+    if(global.save.__sfpOpenFinanceRecurringReconcile)return true;
     originalSave=global.save;
     const wrapped=async function(reason,...args){
       const shouldReconcile=reason==='Sincronizar Open Finance';
@@ -263,7 +265,8 @@
   }
 
   function wrapRenderAll(){
-    if(typeof global.renderAll!=='function'||global.renderAll.__sfpOpenFinanceRecurringReconcile)return false;
+    if(typeof global.renderAll!=='function')return false;
+    if(global.renderAll.__sfpOpenFinanceRecurringReconcile)return true;
     originalRenderAll=global.renderAll;
     const wrapped=function(...args){
       if(!syncActive()||!lastPreviewResult?.ok)return originalRenderAll.apply(this,args);
