@@ -118,7 +118,7 @@
 
   function projectedTransfers(days=HORIZON_DAYS,reference=new Date()){
     const today=isoDate(reference),end=addDays(today,days);
-    return (global.state?.transfers||[]).filter(t=>{const date=String(t.date||'');return date>=today&&date<=end&&(Number(t.amount)||0)>0;}).map(t=>({id:`transfer:${t.id}`,source:'transfer',sourceId:t.id,type:'transfer',amount:Number(t.amount)||0,desc:t.desc||'Transferência',date:t.date,effectiveDate:t.date,dueDate:t.date,fromId:t.fromId,toId:t.toId,status:t.date>today?'scheduled':'paid'})).sort(eventComparator);
+    return (global.state?.transfers||[]).filter(t=>{const date=String(t.date||'');return date>today&&date<=end&&(Number(t.amount)||0)>0;}).map(t=>({id:`transfer:${t.id}`,source:'transfer',sourceId:t.id,type:'transfer',amount:Number(t.amount)||0,desc:t.desc||'Transferência',date:t.date,effectiveDate:t.date,dueDate:t.date,fromId:t.fromId,toId:t.toId,status:'scheduled'})).sort(eventComparator);
   }
 
   function priority(event){
@@ -172,10 +172,6 @@
     });
 
     const accountRisks=[...accountState.values()].filter(a=>a.minBalanceCents<0).map(a=>({accountId:a.id,accountName:a.name,minBalanceCents:a.minBalanceCents,minDate:a.minDate,requiredTransferCents:-a.minBalanceCents}));
-    // "Gasto seguro" significa dinheiro que pode sair agora sem deixar nenhuma
-    // conta operacional conhecida negativa na trajetória. Cobertura global em
-    // outra conta não é autorização implícita para gastar: a transferência que
-    // resolve o risco precisa existir no cronograma antes do vencimento.
     const accountRisk=accountRisks.length>0;
     const safeToSpendCents=accountRisk?0:clamp0(Math.min(openingCents,minBalance));
     const shortfallCents=clamp0(-minBalance);
