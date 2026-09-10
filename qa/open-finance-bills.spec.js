@@ -46,7 +46,7 @@ async function boot(page,value){
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await expectBootComplete(page,expect,value.settings.name);
-  await page.waitForFunction(()=>window.SFPOpenFinanceBills?.version===1);
+  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBills?.version)>=1);
 }
 
 async function openOpenFinance(page){
