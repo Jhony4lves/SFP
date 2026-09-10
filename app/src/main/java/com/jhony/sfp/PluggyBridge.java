@@ -348,6 +348,7 @@ public final class PluggyBridge {
         return "/auth".equals(path)
                 || "/items".equals(path)
                 || "/accounts".equals(path)
+                || "/bills".equals(path)
                 || "/v2/items".equals(path)
                 || "/v2/transactions".equals(path)
                 || ITEM_PATH_PATTERN.matcher(path).matches();
@@ -370,7 +371,7 @@ public final class PluggyBridge {
             connection.setInstanceFollowRedirects(false);
             connection.setRequestMethod(method);
             connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestProperty("User-Agent", "SmartFinancialPlanner/" + BuildConfig.VERSION_NAME + " OpenFinance/1.2");
+            connection.setRequestProperty("User-Agent", "SmartFinancialPlanner/" + BuildConfig.VERSION_NAME + " OpenFinance/1.3");
             connection.setConnectTimeout(15000);
             connection.setReadTimeout(25000);
             if (key != null && !key.trim().isEmpty()) {
@@ -553,6 +554,8 @@ public final class PluggyBridge {
         summary.put("currencyCode", cleanFirst(cleanString(transaction, "currencyCode"), "BRL"));
         summary.put("status", cleanString(transaction, "status"));
         summary.put("type", cleanString(transaction, "type"));
+        String billId = cleanString(transaction, "billId");
+        if (!billId.isEmpty()) summary.put("billId", billId);
         copyOptionalNumber(transaction, summary, "amount");
         copyOptionalNumber(transaction, summary, "amountInAccountCurrency");
 
@@ -568,6 +571,57 @@ public final class PluggyBridge {
             copyOptionalNumber(installment, sanitized, "totalAmount");
             if (sanitized.length() > 0) summary.put("installment", sanitized);
         }
+        return summary;
+    }
+
+    private static JSONObject summarizeBill(JSONObject bill) throws Exception {
+        JSONObject summary = new JSONObject();
+        summary.put("id", cleanString(bill, "id"));
+        summary.put("dueDate", cleanString(bill, "dueDate"));
+        String closeDate = cleanString(bill, "billClosingDate");
+        if (!closeDate.isEmpty()) summary.put("billClosingDate", closeDate);
+        copyOptionalNumber(bill, summary, "totalAmount");
+        summary.put("totalAmountCurrencyCode", cleanFirst(cleanString(bill, "totalAmountCurrencyCode"), "BRL"));
+        copyOptionalNumber(bill, summary, "minimumPaymentAmount");
+        if (bill.has("allowsInstallments") && !bill.isNull("allowsInstallments")) {
+            summary.put("allowsInstallments", bill.optBoolean("allowsInstallments", false));
+        }
+
+        JSONArray sourcePayments = bill.optJSONArray("payments");
+        JSONArray payments = new JSONArray();
+        if (sourcePayments != null) {
+            for (int index = 0; index < sourcePayments.length(); index++) {
+                JSONObject payment = sourcePayments.optJSONObject(index);
+                if (payment == null) continue;
+                JSONObject safe = new JSONObject();
+                safe.put("id", cleanString(payment, "id"));
+                safe.put("valueType", cleanString(payment, "valueType"));
+                safe.put("paymentDate", cleanString(payment, "paymentDate"));
+                safe.put("paymentMode", cleanString(payment, "paymentMode"));
+                copyOptionalNumber(payment, safe, "amount");
+                safe.put("currencyCode", cleanFirst(cleanString(payment, "currencyCode"), "BRL"));
+                payments.put(safe);
+            }
+        }
+        summary.put("payments", payments);
+
+        JSONArray sourceCharges = bill.optJSONArray("financeCharges");
+        JSONArray charges = new JSONArray();
+        if (sourceCharges != null) {
+            for (int index = 0; index < sourceCharges.length(); index++) {
+                JSONObject charge = sourceCharges.optJSONObject(index);
+                if (charge == null) continue;
+                JSONObject safe = new JSONObject();
+                safe.put("id", cleanString(charge, "id"));
+                safe.put("type", cleanString(charge, "type"));
+                copyOptionalNumber(charge, safe, "amount");
+                safe.put("currencyCode", cleanFirst(cleanString(charge, "currencyCode"), "BRL"));
+                String info = cleanString(charge, "additionalInfo");
+                if (!info.isEmpty()) safe.put("additionalInfo", info);
+                charges.put(safe);
+            }
+        }
+        summary.put("financeCharges", charges);
         return summary;
     }
 
@@ -627,6 +681,28 @@ public final class PluggyBridge {
         for (int index = 0; index < source.length(); index++) {
             JSONObject account = source.optJSONObject(index);
             if (account != null) result.put(summarizeAccount(account));
+        }
+        return result;
+    }
+
+    private JSONArray listBillsInternal(String key, String accountId) throws Exception {
+        if (!UUID_PATTERN.matcher(accountId).matches()) throw new IllegalArgumentException("INVALID_ACCOUNT_ID");
+        String query = "accountId=" + URLEncoder.encode(accountId, StandardCharsets.UTF_8.name());
+        HttpResult response = request("GET", "/bills", query, null, key);
+        if (response.status == 401) {
+            apiKey = null;
+            apiKeyExpiresAtMs = 0L;
+            throw new SecurityException("API_KEY_REJECTED");
+        }
+        if (response.status == 403 || response.status == 404) return new JSONArray();
+        if (response.status < 200 || response.status >= 300) {
+            throw new IllegalStateException("BILLS_HTTP_" + response.status);
+        }
+        JSONArray source = extractCollection(response.body);
+        JSONArray result = new JSONArray();
+        for (int index = 0; index < source.length(); index++) {
+            JSONObject bill = source.optJSONObject(index);
+            if (bill != null) result.put(summarizeBill(bill));
         }
         return result;
     }
@@ -750,6 +826,7 @@ public final class PluggyBridge {
             JSONArray output = new JSONArray();
             int accountCount = 0;
             int transactionPreviewCount = 0;
+            int billCount = 0;
             for (int index = 0; index < items.length(); index++) {
                 JSONObject item = items.getJSONObject(index);
                 JSONObject copy = new JSONObject(item.toString());
@@ -785,6 +862,17 @@ public final class PluggyBridge {
                         enriched.put("transactions", new JSONArray());
                         enriched.put("transactionsError", true);
                     }
+                    if ("CREDIT".equalsIgnoreCase(cleanString(account, "type"))) {
+                        try {
+                            JSONArray bills = listBillsInternal(key, accountId);
+                            enriched.put("bills", bills);
+                            enriched.put("billsAvailable", true);
+                            billCount += bills.length();
+                        } catch (Exception billError) {
+                            enriched.put("bills", new JSONArray());
+                            enriched.put("billsError", true);
+                        }
+                    }
                     enrichedAccounts.put(enriched);
                 }
                 copy.put("accounts", enrichedAccounts);
@@ -800,6 +888,7 @@ public final class PluggyBridge {
             result.put("itemCount", output.length());
             result.put("accountCount", accountCount);
             result.put("transactionPreviewCount", transactionPreviewCount);
+            result.put("billCount", billCount);
             result.put("transactionWindowDays", TRANSACTION_WINDOW_DAYS);
             return result.toString();
         } catch (SecurityException error) {
