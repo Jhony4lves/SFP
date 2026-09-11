@@ -100,3 +100,34 @@ test('campos de limite ausentes não viram uso bancário zero artificial',async(
   expect(cardState.openFinanceUsedAmount).toBeUndefined();
   expect(report.estimated).toBe(0);
 });
+
+test('cartão conectado mostra uso e limite do banco sem confundir com compromissos futuros',async({page})=>{
+  const value=stateFor('Cartão conectado com verdade bancária');
+  value.cards[0].limit=600;
+  value.purchases=[{id:10,cardId:1,desc:'Parcelas futuras grandes',total:1403.99,installments:1,firstMonth:'2026-10',purchaseDate:'2026-09-20',status:'active',refunds:[]}];
+  await installBridge(page,{creditData:{creditLimit:600,availableCreditLimit:196.98},balance:403.02});
+  await boot(page,value);
+  await apply(page);
+  await page.evaluate(()=>{setPage('cartoes');renderCards()});
+  const cardText=await page.locator('#cardsGrid .management-card--interactive').first().innerText();
+  expect(cardText).toContain('Uso atual do limite');
+  expect(cardText).toContain('R$ 403,02');
+  expect(cardText).toContain('Limite disponível');
+  expect(cardText).toContain('R$ 196,98');
+  expect(cardText).toContain('67,2% do limite usado');
+  expect(cardText).toContain('R$ 1.403,99 em faturas futuras');
+  const summary=await page.locator('#cardsOutstandingTotal').evaluate(el=>({label:el.parentElement.querySelector('span')?.textContent,hint:el.parentElement.querySelector('small')?.textContent}));
+  expect(summary).toEqual({label:'Compromissos projetados',hint:'faturas atuais e futuras no SFP'});
+});
+
+test('alerta de 80% usa o consumo bancário, não parcelas futuras projetadas',async({page})=>{
+  const value=stateFor('Alerta bancário correto');
+  value.cards[0].limit=600;
+  value.purchases=[{id:10,cardId:1,desc:'Futuro acima do limite',total:1403.99,installments:1,firstMonth:'2026-10',purchaseDate:'2026-09-20',status:'active',refunds:[]}];
+  await installBridge(page,{creditData:{creditLimit:600,availableCreditLimit:196.98},balance:403.02});
+  await boot(page,value);
+  await apply(page);
+  const alerts=await page.evaluate(()=>healthAlerts().map(x=>x.t));
+  expect(alerts.some(text=>/80% do limite está comprometido/i.test(text))).toBe(false);
+  expect(alerts.some(text=>/uso do limite informado pelo banco está acima de 80%/i.test(text))).toBe(false);
+});
