@@ -112,112 +112,68 @@
   document.head.appendChild(script);
 })();
 
-/*
- * SFP_BALANCE_EVIDENCE_GUARD_V1
- *
- * transferEvidence é somente evidência de uma possível transferência.
- * Enquanto não houver pareamento/confirmação, ela não representa dinheiro
- * efetivamente debitado ou creditado no saldo oficial da conta.
- *
- * O core legado ainda soma evidências pendentes em accountBalance(). Este
- * guard neutraliza apenas essa parcela e se auto-desativa quando o core for
- * refatorado para remover transferEvidence da função nativa.
- */
 (function installTransferEvidenceBalanceGuard(){
   if(typeof document==='undefined')return;
-
   const install=()=>{
     try{
-      if(typeof accountBalance!=='function'||typeof state==='undefined'){
-        setTimeout(install,0);
-        return;
-      }
+      if(typeof accountBalance!=='function'||typeof state==='undefined'){setTimeout(install,0);return;}
       if(accountBalance.__sfpTransferEvidenceNeutral===true)return;
-
       const source=Function.prototype.toString.call(accountBalance);
       if(!source.includes('transferEvidence'))return;
-
       const original=accountBalance;
       const guarded=function(id){
         let value=Number(original(id)||0);
-        (state.transferEvidence||[])
-          .filter(e=>e.accountId==id&&e.status!=='matched'&&e.balanceImpact===true)
-          .forEach(e=>value-=Number(e.amount)||0);
+        (state.transferEvidence||[]).filter(e=>e.accountId==id&&e.status!=='matched'&&e.balanceImpact===true).forEach(e=>value-=Number(e.amount)||0);
         return Math.round(value*100)/100;
       };
-
       Object.defineProperty(guarded,'__sfpTransferEvidenceNeutral',{value:true});
       Object.defineProperty(guarded,'__sfpOriginalAccountBalance',{value:original});
-      accountBalance=guarded;
-      if(typeof window!=='undefined')window.accountBalance=guarded;
-    }catch(error){
-      console.error('SFP balance evidence guard:',error);
-    }
+      accountBalance=guarded;if(typeof window!=='undefined')window.accountBalance=guarded;
+    }catch(error){console.error('SFP balance evidence guard:',error);}
   };
-
   setTimeout(install,0);
 })();
 
 (function loadFinancialIntegrityV2(){
   if(typeof document==='undefined'||document.querySelector('script[data-sfp-financial-integrity-v2="1"]'))return;
-  const script=document.createElement('script');
-  script.src='financial-integrity-v2.js';
-  script.async=false;
-  script.dataset.sfpFinancialIntegrityV2='1';
-  document.head.appendChild(script);
+  const script=document.createElement('script');script.src='financial-integrity-v2.js';script.async=false;script.dataset.sfpFinancialIntegrityV2='1';document.head.appendChild(script);
 })();
 
 (function loadManualInvoiceReconciliation(){
   if(typeof document==='undefined'||document.querySelector('script[data-sfp-manual-invoice-reconciliation="1"]'))return;
-  const script=document.createElement('script');
-  script.src='invoice-manual-reconciliation.js';
-  script.async=false;
-  script.dataset.sfpManualInvoiceReconciliation='1';
-  document.head.appendChild(script);
+  const script=document.createElement('script');script.src='invoice-manual-reconciliation.js';script.async=false;script.dataset.sfpManualInvoiceReconciliation='1';document.head.appendChild(script);
 })();
 
 (function loadOpenFinancePersonal(){
   if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-personal="1"]'))return;
-  const script=document.createElement('script');
-  script.src='open-finance-personal.js';
-  script.async=false;
-  script.dataset.sfpOpenFinancePersonal='1';
-  document.head.appendChild(script);
+  const script=document.createElement('script');script.src='open-finance-personal.js';script.async=false;script.dataset.sfpOpenFinancePersonal='1';document.head.appendChild(script);
 })();
 
 (function loadOpenFinanceItemRefs(){
   if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-item-refs="1"]'))return;
-  const script=document.createElement('script');
-  script.src='open-finance-item-refs.js';
-  script.async=false;
-  script.dataset.sfpOpenFinanceItemRefs='1';
-  document.head.appendChild(script);
+  const script=document.createElement('script');script.src='open-finance-item-refs.js';script.async=false;script.dataset.sfpOpenFinanceItemRefs='1';document.head.appendChild(script);
 })();
 
 (function loadOpenFinanceUnifiedSync(){
   if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-unified-sync="1"]'))return;
-  const script=document.createElement('script');
-  script.src='open-finance-sync-accounts.js';
-  script.async=false;
-  script.dataset.sfpOpenFinanceUnifiedSync='1';
-  document.head.appendChild(script);
+  const script=document.createElement('script');script.src='open-finance-sync-accounts.js';script.async=false;script.dataset.sfpOpenFinanceUnifiedSync='1';document.head.appendChild(script);
 })();
 
 (function loadOpenFinanceRecurringReconcile(){
   if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-recurring-reconcile="1"]'))return;
-  const script=document.createElement('script');
-  script.src='open-finance-recurring-reconcile.js';
-  script.async=false;
-  script.dataset.sfpOpenFinanceRecurringReconcile='1';
-  document.head.appendChild(script);
+  const script=document.createElement('script');script.src='open-finance-recurring-reconcile.js';script.async=false;script.dataset.sfpOpenFinanceRecurringReconcile='1';document.head.appendChild(script);
 })();
-
 
 (function loadOpenFinanceBills(){
   if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-bills="1"]'))return;
+  const script=document.createElement('script');script.src='open-finance-bills.js';script.async=false;script.dataset.sfpOpenFinanceBills='1';document.head.appendChild(script);
+})();
+
+(function loadFinancialRootIntegrity(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-financial-root-integrity="1"]'))return;
   const script=document.createElement('script');
-  script.src='open-finance-bills.js';
+  script.src='financial-root-integrity.js';
   script.async=false;
-  script.dataset.sfpOpenFinanceBills='1';
+  script.dataset.sfpFinancialRootIntegrity='1';
   document.head.appendChild(script);
 })();
