@@ -43,7 +43,7 @@ async function boot(page,value){
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await expectBootComplete(page,expect,value.settings.name);
-  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBills?.version)>=4);
+  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBills?.version)>=6);
 }
 
 async function apply(page){
@@ -81,12 +81,18 @@ test('Nubank: crédito PENDING é evidência de revisão, nunca pagamento confir
   expect(result.adjustments).toBe(0);
 });
 
-test('Nubank: sem Bill atual a UI declara estimativa não oficial e status bancário não confirmado',async({page})=>{
+test('Nubank: sem Bill atual a UI usa o ciclo bancário e declara estimativa não oficial',async({page})=>{
   await installBridge(page);
   await boot(page,nubankState('Nubank UI truth'));
   await apply(page);
   await page.evaluate(()=>{setPage('cartoes');state.ui.invoiceCardId=1;state.mesAtual='2026-09';renderAll()});
 
+  const card=page.getByRole('button',{name:/Abrir detalhes de Nubank/});
+  await expect(card).toContainText('Fatura atual · Setembro de 2026');
+  await expect(card).toContainText('R$ 241,49');
+  await expect(card).not.toContainText('Fatura atual · Outubro de 2026');
+
+  await page.evaluate(()=>openInvoiceDetail(1));
   const note=page.locator('#openFinanceInvoiceTruth');
   await expect(note).toBeVisible();
   await expect(note).toContainText('fatura estimada no SFP (não oficial): R$ 241,49');
