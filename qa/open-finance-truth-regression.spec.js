@@ -109,7 +109,7 @@ test('cartão conectado mostra uso e limite do banco sem confundir com compromis
   await boot(page,value);
   await apply(page);
   await page.evaluate(()=>{setPage('cartoes');renderCards()});
-  const cardText=await page.locator('#cardsGrid .management-card--interactive').first().innerText();
+  const cardText=(await page.locator('#cardsGrid .management-card--interactive').first().innerText()).replace(/\u00a0/g,' ');
   expect(cardText).toContain('Uso atual do limite');
   expect(cardText).toContain('R$ 403,02');
   expect(cardText).toContain('Limite disponível');
