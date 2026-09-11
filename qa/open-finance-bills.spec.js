@@ -144,7 +144,7 @@ test('diagnóstico separa uso bancário de compromissos projetados do SFP',async
   await page.evaluate(()=>openInvoiceDetail(1));
   await expect(page.locator('#exportInvoiceDiagnostic')).toBeVisible();
   const diagnostic=await page.evaluate(()=>SFPOpenFinanceBills.diag(1,'2026-09'));
-  expect(diagnostic.schema).toBe('sfp-invoice-diagnostic-v2');
+  expect(diagnostic.schema).toBe('sfp-invoice-diagnostic-v3');
   expect(diagnostic.invoice.totalShown).toBe(222.38);
   expect(diagnostic.invoice.officialTotal).toBeNull();
   expect(diagnostic.invoice.estimatedTotal).toBe(222.38);
@@ -182,10 +182,10 @@ test('interface deixa explícito banco atual, estimativa e futuro',async({page})
 test('bridge nativa allowlista e sanitiza Bills da Pluggy',async()=>{
   const bridge=fs.readFileSync('app/src/main/java/com/jhony/sfp/PluggyBridge.java','utf8');
   const loader=fs.readFileSync('app/src/main/assets/www/safe-spend.js','utf8');
-  expect(bridge).toContain('"/bills".equals(path)');
+  expect(bridge).toContain('\"/bills\".equals(path)');
   expect(bridge).toContain('listBillsInternal');
   expect(bridge).toContain('summarizeBill');
-  expect(bridge).toContain('summary.put("billId", billId)');
-  expect(bridge).toContain('result.put("billCount", billCount)');
+  expect(bridge).toContain('summary.put(\"billId\", billId)');
+  expect(bridge).toContain('result.put(\"billCount\", billCount)');
   expect(loader).toContain("script.src='open-finance-bills.js'");
 });
