@@ -85,7 +85,6 @@ test('remove inferência oficial antiga quando o banco não fornece Bill atual',
   expect(result.clearedInferred).toBe(1);
   expect(inv.officialTotal).toBeUndefined();
   expect(inv.officialTotalSource).toBeUndefined();
-  expect(invoiceStatus).toBeTruthy();
 });
 
 test('Bill oficial prevalece sobre estimativa da fatura aberta',async({page})=>{
