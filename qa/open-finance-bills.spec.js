@@ -101,15 +101,38 @@ test('Bill oficial prevalece sobre estimativa da fatura aberta',async({page})=>{
   expect(inv.openFinanceEstimate).toBeUndefined();
 });
 
-test('leitura parcial não cria estimativa bancária nem altera total oficial',async({page})=>{
+test('leitura parcial não cria estimativa bancária, officialTotal nem registro vazio de fatura',async({page})=>{
   await installBridge(page,{partial:true});
   await boot(page,stateFor('Open Finance parcial'));
+  expect(await page.evaluate(()=>state.invoices.length)).toBe(0);
   const result=await page.evaluate(()=>SFPOpenFinanceBills.apply(JSON.parse(PluggyBridge.previewData())));
   expect(result.estimated).toBe(0);
   expect(await page.evaluate(()=>invoiceTotal(1,'2026-09'))).toBe(222.38);
-  const inv=await page.evaluate(()=>invoiceStatus(1,'2026-09'));
-  expect(inv.officialTotal).toBeUndefined();
-  expect(inv.openFinanceEstimate).toBeUndefined();
+  expect(await page.evaluate(()=>state.invoices.length)).toBe(0);
+});
+
+test('reaplicar exatamente o mesmo payload é idempotente financeiramente',async({page})=>{
+  await installBridge(page);
+  await boot(page,stateFor('Open Finance idempotência'));
+  const results=await page.evaluate(()=>{
+    const payload=JSON.parse(PluggyBridge.previewData());
+    const first=SFPOpenFinanceBills.apply(payload);
+    const snapshot=JSON.stringify({
+      cards:state.cards.map(({openFinanceUsageSyncedAt,...card})=>card),
+      invoices:state.invoices.map(({openFinanceBillSyncedAt,...invoice})=>invoice)
+    });
+    const second=SFPOpenFinanceBills.apply(payload);
+    const after=JSON.stringify({
+      cards:state.cards.map(({openFinanceUsageSyncedAt,...card})=>card),
+      invoices:state.invoices.map(({openFinanceBillSyncedAt,...invoice})=>invoice)
+    });
+    return{first,second,same:snapshot===after,invoiceCount:state.invoices.length};
+  });
+  expect(results.first.changed).toBe(true);
+  expect(results.first.estimated).toBe(1);
+  expect(results.second).toEqual({changed:false,bills:0,estimated:0,clearedInferred:0});
+  expect(results.same).toBe(true);
+  expect(results.invoiceCount).toBe(1);
 });
 
 test('diagnóstico separa uso bancário de compromissos projetados do SFP',async({page})=>{
