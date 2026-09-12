@@ -182,10 +182,10 @@ test('interface deixa explícito banco atual, estimativa e futuro',async({page})
 test('bridge nativa allowlista e sanitiza Bills da Pluggy',async()=>{
   const bridge=fs.readFileSync('app/src/main/java/com/jhony/sfp/PluggyBridge.java','utf8');
   const loader=fs.readFileSync('app/src/main/assets/www/safe-spend.js','utf8');
-  expect(bridge).toContain('\"/bills\".equals(path)');
+  expect(bridge).toContain('"/bills".equals(path)');
   expect(bridge).toContain('listBillsInternal');
   expect(bridge).toContain('summarizeBill');
-  expect(bridge).toContain('summary.put(\"billId\", billId)');
-  expect(bridge).toContain('result.put(\"billCount\", billCount)');
+  expect(bridge).toContain('summary.put("billId", billId)');
+  expect(bridge).toContain('result.put("billCount", billCount)');
   expect(loader).toContain("script.src='open-finance-bills.js'");
 });
