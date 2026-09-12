@@ -43,7 +43,7 @@ async function boot(page,value){
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await expectBootComplete(page,expect,value.settings.name);
-  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBills?.version)>=6);
+  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBills?.version)>=8);
 }
 
 async function apply(page){
@@ -92,7 +92,7 @@ test('Nubank: sem Bill atual a UI usa o ciclo bancário e declara estimativa nã
   await expect(card).toContainText('R$ 241,49');
   await expect(card).not.toContainText('Fatura atual · Outubro de 2026');
 
-  await page.evaluate(()=>openInvoiceDetail(1));
+  await card.click();
   const note=page.locator('#openFinanceInvoiceTruth');
   await expect(note).toBeVisible();
   await expect(note).toContainText('fatura estimada no SFP (não oficial): R$ 241,49');
