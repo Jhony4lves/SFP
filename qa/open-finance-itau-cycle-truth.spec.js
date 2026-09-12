@@ -80,6 +80,7 @@ test('Itaú: vencimento bancário ancora setembro e outubro continua futuro',asy
   await expect(modalCurrent).toContainText('R$ 321,24');
   await expect(modalCurrent).toContainText('Setembro de 2026');
   await expect(modalCurrent).not.toContainText('Outubro de 2026');
+  await page.getByRole('button',{name:'Abrir fatura'}).click();
 
   const note=page.locator('#openFinanceInvoiceTruth');
   await expect(note).toBeVisible();
