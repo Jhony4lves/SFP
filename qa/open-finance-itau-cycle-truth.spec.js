@@ -40,7 +40,7 @@ async function boot(page){
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await expectBootComplete(page,expect,'Itaú cycle truth');
-  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBills?.version)>=8);
+  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBills?.version)>=9);
 }
 
 test('Itaú: vencimento bancário ancora setembro e outubro continua futuro',async({page})=>{
@@ -50,9 +50,12 @@ test('Itaú: vencimento bancário ancora setembro e outubro continua futuro',asy
   await page.evaluate(()=>{setPage('cartoes');renderAll()});
 
   const card=page.getByRole('button',{name:/Abrir detalhes de Itaú Click/});
-  await expect(card).toContainText('Fatura atual · Setembro de 2026');
-  await expect(card).toContainText('R$ 321,24');
-  await expect(card).not.toContainText('R$ 180,82');
+  const current=card.locator('.sfp-card-v2-primary');
+  const next=card.locator('.sfp-card-v2-stat').filter({hasText:'Próxima fatura'});
+  await expect(current).toContainText('Fatura atual · Setembro de 2026');
+  await expect(current).toContainText('R$ 321,24');
+  await expect(current).not.toContainText('R$ 180,82');
+  await expect(next).toContainText('R$ 180,82');
 
   const truth=await page.evaluate(()=>{
     const sep=invoiceStatus(1,'2026-09');
@@ -73,6 +76,11 @@ test('Itaú: vencimento bancário ancora setembro e outubro continua futuro',asy
   expect(truth.futureOct).toBe(180.82);
 
   await card.click();
+  const modalCurrent=page.locator('#modalRoot .metric').filter({hasText:'Fatura atual'});
+  await expect(modalCurrent).toContainText('R$ 321,24');
+  await expect(modalCurrent).toContainText('Setembro de 2026');
+  await expect(modalCurrent).not.toContainText('Outubro de 2026');
+
   const note=page.locator('#openFinanceInvoiceTruth');
   await expect(note).toBeVisible();
   await expect(note).toContainText('fatura estimada no SFP (não oficial): R$ 321,24');
