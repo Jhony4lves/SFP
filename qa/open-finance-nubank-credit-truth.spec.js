@@ -98,6 +98,7 @@ test('Nubank: sem Bill atual a UI usa o ciclo bancário e declara estimativa nã
   await expect(modalCurrent).toContainText('Setembro de 2026');
   await expect(modalCurrent).not.toContainText('Outubro de 2026');
 
+  await page.getByRole('button',{name:'Abrir fatura'}).click();
   const note=page.locator('#openFinanceInvoiceTruth');
   await expect(note).toBeVisible();
   await expect(note).toContainText('fatura estimada no SFP (não oficial): R$ 241,49');
