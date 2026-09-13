@@ -42,6 +42,7 @@ jobs:
       SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
       SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
       SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
+      SFP_QA_CERT_SHA256: bf036c1668644f9c5b739e827472c7b29392de54554cdfbf2890d3b764aed2d9
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -75,13 +76,23 @@ jobs:
           echo "SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-qa.jks" >> "$GITHUB_ENV"
       - name: Build update-safe QA APK
         run: gradle :app:assembleDebug :app:assembleDebugAndroidTest
-      - name: Verify QA APK signature and launcher resources
+      - name: Verify pinned QA APK signature and launcher resources
+        shell: bash
         run: |
           set -euo pipefail
+          apk="app/build/outputs/apk/debug/app-debug.apk"
           echo "=== ASSINATURA DO APK QA ==="
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/debug/app-debug.apk
+          signature="$($ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$apk")"
+          printf '%s\n' "$signature"
+          actual_cert="$(printf '%s\n' "$signature" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr '[:upper:]' '[:lower:]')"
+          expected_cert="$(printf '%s' "$SFP_QA_CERT_SHA256" | tr '[:upper:]' '[:lower:]')"
+          if [ -z "$actual_cert" ] || [ "$actual_cert" != "$expected_cert" ]; then
+            echo "::error::Certificado inesperado no APK QA. A identidade de assinatura não pode mudar silenciosamente entre builds, pois isso quebra atualização in-place e pode levar à perda do cofre local."
+            exit 1
+          fi
+          echo "QA signing identity pinned: $actual_cert"
           echo "=== RECURSOS DE LAUNCHER EMPACOTADOS NO APK DEBUG ==="
-          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E "res/mipmap|res/drawable|ic_launcher" || true
+          unzip -l "$apk" | grep -E "res/mipmap|res/drawable|ic_launcher" || true
       - name: Record APK checksums without publishing app data
         run: |
           mkdir -p build/reports
