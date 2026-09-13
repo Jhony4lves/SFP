@@ -52,6 +52,19 @@ test.describe('Android release engineering', () => {
     expect(workflow).toContain('EXPECTED_TAG="v${VERSION_NAME}"');
   });
 
+  test('APK de QA usa assinatura persistente e não publica build efêmera', () => {
+    const build = read('app/build.gradle');
+    const workflow = read('.github/workflows/qa.yml');
+
+    expect(build).toMatch(/debug\s*\{[\s\S]*?applicationIdSuffix\s+["']\.debug["'][\s\S]*?signingConfig\s+signingConfigs\.release[\s\S]*?\}/);
+    expect(workflow).toContain('Require stable QA signing identity');
+    expect(workflow).toContain('SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}');
+    expect(workflow).toContain('SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-qa.jks');
+    expect(workflow).toContain('apksigner" verify --verbose --print-certs app/build/outputs/apk/debug/app-debug.apk');
+    expect(workflow).toContain('if: success()');
+    expect(workflow).toContain('O QA não publicará APK com assinatura efêmera');
+  });
+
   test('keystore e artefatos locais estão ignorados pelo Git', () => {
     const ignore = read('.gitignore');
 
