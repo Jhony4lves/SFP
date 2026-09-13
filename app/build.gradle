@@ -39,6 +39,12 @@ android {
         debug {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
+            // QA APKs must keep a stable signature across CI runs. Otherwise Android
+            // requires uninstalling the previous com.jhony.sfp.debug build, which wipes
+            // the app-private Pluggy vault and its Android Keystore key.
+            if (System.getenv("SFP_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
         }
         release {
             minifyEnabled false
