@@ -37,6 +37,11 @@ jobs:
 
   android-qa-build:
     runs-on: ubuntu-latest
+    env:
+      SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}
+      SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
+      SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
+      SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -49,9 +54,32 @@ jobs:
           gradle-version: "8.11.1"
       - run: yes | sdkmanager --licenses >/dev/null || true
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      - run: gradle :app:assembleDebug :app:assembleDebugAndroidTest
-      - name: Inspect APK launcher resources
+      - name: Require stable QA signing identity
+        shell: bash
         run: |
+          set -euo pipefail
+          missing=0
+          for var in SFP_KEYSTORE_BASE64 SFP_KEYSTORE_PASSWORD SFP_KEY_ALIAS SFP_KEY_PASSWORD; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::$var não está configurado. O QA não publicará APK com assinatura efêmera, pois isso força reinstalação e apaga o cofre Open Finance."
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - name: Restore persistent QA signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-qa.jks"
+          test -s "$RUNNER_TEMP/sfp-qa.jks"
+          echo "SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-qa.jks" >> "$GITHUB_ENV"
+      - name: Build update-safe QA APK
+        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Verify QA APK signature and launcher resources
+        run: |
+          set -euo pipefail
+          echo "=== ASSINATURA DO APK QA ==="
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/debug/app-debug.apk
           echo "=== RECURSOS DE LAUNCHER EMPACOTADOS NO APK DEBUG ==="
           unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E "res/mipmap|res/drawable|ic_launcher" || true
       - name: Record APK checksums without publishing app data
@@ -64,9 +92,9 @@ jobs:
           name: android-qa-checksums
           path: build/reports/android-qa-checksums.txt
           if-no-files-found: error
-      - if: always()
+      - if: success()
         uses: actions/upload-artifact@v6
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: warn
+          if-no-files-found: error
