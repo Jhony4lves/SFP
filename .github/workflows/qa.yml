@@ -3,7 +3,7 @@ name: SFP QA Lab
 on:
   pull_request:
   push:
-    branches: ["qa/**"]
+    branches: ["main", "qa/**"]
   workflow_dispatch:
 
 concurrency:
