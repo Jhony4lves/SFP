@@ -104,3 +104,46 @@ test('Itaú: setembro liquidado permite rollover seguro para outubro',async({pag
   await expect(current).toContainText('Fatura atual · Outubro de 2026');
   await expect(current).toContainText('R$ 180,82');
 });
+
+test('upgrade QA672→V10 ignora seleção de outubro persistida quando setembro segue aberto',async({page})=>{
+  await installBridge(page);
+  await page.goto('/index.html');
+  await expectBootComplete(page,expect,'Fixture QA');
+  const persisted=itauState();
+  persisted.ui=persisted.ui||{};
+  persisted.ui.invoiceMonthByCard={1:'2026-10'};
+  persisted.cards[0].openFinanceBalanceCloseDate='2026-10-02';
+  persisted.cards[0].openFinanceBalanceDueDate='2026-10-10';
+  persisted.cards[0].openFinanceUsedAmount=1494.37;
+  persisted.cards[0].openFinanceCreditLimit=2090;
+  persisted.cards[0].openFinanceAvailableCreditLimit=595.63;
+  persisted.invoices=[{
+    id:902,cardId:1,month:'2026-09',status:'open',paidAmount:0,payments:[],
+    openFinanceEstimate:{amount:321.24,official:false,basis:'local-confirmed',bankStatus:'unconfirmed-without-current-bill'}
+  }];
+  await writeIndexedDB(page,persisted);
+  await page.evaluate(()=>localStorage.clear());
+  await page.reload();
+  await expectBootComplete(page,expect,'Itaú cycle truth');
+  await page.evaluate(()=>{window.localCivilMonth=()=> '2026-09';setPage('cartoes');renderAll()});
+  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBills?.version)>=10);
+
+  const card=page.getByRole('button',{name:/Abrir detalhes de Itaú Click/});
+  await expect(card.locator('.sfp-card-v2-primary')).toContainText('Fatura atual · Setembro de 2026');
+  await expect(card.locator('.sfp-card-v2-primary')).toContainText('R$ 321,24');
+
+  await page.evaluate(()=>SFPOpenFinanceBills.apply(JSON.parse(PluggyBridge.previewData())));
+  await page.evaluate(()=>renderAll());
+  await expect(card.locator('.sfp-card-v2-primary')).toContainText('Fatura atual · Setembro de 2026');
+  await expect(card.locator('.sfp-card-v2-primary')).toContainText('R$ 321,24');
+
+  const stateAfter=await page.evaluate(()=>({
+    selected:state.ui.invoiceMonthByCard?.[1],
+    septemberStatus:invoiceStatus(1,'2026-09').status,
+    septemberTotal:invoiceTotal(1,'2026-09'),
+    octoberTotal:invoiceTotal(1,'2026-10')
+  }));
+  expect(stateAfter.septemberStatus).toBe('open');
+  expect(stateAfter.septemberTotal).toBe(321.24);
+  expect(stateAfter.octoberTotal).toBe(180.82);
+});
