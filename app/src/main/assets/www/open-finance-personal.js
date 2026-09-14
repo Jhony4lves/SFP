@@ -691,6 +691,7 @@
     clearCredentials,
     cleanText,
     suggestSfpEntity,
+    itemDisplayName,
     likelyExisting,
     planInvoiceSync,
     invoiceMonthForCard,

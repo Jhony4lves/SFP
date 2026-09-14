@@ -3,19 +3,21 @@ const fs = require('fs');
 const vm = require('vm');
 
 // Run the production resolver with bank payloads, without UI or a network connection.
-function resolver({ transactions = [], bills = [], partial = false, stored = {} } = {}) {
+function resolver({ transactions = [], bills = [], partial = false, stored = {}, realMapping = false } = {}) {
   const card = { id: 1, name: 'Nubank', closeDay: 9, dueDay: 16, openFinanceBankBills: stored };
   const account = { type: 'CREDIT', transactions, bills, transactionPreviewHasMore: partial,
     creditData: { balanceDueDate: '2026-09-16', balanceCloseDate: '2026-09-09' } };
+  const item={connectorName:'MeuPluggy',accounts:realMapping?[{type:'BANK',name:'Nubank'},account]:[account]};
   const context = {
     state: { cards: [card], invoices: [], baseDate: '2026-09-14', mesAtual: '2026-09' },
     document: { querySelectorAll: () => [], getElementById: () => null },
-    SFPOpenFinanceBills: { getLastPreview: () => ({ ok: true, items: [{ accounts: [account] }] }) },
+    SFPOpenFinanceBills: { getLastPreview: () => ({ ok: true, items: [item] }) },
     SFPOpenFinancePersonal: { suggestSfpEntity: () => ({ entity: card }) },
     invoiceCalculated: () => 241.49, invoiceStatus: () => ({}),
     renderCards() {}, openCardDetail() {}, setInterval() {}, clearInterval() {}
   };
   vm.createContext(context);
+  if(realMapping)vm.runInContext(fs.readFileSync('app/src/main/assets/www/open-finance-personal.js','utf8'),context);
   vm.runInContext(fs.readFileSync('app/src/main/assets/www/open-finance-bank-truth-v2.js', 'utf8'), context);
   return { api: context.SFPOpenFinanceBankTruth, card, account };
 }
@@ -109,4 +111,12 @@ test('mês previsto também governa grupos com billId, mantendo pagamento penden
     { ...payment, date: '2026-09-11', billForecastDate: '2026-09', billId: 'itau-sep' }
   ] });
   expect(api.bankTruth(card, '2026-09')).toMatchObject({ amount: 327.59, official: false, paymentsExcluded: 70.65 });
+});
+
+test('cartão sem nome usa o banco da mesma conexão para resolver a fatura', () => {
+  const { api, card } = resolver({ realMapping: true, transactions: [
+    { date: '2026-09-02', amount: 170.84, status: 'PENDING' }
+  ] });
+  expect(api.bankTruth(card, '2026-09')).toMatchObject({ amount: 170.84, official: false });
+  expect(api.displayTotal(card, '2026-09')).toBe(170.84);
 });

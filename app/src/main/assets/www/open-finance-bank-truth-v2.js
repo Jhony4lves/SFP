@@ -43,7 +43,7 @@
     catch(_){return null;}
   }
 
-  function itemName(item){return clean(item?.institution)||clean(item?.connectorName);}
+  function itemName(item){return global.SFPOpenFinancePersonal?.itemDisplayName?.(item)||clean(item?.institution)||clean(item?.connectorName);}
 
   function cardFor(account,item){
     try{return global.SFPOpenFinancePersonal?.suggestSfpEntity?.(account,itemName(item))?.entity||null;}
