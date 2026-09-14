@@ -82,7 +82,7 @@ jobs:
           test -s "$RUNNER_TEMP/sfp-qa.jks"
           echo "SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-qa.jks" >> "$GITHUB_ENV"
       - name: Build update-safe QA APK
-        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest
+        run: gradle :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest
       - name: Verify pinned QA APK signature and launcher resources
         shell: bash
         run: |
