@@ -80,3 +80,33 @@ test('cache legado composto só por pagamento não perpetua fatura zero após at
   expect(api.bankTruth(card, '2026-09')).toBeNull();
   expect(api.displayTotal(card, '2026-09')).toBe(241.49);
 });
+
+test('mês previsto pelo banco inclui compra fora do corte local e exclui a próxima fatura', () => {
+  const { api, card } = resolver({ transactions: [
+    { date: '2026-09-11', amount: 100, status: 'PENDING', billForecastDate: '2026-09' },
+    { date: '2026-09-09', amount: 43.48, status: 'PENDING', billForecastDate: '2026-10' }
+  ] });
+  expect(api.displayTotal(card, '2026-09')).toBe(100);
+  expect(api.displayTotal(card, '2026-10')).toBe(43.48);
+});
+
+test('crédito de compra é diferente de pagamento: R$ 252,48 menos R$ 81,64 resulta em estimativa de R$ 170,84', () => {
+  // Aggregate amounts from the September diagnostic; forecast months are an explicit fixture,
+  // not a claim that the older Android export retained the provider metadata.
+  const { api, card } = resolver({ transactions: [
+    { date: '2026-08-11', amount: 252.48, status: 'PENDING', billForecastDate: '2026-09' },
+    { date: '2026-09-02', amount: -81.64, description: 'Crédito de Google One', status: 'PENDING', billForecastDate: '2026-09' },
+    { date: '2026-08-10', amount: -59.99, description: 'Pagamento recebido', status: 'PENDING', billForecastDate: '2026-09' },
+    { date: '2026-09-09', amount: 43.48, status: 'PENDING', billForecastDate: '2026-10' }
+  ] });
+  expect(api.bankTruth(card, '2026-09')).toMatchObject({ amount: 170.84, official: false, paymentsExcluded: 59.99 });
+  expect(api.displayTotal(card, '2026-10')).toBe(43.48);
+});
+
+test('mês previsto também governa grupos com billId, mantendo pagamento pendente excluído', () => {
+  const { api, card } = resolver({ transactions: [
+    { date: '2026-09-11', amount: 327.59, status: 'PENDING', billForecastDate: '2026-09', billId: 'itau-sep' },
+    { ...payment, date: '2026-09-11', billForecastDate: '2026-09', billId: 'itau-sep' }
+  ] });
+  expect(api.bankTruth(card, '2026-09')).toMatchObject({ amount: 327.59, official: false, paymentsExcluded: 70.65 });
+});

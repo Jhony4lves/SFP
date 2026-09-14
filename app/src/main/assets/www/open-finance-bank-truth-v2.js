@@ -172,6 +172,13 @@
     return ['POSTED','COMPLETED','CLEARED','SETTLED','CONFIRMED'].some(token=>status.includes(token));
   }
 
+  function belongsToCycle(transaction,month,bounds){
+    const forecast=clean(transaction?.billForecastDate);
+    if(validMonth(forecast))return forecast===month;
+    const txDate=isoDate(transaction?.date);
+    return validDate(txDate)&&txDate>=bounds.startDate&&txDate<=bounds.endDate;
+  }
+
   function cycleTransactions(card,month,{confirmedOnly=false}={}){
     const account=previewAccount(card)?.account;
     if(!account||account.transactionsError||account.transactionPreviewHasMore)return null;
@@ -183,7 +190,7 @@
       if(cancelled(transaction))continue;
       if(confirmedOnly&&!confirmed(transaction))continue;
       const txDate=isoDate(transaction?.date),amount=Number(transaction?.amount);
-      if(!validDate(txDate)||txDate<bounds.startDate||txDate>bounds.endDate||!Number.isFinite(amount)||Math.abs(amount)<.0001)continue;
+      if(!belongsToCycle(transaction,month,bounds)||!Number.isFinite(amount)||Math.abs(amount)<.0001)continue;
 
       if(amount<0){
         if(isPaymentCredit(transaction)){paymentsExcluded+=Math.abs(amount);continue;}
@@ -228,7 +235,7 @@
     for(const transaction of Array.isArray(account.transactions)?account.transactions:[]){
       const billId=clean(transaction?.billId),amount=Number(transaction?.amount),txDate=isoDate(transaction?.date);
       if(cancelled(transaction)||!billId||!Number.isFinite(amount)||!validDate(txDate))continue;
-      if(txDate<bounds.startDate||txDate>bounds.endDate)continue;
+      if(!belongsToCycle(transaction,month,bounds))continue;
       const group=groups.get(billId)||{billId,debits:0,credits:0,paymentsExcluded:0,count:0,pendingCount:0,maxDate:''};
       if(amount<0){
         if(isPaymentCredit(transaction))group.paymentsExcluded+=Math.abs(amount);

@@ -559,6 +559,8 @@ public final class PluggyBridge {
         String billId = cleanFirst(creditMetadata == null ? "" : cleanString(creditMetadata, "billId"),
                 cleanString(transaction, "billId"));
         if (!billId.isEmpty()) summary.put("billId", billId);
+        String forecast = creditMetadata == null ? "" : cleanString(creditMetadata, "billForecastDate");
+        if (forecast.matches("[0-9]{4}-(0[1-9]|1[0-2])")) summary.put("billForecastDate", forecast);
         copyOptionalNumber(transaction, summary, "amount");
         copyOptionalNumber(transaction, summary, "amountInAccountCurrency");
 

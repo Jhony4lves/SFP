@@ -30,6 +30,14 @@ public class PluggyTransactionContractTest {
         assertEquals("september-bill", tx.getString("billId"));
     }
 
+    @Test public void preservesForecastMonthForPendingTransactions() throws Exception {
+        JSONObject tx = summarize("{\"amount\":18.98,\"status\":\"PENDING\","
+                + "\"creditCardMetadata\":{\"billForecastDate\":\"2026-09\"}}");
+        assertEquals("2026-09", tx.getString("billForecastDate"));
+        assertFalse(tx.has("billId"));
+        assertFalse(summarize("{\"creditCardMetadata\":{\"billForecastDate\":\"2026-13\"}}").has("billForecastDate"));
+    }
+
     @Test public void legacyRootBillStillWorksWithoutMetadata() throws Exception {
         assertEquals("legacy-bill", summarize("{\"billId\":\"legacy-bill\"}").getString("billId"));
         assertFalse(summarize("{}").has("billId"));
