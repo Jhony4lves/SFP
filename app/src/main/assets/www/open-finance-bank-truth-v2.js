@@ -1,8 +1,8 @@
-(function installOpenFinanceBankTruthV2(global){
+(function installOpenFinanceBankTruthV3(global){
   'use strict';
 
-  const VERSION=2;
-  const FLAG='__SFP_OF_BANK_TRUTH_V2';
+  const VERSION=3;
+  const FLAG='__SFP_OF_BANK_TRUTH_V3';
   if(global[FLAG])return;
 
   const round2=value=>Math.round((Number(value)||0)*100)/100;
@@ -15,7 +15,6 @@
   const localToday=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   const localMonth=()=>localToday().slice(0,7);
   const activeMonth=()=>validMonth(global.state?.mesAtual)?global.state.mesAtual:localMonth();
-  const monthAdd=(month,delta)=>{if(!validMonth(month))return month;const [y,m]=month.split('-').map(Number),d=new Date(y,m-1+Number(delta||0),1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;};
   let persistenceBusy=false;
 
   function preview(){
@@ -43,17 +42,36 @@
     return null;
   }
 
-  function dateForMonth(card,month,kind,account=null){
+  function invoiceRecord(card,month){
+    return (global.state?.invoices||[]).find(inv=>sameId(inv?.cardId,card?.id)&&inv?.month===month)||null;
+  }
+
+  function currentBill(card,month){
+    const account=previewAccount(card)?.account;
+    if(!account)return null;
+    const bills=Array.isArray(account.bills)?account.bills:[];
+    const candidates=bills.filter(bill=>isoMonth(bill?.dueDate)===month||isoMonth(bill?.billClosingDate)===month);
+    if(!candidates.length)return null;
+    return [...candidates].sort((a,b)=>isoDate(b?.dueDate).localeCompare(isoDate(a?.dueDate)))[0]||null;
+  }
+
+  function explicitDateForMonth(card,month,kind,account=null,bill=null){
+    const inv=invoiceRecord(card,month);
     const key=kind==='due'?'balanceDueDate':'balanceCloseDate';
-    const persisted=kind==='due'?card?.openFinanceBalanceDueDate:card?.openFinanceBalanceCloseDate;
-    const live=account?.creditData?.[key];
-    for(const candidate of [live,persisted]){
+    const candidates=kind==='due'
+      ?[bill?.dueDate,inv?.documentDueDate,account?.creditData?.[key],card?.openFinanceBalanceDueDate,card?.openFinanceBankBills?.[month]?.dueDate]
+      :[bill?.billClosingDate,inv?.documentCloseDate,account?.creditData?.[key],card?.openFinanceBalanceCloseDate,card?.openFinanceBankBills?.[month]?.closeDate];
+    for(const candidate of candidates){
       const value=isoDate(candidate);
       if(validDate(value)&&value.slice(0,7)===month)return value;
     }
-    const dayRaw=kind==='due'?card?.dueDay:card?.closeDay;
-    const day=Math.max(1,Math.trunc(Number(dayRaw)||1));
+    return'';
+  }
+
+  function fallbackDate(card,month,kind){
     if(!validMonth(month))return'';
+    const raw=kind==='due'?card?.dueDay:card?.closeDay;
+    const day=Math.max(1,Math.trunc(Number(raw)||1));
     const [year,number]=month.split('-').map(Number);
     const lastDay=new Date(year,number,0).getDate();
     return `${month}-${String(Math.min(day,lastDay)).padStart(2,'0')}`;
@@ -62,89 +80,119 @@
   function bankCalendar(card,month){
     const linked=previewAccount(card);
     const account=linked?.account||null;
-    const dueDate=dateForMonth(card,month,'due',account);
-    const closeDate=dateForMonth(card,month,'close',account);
+    const bill=currentBill(card,month);
+    const bankDueDate=explicitDateForMonth(card,month,'due',account,bill);
+    const bankCloseDate=explicitDateForMonth(card,month,'close',account,bill);
+    const dueDate=bankDueDate||fallbackDate(card,month,'due');
+    const closeDate=bankCloseDate||fallbackDate(card,month,'close');
     return{
       dueDate,
       closeDate,
+      bankDueDate:bankDueDate||null,
+      bankCloseDate:bankCloseDate||null,
       dueDay:validDate(dueDate)?Number(dueDate.slice(8,10)):Math.max(1,Math.trunc(Number(card?.dueDay)||1)),
       closeDay:validDate(closeDate)?Number(closeDate.slice(8,10)):Math.max(1,Math.trunc(Number(card?.closeDay)||1)),
-      account
+      account,
+      bill
     };
   }
 
   function liveBill(card,month){
-    const account=previewAccount(card)?.account;
-    if(!account)return null;
-    const bills=Array.isArray(account.bills)?account.bills:[];
-    const candidates=bills.filter(bill=>isoMonth(bill?.dueDate)===month||isoMonth(bill?.billClosingDate)===month);
-    if(!candidates.length)return null;
-    const selected=candidates.sort((a,b)=>isoDate(b?.dueDate).localeCompare(isoDate(a?.dueDate)))[0];
-    const amount=Math.abs(Number(selected?.totalAmount));
+    const bill=currentBill(card,month);
+    if(!bill)return null;
+    const amount=Math.abs(Number(bill?.totalAmount));
     if(!Number.isFinite(amount))return null;
+    const calendar=bankCalendar(card,month);
     return{
       amount:round2(amount),
       source:'open-finance-bill',
       official:true,
-      billId:clean(selected?.id)||null,
-      dueDate:isoDate(selected?.dueDate)||null,
-      closeDate:isoDate(selected?.billClosingDate)||null
+      bankBacked:true,
+      billId:clean(bill?.id)||null,
+      dueDate:isoDate(bill?.dueDate)||calendar.bankDueDate||null,
+      closeDate:isoDate(bill?.billClosingDate)||calendar.bankCloseDate||null
     };
   }
 
+  function normalizedText(value){
+    return clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  }
+
   function isPaymentCredit(transaction){
-    const text=clean(transaction?.description).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-    return /pagamento|payment|pgto|pag fatura|debito automatico|autopay|liquidacao/.test(text);
+    return /pagamento|payment|pgto|pag fatura|debito automatico|autopay|liquidacao/.test(normalizedText(transaction?.description));
+  }
+
+  function confirmed(transaction){
+    const status=clean(transaction?.status).toUpperCase();
+    if(!status)return true;
+    if(status.includes('PENDING')||status.includes('CANCEL'))return false;
+    return ['POSTED','COMPLETED','CLEARED','SETTLED','CONFIRMED'].some(token=>status.includes(token));
   }
 
   function linkedBillFromAccount(card,month){
-    const linked=previewAccount(card);
-    const account=linked?.account;
+    const account=previewAccount(card)?.account;
     if(!account||account.transactionsError||account.transactionPreviewHasMore)return null;
-    const transactions=Array.isArray(account.transactions)?account.transactions:[];
     const groups=new Map();
-    for(const transaction of transactions){
-      const status=clean(transaction?.status).toUpperCase();
-      const billId=clean(transaction?.billId);
-      const amount=Number(transaction?.amount);
-      if(status!=='POSTED'||!billId||!Number.isFinite(amount))continue;
+    for(const transaction of Array.isArray(account.transactions)?account.transactions:[]){
+      const billId=clean(transaction?.billId),amount=Number(transaction?.amount);
+      if(!confirmed(transaction)||!billId||!Number.isFinite(amount))continue;
       const date=isoDate(transaction?.date);
-      const group=groups.get(billId)||{billId,amount:0,count:0,maxDate:'',dates:[]};
+      const group=groups.get(billId)||{billId,amount:0,count:0,maxDate:''};
       if(amount>0)group.amount+=amount;
       else if(amount<0&&!isPaymentCredit(transaction))group.amount+=amount;
       group.count++;
-      if(validDate(date)){
-        group.dates.push(date);
-        if(!group.maxDate||date>group.maxDate)group.maxDate=date;
-      }
+      if(validDate(date)&&(!group.maxDate||date>group.maxDate))group.maxDate=date;
       groups.set(billId,group);
     }
     if(!groups.size)return null;
-
     const calendar=bankCalendar(card,month);
     let candidates=[...groups.values()].filter(group=>group.amount>0);
-    if(!candidates.length)return null;
-    if(validDate(calendar.closeDate)){
-      const beforeClose=candidates.filter(group=>group.maxDate&&group.maxDate<=calendar.closeDate);
-      if(beforeClose.length)candidates=beforeClose;
+    if(calendar.bankCloseDate){
+      const bounded=candidates.filter(group=>group.maxDate&&group.maxDate<=calendar.bankCloseDate);
+      if(bounded.length)candidates=bounded;
     }
-    candidates.sort((a,b)=>{
-      const byDate=clean(b.maxDate).localeCompare(clean(a.maxDate));
-      if(byDate)return byDate;
-      return b.amount-a.amount;
-    });
+    candidates.sort((a,b)=>clean(b.maxDate).localeCompare(clean(a.maxDate))||b.amount-a.amount);
     const selected=candidates[0];
-    if(!selected||selected.count<1)return null;
+    if(!selected)return null;
     return{
-      amount:round2(Math.max(0,selected.amount)),
+      amount:round2(selected.amount),
       source:'open-finance-linked-transactions',
       official:false,
       bankBacked:true,
       billId:selected.billId,
       transactionCount:selected.count,
       maxDate:selected.maxDate||null,
-      dueDate:calendar.dueDate||null,
-      closeDate:calendar.closeDate||null
+      dueDate:calendar.bankDueDate||calendar.dueDate||null,
+      closeDate:calendar.bankCloseDate||calendar.closeDate||null
+    };
+  }
+
+  function postedCycleFromAccount(card,month){
+    const account=previewAccount(card)?.account;
+    if(!account||account.transactionsError||account.transactionPreviewHasMore)return null;
+    const calendar=bankCalendar(card,month);
+    let amount=0,count=0,maxDate='';
+    for(const transaction of Array.isArray(account.transactions)?account.transactions:[]){
+      if(!confirmed(transaction))continue;
+      const date=isoDate(transaction?.date),value=Number(transaction?.amount);
+      if(!validDate(date)||date.slice(0,7)!==month||!Number.isFinite(value))continue;
+      if(calendar.bankCloseDate&&date>calendar.bankCloseDate)continue;
+      if(value>0){amount+=value;count++;}
+      else if(value<0&&!isPaymentCredit(transaction)){amount+=value;count++;}
+      if(!maxDate||date>maxDate)maxDate=date;
+    }
+    amount=round2(Math.max(0,amount));
+    if(!count||amount<=0)return null;
+    return{
+      amount,
+      source:'open-finance-posted-cycle',
+      official:false,
+      bankBacked:true,
+      billId:null,
+      transactionCount:count,
+      maxDate:maxDate||null,
+      dueDate:calendar.bankDueDate||calendar.dueDate||null,
+      closeDate:calendar.bankCloseDate||calendar.closeDate||null
     };
   }
 
@@ -157,8 +205,7 @@
 
   function invoiceOfficial(card,month){
     try{
-      const status=global.invoiceStatus?.(card?.id,month);
-      const amount=Number(status?.officialTotal);
+      const status=global.invoiceStatus?.(card?.id,month),amount=Number(status?.officialTotal);
       if(!Number.isFinite(amount))return null;
       return{amount:round2(amount),source:clean(status?.officialTotalSource)||'sfp-official',official:true};
     }catch(_){return null;}
@@ -168,8 +215,7 @@
     const account=previewAccount(card)?.account;
     if(account&&!account.transactionsError&&!account.transactionPreviewHasMore){
       return round2((account.transactions||[]).filter(tx=>{
-        const status=clean(tx?.status).toUpperCase();
-        const amount=Number(tx?.amount);
+        const status=clean(tx?.status).toUpperCase(),amount=Number(tx?.amount);
         return status.includes('PENDING')&&Number.isFinite(amount)&&amount>0&&isoMonth(tx?.date)===month;
       }).reduce((sum,tx)=>sum+Math.abs(Number(tx.amount)||0),0));
     }
@@ -182,15 +228,12 @@
   }
 
   function bankTruth(card,month){
-    const live=liveBill(card,month);
-    if(live)return live;
-    const linked=linkedBillFromAccount(card,month);
-    if(linked)return linked;
-    const stored=storedBankBill(card,month);
-    if(stored)return stored;
-    const official=invoiceOfficial(card,month);
-    if(official)return official;
-    return null;
+    return liveBill(card,month)
+      ||linkedBillFromAccount(card,month)
+      ||postedCycleFromAccount(card,month)
+      ||storedBankBill(card,month)
+      ||invoiceOfficial(card,month)
+      ||null;
   }
 
   function displayTotal(card,month){
@@ -205,11 +248,13 @@
   }
 
   function closed(card,month,referenceDate=localToday()){
+    const ref=isoDate(referenceDate),calendar=bankCalendar(card,month);
+    if(!validDate(ref))return false;
+    if(calendar.bankCloseDate&&ref>=calendar.bankCloseDate)return true;
+    if(calendar.bankDueDate&&ref>calendar.bankDueDate)return true;
     const truth=bankTruth(card,month);
-    if(truth?.source==='open-finance-bill'||truth?.source==='open-finance-linked-transactions')return true;
-    const ref=isoDate(referenceDate);
-    const close=bankCalendar(card,month).closeDate;
-    return validDate(ref)&&validDate(close)&&ref>=close;
+    if(truth?.source==='open-finance-bill'&&truth?.closeDate&&validDate(truth.closeDate))return ref>=truth.closeDate;
+    return false;
   }
 
   function monthLabel(month){try{return global.monthName?.(month)||month;}catch(_){return month;}}
@@ -223,16 +268,13 @@
 
   function patchCalendarText(root,card,month){
     if(!root||!card)return;
-    const calendar=bankCalendar(card,month);
-    const text=`Fecha dia ${calendar.closeDay} · vence dia ${calendar.dueDay}`;
-    const nodes=[...root.querySelectorAll('small,p,span')];
-    const node=nodes.find(el=>/^Fecha dia \d+\s*·\s*vence dia \d+/i.test(clean(el.textContent)));
+    const calendar=bankCalendar(card,month),text=`Fecha dia ${calendar.closeDay} · vence dia ${calendar.dueDay}`;
+    const node=[...root.querySelectorAll('small,p,span')].find(el=>/^Fecha dia \d+\s*·\s*vence dia \d+/i.test(clean(el.textContent)));
     if(node)node.textContent=text;
   }
 
   function patchGrid(){
-    const cards=global.state?.cards||[];
-    const month=activeMonth();
+    const cards=global.state?.cards||[],month=activeMonth();
     const nodes=[...document.querySelectorAll('#cardsGrid .management-card--interactive')];
     nodes.forEach((node,index)=>{
       const card=cards[index];
@@ -279,9 +321,12 @@
     const month=activeMonth(),modal=document.querySelector('#modalRoot .modal');
     if(!modal)return;
     patchCalendarText(modal,card,month);
-    const metrics=[...modal.querySelectorAll('.metric')];
-    const current=metrics.find(el=>/Fatura atual/i.test(el.textContent||''));
-    if(current){const strong=current.querySelector('strong'),small=current.querySelector('small');if(strong)strong.textContent=money(displayTotal(card,month));if(small)small.textContent=monthLabel(month);}
+    const current=[...modal.querySelectorAll('.metric')].find(el=>/Fatura atual/i.test(el.textContent||''));
+    if(current){
+      const strong=current.querySelector('strong'),small=current.querySelector('small');
+      if(strong)strong.textContent=money(displayTotal(card,month));
+      if(small)small.textContent=monthLabel(month);
+    }
   }
 
   function rememberBankTruth(){
@@ -290,12 +335,20 @@
     let changed=false;
     const month=activeMonth();
     for(const card of global.state.cards){
-      const linked=linkedBillFromAccount(card,month);
-      if(!linked)continue;
+      const truth=liveBill(card,month)||linkedBillFromAccount(card,month)||postedCycleFromAccount(card,month);
+      if(!truth)continue;
       card.openFinanceBankBills??={};
       const previous=card.openFinanceBankBills[month];
-      const next={amount:linked.amount,billId:linked.billId,source:linked.source,dueDate:linked.dueDate,closeDate:linked.closeDate,transactionCount:linked.transactionCount,updatedAt:new Date().toISOString()};
-      const same=previous&&Number(previous.amount)===Number(next.amount)&&clean(previous.billId)===clean(next.billId)&&clean(previous.dueDate)===clean(next.dueDate)&&clean(previous.closeDate)===clean(next.closeDate);
+      const next={
+        amount:truth.amount,
+        billId:truth.billId||null,
+        source:truth.source,
+        dueDate:truth.dueDate||null,
+        closeDate:truth.closeDate||null,
+        transactionCount:truth.transactionCount||null,
+        updatedAt:new Date().toISOString()
+      };
+      const same=previous&&Number(previous.amount)===Number(next.amount)&&clean(previous.billId)===clean(next.billId)&&clean(previous.source)===clean(next.source)&&clean(previous.dueDate)===clean(next.dueDate)&&clean(previous.closeDate)===clean(next.closeDate);
       if(!same){card.openFinanceBankBills[month]=next;changed=true;}
     }
     return changed;
@@ -310,9 +363,13 @@
   function installRenderGuard(){
     const original=global.renderCards;
     if(typeof original!=='function')return false;
-    if(original.__sfpBankTruthV2)return true;
-    const wrapped=function(){const output=original.apply(this,arguments);patchGrid();patchInvoiceFocus();persistRememberedTruth();return output;};
-    Object.defineProperty(wrapped,'__sfpBankTruthV2',{value:true});
+    if(original.__sfpBankTruthV3)return true;
+    const wrapped=function(){
+      const output=original.apply(this,arguments);
+      patchGrid();patchInvoiceFocus();persistRememberedTruth();
+      return output;
+    };
+    Object.defineProperty(wrapped,'__sfpBankTruthV3',{value:true});
     global.renderCards=wrapped;try{renderCards=wrapped}catch(_){}
     return true;
   }
@@ -320,19 +377,37 @@
   function installDetailGuard(){
     const original=global.openCardDetail;
     if(typeof original!=='function')return false;
-    if(original.__sfpBankTruthV2)return true;
-    const wrapped=function(id){const output=original.apply(this,arguments);const card=(global.state?.cards||[]).find(item=>sameId(item.id,id));patchDetail(card);return output;};
-    Object.defineProperty(wrapped,'__sfpBankTruthV2',{value:true});
-    global.openCardDetail=wrapped;
+    if(original.__sfpBankTruthV3)return true;
+    const wrapped=function(id){
+      const output=original.apply(this,arguments);
+      const card=(global.state?.cards||[]).find(item=>sameId(item.id,id));
+      patchDetail(card);
+      return output;
+    };
+    Object.defineProperty(wrapped,'__sfpBankTruthV3',{value:true});
+    global.openCardDetail=wrapped;try{openCardDetail=wrapped}catch(_){}
     return true;
   }
 
   function install(){
+    if(global[FLAG])return true;
     if(!global.state||!global.SFPOpenFinanceBills||!global.SFPOpenFinancePersonal)return false;
     if(!installRenderGuard()||!installDetailGuard())return false;
     patchGrid();patchInvoiceFocus();rememberBankTruth();
     global[FLAG]=true;
-    global.SFPOpenFinanceBankTruth=Object.freeze({version:VERSION,activeMonth,bankCalendar,bankTruth,displayTotal,closed,linkedBillFromAccount,rememberBankTruth,patchGrid,patchInvoiceFocus});
+    global.SFPOpenFinanceBankTruth=Object.freeze({
+      version:VERSION,
+      activeMonth,
+      bankCalendar,
+      bankTruth,
+      displayTotal,
+      closed,
+      linkedBillFromAccount,
+      postedCycleFromAccount,
+      rememberBankTruth,
+      patchGrid,
+      patchInvoiceFocus
+    });
     return true;
   }
 
