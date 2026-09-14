@@ -61,7 +61,9 @@ test.describe('Android release engineering', () => {
     expect(workflow).toContain('SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}');
     expect(workflow).toContain('SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-qa.jks');
     expect(workflow).toContain('SFP_QA_CERT_SHA256: bf036c1668644f9c5b739e827472c7b29392de54554cdfbf2890d3b764aed2d9');
-    expect(workflow).toContain('Verify pinned QA APK signature and launcher resources');
+    expect(workflow).toContain('Verify pinned QA signatures, package identities and launcher resources');
+    expect(workflow).toContain('verify_apk "app/build/outputs/apk/debug/app-debug.apk" "com.jhony.sfp.debug" "DEBUG"');
+    expect(workflow).toContain('verify_apk "app/build/outputs/apk/release/app-release.apk" "com.jhony.sfp" "RELEASE-QA"');
     expect(workflow).toContain('certificate SHA-256 digest');
     expect(workflow).toContain('actual_cert');
     expect(workflow).toContain('expected_cert');
