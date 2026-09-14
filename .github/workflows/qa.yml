@@ -49,6 +49,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Test native Pluggy refresh lifecycle
+        run: |
+          mkdir -p build/qa-java
+          javac -d build/qa-java app/src/main/java/com/jhony/sfp/PluggyRefreshState.java qa/java/PluggyRefreshStateTest.java
+          java -cp build/qa-java com.jhony.sfp.PluggyRefreshStateTest
       - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools

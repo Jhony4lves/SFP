@@ -7,6 +7,22 @@
 
   let busy=false;
   let observer=null;
+  let lastAttempt=null;
+  const code=value=>/^[A-Z][A-Z0-9_:-]{0,79}$/.test(String(value||''))?String(value):'';
+  function evidence(result){
+    if(!result)return null;
+    return {ok:result.ok===true,requested:Number(result.requested)||0,started:Number(result.started)||0,
+      complete:result.complete===true,needsUser:result.needsUser===true,failed:result.failed===true,
+      code:code(result.code),items:(Array.isArray(result.items)?result.items:[]).map((row,index)=>({
+        connection:index+1,accepted:row.accepted===true,status:typeof row.status==='number'?row.status:code(row.status),
+        code:code(row.code),providerCode:code(row.providerCode),executionStatus:code(row.executionStatus),
+        lastUpdatedAt:/^\d{4}-\d{2}-\d{2}T[0-9:.Z+-]+$/.test(row.lastUpdatedAt||'')?row.lastUpdatedAt:null
+      }))};
+  }
+  function diagnostic(){return lastAttempt?JSON.parse(JSON.stringify(lastAttempt)):null;}
+  function exportDiagnostic(){
+    global.download?.(JSON.stringify(diagnostic(),null,2),'sfp-sincronizacao-diagnostico.json','application/json');
+  }
 
   const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
@@ -35,18 +51,28 @@
       root.prepend(note);
     }
     note.textContent=clean;
+    if(lastAttempt){
+      const exportButton=document.createElement('button');
+      exportButton.type='button';
+      exportButton.textContent='Exportar diagnóstico da sincronização';
+      exportButton.style.marginTop='10px';
+      exportButton.addEventListener('click',exportDiagnostic);
+      note.append(document.createElement('br'),exportButton);
+    }
   }
 
   function refreshFailureText(result){
     const rows=Array.isArray(result?.items)?result.items:[];
-    const codes=rows.map(row=>String(row?.providerCode||row?.code||'')).filter(Boolean);
-    if(codes.some(code=>code.includes('BEFORE_ALLOWED_FREQUENCY')||code==='REFRESH_RATE_LIMITED')){
-      return 'A Pluggy bloqueou uma nova atualização por limite de frequência. Vou usar a leitura mais recente disponível.';
-    }
-    if(codes.some(code=>/MFA|CREDENTIAL|PARAMETER|ATTENTION/i.test(code))){
-      return 'O banco precisa de nova autenticação para atualizar. A leitura atual será mantida até a conexão ser revalidada.';
-    }
-    return String(result?.message||'A instituição não iniciou uma nova sincronização agora. Vou usar a leitura mais recente disponível.');
+    const codes=[code(result?.code),...rows.flatMap(row=>[code(row?.providerCode),code(row?.code)])].filter(Boolean);
+    const details=rows.map((row,index)=>`Conexão ${index+1}: HTTP ${Number(row.status)||'indisponível'} ${code(row.providerCode)||code(row.code)||'sem código'}`).join('; ');
+    let text='A instituição não iniciou uma nova sincronização. A consulta usa os dados já disponíveis.';
+    if(codes.some(value=>value.includes('BEFORE_ALLOWED_FREQUENCY')||value==='REFRESH_RATE_LIMITED'))
+      text='A Pluggy bloqueou uma nova atualização por limite de frequência. A consulta usa a leitura mais recente disponível.';
+    else if(codes.some(value=>/MFA|CREDENTIAL|AUTH_REJECTED|AUTH_REQUIRED/.test(value)))
+      text='A conexão precisa de autenticação. Revalide o Open Finance para atualizar.';
+    else if(codes.includes('REFRESH_NEEDS_ATTENTION'))
+      text='A Pluggy recusou a atualização da conexão. O diagnóstico registra o retorno recebido.';
+    return `${text} ${details||codes.join(', ')}`.trim();
   }
 
   async function syncCurrentData(){
@@ -72,6 +98,8 @@
     }
     if(busy)return;
     busy=true;
+    lastAttempt={schema:'sfp-refresh-diagnostic-v1',attemptedAt:new Date().toISOString(),
+      request:null,status:null,polls:0,outcome:'requesting',privacy:{credentials:false,itemIds:false,accountIds:false}};
 
     const originalText=button?.textContent||'Atualizar faturas agora';
     if(button){
@@ -88,7 +116,9 @@
       }
 
       const started=parse(bridge.refreshItems());
+      lastAttempt.request=evidence(started);
       if(!started?.ok||Number(started?.started||0)<=0){
+        lastAttempt.outcome='rejected';
         await syncCurrentData();
         message(refreshFailureText(started),'error');
         return;
@@ -101,27 +131,40 @@
       for(let attempt=0;attempt<30;attempt++){
         await wait(attempt===0?1500:2500);
         finalStatus=parse(bridge.refreshStatus?.());
+        lastAttempt.status=evidence(finalStatus);
+        lastAttempt.polls=attempt+1;
         if(finalStatus?.needsUser){
-          message('A instituição pediu autenticação adicional. Revalide a conexão Open Finance para concluir a atualização.','error');
+          lastAttempt.outcome='needs-user';
           await syncCurrentData();
+          message('A instituição pediu autenticação adicional. Revalide a conexão Open Finance para concluir a atualização.','error');
+          return;
+        }
+        if(finalStatus?.failed){
+          lastAttempt.outcome='provider-failed';
+          await syncCurrentData();
+          message('A atualização terminou com erro ou dados parciais na instituição. A consulta usa os dados disponíveis; confira o diagnóstico.','error');
           return;
         }
         if(finalStatus?.ok&&finalStatus?.complete){
           if(button)button.textContent='Aplicando dados novos…';
           const applied=await syncCurrentData();
+          lastAttempt.outcome=applied?.ok===false?'apply-failed':Number(started.started)<Number(started.requested)?'partially-refreshed':'completed';
           if(applied?.ok===false){message(applied.message||'A leitura nova não pôde ser aplicada. Dados anteriores preservados.','error');return;}
-          message('Dados atualizados diretamente da instituição e faturas recalculadas.','success');
+          if(lastAttempt.outcome==='partially-refreshed')message('Somente parte das conexões foi atualizada. '+refreshFailureText({items:started.items.filter(row=>!row.accepted)}),'error');
+          else message('Dados atualizados diretamente da instituição e faturas recalculadas.','success');
           try{global.renderAll?.();}catch(_){}
           return;
         }
       }
 
-      message('A instituição ainda está sincronizando. Mantive a última leitura; toque em atualizar novamente em alguns instantes.');
+      lastAttempt.outcome='timeout';
       await syncCurrentData();
+      message('A instituição ainda está sincronizando. A consulta usa a última leitura disponível.');
     }catch(error){
       console.error('SFP Open Finance real refresh:',error);
-      message('Falha ao atualizar a instituição. Mantive os dados anteriores sem sobrescrever a fatura.','error');
+      lastAttempt.outcome='request-failed';
       try{await syncCurrentData();}catch(_){}
+      message('Falha ao atualizar a instituição. Não foi possível confirmar uma nova leitura bancária.','error');
     }finally{
       busy=false;
       if(button){
@@ -149,7 +192,9 @@
   }
 
   global.SFPOpenFinanceRealRefresh=Object.freeze({
-    version:1,
+    version:2,
+    diagnostic,
+    exportDiagnostic,
     hook,
     refresh:()=>handleRefresh(null,document.getElementById('openFinanceSyncBtn'))
   });

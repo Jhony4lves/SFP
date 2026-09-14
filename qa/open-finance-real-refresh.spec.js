@@ -108,3 +108,42 @@ test('refresh aplica o Bill novo do banco mesmo sem compras novas',async({page})
   await expectBootComplete(page,expect,'Open Finance real refresh');
   expect(await page.evaluate(()=>invoiceStatus(2,'2026-09').officialTotal)).toBe(327.59);
 });
+
+test('recusa mostra HTTP e código sem incluir credenciais ou identificadores no diagnóstico',async({page})=>{
+  await boot(page);
+  await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
+    refreshItems:()=>JSON.stringify({ok:false,requested:1,started:0,apiKey:'secret-token',items:[
+      {id:'private-item-id',accepted:false,status:403,providerCode:'FORBIDDEN',message:'secret-token'}
+    ]})
+  }}));
+  await page.locator('#openFinanceSyncBtn').click();
+  await expect(page.locator('#openFinancePreview')).toContainText('HTTP 403 FORBIDDEN');
+  await expect(page.getByRole('button',{name:'Exportar diagnóstico da sincronização'})).toBeVisible();
+  const diagnostic=await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic());
+  expect(diagnostic.outcome).toBe('rejected');
+  expect(diagnostic.request.items[0].providerCode).toBe('FORBIDDEN');
+  expect(JSON.stringify(diagnostic)).not.toMatch(/secret-token|private-item-id/);
+});
+
+test('erro terminal do provedor não é anunciado como atualização concluída',async({page})=>{
+  await boot(page);
+  await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
+    refreshItems:()=>JSON.stringify({ok:true,requested:1,started:1}),
+    refreshStatus:()=>JSON.stringify({ok:true,complete:false,failed:true,items:[{status:'OUTDATED',executionStatus:'ERROR'}]})
+  }}));
+  await page.locator('#openFinanceSyncBtn').click();
+  await expect(page.locator('#openFinancePreview')).toContainText('erro ou dados parciais');
+  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('provider-failed');
+});
+
+test('refresh de parte das instituições identifica a conexão recusada',async({page})=>{
+  await boot(page);
+  await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
+    refreshItems:()=>JSON.stringify({ok:true,requested:2,started:1,items:[{accepted:true,status:200},{accepted:false,status:429,code:'REFRESH_RATE_LIMITED'}]}),
+    refreshStatus:()=>JSON.stringify({ok:true,complete:true,items:[{status:'UPDATED',executionStatus:'SUCCESS'}]})
+  }}));
+  await page.locator('#openFinanceSyncBtn').click();
+  await expect(page.locator('#openFinancePreview')).toContainText('Somente parte das conexões');
+  await expect(page.locator('#openFinancePreview')).toContainText('HTTP 429');
+  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('partially-refreshed');
+});

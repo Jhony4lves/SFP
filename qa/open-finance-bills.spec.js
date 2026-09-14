@@ -146,8 +146,11 @@ test('diagnóstico separa uso bancário de compromissos projetados do SFP',async
   await page.evaluate(()=>openInvoiceDetail(1));
   await expect(page.locator('#exportInvoiceDiagnostic')).toBeVisible();
   const diagnostic=await page.evaluate(()=>SFPOpenFinanceBills.diag(1,'2026-09'));
-  expect(diagnostic.schema).toBe('sfp-invoice-diagnostic-v3');
-  expect(diagnostic.invoice.totalShown).toBe(222.38);
+  expect(diagnostic.schema).toBe('sfp-invoice-diagnostic-v4');
+  // Export the same bank-cycle estimate rendered on the card, keeping the local sum separate.
+  expect(diagnostic.invoice.totalShown).toBe(84.42);
+  expect(diagnostic.invoice.calculatedTotal).toBe(222.38);
+  expect(diagnostic.displayEvidence.source).toBe('open-finance-cycle-transactions');
   expect(diagnostic.invoice.officialTotal).toBeNull();
   expect(diagnostic.invoice.estimatedTotal).toBe(222.38);
   expect(diagnostic.invoice.pendingAmount).toBe(84.42);

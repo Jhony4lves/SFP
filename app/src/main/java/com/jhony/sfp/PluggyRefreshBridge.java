@@ -320,6 +320,7 @@ public final class PluggyRefreshBridge {
             JSONArray results = new JSONArray();
             boolean complete = true;
             boolean needsUser = false;
+            boolean failed = false;
             for (String id : lastRefreshIds) {
                 HttpResult response = request("GET", "/items/" + id, null, key);
                 JSONObject row = new JSONObject();
@@ -332,19 +333,13 @@ public final class PluggyRefreshBridge {
                     row.put("executionStatus", executionStatus);
                     row.put("lastUpdatedAt", clean(item.optString("lastUpdatedAt", item.optString("updatedAt", ""))));
 
-                    String upper = status.toUpperCase();
-                    String executionUpper = executionStatus.toUpperCase();
-                    boolean updating = upper.contains("UPDAT")
-                            || executionUpper.contains("UPDAT")
-                            || executionUpper.contains("RUNNING")
-                            || executionUpper.contains("LOGIN_IN_PROGRESS");
-                    boolean waiting = upper.contains("WAITING")
-                            || executionUpper.contains("WAITING")
-                            || executionUpper.contains("MFA")
-                            || executionUpper.contains("LOGIN_ERROR")
-                            || upper.contains("INVALID_CREDENTIALS");
-                    if (updating || waiting) complete = false;
-                    if (waiting) needsUser = true;
+                    PluggyRefreshState state = new PluggyRefreshState(status, executionStatus);
+                    row.put("complete", state.complete);
+                    row.put("needsUser", state.needsUser);
+                    row.put("failed", state.failed);
+                    if (!state.complete) complete = false;
+                    if (state.needsUser) needsUser = true;
+                    if (state.failed) failed = true;
                 } else {
                     row.put("status", "HTTP_" + response.status);
                     complete = false;
@@ -355,6 +350,7 @@ public final class PluggyRefreshBridge {
             JSONObject output = envelope(true);
             output.put("complete", complete);
             output.put("needsUser", needsUser);
+            output.put("failed", failed);
             output.put("items", results);
             return output.toString();
         } catch (Exception statusError) {
