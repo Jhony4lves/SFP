@@ -139,7 +139,9 @@ test('reaplicar exatamente o mesmo payload é idempotente financeiramente',async
 
 test('diagnóstico separa uso bancário de compromissos projetados do SFP',async({page})=>{
   await installBridge(page);
-  await boot(page,stateFor('Diagnóstico semântico'));
+  const diagnosticState=stateFor('Diagnóstico semântico');
+  diagnosticState.baseDate='2026-09-10';
+  await boot(page,diagnosticState);
   await openOpenFinance(page);
   await page.locator('#openFinanceSyncBtn').click();
   await page.evaluate(()=>setPage('cartoes'));
