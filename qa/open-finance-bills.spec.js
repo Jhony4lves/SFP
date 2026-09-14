@@ -7,7 +7,7 @@ function stateFor(name){
   value.mesAtual='2026-09';
   value.baseDate='2026-09-01';
   value.accounts=[{id:1,name:'Itaú',type:'Conta corrente',initial:1000,balanceMode:'snapshot',balanceDate:'2026-09-01'}];
-  value.cards=[{id:1,name:'Itaú Click',limit:2090,closeDay:13,dueDay:20,payAccountId:1,history:[]}];
+  value.cards=[{id:1,name:'Itaú Click',limit:2090,closeDay:30,dueDay:20,payAccountId:1,history:[]}];
   value.purchases=[
     {id:10,cardId:1,desc:'Compras da fatura atual',total:222.38,installments:1,firstMonth:'2026-09',purchaseDate:'2026-09-05',status:'active',refunds:[]},
     {id:11,cardId:1,desc:'Parcelas futuras',total:1166.80,installments:1,firstMonth:'2026-10',purchaseDate:'2026-09-21',status:'active',refunds:[]}
