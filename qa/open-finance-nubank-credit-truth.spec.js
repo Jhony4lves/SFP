@@ -24,7 +24,7 @@ async function installBridge(page,{bills=[]}={}){
     const account={
       id:'nu-credit',type:'CREDIT',subtype:'CREDIT_CARD',name:'Nubank',marketingName:'Nubank',presentationName:'Nubank',
       balance:403.02,currencyCode:'BRL',transactionPreviewHasMore:false,transactionsError:false,
-      creditData:{creditLimit:600,availableCreditLimit:196.98,balanceCloseDate:'2026-09-09',balanceDueDate:'2026-09-16'},
+      creditData:{creditLimit:600,availableCreditLimit:196.98,balanceCloseDate:'2026-10-09',balanceDueDate:'2026-10-16'},
       transactions,bills
     };
     const payload={ok:true,provider:'pluggy-personal',readOnly:true,itemCount:1,accountCount:1,transactionPreviewCount:transactions.length,billCount:bills.length,items:[{id:'nu-item',connectorName:'MeuPluggy',institution:'Nubank',status:'UPDATED',accounts:[account]}]};
@@ -81,7 +81,7 @@ test('Nubank: crédito PENDING é evidência de revisão, nunca pagamento confir
   expect(result.adjustments).toBe(0);
 });
 
-test('Nubank: sem Bill atual a UI usa o ciclo bancário e declara estimativa não oficial',async({page})=>{
+test('Nubank: provider já anuncia outubro, mas setembro continua atual sem Bill',async({page})=>{
   await installBridge(page);
   await boot(page,nubankState('Nubank UI truth'));
   await apply(page);
@@ -91,6 +91,8 @@ test('Nubank: sem Bill atual a UI usa o ciclo bancário e declara estimativa nã
   await expect(card).toContainText('Fatura atual · Setembro de 2026');
   await expect(card).toContainText('R$ 241,49');
   await expect(card).not.toContainText('Fatura atual · Outubro de 2026');
+  const next=card.locator('.sfp-card-v2-stat').filter({hasText:'Próxima fatura'});
+  await expect(next).toContainText('R$ 94,36');
 
   await card.click();
   const modalCurrent=page.locator('#modalRoot .metric').filter({hasText:'Fatura atual'});
@@ -116,10 +118,11 @@ test('Nubank: Bill atual é a única fonte Open Finance que torna R$ 170,84 ofic
   await boot(page,nubankState('Nubank official Bill'));
   await apply(page);
 
-  const inv=await page.evaluate(()=>invoiceStatus(1,'2026-09'));
-  expect(inv.officialTotal).toBe(170.84);
-  expect(inv.officialTotalSource).toBe('open-finance-bill');
-  expect(inv.openFinanceBillId).toBe('bill-sep-2026');
-  expect(inv.openFinanceEstimate).toBeUndefined();
+  const truth=await page.evaluate(()=>({sep:invoiceStatus(1,'2026-09'),oct:invoiceStatus(1,'2026-10')}));
+  expect(truth.sep.officialTotal).toBe(170.84);
+  expect(truth.sep.officialTotalSource).toBe('open-finance-bill');
+  expect(truth.sep.openFinanceBillId).toBe('bill-sep-2026');
+  expect(truth.sep.openFinanceEstimate).toBeUndefined();
+  expect(truth.oct.openFinanceEstimate).toBeUndefined();
   expect(await page.evaluate(()=>invoiceTotal(1,'2026-09'))).toBe(170.84);
 });
