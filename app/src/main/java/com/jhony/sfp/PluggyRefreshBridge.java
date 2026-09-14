@@ -8,20 +8,23 @@ import android.webkit.JavascriptInterface;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
+
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 /**
  * Ponte mínima dedicada ao refresh explícito dos Items da Pluggy.
@@ -45,9 +48,20 @@ public final class PluggyRefreshBridge {
 
     private static final Pattern UUID_PATTERN = Pattern.compile(
             "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$");
+    private static final Pattern ITEM_PATH_PATTERN = Pattern.compile(
+            "^/items/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$");
+
+    private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
     private final Context context;
     private final Set<String> lastRefreshIds = new LinkedHashSet<>();
+    private final OkHttpClient http = new OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(25, TimeUnit.SECONDS)
+            .writeTimeout(25, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build();
 
     PluggyRefreshBridge(Context context) {
         this.context = context.getApplicationContext();
@@ -133,52 +147,37 @@ public final class PluggyRefreshBridge {
         }
     }
 
+    private static boolean allowedPath(String path) {
+        return "/auth".equals(path)
+                || "/items".equals(path)
+                || ITEM_PATH_PATTERN.matcher(path).matches();
+    }
+
     private HttpResult request(String method, String path, JSONObject body, String apiKey) throws Exception {
-        if (!("/auth".equals(path) || "/items".equals(path) || path.matches("^/items/[0-9a-fA-F-]{36}$"))) {
-            throw new SecurityException("Endpoint Pluggy não autorizado");
-        }
-        URL url = new URL(API_BASE + path);
-        if (!"https".equalsIgnoreCase(url.getProtocol()) || !"api.pluggy.ai".equalsIgnoreCase(url.getHost())) {
-            throw new SecurityException("Host Pluggy não autorizado");
+        if (!allowedPath(path)) throw new SecurityException("Endpoint Pluggy não autorizado");
+
+        Request.Builder builder = new Request.Builder()
+                .url(API_BASE + path)
+                .header("Accept", "application/json")
+                .header("User-Agent", "SmartFinancialPlanner/" + BuildConfig.VERSION_NAME + " OpenFinanceRefresh/1.1");
+        if (apiKey != null && !apiKey.trim().isEmpty()) {
+            builder.header("X-API-KEY", apiKey.trim());
         }
 
-        HttpURLConnection connection = null;
-        try {
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setInstanceFollowRedirects(false);
-            connection.setRequestMethod(method);
-            connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestProperty("User-Agent", "SmartFinancialPlanner/" + BuildConfig.VERSION_NAME + " OpenFinanceRefresh/1.0");
-            connection.setConnectTimeout(15000);
-            connection.setReadTimeout(25000);
-            if (apiKey != null && !apiKey.trim().isEmpty()) {
-                connection.setRequestProperty("X-API-KEY", apiKey.trim());
-            }
-            if (body != null) {
-                connection.setDoOutput(true);
-                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
-                try (OutputStream output = connection.getOutputStream()) {
-                    output.write(bytes);
-                    output.flush();
-                }
-            }
+        RequestBody requestBody = body == null ? null : RequestBody.create(body.toString(), JSON);
+        if ("GET".equals(method)) {
+            builder.get();
+        } else if ("POST".equals(method)) {
+            builder.post(requestBody == null ? RequestBody.create("{}", JSON) : requestBody);
+        } else if ("PATCH".equals(method)) {
+            builder.patch(requestBody == null ? RequestBody.create("{}", JSON) : requestBody);
+        } else {
+            throw new SecurityException("Método HTTP não autorizado");
+        }
 
-            int status = connection.getResponseCode();
-            InputStream stream = status >= 200 && status < 300
-                    ? connection.getInputStream()
-                    : connection.getErrorStream();
-            if (stream == null) return new HttpResult(status, "");
-            try (InputStream input = stream; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-                byte[] buffer = new byte[4096];
-                int read;
-                while ((read = input.read(buffer)) != -1) output.write(buffer, 0, read);
-                return new HttpResult(status, output.toString("UTF-8"));
-            }
-        } finally {
-            if (connection != null) {
-                try { connection.disconnect(); } catch (Exception ignored) {}
-            }
+        try (Response response = http.newCall(builder.build()).execute()) {
+            ResponseBody responseBody = response.body();
+            return new HttpResult(response.code(), responseBody == null ? "" : responseBody.string());
         }
     }
 
@@ -240,6 +239,18 @@ public final class PluggyRefreshBridge {
         return ids;
     }
 
+    private static String providerErrorCode(HttpResult response) {
+        if (response == null || response.body == null || response.body.trim().isEmpty()) return "";
+        try {
+            JSONObject value = new JSONObject(response.body);
+            String code = clean(value.optString("code", ""));
+            if (code.isEmpty()) code = clean(value.optString("errorCode", ""));
+            return code;
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
     @JavascriptInterface
     public synchronized String refreshItems() {
         try {
@@ -258,13 +269,15 @@ public final class PluggyRefreshBridge {
                     row.put("status", response.status);
                     boolean accepted = response.status >= 200 && response.status < 300;
                     row.put("accepted", accepted);
+                    String providerCode = providerErrorCode(response);
+                    if (!providerCode.isEmpty()) row.put("providerCode", providerCode);
                     if (accepted) {
                         started++;
                         lastRefreshIds.add(id);
-                    } else if (response.status == 429) {
+                    } else if (response.status == 429 || providerCode.contains("BEFORE_ALLOWED_FREQUENCY")) {
                         row.put("code", "REFRESH_RATE_LIMITED");
                     } else if (response.status == 400 || response.status == 409) {
-                        row.put("code", "REFRESH_NOT_AVAILABLE_YET");
+                        row.put("code", "REFRESH_NEEDS_ATTENTION");
                     } else {
                         row.put("code", "REFRESH_HTTP_" + response.status);
                     }
@@ -279,16 +292,16 @@ public final class PluggyRefreshBridge {
             output.put("requested", ids.size());
             output.put("started", started);
             output.put("items", results);
-            if (started > 0) output.put("message", "Sincronização solicitada à instituição.");
-            else output.put("message", "A Pluggy não aceitou uma nova sincronização agora.");
+            if (started > 0) output.put("message", "Sincronização em tempo real solicitada à instituição.");
+            else output.put("message", "A Pluggy não iniciou uma nova sincronização agora.");
             return output.toString();
-        } catch (SecurityException error) {
+        } catch (SecurityException authError) {
             return error("AUTH_REJECTED", "A Pluggy recusou as credenciais do Open Finance.", 401);
-        } catch (IllegalStateException error) {
-            String code = error.getMessage() == null ? "REFRESH_FAILED" : error.getMessage();
+        } catch (IllegalStateException stateError) {
+            String code = stateError.getMessage() == null ? "REFRESH_FAILED" : stateError.getMessage();
             if ("AUTH_REQUIRED".equals(code)) return error("AUTH_REQUIRED", "Configure a Pluggy antes de atualizar.", 428);
             return error(code, "Não foi possível solicitar a atualização do Open Finance.", 502);
-        } catch (Exception error) {
+        } catch (Exception requestError) {
             return error("REFRESH_FAILED", "Não foi possível solicitar a atualização do Open Finance.", 500);
         }
     }
@@ -302,6 +315,7 @@ public final class PluggyRefreshBridge {
                 empty.put("items", new JSONArray());
                 return empty.toString();
             }
+
             String key = apiKey();
             JSONArray results = new JSONArray();
             boolean complete = true;
@@ -317,10 +331,18 @@ public final class PluggyRefreshBridge {
                     row.put("status", status);
                     row.put("executionStatus", executionStatus);
                     row.put("lastUpdatedAt", clean(item.optString("lastUpdatedAt", item.optString("updatedAt", ""))));
+
                     String upper = status.toUpperCase();
                     String executionUpper = executionStatus.toUpperCase();
-                    boolean updating = upper.contains("UPDAT") || executionUpper.contains("UPDAT") || executionUpper.contains("RUNNING");
-                    boolean waiting = upper.contains("WAITING") || upper.contains("LOGIN") || executionUpper.contains("WAITING") || executionUpper.contains("MFA");
+                    boolean updating = upper.contains("UPDAT")
+                            || executionUpper.contains("UPDAT")
+                            || executionUpper.contains("RUNNING")
+                            || executionUpper.contains("LOGIN_IN_PROGRESS");
+                    boolean waiting = upper.contains("WAITING")
+                            || executionUpper.contains("WAITING")
+                            || executionUpper.contains("MFA")
+                            || executionUpper.contains("LOGIN_ERROR")
+                            || upper.contains("INVALID_CREDENTIALS");
                     if (updating || waiting) complete = false;
                     if (waiting) needsUser = true;
                 } else {
@@ -329,12 +351,13 @@ public final class PluggyRefreshBridge {
                 }
                 results.put(row);
             }
+
             JSONObject output = envelope(true);
             output.put("complete", complete);
             output.put("needsUser", needsUser);
             output.put("items", results);
             return output.toString();
-        } catch (Exception error) {
+        } catch (Exception statusError) {
             return error("REFRESH_STATUS_FAILED", "Não foi possível consultar o andamento da atualização.", 502);
         }
     }
