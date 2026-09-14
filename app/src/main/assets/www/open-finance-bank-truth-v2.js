@@ -280,6 +280,10 @@
     if(!Number.isFinite(amount)||amount<0)return null;
     // V3 podia persistir uma soma por mês-calendário. Não reutilize esse cache como verdade do ciclo.
     if(Number(record?.schema||0)<4&&record?.source!=='open-finance-bill')return null;
+    // Older V4 builds cached payment-only groups as a zero-value invoice.
+    if(record.source==='open-finance-linked-transactions'&&!record.official
+      &&Number(record.debitAmount)===0&&Number(record.creditAmount)===0
+      &&Number(record.paymentsExcluded)>0)return null;
     return{...record,amount:round2(amount),bankBacked:true};
   }
 

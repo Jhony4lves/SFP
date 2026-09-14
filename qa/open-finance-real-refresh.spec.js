@@ -84,3 +84,27 @@ test('refresh bloqueado não dispara segundo PATCH e preserva leitura disponíve
   expect(calls.status).toBe(0);
   await expect(page.locator('#openFinancePreview')).toContainText('limite de frequência');
 });
+
+test('refresh aplica o Bill novo do banco mesmo sem compras novas',async({page})=>{
+  await boot(page);
+  await page.evaluate(()=>{
+    const original=PluggyBridge.previewData;
+    Object.defineProperty(window,'PluggyBridge',{configurable:true,value:{...PluggyBridge,
+      previewData:()=>{
+        const payload=JSON.parse(original());
+        if(window.__sfpRefreshCalls.status>0){
+          payload.items[0].accounts[0].bills=[{id:'itau-sep',dueDate:'2026-09-21',
+            billClosingDate:'2026-09-12',totalAmount:327.59,payments:[]}];
+        }
+        return JSON.stringify(payload);
+      }
+    }});
+  });
+  await page.locator('#openFinanceSyncBtn').click();
+  await expect.poll(()=>page.evaluate(()=>invoiceStatus(2,'2026-09').officialTotal)).toBe(327.59);
+  expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(1);
+  await expect(page.locator('#openFinanceSyncBtn')).toBeEnabled();
+  await page.reload();
+  await expectBootComplete(page,expect,'Open Finance real refresh');
+  expect(await page.evaluate(()=>invoiceStatus(2,'2026-09').officialTotal)).toBe(327.59);
+});

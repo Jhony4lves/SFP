@@ -70,3 +70,13 @@ test('Bill sem total não transforma ausência de dados em fatura oficial zero',
   expect(api.bankTruth(card, '2026-09')).toBeNull();
   expect(api.displayTotal(card, '2026-09')).toBe(241.49);
 });
+
+test('cache legado composto só por pagamento não perpetua fatura zero após atualização', () => {
+  const { api, card } = resolver({ transactions: [payment], stored: { '2026-09': {
+    schema: 4, source: 'open-finance-linked-transactions', official: false,
+    amount: 0, transactionCount: 1, pendingCount: 1,
+    debitAmount: 0, creditAmount: 0, paymentsExcluded: 70.65
+  } } });
+  expect(api.bankTruth(card, '2026-09')).toBeNull();
+  expect(api.displayTotal(card, '2026-09')).toBe(241.49);
+});
