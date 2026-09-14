@@ -145,6 +145,9 @@ test('diagnóstico separa uso bancário de compromissos projetados do SFP',async
   await page.evaluate(()=>setPage('cartoes'));
   await page.evaluate(()=>openInvoiceDetail(1));
   await expect(page.locator('#exportInvoiceDiagnostic')).toBeVisible();
+  // Android injects this resolver after the page loads; exercise that same display path.
+  await page.addScriptTag({url:'/open-finance-bank-truth-v2.js'});
+  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBankTruth?.version)>=4);
   const diagnostic=await page.evaluate(()=>SFPOpenFinanceBills.diag(1,'2026-09'));
   expect(diagnostic.schema).toBe('sfp-invoice-diagnostic-v4');
   // Export the same bank-cycle estimate rendered on the card, keeping the local sum separate.

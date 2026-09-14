@@ -160,6 +160,8 @@ test('app zerado informa vínculo pendente sem anunciar faturas recalculadas',as
 
 test('cartão recém-cadastrado sem total bancário não aparece como quitado',async({page})=>{
   await boot(page);
+  await page.addScriptTag({url:'/open-finance-bank-truth-v2.js'});
+  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBankTruth?.version)>=4);
   await page.locator('#openFinanceSyncBtn').click();
   await expect(page.locator('#openFinanceSyncBtn')).toBeEnabled();
   await page.evaluate(()=>setPage('cartoes'));
