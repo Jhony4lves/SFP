@@ -79,6 +79,8 @@ test('não soma R$ 180,83 local com R$ 132,78 pendentes e respeita fechamento do
   expect(result.calendar.dueDate).toBe('2026-09-10');
   expect(result.calendar.closeDate).toBe('2026-09-02');
   expect(result.calendar.bankDueDate).toBeNull();
+  expect(result.calendar.account.creditData.balanceDueDate).toBe('2026-08-10');
+  expect(result.calendar.account.sfpCycleNormalized).toBeUndefined();
   expect(result.bounds.startDate).toBe('2026-08-03');
   expect(result.bounds.endDate).toBe('2026-09-02');
   expect(result.truth.source).toBe('open-finance-cycle-transactions');
