@@ -157,3 +157,12 @@ test('app zerado informa vínculo pendente sem anunciar faturas recalculadas',as
   await expect(page.locator('#openFinancePreview')).not.toContainText('faturas recalculadas');
   expect(await page.evaluate(()=>state.invoices.length)).toBe(0);
 });
+
+test('cartão recém-cadastrado sem total bancário não aparece como quitado',async({page})=>{
+  await boot(page);
+  await page.locator('#openFinanceSyncBtn').click();
+  await expect(page.locator('#openFinanceSyncBtn')).toBeEnabled();
+  await page.evaluate(()=>setPage('cartoes'));
+  await expect(page.locator('#cardsGrid .sfp-card-v2-primary').first()).toContainText('Fatura sem total confirmado');
+  await expect(page.locator('#cardsGrid .sfp-card-v2-primary').first()).not.toContainText('quitada');
+});

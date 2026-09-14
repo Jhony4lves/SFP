@@ -349,7 +349,10 @@
     const truth=bankTruth(card,month);
     const total=truth?.amount??localCalculated(card,month);
     const remaining=Math.max(0,round2(total-paidAmount(card,month)));
-    if(remaining<=.009)return truth?.official?'Fatura quitada':'Estimativa quitada';
+    if(remaining<=.009){
+      if(paidAmount(card,month)>.009)return truth?.official?'Fatura quitada':'Estimativa quitada';
+      return truth?.official?'Sem valor a pagar informado pelo banco':'Fatura sem total confirmado';
+    }
     if(truth?.official)return closed(card,month)?'Fechada':`${money(remaining)} ainda em aberto`;
     if(truth?.bankBacked)return closed(card,month)?'Estimativa bancária · ciclo fechado':`Estimativa bancária · ${money(remaining)} no ciclo`;
     return closed(card,month)?'Estimativa SFP · ciclo fechado':`${money(remaining)} estimados no SFP`;
