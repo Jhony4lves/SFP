@@ -56,7 +56,7 @@ test('Atualizar faturas solicita refresh da instituição antes de reler a Plugg
   const before=await page.evaluate(()=>({...window.__sfpRefreshCalls}));
   const button=page.locator('#openFinanceSyncBtn');
   await expect(button).toBeVisible();
-  await expect(button).toHaveText('Atualizar faturas agora');
+  await expect(button).toHaveText('Sincronizar contas e faturas');
 
   await button.click();
 

@@ -134,6 +134,8 @@
   }
 
   function displayTotal(card,month){
+    // Keep legacy callers on the same non-additive rule used by the invoice UI.
+    if(global.SFPOpenFinanceBankTruth)return global.SFPOpenFinanceBankTruth.displayTotal(card,month);
     const official=officialTotal(card?.id,month);
     if(official!==null)return official;
     let calculated=0;

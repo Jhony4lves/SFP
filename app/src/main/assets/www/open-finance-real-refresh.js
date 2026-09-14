@@ -50,6 +50,8 @@
   }
 
   async function syncCurrentData(){
+    const unified=global.SFPOpenFinanceUnifiedSync;
+    if(typeof unified?.syncAll==='function')return await unified.syncAll();
     const personal=global.SFPOpenFinancePersonal;
     if(personal&&typeof personal.syncInvoices==='function'){
       return await personal.syncInvoices();
@@ -87,8 +89,8 @@
 
       const started=parse(bridge.refreshItems());
       if(!started?.ok||Number(started?.started||0)<=0){
-        message(refreshFailureText(started),'error');
         await syncCurrentData();
+        message(refreshFailureText(started),'error');
         return;
       }
 
@@ -106,7 +108,8 @@
         }
         if(finalStatus?.ok&&finalStatus?.complete){
           if(button)button.textContent='Aplicando dados novos…';
-          await syncCurrentData();
+          const applied=await syncCurrentData();
+          if(applied?.ok===false){message(applied.message||'A leitura nova não pôde ser aplicada. Dados anteriores preservados.','error');return;}
           message('Dados atualizados diretamente da instituição e faturas recalculadas.','success');
           try{global.renderAll?.();}catch(_){}
           return;

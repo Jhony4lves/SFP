@@ -59,7 +59,7 @@ async function previewAndApply(page){
   });
 }
 
-test('mês selecionado vence disputa com balanceDueDate antigo e soma compras do mês',async({page})=>{
+test('mês selecionado ignora snapshot antigo sem somar pendências à base local',async({page})=>{
   await installBridge(page);
   await boot(page);
   await previewAndApply(page);
@@ -73,14 +73,14 @@ test('mês selecionado vence disputa com balanceDueDate antigo e soma compras do
   }));
   expect(truth.firstMonth).toBe('2026-09');
   expect(truth.pending).toBe(25);
-  expect(truth.total).toBe(175);
+  expect(truth.total).toBe(150);
   expect(truth.closed).toBe(true);
 
   const card=page.getByRole('button',{name:/Abrir detalhes de Itaú/});
   const current=card.locator('.sfp-card-v2-primary');
   await expect(current).toContainText('Fatura atual · Setembro de 2026');
-  await expect(current).toContainText('R$ 175,00');
-  await expect(current).toContainText('Fechada');
+  await expect(current).toContainText('R$ 150,00');
+  await expect(current).toContainText('Estimativa SFP · ciclo fechado');
   await expect(current).not.toContainText('Agosto de 2026');
   await expect(current).not.toContainText('Outubro de 2026');
 });

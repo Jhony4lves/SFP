@@ -71,7 +71,7 @@
     const account=previewAccount(card)?.account;
     if(!account)return null;
     const bills=Array.isArray(account.bills)?account.bills:[];
-    const candidates=bills.filter(bill=>isoMonth(bill?.dueDate)===month||isoMonth(bill?.billClosingDate)===month);
+    const candidates=bills.filter(bill=>(isoMonth(bill?.dueDate)||isoMonth(bill?.billClosingDate))===month);
     if(!candidates.length)return null;
     return [...candidates].sort((a,b)=>isoDate(b?.dueDate).localeCompare(isoDate(a?.dueDate)))[0]||null;
   }
@@ -80,8 +80,8 @@
     const inv=invoiceRecord(card,month);
     const key=kind==='due'?'balanceDueDate':'balanceCloseDate';
     const candidates=kind==='due'
-      ?[bill?.dueDate,inv?.documentDueDate,account?.creditData?.[key],card?.openFinanceBalanceDueDate,card?.openFinanceBankBills?.[month]?.dueDate]
-      :[bill?.billClosingDate,inv?.documentCloseDate,account?.creditData?.[key],card?.openFinanceBalanceCloseDate,card?.openFinanceBankBills?.[month]?.closeDate];
+      ?[bill?.dueDate,inv?.documentDueDate,account?.creditData?.[key],card?.openFinanceBalanceDueDate,(card?.openFinanceBankBills?.[month]?.source==='open-finance-bill'?card.openFinanceBankBills[month].dueDate:card?.openFinanceBankBills?.[month]?.bankDueDate)]
+      :[bill?.billClosingDate,inv?.documentCloseDate,account?.creditData?.[key],card?.openFinanceBalanceCloseDate,(card?.openFinanceBankBills?.[month]?.source==='open-finance-bill'?card.openFinanceBankBills[month].closeDate:card?.openFinanceBankBills?.[month]?.bankCloseDate)];
     for(const candidate of candidates){
       const value=isoDate(candidate);
       // Datas de outro mês são snapshot antigo da instituição. Nunca ancoram o ciclo atual.
@@ -136,7 +136,8 @@
   function liveBill(card,month){
     const bill=currentBill(card,month);
     if(!bill)return null;
-    const amount=Math.abs(Number(bill?.totalAmount));
+    if(bill.totalAmount==null||clean(bill.totalAmount)==='')return null;
+    const amount=Math.abs(Number(bill.totalAmount));
     if(!Number.isFinite(amount))return null;
     const calendar=bankCalendar(card,month);
     return{
@@ -212,6 +213,8 @@
       periodEnd:bounds.endDate,
       maxDate:maxDate||null,
       dueDate:bounds.calendar.bankDueDate||bounds.dueDate||null,
+      bankDueDate:bounds.calendar.bankDueDate,
+      bankCloseDate:bounds.calendar.bankCloseDate,
       closeDate:bounds.calendar.bankCloseDate||bounds.closeDate||null
     };
   }
@@ -231,6 +234,8 @@
         if(isPaymentCredit(transaction))group.paymentsExcluded+=Math.abs(amount);
         else group.credits+=Math.abs(amount);
       }else group.debits+=amount;
+      // A payment alone is not evidence of an invoice total, even with a billId.
+      if(amount<0&&isPaymentCredit(transaction)){groups.set(billId,group);continue;}
       group.count++;
       if(!confirmed(transaction))group.pendingCount++;
       if(!group.maxDate||txDate>group.maxDate)group.maxDate=txDate;
@@ -259,6 +264,8 @@
       periodEnd:bounds.endDate,
       maxDate:selected.maxDate||null,
       dueDate:bounds.calendar.bankDueDate||bounds.dueDate||null,
+      bankDueDate:bounds.calendar.bankDueDate,
+      bankCloseDate:bounds.calendar.bankCloseDate,
       closeDate:bounds.calendar.bankCloseDate||bounds.closeDate||null
     };
   }
@@ -294,6 +301,7 @@
   function bankTruth(card,month){
     return liveBill(card,month)
       ||invoiceOfficial(card,month)
+      ||(storedBankBill(card,month)?.official?storedBankBill(card,month):null)
       ||linkedBillFromAccount(card,month)
       ||cycleTransactions(card,month)
       ||storedBankBill(card,month)
@@ -409,6 +417,7 @@
       if(!truth)continue;
       card.openFinanceBankBills??={};
       const previous=card.openFinanceBankBills[month];
+      if(previous?.official&&!truth.official)continue;
       const next={
         schema:4,
         amount:truth.amount,
@@ -417,6 +426,8 @@
         source:truth.source,
         dueDate:truth.dueDate||null,
         closeDate:truth.closeDate||null,
+        bankDueDate:truth.bankDueDate||null,
+        bankCloseDate:truth.bankCloseDate||null,
         periodStart:truth.periodStart||null,
         periodEnd:truth.periodEnd||null,
         transactionCount:truth.transactionCount||null,
@@ -428,7 +439,7 @@
       };
       const comparable=value=>JSON.stringify({
         schema:value?.schema||0,amount:Number(value?.amount),official:Boolean(value?.official),billId:clean(value?.billId),
-        source:clean(value?.source),dueDate:clean(value?.dueDate),closeDate:clean(value?.closeDate),
+        source:clean(value?.source),dueDate:clean(value?.dueDate),closeDate:clean(value?.closeDate),bankDueDate:clean(value?.bankDueDate),bankCloseDate:clean(value?.bankCloseDate),
         periodStart:clean(value?.periodStart),periodEnd:clean(value?.periodEnd),transactionCount:Number(value?.transactionCount||0),
         pendingCount:Number(value?.pendingCount||0),debitAmount:value?.debitAmount??null,creditAmount:value?.creditAmount??null,paymentsExcluded:value?.paymentsExcluded??null
       });

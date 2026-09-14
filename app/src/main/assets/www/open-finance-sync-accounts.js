@@ -405,7 +405,9 @@
       event.preventDefault();event.stopImmediatePropagation();previewOnly();
     },true);
     sync.addEventListener('click',event=>{
-      event.preventDefault();event.stopImmediatePropagation();void syncAll();
+      event.preventDefault();event.stopImmediatePropagation();
+      if(global.SFPOpenFinanceRealRefresh)void global.SFPOpenFinanceRealRefresh.refresh();
+      else void syncAll();
     },true);
     return true;
   }
