@@ -52,10 +52,17 @@ async function boot(page){
   await page.waitForFunction(()=>Number(window.SFPOpenFinanceCalendarTruth?.version)>=1);
 }
 
+async function previewAndApply(page){
+  await page.evaluate(async()=>{
+    const result=await SFPOpenFinancePersonal.preview();
+    SFPOpenFinanceBills.apply(result);
+  });
+}
+
 test('mês selecionado vence disputa com balanceDueDate antigo e soma compras do mês',async({page})=>{
   await installBridge(page);
   await boot(page);
-  await page.evaluate(()=>SFPOpenFinanceBills.apply(JSON.parse(PluggyBridge.previewData())));
+  await previewAndApply(page);
   await page.evaluate(()=>{setPage('cartoes');renderAll()});
 
   const truth=await page.evaluate(()=>({
