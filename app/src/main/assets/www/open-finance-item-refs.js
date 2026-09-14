@@ -12,6 +12,48 @@
     try{if(typeof global.toast==='function')global.toast(message,type);}catch(_){}
   }
 
+  function monthKey(value){return String(value||'').slice(0,7);}
+  function validDate(value){return /^\d{4}-\d{2}-\d{2}$/.test(String(value||'').slice(0,10));}
+  function currentMonth(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+  function moveDateToMonth(value,month){
+    const raw=String(value||'').slice(0,10);if(!validDate(raw)||!/^\d{4}-\d{2}$/.test(month))return value;
+    const [y,m]=month.split('-').map(Number),day=Number(raw.slice(8,10));
+    const last=new Date(Date.UTC(y,m,0)).getUTCDate();
+    return `${month}-${String(Math.min(Math.max(day,1),last)).padStart(2,'0')}`;
+  }
+  function normalizeStaleCreditCycles(result){
+    if(!result?.ok)return result;
+    const nowMonth=currentMonth();
+    for(const item of Array.isArray(result.items)?result.items:[]){
+      for(const account of Array.isArray(item?.accounts)?item.accounts:[]){
+        if(account?.type!=='CREDIT'||!account.creditData)continue;
+        const due=String(account.creditData.balanceDueDate||'').slice(0,10);
+        if(!validDate(due)||monthKey(due)>=nowMonth)continue;
+        account.creditData.balanceDueDate=moveDateToMonth(due,nowMonth);
+        const close=String(account.creditData.balanceCloseDate||'').slice(0,10);
+        if(validDate(close)&&monthKey(close)<nowMonth)account.creditData.balanceCloseDate=moveDateToMonth(close,nowMonth);
+        account.sfpOriginalBalanceDueDate=due;
+        account.sfpCycleNormalized=true;
+      }
+    }
+    return result;
+  }
+  function installCycleHotfix(){
+    const api=global.SFPOpenFinancePersonal;
+    if(!api||typeof api.preview!=='function')return false;
+    if(api.__sfpStaleCycleFix)return true;
+    try{
+      const original=api.preview;
+      const wrapped={...api,preview:(...args)=>{
+        const out=original(...args);
+        return out&&typeof out.then==='function'?out.then(normalizeStaleCreditCycles):normalizeStaleCreditCycles(out);
+      }};
+      Object.defineProperty(wrapped,'__sfpStaleCycleFix',{value:true});
+      global.SFPOpenFinancePersonal=Object.freeze(wrapped);
+      return true;
+    }catch(error){console.error('SFP stale Open Finance cycle fix:',error);return false;}
+  }
+
   function refreshHint(){
     const hint=$('openFinanceItemRefsHint');
     const bridge=global.PluggyBridge;
@@ -69,12 +111,15 @@
   }
 
   function install(){
-    if(build())return;
     let attempts=0;
     const timer=setInterval(()=>{
       attempts++;
-      if(build()||attempts>120)clearInterval(timer);
+      const uiReady=build();
+      const cycleReady=installCycleHotfix();
+      if((uiReady&&cycleReady)||attempts>120)clearInterval(timer);
     },50);
+    build();
+    installCycleHotfix();
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
