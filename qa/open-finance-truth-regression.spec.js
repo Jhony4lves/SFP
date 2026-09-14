@@ -85,7 +85,7 @@ test('pendências antigas não inflam o valor pendente do ciclo atual',async({pa
     {id:'current',date:'2026-09-05T12:00:00.000Z',description:'Compra atual',amount:84.42,type:'DEBIT',status:'PENDING',currencyCode:'BRL'},
     {id:'old',date:'2026-08-05T12:00:00.000Z',description:'Pendente antigo',amount:500,type:'DEBIT',status:'PENDING',currencyCode:'BRL'}
   ];
-  await installBridge(page,{transactions});
+  await installBridge(page,{transactions,creditData:{creditLimit:2090,availableCreditLimit:616.42,balanceDueDate:'2026-09-20'}});
   await boot(page,stateFor('Pendência por ciclo'));
   await apply(page);
   const inv=await page.evaluate(()=>invoiceStatus(1,'2026-09'));
