@@ -69,7 +69,7 @@ async function boot(page,options={}){
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await expectBootComplete(page,expect,'Bank truth v2');
-  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBankTruth?.version)>=2);
+  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBankTruth?.version)>=4);
   await page.evaluate(async()=>{await SFPOpenFinancePersonal.preview();setPage('cartoes');renderAll();});
 }
 
@@ -83,12 +83,12 @@ test('fallback bancário por billId reproduz os valores reais das telas',async({
   await expect(nubank).toContainText('Fecha dia 9 · vence dia 16');
   await expect(nubank.locator('.sfp-card-v2-primary')).toContainText('Fatura atual · Setembro de 2026');
   await expect(nubank.locator('.sfp-card-v2-primary')).toContainText('R$ 170,84');
-  await expect(nubank.locator('.sfp-card-v2-primary')).toContainText('Fechada');
+  await expect(nubank.locator('.sfp-card-v2-primary')).toContainText('Estimativa bancária · ciclo fechado');
   await expect(nubank.locator('.sfp-card-v2-primary')).not.toContainText('R$ 241,49');
 
   await expect(itau).toContainText('Fecha dia 12 · vence dia 21');
   await expect(itau.locator('.sfp-card-v2-primary')).toContainText('R$ 327,59');
-  await expect(itau.locator('.sfp-card-v2-primary')).toContainText('Fechada');
+  await expect(itau.locator('.sfp-card-v2-primary')).toContainText('Estimativa bancária · ciclo fechado');
   await expect(itau.locator('.sfp-card-v2-primary')).not.toContainText('R$ 313,61');
 
   const truth=await page.evaluate(()=>({
