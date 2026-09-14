@@ -169,6 +169,15 @@
   const script=document.createElement('script');script.src='open-finance-bills.js';script.async=false;script.dataset.sfpOpenFinanceBills='1';document.head.appendChild(script);
 })();
 
+(function loadOpenFinanceCalendarTruth(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-calendar-truth="1"]'))return;
+  const script=document.createElement('script');
+  script.src='open-finance-calendar-truth.js';
+  script.async=false;
+  script.dataset.sfpOpenFinanceCalendarTruth='1';
+  document.head.appendChild(script);
+})();
+
 (function loadFinancialRootIntegrity(){
   if(typeof document==='undefined'||document.querySelector('script[data-sfp-financial-root-integrity="1"]'))return;
   const script=document.createElement('script');
