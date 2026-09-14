@@ -135,7 +135,7 @@ test('reaplicar exatamente o mesmo payload é idempotente financeiramente',async
   expect(results.invoiceCount).toBe(1);
 });
 
-test('diagnóstico separa uso bancário de compromissos projetados do SFP',async({page})=>{
+test('diagnóstico separa uso bancário de compromissos projetados do SFP e explica decisão do ciclo',async({page})=>{
   await installBridge(page);
   await boot(page,stateFor('Diagnóstico semântico'));
   await openOpenFinance(page);
@@ -144,12 +144,19 @@ test('diagnóstico separa uso bancário de compromissos projetados do SFP',async
   await page.evaluate(()=>openInvoiceDetail(1));
   await expect(page.locator('#exportInvoiceDiagnostic')).toBeVisible();
   const diagnostic=await page.evaluate(()=>SFPOpenFinanceBills.diag(1,'2026-09'));
-  expect(diagnostic.schema).toBe('sfp-invoice-diagnostic-v3');
+  expect(diagnostic.schema).toBe('sfp-invoice-diagnostic-v4');
   expect(diagnostic.invoice.totalShown).toBe(222.38);
   expect(diagnostic.invoice.officialTotal).toBeNull();
   expect(diagnostic.invoice.estimatedTotal).toBe(222.38);
   expect(diagnostic.invoice.pendingAmount).toBe(84.42);
   expect(diagnostic.openFinance.usage.amount).toBe(1473.58);
+  expect(diagnostic.openFinance.cycle.month).toBe('2026-09');
+  expect(diagnostic.openFinance.cycle.candidateMonth).toBe('2026-09');
+  expect(diagnostic.openFinance.cycle.heldByUnsettledPrevious).toBe(false);
+  expect(diagnostic.openFinance.cycle.previousCycleSettlement.month).toBe('2026-09');
+  expect(diagnostic.openFinance.cycle.previousCycleSettlement.unsettled).toBe(true);
+  expect(diagnostic.openFinance.cycle.previousCycleSettlement.reason).toBe('local-cycle-has-balance');
+  expect(diagnostic.openFinance.cycle.previousCycleSettlement.invoice.total).toBe(222.38);
   expect(diagnostic.commitment.bankCurrentUsage).toBe(1473.58);
   expect(diagnostic.commitment.bankAvailableLimit).toBe(616.42);
   expect(diagnostic.commitment.sfpProjectedOutstanding).toBe(1389.18);
