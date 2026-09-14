@@ -40,6 +40,7 @@ async function boot(page){
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await expectBootComplete(page,expect,'Itaú cycle truth');
+  await page.evaluate(()=>{window.localCivilMonth=()=> '2026-09'});
   await page.waitForFunction(()=>Number(window.SFPOpenFinanceBills?.version)>=9);
 }
 
