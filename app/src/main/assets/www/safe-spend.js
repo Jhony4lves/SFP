@@ -178,6 +178,15 @@
   document.head.appendChild(script);
 })();
 
+(function loadOpenFinanceBankTruthV2(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-bank-truth-v2="1"]'))return;
+  const script=document.createElement('script');
+  script.src='open-finance-bank-truth-v2.js';
+  script.async=false;
+  script.dataset.sfpOpenFinanceBankTruthV2='1';
+  document.head.appendChild(script);
+})();
+
 (function loadFinancialRootIntegrity(){
   if(typeof document==='undefined'||document.querySelector('script[data-sfp-financial-root-integrity="1"]'))return;
   const script=document.createElement('script');
