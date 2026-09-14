@@ -147,3 +147,13 @@ test('refresh de parte das instituições identifica a conexão recusada',async(
   await expect(page.locator('#openFinancePreview')).toContainText('HTTP 429');
   expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('partially-refreshed');
 });
+
+test('app zerado informa vínculo pendente sem anunciar faturas recalculadas',async({page})=>{
+  await boot(page);
+  await page.evaluate(()=>{state.cards=[];state.accounts=[];state.purchases=[];state.invoices=[];renderAll();});
+  await page.locator('#openFinanceSyncBtn').click();
+  await expect(page.locator('#openFinancePreview')).toContainText('contas ou cartões sem vínculo');
+  await expect(page.locator('#openFinanceStatus')).toContainText('Vínculos pendentes no SFP');
+  await expect(page.locator('#openFinancePreview')).not.toContainText('faturas recalculadas');
+  expect(await page.evaluate(()=>state.invoices.length)).toBe(0);
+});

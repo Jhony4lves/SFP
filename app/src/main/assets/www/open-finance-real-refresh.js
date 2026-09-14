@@ -151,6 +151,7 @@
           lastAttempt.outcome=applied?.ok===false?'apply-failed':Number(started.started)<Number(started.requested)?'partially-refreshed':'completed';
           if(applied?.ok===false){message(applied.message||'A leitura nova não pôde ser aplicada. Dados anteriores preservados.','error');return;}
           if(lastAttempt.outcome==='partially-refreshed')message('Somente parte das conexões foi atualizada. '+refreshFailureText({items:started.items.filter(row=>!row.accepted)}),'error');
+          else if(Number(applied?.card?.unmapped||0)+Number(applied?.bank?.unmapped||0)>0)message('Dados bancários consultados. Há contas ou cartões sem vínculo: cadastre-os no SFP e confira os vínculos para importar.');
           else message('Dados atualizados diretamente da instituição e faturas recalculadas.','success');
           try{global.renderAll?.();}catch(_){}
           return;
