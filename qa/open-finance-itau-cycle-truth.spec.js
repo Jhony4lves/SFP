@@ -21,7 +21,7 @@ async function installBridge(page){
     const account={
       id:'itau-credit',type:'CREDIT',subtype:'CREDIT_CARD',name:'Itaú Click',marketingName:'Itaú Click',presentationName:'Itaú Click',
       balance:1494.37,currencyCode:'BRL',transactionPreviewHasMore:false,transactionsError:false,
-      creditData:{creditLimit:2090,availableCreditLimit:595.63,balanceDueDate:'2026-09-21'},
+      creditData:{creditLimit:2090,availableCreditLimit:595.63,balanceCloseDate:'2026-10-02',balanceDueDate:'2026-10-10'},
       transactions:[],bills:[]
     };
     const payload={ok:true,provider:'pluggy-personal',readOnly:true,itemCount:1,accountCount:1,transactionPreviewCount:0,billCount:0,items:[{id:'itau-item',connectorName:'MeuPluggy',institution:'Itaú',status:'UPDATED',accounts:[account]}]};
@@ -43,7 +43,7 @@ async function boot(page){
   await page.waitForFunction(()=>Number(window.SFPOpenFinanceBills?.version)>=9);
 }
 
-test('Itaú: vencimento bancário ancora setembro e outubro continua futuro',async({page})=>{
+test('Itaú: provider já anuncia outubro, mas setembro não liquidado continua atual',async({page})=>{
   await installBridge(page);
   await boot(page);
   await page.evaluate(()=>SFPOpenFinanceBills.apply(JSON.parse(PluggyBridge.previewData())));
@@ -86,4 +86,20 @@ test('Itaú: vencimento bancário ancora setembro e outubro continua futuro',asy
   await expect(note).toBeVisible();
   await expect(note).toContainText('fatura estimada no SFP (não oficial): R$ 321,24');
   await expect(note).not.toContainText('fatura oficial:');
+});
+
+test('Itaú: setembro liquidado permite rollover seguro para outubro',async({page})=>{
+  await installBridge(page);
+  await boot(page);
+  await page.evaluate(()=>{
+    state.invoices=[{id:901,cardId:1,month:'2026-09',status:'paid',paidAmount:321.24,payments:[{date:'2026-09-10',amount:321.24,source:'manual'}]}];
+    SFPOpenFinanceBills.apply(JSON.parse(PluggyBridge.previewData()));
+    setPage('cartoes');
+    renderAll();
+  });
+
+  const card=page.getByRole('button',{name:/Abrir detalhes de Itaú Click/});
+  const current=card.locator('.sfp-card-v2-primary');
+  await expect(current).toContainText('Fatura atual · Outubro de 2026');
+  await expect(current).toContainText('R$ 180,82');
 });
