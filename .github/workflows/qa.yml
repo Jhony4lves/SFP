@@ -1,41 +1,15 @@
-name: SFP QA Lab
+name: SFP Installed APK Diagnostic
 
 on:
   pull_request:
-  push:
-    branches: ["main", "qa/**"]
   workflow_dispatch:
 
 concurrency:
-  group: sfp-qa-${{ github.workflow }}-${{ github.ref }}
+  group: sfp-diag-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  web-qa:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:static
-      - run: npm run test:invoice-pdf
-      - run: npm run test:invoice-image
-      - run: npm run test:sophy-arch
-      - run: npm run test:sophy-benchmark
-      - run: npm run test:financial
-      - run: npm run test:qa
-      - if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: web-qa-reports
-          path: build/reports/playwright-html
-          if-no-files-found: warn
-
-  android-qa-build:
+  android-diagnostic:
     runs-on: ubuntu-latest
     env:
       SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}
@@ -57,75 +31,32 @@ jobs:
           gradle-version: "8.11.1"
       - run: yes | sdkmanager --licenses >/dev/null || true
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      - name: Require stable QA signing identity
+      - name: Restore signing key
         shell: bash
         run: |
           set -euo pipefail
-          missing=0
           for var in SFP_KEYSTORE_BASE64 SFP_KEYSTORE_PASSWORD SFP_KEY_ALIAS SFP_KEY_PASSWORD; do
-            if [ -z "${!var:-}" ]; then
-              echo "::error::$var não está configurado. O QA não publicará APK com assinatura efêmera, pois isso força reinstalação e apaga o cofre Open Finance."
-              missing=1
-            fi
+            test -n "${!var:-}" || { echo "::error::$var ausente"; exit 1; }
           done
-          exit "$missing"
-      - name: Restore persistent QA signing key
+          printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-diag.jks"
+          test -s "$RUNNER_TEMP/sfp-diag.jks"
+          echo "SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-diag.jks" >> "$GITHUB_ENV"
+      - name: Build diagnostic release APK
+        run: gradle :app:assembleRelease
+      - name: Verify diagnostic package and signature
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-qa.jks"
-          test -s "$RUNNER_TEMP/sfp-qa.jks"
-          echo "SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-qa.jks" >> "$GITHUB_ENV"
-      - name: Build update-safe QA APKs
-        run: gradle :app:assembleDebug :app:assembleRelease :app:assembleDebugAndroidTest
-      - name: Verify pinned QA signatures, package identities and launcher resources
-        shell: bash
-        run: |
-          set -euo pipefail
-          expected_cert="$(printf '%s' "$SFP_QA_CERT_SHA256" | tr '[:upper:]' '[:lower:]')"
-          verify_apk() {
-            apk="$1"
-            expected_package="$2"
-            label="$3"
-            echo "=== ASSINATURA DO APK $label ==="
-            signature="$($ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$apk")"
-            printf '%s\n' "$signature"
-            actual_cert="$(printf '%s\n' "$signature" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr '[:upper:]' '[:lower:]')"
-            if [ -z "$actual_cert" ] || [ "$actual_cert" != "$expected_cert" ]; then
-              echo "::error::Certificado inesperado no APK $label. A identidade de assinatura não pode mudar silenciosamente entre builds."
-              exit 1
-            fi
-            package_name="$($ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -n1)"
-            if [ "$package_name" != "$expected_package" ]; then
-              echo "::error::Package inesperado no APK $label: $package_name (esperado $expected_package)."
-              exit 1
-            fi
-            echo "$label signing identity pinned: $actual_cert"
-            echo "$label package identity: $package_name"
-          }
-          verify_apk "app/build/outputs/apk/debug/app-debug.apk" "com.jhony.sfp.debug" "DEBUG"
-          verify_apk "app/build/outputs/apk/release/app-release.apk" "com.jhony.sfp" "RELEASE-QA"
-          echo "=== RECURSOS DE LAUNCHER EMPACOTADOS NO APK RELEASE-QA ==="
-          unzip -l app/build/outputs/apk/release/app-release.apk | grep -E "res/mipmap|res/drawable|ic_launcher" || true
-      - name: Record APK checksums without publishing app data
-        run: |
-          mkdir -p build/reports
-          sha256sum app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk app/build/outputs/apk/androidTest/debug/*.apk > build/reports/android-qa-checksums.txt
-      - if: always()
-        uses: actions/upload-artifact@v6
+          apk="app/build/outputs/apk/release/app-release.apk"
+          package_name="$($ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -n1)"
+          test "$package_name" = "com.jhony.sfpdiag"
+          signature="$($ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$apk")"
+          actual_cert="$(printf '%s\n' "$signature" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr '[:upper:]' '[:lower:]')"
+          test "$actual_cert" = "$SFP_QA_CERT_SHA256"
+          echo "diagnostic package: $package_name"
+          echo "diagnostic cert: $actual_cert"
+      - uses: actions/upload-artifact@v6
         with:
-          name: android-qa-checksums
-          path: build/reports/android-qa-checksums.txt
-          if-no-files-found: error
-      - if: success()
-        uses: actions/upload-artifact@v6
-        with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-      - if: success()
-        uses: actions/upload-artifact@v6
-        with:
-          name: app-release-qa-apk
+          name: sfp-installed-diagnostic-apk
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error

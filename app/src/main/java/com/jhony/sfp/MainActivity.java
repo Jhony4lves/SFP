@@ -1,286 +1,194 @@
 package com.jhony.sfp;
 
-import android.Manifest;
-import android.app.Activity;
-import android.content.Intent;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.pm.InstallSourceInfo;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.net.Uri;
+import android.content.pm.Signature;
 import android.os.Build;
 import android.os.Bundle;
-import android.webkit.MimeTypeMap;
-import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
+import android.graphics.Typeface;
+import android.view.View;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.webkit.WebViewAssetLoader;
 
-import java.util.LinkedHashSet;
+import java.security.MessageDigest;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
-import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
-    private WebView webView;
-    private ValueCallback<Uri[]> fileChooserCallback;
-    private static final int FILE_CHOOSER_REQUEST = 7001;
-    private static final int NOTIFICATION_PERMISSION_REQUEST = 7002;
-    private boolean backRequestPending;
-    private boolean notificationPermissionRequestPending;
+    private static final String TARGET_RELEASE = "com.jhony.sfp";
+    private static final String TARGET_DEBUG = "com.jhony.sfp.debug";
+    private static final String EXPECTED_CERT = "bf036c1668644f9c5b739e827472c7b29392de54554cdfbf2890d3b764aed2d9";
 
-    private static final String[] FALLBACK_FILE_MIME_TYPES = new String[]{
-            "text/csv",
-            "application/csv",
-            "text/comma-separated-values",
-            "application/vnd.ms-excel",
-            "application/json",
-            "application/octet-stream",
-            "application/x-ofx",
-            "application/ofx",
-            "application/pdf",
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "text/plain"
-    };
+    private TextView reportView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setTitle("SFP Diagnóstico de Instalação");
 
-        webView = findViewById(R.id.webView);
+        int pad = dp(20);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(pad, pad, pad, pad);
 
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setDatabaseEnabled(true);
-        settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(true);
-        settings.setMediaPlaybackRequiresUserGesture(true);
-        settings.setBuiltInZoomControls(false);
-        settings.setDisplayZoomControls(false);
-        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        TextView title = new TextView(this);
+        title.setText("SFP — Diagnóstico de atualização");
+        title.setTextSize(22f);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        root.addView(title);
 
-        WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
-                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
-                .build();
+        TextView help = new TextView(this);
+        help.setText("Este app não altera nem abre o banco do SFP. Ele apenas lê versão, package e certificado de assinatura que o Android informa para o SFP instalado.");
+        help.setTextSize(15f);
+        help.setPadding(0, dp(8), 0, dp(16));
+        root.addView(help);
 
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public android.webkit.WebResourceResponse shouldInterceptRequest(
-                    WebView view, android.webkit.WebResourceRequest request) {
-                return assetLoader.shouldInterceptRequest(request.getUrl());
-            }
+        reportView = new TextView(this);
+        reportView.setTextSize(14f);
+        reportView.setTypeface(Typeface.MONOSPACE);
+        reportView.setTextIsSelectable(true);
+        reportView.setPadding(0, 0, 0, dp(16));
+        root.addView(reportView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
 
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
-                if (request == null || request.getUrl() == null) return true;
-                return handleNavigation(request.getUrl());
-            }
+        Button refresh = new Button(this);
+        refresh.setText("Ler novamente");
+        refresh.setOnClickListener(v -> refreshReport());
+        root.addView(refresh);
 
-            @SuppressWarnings("deprecation")
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if (url == null) return true;
-                return handleNavigation(Uri.parse(url));
-            }
-
-            private boolean handleNavigation(Uri uri) {
-                if (uri == null) return true;
-                String scheme = uri.getScheme();
-                String host = uri.getHost();
-                if ("https".equalsIgnoreCase(scheme) && "appassets.androidplatform.net".equalsIgnoreCase(host)) {
-                    return false;
-                }
-                try {
-                    if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme) || "mailto".equalsIgnoreCase(scheme) || "tel".equalsIgnoreCase(scheme)) {
-                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
-                        startActivity(browserIntent);
-                    }
-                } catch (Exception ignored) {}
-                return true;
-            }
+        Button copy = new Button(this);
+        copy.setText("Copiar diagnóstico");
+        copy.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            clipboard.setPrimaryClip(ClipData.newPlainText("SFP diagnóstico", reportView.getText()));
+            Toast.makeText(this, "Diagnóstico copiado.", Toast.LENGTH_SHORT).show();
         });
+        root.addView(copy);
 
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onShowFileChooser(
-                    WebView webView,
-                    ValueCallback<Uri[]> filePathCallback,
-                    FileChooserParams fileChooserParams) {
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(root);
+        setContentView(scroll);
+        refreshReport();
+    }
 
-                if (fileChooserCallback != null) {
-                    fileChooserCallback.onReceiveValue(null);
-                }
-                fileChooserCallback = filePathCallback;
+    private void refreshReport() {
+        StringBuilder out = new StringBuilder();
+        out.append("Android: ").append(Build.VERSION.RELEASE)
+                .append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\n");
+        out.append("Modelo: ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL).append("\n\n");
+        out.append("Certificado esperado para as novas builds:\n")
+                .append(EXPECTED_CERT).append("\n\n");
 
-                String[] acceptedMimeTypes = resolveAcceptMimeTypes(fileChooserParams);
-                boolean broadFinancialPicker = requiresBroadFinancialPicker(fileChooserParams);
-                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                if (broadFinancialPicker) {
-                    // Samsung/Android providers commonly expose OFX/QFX/CSV as application/octet-stream
-                    // or with no reliable MIME. MIME filtering would grey out perfectly valid files.
-                    intent.setType("*/*");
-                } else if (acceptedMimeTypes.length == 1) {
-                    intent.setType(acceptedMimeTypes[0]);
-                } else {
-                    intent.setType("*/*");
-                    intent.putExtra(Intent.EXTRA_MIME_TYPES, acceptedMimeTypes);
-                }
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
-                        fileChooserParams != null && fileChooserParams.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE);
-                try {
-                    startActivityForResult(intent, FILE_CHOOSER_REQUEST);
-                } catch (Exception error) {
-                    fileChooserCallback.onReceiveValue(null);
-                    fileChooserCallback = null;
-                    Toast.makeText(MainActivity.this, "Não foi possível abrir o seletor de arquivos.", Toast.LENGTH_SHORT).show();
-                }
-                return true;
+        appendPackage(out, TARGET_RELEASE, "SFP RELEASE");
+        out.append("\n");
+        appendPackage(out, TARGET_DEBUG, "SFP DEBUG");
+
+        out.append("\n--- INTERPRETAÇÃO ---\n");
+        out.append("Se RELEASE existir e 'assinatura compatível' = SIM, a instalação deve depender de versionCode/política do instalador.\n");
+        out.append("Se RELEASE existir e 'assinatura compatível' = NÃO, o APK atualmente instalado veio de outra chave e não pode ser atualizado por cima com a chave nova.\n");
+        out.append("Se apenas DEBUG existir, você está usando com.jhony.sfp.debug e o APK Release é outro aplicativo para o Android.\n");
+
+        reportView.setText(out.toString());
+    }
+
+    private void appendPackage(StringBuilder out, String packageName, String label) {
+        out.append("=== ").append(label).append(" ===\n");
+        try {
+            PackageManager pm = getPackageManager();
+            int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                    ? PackageManager.GET_SIGNING_CERTIFICATES
+                    : PackageManager.GET_SIGNATURES;
+            PackageInfo info = pm.getPackageInfo(packageName, flags);
+
+            long versionCode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                    ? info.getLongVersionCode()
+                    : info.versionCode;
+
+            out.append("instalado: SIM\n");
+            out.append("package: ").append(info.packageName).append("\n");
+            out.append("versionName: ").append(info.versionName).append("\n");
+            out.append("versionCode: ").append(versionCode).append("\n");
+            out.append("primeira instalação: ").append(formatDate(info.firstInstallTime)).append("\n");
+            out.append("última atualização: ").append(formatDate(info.lastUpdateTime)).append("\n");
+            out.append("instalador: ").append(installerFor(pm, packageName)).append("\n");
+
+            Signature[] signatures;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && info.signingInfo != null) {
+                signatures = info.signingInfo.hasMultipleSigners()
+                        ? info.signingInfo.getApkContentsSigners()
+                        : info.signingInfo.getSigningCertificateHistory();
+            } else {
+                signatures = info.signatures;
             }
-        });
 
-        webView.addJavascriptInterface(new AndroidBridge(this), "AndroidBridge");
-        webView.addJavascriptInterface(new PluggyBridge(this), "PluggyBridge");
-        // Always rebuild the document from the APK bundle. IndexedDB/local storage remain intact,
-        // while stale WebView DOM/cache from an older APK can no longer resurrect old navigation.
-        webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
-    }
-
-    static String mapAcceptExtension(String extension) {
-        if (extension == null) return null;
-        switch (extension.toLowerCase(Locale.ROOT)) {
-            case "csv": return "text/csv";
-            case "ofx": return "application/x-ofx";
-            case "qfx": return "application/x-ofx";
-            case "json": return "application/json";
-            case "pdf": return "application/pdf";
-            case "jpg":
-            case "jpeg": return "image/jpeg";
-            case "png": return "image/png";
-            case "webp": return "image/webp";
-            case "txt": return "text/plain";
-            case "sfp": return "application/octet-stream";
-            default: return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
-        }
-    }
-
-    static boolean requiresBroadFinancialPicker(@Nullable WebChromeClient.FileChooserParams params) {
-        if (params == null || params.getAcceptTypes() == null) return false;
-        for (String rawGroup : params.getAcceptTypes()) {
-            if (rawGroup == null) continue;
-            for (String raw : rawGroup.split(",")) {
-                String type = raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
-                if (type.equals(".ofx") || type.equals(".qfx") || type.equals(".csv") || type.equals(".sfp") ||
-                        type.contains("/ofx") || type.contains("csv") || type.equals("application/octet-stream")) {
-                    return true;
+            boolean compatible = false;
+            if (signatures == null || signatures.length == 0) {
+                out.append("SHA-256 assinatura: indisponível\n");
+            } else {
+                for (int i = 0; i < signatures.length; i++) {
+                    String digest = sha256(signatures[i].toByteArray());
+                    out.append("SHA-256 assinatura");
+                    if (signatures.length > 1) out.append(' ').append(i + 1);
+                    out.append(": ").append(digest).append("\n");
+                    if (EXPECTED_CERT.equalsIgnoreCase(digest)) compatible = true;
                 }
             }
+            out.append("assinatura compatível com build nova: ")
+                    .append(compatible ? "SIM" : "NÃO").append("\n");
+        } catch (PackageManager.NameNotFoundException e) {
+            out.append("instalado: NÃO\n");
+        } catch (Exception e) {
+            out.append("erro ao ler: ").append(e.getClass().getSimpleName())
+                    .append(": ").append(e.getMessage()).append("\n");
         }
-        return false;
     }
 
-    static String[] resolveAcceptMimeTypes(@Nullable WebChromeClient.FileChooserParams params) {
-        Set<String> types = new LinkedHashSet<>();
-        if (params != null && params.getAcceptTypes() != null) {
-            for (String rawGroup : params.getAcceptTypes()) {
-                if (rawGroup == null) continue;
-                for (String raw : rawGroup.split(",")) {
-                    String type = raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
-                    if (type.isEmpty()) continue;
-                    if (type.startsWith(".")) {
-                        String extension = type.substring(1);
-                        String mapped = mapAcceptExtension(extension);
-                        if (mapped != null && !mapped.trim().isEmpty()) types.add(mapped);
-                    } else if (type.contains("/")) {
-                        types.add(type);
-                    }
-                }
+    private String installerFor(PackageManager pm, String packageName) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                InstallSourceInfo source = pm.getInstallSourceInfo(packageName);
+                String installing = source.getInstallingPackageName();
+                String initiating = source.getInitiatingPackageName();
+                if (installing != null) return installing;
+                if (initiating != null) return initiating;
+                return "desconhecido/sideload";
             }
+            String legacy = pm.getInstallerPackageName(packageName);
+            return legacy == null ? "desconhecido/sideload" : legacy;
+        } catch (Exception e) {
+            return "indisponível";
         }
-        if (types.isEmpty()) {
-            for (String fallback : FALLBACK_FILE_MIME_TYPES) types.add(fallback);
-        }
-        return types.toArray(new String[0]);
     }
 
+    private static String sha256(byte[] bytes) throws Exception {
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+        StringBuilder hex = new StringBuilder();
+        for (byte b : digest) hex.append(String.format(Locale.US, "%02x", b));
+        return hex.toString();
+    }
+
+    private static String formatDate(long timestamp) {
+        if (timestamp <= 0) return "indisponível";
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date(timestamp));
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    // Mantido para compatibilidade de compilação com AndroidBridge nesta branch de diagnóstico.
     boolean ensureNotificationPermissionForContextualAlert() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true;
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-            return true;
-        }
-        if (!notificationPermissionRequestPending) {
-            notificationPermissionRequestPending = true;
-            runOnUiThread(() -> ActivityCompat.requestPermissions(
-                    MainActivity.this,
-                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                    NOTIFICATION_PERMISSION_REQUEST));
-        }
         return false;
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
-            notificationPermissionRequestPending = false;
-            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-            if (!granted) {
-                Toast.makeText(this,
-                        "Notificações do Android estão desativadas. Os avisos continuam disponíveis dentro do SFP.",
-                        Toast.LENGTH_LONG).show();
-            }
-        }
-    }
-
-    @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-    }
-
-    @Override
-    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == FILE_CHOOSER_REQUEST && fileChooserCallback != null) {
-            Uri[] results = null;
-            if (resultCode == Activity.RESULT_OK && data != null) {
-                if (data.getClipData() != null && data.getClipData().getItemCount() > 0) {
-                    int count = data.getClipData().getItemCount();
-                    results = new Uri[count];
-                    for (int index = 0; index < count; index++) {
-                        results[index] = data.getClipData().getItemAt(index).getUri();
-                    }
-                } else if (data.getData() != null) {
-                    results = new Uri[]{data.getData()};
-                }
-            }
-            fileChooserCallback.onReceiveValue(results);
-            fileChooserCallback = null;
-        }
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (webView == null || backRequestPending) return;
-        backRequestPending = true;
-        webView.evaluateJavascript(
-                "typeof window.handleAndroidBack === 'function' && window.handleAndroidBack()",
-                result -> {
-                    backRequestPending = false;
-                    if (!"true".equals(result)) MainActivity.super.onBackPressed();
-                });
     }
 }
