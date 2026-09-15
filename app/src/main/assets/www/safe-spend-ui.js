@@ -117,7 +117,8 @@ document.addEventListener('click',event=>{
     {title:'Dados',items:[
       ['lancamentos','Lançamentos','Histórico e edição'],
       ['extratos','Extratos','Importação OFX e CSV'],
-      ['dados','Central de Dados','Backup, importação e exportação']
+      ['dados','Central de Dados','Backup, importação e exportação'],
+      ['openfinance','Sincronização','Atualização de contas, cartões e faturas']
     ]},
     {title:'Assistência e sistema',items:[
       ['sophy','Sophy','Assistente contextual'],
