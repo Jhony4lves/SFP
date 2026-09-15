@@ -195,6 +195,7 @@ test('cartão sem compras locais mostra parcelas bancárias identificadas e não
   await page.evaluate(()=>{setPage('cartoes');renderCards();});
   await expect(page.locator('#cardsGrid')).toContainText('2 identificadas');
   await expect(page.locator('#cardsGrid')).toContainText('188,72');
+  await page.waitForFunction(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome==='completed');
   await page.evaluate(()=>{const grid=document.getElementById('cardsGrid');grid.innerHTML=grid.innerHTML.replace('2 identificadas','0');});
   await expect(page.locator('#cardsGrid')).toContainText('2 identificadas');
   await page.evaluate(()=>{
@@ -204,5 +205,6 @@ test('cartão sem compras locais mostra parcelas bancárias identificadas e não
   });
   await page.locator('#openFinanceSyncBtn').click();
   await page.evaluate(()=>{setPage('cartoes');renderCards();});
+  await page.waitForFunction(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome==='apply-failed');
   await expect(page.locator('#cardsGrid')).toContainText('2 identificadas (última leitura)');
 });

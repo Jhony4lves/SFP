@@ -169,6 +169,9 @@
       try{await syncCurrentData();}catch(_){}
       message('Falha ao atualizar a instituição. Não foi possível confirmar uma nova leitura bancária.','error');
     }finally{
+      // Failed/partial sync returns before renderAll; refresh the evidence labels as well.
+      global.SFPOpenFinanceBankTruth?.patchGrid?.();
+      global.SFPOpenFinanceBankTruth?.patchInvoiceFocus?.();
       busy=false;
       if(button){
         button.disabled=false;
