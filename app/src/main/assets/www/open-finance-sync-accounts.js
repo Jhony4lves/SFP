@@ -369,10 +369,15 @@
         if(card.review+bank.review)detail.push(`${card.review+bank.review} item(ns) mantido(s) em revisão`);
         if(card.unmapped+bank.unmapped)detail.push(`${card.unmapped+bank.unmapped} conta(s)/cartão(ões) sem vínculo seguro`);
         if(bank.partial)detail.push(`${bank.partial} conta(s) bancária(s) com cobertura parcial; somente os registros recebidos foram processados`);
-        setStatus(bank.partial?'warning':'success','Contas e faturas sincronizadas pelo Open Finance',detail.join(' • '));
+        const unmapped=card.unmapped+bank.unmapped;
+        const externalCount=(result.items||[]).reduce((n,item)=>n+(item.accounts||[]).filter(account=>account.type==='BANK'||account.type==='CREDIT').length,0);
+        const allUnmapped=unmapped>0&&unmapped===externalCount;
+        const title=allUnmapped?'Vínculos pendentes no SFP':'Contas e faturas sincronizadas pelo Open Finance'+(unmapped?' · Há vínculos pendentes':'');
+        setStatus(unmapped||bank.partial?'warning':'success',title,detail.join(' • '));
         const added=cardApplied.created+bankApplied.created+bankApplied.transfers;
         if(added)notify(`${added} novo(s) registro(s) adicionado(s) pelo Open Finance.`,'success');
         else if(cardApplied.linked+bankApplied.linked)notify('Dados conciliados sem criar duplicatas.','success');
+        else if(unmapped)notify('Cadastre as contas e cartões no SFP e confira os vínculos antes de sincronizar.','warning');
         else notify(bank.partial?'Nada novo entre as transações recebidas; a cobertura bancária ainda é parcial.':'Tudo já estava sincronizado.',bank.partial?'info':'success');
         return{ok:true,card,bank,cardApplied,bankApplied};
       }catch(error){
@@ -405,7 +410,9 @@
       event.preventDefault();event.stopImmediatePropagation();previewOnly();
     },true);
     sync.addEventListener('click',event=>{
-      event.preventDefault();event.stopImmediatePropagation();void syncAll();
+      event.preventDefault();event.stopImmediatePropagation();
+      if(global.SFPOpenFinanceRealRefresh)void global.SFPOpenFinanceRealRefresh.refresh();
+      else void syncAll();
     },true);
     return true;
   }

@@ -554,8 +554,13 @@ public final class PluggyBridge {
         summary.put("currencyCode", cleanFirst(cleanString(transaction, "currencyCode"), "BRL"));
         summary.put("status", cleanString(transaction, "status"));
         summary.put("type", cleanString(transaction, "type"));
-        String billId = cleanString(transaction, "billId");
+        JSONObject creditMetadata = transaction.optJSONObject("creditCardMetadata");
+        // The provider places billId inside creditCardMetadata; keep the legacy root fallback.
+        String billId = cleanFirst(creditMetadata == null ? "" : cleanString(creditMetadata, "billId"),
+                cleanString(transaction, "billId"));
         if (!billId.isEmpty()) summary.put("billId", billId);
+        String forecast = creditMetadata == null ? "" : cleanString(creditMetadata, "billForecastDate");
+        if (forecast.matches("[0-9]{4}-(0[1-9]|1[0-2])")) summary.put("billForecastDate", forecast);
         copyOptionalNumber(transaction, summary, "amount");
         copyOptionalNumber(transaction, summary, "amountInAccountCurrency");
 
@@ -707,14 +712,49 @@ public final class PluggyBridge {
         return result;
     }
 
-    private JSONObject listRecentTransactionsInternal(String key, String accountId) throws Exception {
+    static LocalDate transactionHistoryStart(LocalDate today, String accountType) {
+        // Installments may retain their original purchase date while forecasting a current bill.
+        return "CREDIT".equalsIgnoreCase(accountType) ? today.minusMonths(12) : today.minusDays(TRANSACTION_WINDOW_DAYS);
+    }
+
+    static boolean keepCreditTransaction(JSONObject transaction, LocalDate today) {
+        // The extended lookup is for current installments, not a historical import.
+        String date = cleanString(transaction, "date");
+        try {
+            if (!LocalDate.parse(date.substring(0, 10)).isBefore(today.minusDays(TRANSACTION_WINDOW_DAYS))) return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+        try {
+            return !java.time.YearMonth.parse(cleanString(transaction, "billForecastDate"))
+                    .isBefore(java.time.YearMonth.from(today));
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    static String transactionQuery(String accountId, LocalDate today, String accountType) throws Exception {
+        return "accountId=" + URLEncoder.encode(accountId, StandardCharsets.UTF_8.name())
+                + "&dateFrom=" + transactionHistoryStart(today, accountType)
+                + ("CREDIT".equalsIgnoreCase(accountType) ? "" : "&dateTo=" + today);
+    }
+
+    private static final class TransactionReadException extends Exception {
+        final int status;
+        final String explanation;
+        TransactionReadException(int status, String body, String key) {
+            super("TRANSACTIONS_HTTP_" + status);
+            this.status = status;
+            this.explanation = new PluggyRefreshError(body, key).message;
+        }
+    }
+
+    private JSONObject listRecentTransactionsInternal(String key, String accountId, String accountType) throws Exception {
     if (!UUID_PATTERN.matcher(accountId).matches()) throw new IllegalArgumentException("INVALID_ACCOUNT_ID");
 
     LocalDate today = LocalDate.now(ZoneOffset.UTC);
-    LocalDate from = today.minusDays(TRANSACTION_WINDOW_DAYS);
-    String currentQuery = "accountId=" + URLEncoder.encode(accountId, StandardCharsets.UTF_8.name())
-            + "&dateFrom=" + URLEncoder.encode(from.toString(), StandardCharsets.UTF_8.name())
-            + "&dateTo=" + URLEncoder.encode(today.toString(), StandardCharsets.UTF_8.name());
+    LocalDate from = transactionHistoryStart(today, accountType);
+    String currentQuery = transactionQuery(accountId, today, accountType);
 
     JSONArray transactions = new JSONArray();
     Set<String> visitedQueries = new LinkedHashSet<>();
@@ -740,7 +780,7 @@ public final class PluggyBridge {
         }
         if (response.status == 403) throw new SecurityException("TRANSACTION_ACCESS_FORBIDDEN");
         if (response.status < 200 || response.status >= 300) {
-            throw new IllegalStateException("TRANSACTIONS_HTTP_" + response.status);
+            throw new TransactionReadException(response.status, response.body, key);
         }
         pageCount++;
 
@@ -779,14 +819,22 @@ public final class PluggyBridge {
         hasMore = true;
     }
 
+    if ("CREDIT".equalsIgnoreCase(accountType)) {
+        JSONArray scopedTransactions = new JSONArray();
+        for (int index = 0; index < transactions.length(); index++) {
+            JSONObject transaction = transactions.optJSONObject(index);
+            if (transaction != null && keepCreditTransaction(transaction, today)) scopedTransactions.put(transaction);
+        }
+        transactions = scopedTransactions;
+    }
     JSONObject result = new JSONObject();
     result.put("transactions", transactions);
     result.put("previewCount", transactions.length());
     result.put("hasMore", hasMore);
     result.put("pageCount", pageCount);
-    result.put("windowDays", TRANSACTION_WINDOW_DAYS);
+    result.put("windowDays", java.time.temporal.ChronoUnit.DAYS.between(from, today));
     result.put("dateFrom", from.toString());
-    result.put("dateTo", today.toString());
+    result.put("dateTo", "CREDIT".equalsIgnoreCase(accountType) ? "" : today.toString());
     return result;
 }
 
@@ -848,7 +896,7 @@ public final class PluggyBridge {
                     accountCount++;
                     String accountId = cleanString(account, "id");
                     try {
-                        JSONObject transactionPage = listRecentTransactionsInternal(key, accountId);
+                        JSONObject transactionPage = listRecentTransactionsInternal(key, accountId, cleanString(account, "type"));
                         JSONArray transactions = transactionPage.optJSONArray("transactions");
                         if (transactions == null) transactions = new JSONArray();
                         enriched.put("transactions", transactions);
@@ -861,6 +909,17 @@ public final class PluggyBridge {
                     } catch (Exception transactionError) {
                         enriched.put("transactions", new JSONArray());
                         enriched.put("transactionsError", true);
+                        enriched.put("transactionPreviewHasMore", true);
+                        LocalDate attemptedDate = LocalDate.now(ZoneOffset.UTC);
+                        enriched.put("transactionDateFrom", transactionHistoryStart(attemptedDate, cleanString(account, "type")).toString());
+                        enriched.put("transactionDateTo", attemptedDate.toString());
+                        if (transactionError instanceof TransactionReadException) {
+                            TransactionReadException failure = (TransactionReadException) transactionError;
+                            enriched.put("transactionsHttpStatus", failure.status);
+                            enriched.put("transactionsErrorMessage", failure.explanation);
+                        } else {
+                            enriched.put("transactionsErrorMessage", "Não foi possível concluir a leitura das transações.");
+                        }
                     }
                     if ("CREDIT".equalsIgnoreCase(cleanString(account, "type"))) {
                         try {

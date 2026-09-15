@@ -39,6 +39,12 @@ android {
         debug {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
+            // QA APKs must keep a stable signature across CI runs. Otherwise Android
+            // requires uninstalling the previous com.jhony.sfp.debug build, which wipes
+            // the app-private Pluggy vault and its Android Keystore key.
+            if (System.getenv("SFP_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
         }
         release {
             minifyEnabled false
@@ -62,8 +68,13 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.webkit:webkit:1.12.1'
     implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
+    // PATCH é necessário para o refresh manual de Items da Pluggy; HttpURLConnection
+    // do Android não suporta PATCH de forma portável.
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     // Modelo latino embarcado: OCR de faturas funciona offline desde a primeira abertura.
     implementation 'com.google.mlkit:text-recognition:16.0.1'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test:runner:1.6.2'
     androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'

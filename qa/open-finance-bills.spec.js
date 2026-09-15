@@ -40,6 +40,8 @@ async function installBridge(page,{bill=false,partial=false,error=false}={}){
 }
 
 async function boot(page,value){
+  // This fixture models the open September cycle, before its September 13 close.
+  await page.clock.setFixedTime(new Date('2026-09-10T12:00:00Z'));
   await page.goto('/index.html');
   await expectBootComplete(page,expect,'Fixture QA');
   await writeIndexedDB(page,value);
@@ -137,15 +139,26 @@ test('reaplicar exatamente o mesmo payload é idempotente financeiramente',async
 
 test('diagnóstico separa uso bancário de compromissos projetados do SFP',async({page})=>{
   await installBridge(page);
-  await boot(page,stateFor('Diagnóstico semântico'));
+  const diagnosticState=stateFor('Diagnóstico semântico');
+  diagnosticState.baseDate='2026-09-10';
+  await boot(page,diagnosticState);
   await openOpenFinance(page);
   await page.locator('#openFinanceSyncBtn').click();
   await page.evaluate(()=>setPage('cartoes'));
   await page.evaluate(()=>openInvoiceDetail(1));
   await expect(page.locator('#exportInvoiceDiagnostic')).toBeVisible();
+  // Android injects this resolver after the page loads; exercise that same display path.
+  await page.addScriptTag({url:'/open-finance-bank-truth-v2.js'});
+  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBankTruth?.version)>=4);
   const diagnostic=await page.evaluate(()=>SFPOpenFinanceBills.diag(1,'2026-09'));
-  expect(diagnostic.schema).toBe('sfp-invoice-diagnostic-v2');
-  expect(diagnostic.invoice.totalShown).toBe(222.38);
+  expect(diagnostic.schema).toBe('sfp-invoice-diagnostic-v4');
+  // Export the same bank-cycle estimate rendered on the card, keeping the local sum separate.
+  expect(diagnostic.invoice.totalShown).toBe(84.42);
+  expect(diagnostic.invoice.remaining).toBe(84.42);
+  expect(diagnostic.invoice.localRemaining).toBe(222.38);
+  expect(diagnostic.equation.remaining).toBe(84.42);
+  expect(diagnostic.invoice.calculatedTotal).toBe(222.38);
+  expect(diagnostic.displayEvidence.source).toBe('open-finance-cycle-transactions');
   expect(diagnostic.invoice.officialTotal).toBeNull();
   expect(diagnostic.invoice.estimatedTotal).toBe(222.38);
   expect(diagnostic.invoice.pendingAmount).toBe(84.42);

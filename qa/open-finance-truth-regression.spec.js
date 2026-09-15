@@ -34,6 +34,8 @@ async function installBridge(page,{transactions=[],creditData={creditLimit:2090,
 }
 
 async function boot(page,value){
+  // This fixture models the open September cycle, before its September 13 close.
+  await page.clock.setFixedTime(new Date('2026-09-10T12:00:00Z'));
   await page.goto('/index.html');
   await expectBootComplete(page,expect,'Fixture QA');
   await writeIndexedDB(page,value);
