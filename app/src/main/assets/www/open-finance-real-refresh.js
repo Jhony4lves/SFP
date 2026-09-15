@@ -192,6 +192,32 @@
     }
   }
 
+  function appendMoreMenuEntry(){
+    const root=document.getElementById('modalRoot');
+    if(!root||root.querySelector(`[data-sfp-more-page="${PAGE_ID}"]`))return false;
+    const sections=Array.from(root.querySelectorAll('.sfp-more-group'));
+    const dataSection=sections.find(section=>section.querySelector('.sfp-more-group-title')?.textContent.trim()==='Dados');
+    const grid=dataSection?.querySelector('.sfp-more-grid');
+    if(!grid)return false;
+
+    const item=document.createElement('button');
+    item.type='button';
+    item.className='sfp-more-item';
+    item.dataset.sfpMorePage=PAGE_ID;
+    const icon=document.querySelector(`.sidebar .nav button[data-page="${PAGE_ID}"] svg`)?.outerHTML||'';
+    item.innerHTML=`<span class="sfp-more-icon" aria-hidden="true">${icon}</span><span class="sfp-more-copy"><strong>Sincronização</strong><small>Open Finance e atualização de dados</small></span><span class="sfp-more-arrow" aria-hidden="true">›</span>`;
+    grid.prepend(item);
+    return true;
+  }
+
+  function installMoreMenuHook(){
+    const more=document.getElementById('moreNavBtn');
+    if(!more||more.dataset.sfpOpenFinanceMoreHook==='1')return Boolean(more);
+    more.dataset.sfpOpenFinanceMoreHook='1';
+    more.addEventListener('click',()=>queueMicrotask(appendMoreMenuEntry));
+    return true;
+  }
+
   function installNavigation(){
     const panel=document.getElementById('openFinancePersonalPanel');
     const main=document.querySelector('main');
@@ -217,7 +243,7 @@
       navButton.type='button';
       navButton.dataset.page=PAGE_ID;
       navButton.setAttribute('aria-label','Sincronização Open Finance');
-      navButton.innerHTML='<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Sincronizar</span>';
+      navButton.innerHTML='<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Sincronização</span>';
       const contas=nav.querySelector('button[data-page="contas"]');
       if(contas)contas.insertAdjacentElement('afterend',navButton);
       else nav.insertBefore(navButton,nav.querySelector('button[data-page="config"]')||null);
@@ -226,12 +252,8 @@
       });
     }
 
-    if(!document.getElementById('sfp-openfinance-nav-style')){
-      const style=document.createElement('style');
-      style.id='sfp-openfinance-nav-style';
-      style.textContent='@media(max-width:650px) and (orientation:portrait){.sidebar .nav{grid-template-columns:repeat(6,1fr)!important}.sidebar .nav button[data-page="openfinance"]{display:flex!important;flex-direction:column;align-items:center;justify-content:center;padding:4px 1px;font-size:11px;border-radius:8px;min-width:0;min-height:46px}}';
-      document.head.appendChild(style);
-    }
+    document.getElementById('sfp-openfinance-nav-style')?.remove();
+    installMoreMenuHook();
 
     const title=panel.querySelector('.head h2');
     const subtitle=panel.querySelector('.head p');
@@ -357,7 +379,6 @@
           return;
         }
       }
-
       lastAttempt.outcome='timeout';
       await syncCurrentData();
       message('A instituição ainda está sincronizando. O SFP manteve a leitura mais recente disponível.');
@@ -402,7 +423,7 @@
   }
 
   global.SFPOpenFinanceRealRefresh=Object.freeze({
-    version:4,
+    version:5,
     autoIntervalMs:AUTO_INTERVAL_MS,
     diagnostic,
     exportDiagnostic,
