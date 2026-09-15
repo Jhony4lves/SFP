@@ -147,10 +147,32 @@ public final class PluggyRefreshBridge {
         }
     }
 
+    private static String failureKind(Exception error) {
+        if (error instanceof java.net.UnknownHostException) return "DNS";
+        if (error instanceof java.net.SocketTimeoutException) return "TIMEOUT";
+        if (error instanceof javax.net.ssl.SSLException) return "TLS";
+        if (error instanceof org.json.JSONException) return "INVALID_JSON";
+        if (error instanceof java.io.IOException) return "IO";
+        return "UNEXPECTED";
+    }
+
+    private static int failureStatus(String kind) {
+        if ("INVALID_JSON".equals(kind)) return 502;
+        if ("UNEXPECTED".equals(kind)) return 500;
+        return 503;
+    }
+
     private static boolean allowedPath(String path) {
         return "/auth".equals(path)
                 || "/items".equals(path)
                 || ITEM_PATH_PATTERN.matcher(path).matches();
+    }
+
+    private HttpResult execute(Request request) throws Exception {
+        try (Response response = http.newCall(request).execute()) {
+            ResponseBody responseBody = response.body();
+            return new HttpResult(response.code(), responseBody == null ? "" : responseBody.string());
+        }
     }
 
     private HttpResult request(String method, String path, JSONObject body, String apiKey) throws Exception {
@@ -159,7 +181,7 @@ public final class PluggyRefreshBridge {
         Request.Builder builder = new Request.Builder()
                 .url(API_BASE + path)
                 .header("Accept", "application/json")
-                .header("User-Agent", "SmartFinancialPlanner/" + BuildConfig.VERSION_NAME + " OpenFinanceRefresh/1.1");
+                .header("User-Agent", "SmartFinancialPlanner/" + BuildConfig.VERSION_NAME + " OpenFinanceRefresh/1.2");
         if (apiKey != null && !apiKey.trim().isEmpty()) {
             builder.header("X-API-KEY", apiKey.trim());
         }
@@ -175,9 +197,20 @@ public final class PluggyRefreshBridge {
             throw new SecurityException("Método HTTP não autorizado");
         }
 
-        try (Response response = http.newCall(builder.build()).execute()) {
-            ResponseBody responseBody = response.body();
-            return new HttpResult(response.code(), responseBody == null ? "" : responseBody.string());
+        Request request = builder.build();
+        try {
+            return execute(request);
+        } catch (java.io.IOException firstFailure) {
+            // GET e POST /auth são seguros para uma segunda tentativa. PATCH nunca
+            // é repetido: a instituição pode ter recebido a primeira solicitação.
+            if ("PATCH".equals(method)) throw firstFailure;
+            try {
+                Thread.sleep(250L);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw firstFailure;
+            }
+            return execute(request);
         }
     }
 
@@ -241,11 +274,14 @@ public final class PluggyRefreshBridge {
 
     @JavascriptInterface
     public synchronized String refreshItems() {
+        String stage = "AUTH";
         try {
             String key = apiKey();
+            stage = "ITEM_DISCOVERY";
             Set<String> ids = discoverItemIds(key);
             if (ids.isEmpty()) return error("ITEMS_NOT_FOUND", "Nenhuma conexão Open Finance foi encontrada para atualizar.", 404);
 
+            stage = "ITEM_REFRESH";
             JSONArray results = new JSONArray();
             lastRefreshIds.clear();
             int started = 0;
@@ -273,7 +309,7 @@ public final class PluggyRefreshBridge {
                     }
                 } catch (Exception itemError) {
                     row.put("accepted", false);
-                    row.put("code", "REFRESH_REQUEST_FAILED");
+                    row.put("code", "REFRESH_REQUEST_" + failureKind(itemError));
                 }
                 results.put(row);
             }
@@ -292,12 +328,15 @@ public final class PluggyRefreshBridge {
             if ("AUTH_REQUIRED".equals(code)) return error("AUTH_REQUIRED", "Configure a Pluggy antes de atualizar.", 428);
             return error(code, "Não foi possível solicitar a atualização do Open Finance.", 502);
         } catch (Exception requestError) {
-            return error("REFRESH_FAILED", "Não foi possível solicitar a atualização do Open Finance.", 500);
+            String kind = failureKind(requestError);
+            return error("REFRESH_" + stage + "_" + kind,
+                    "Não foi possível solicitar a atualização do Open Finance.", failureStatus(kind));
         }
     }
 
     @JavascriptInterface
     public synchronized String refreshStatus() {
+        String stage = "AUTH";
         try {
             if (lastRefreshIds.isEmpty()) {
                 JSONObject empty = envelope(true);
@@ -307,6 +346,7 @@ public final class PluggyRefreshBridge {
             }
 
             String key = apiKey();
+            stage = "ITEM_STATUS";
             JSONArray results = new JSONArray();
             boolean complete = true;
             boolean needsUser = false;
@@ -343,8 +383,16 @@ public final class PluggyRefreshBridge {
             output.put("failed", failed);
             output.put("items", results);
             return output.toString();
+        } catch (SecurityException authError) {
+            return error("AUTH_REJECTED", "A Pluggy recusou as credenciais do Open Finance.", 401);
+        } catch (IllegalStateException stateError) {
+            String code = stateError.getMessage() == null ? "REFRESH_STATUS_FAILED" : stateError.getMessage();
+            if ("AUTH_REQUIRED".equals(code)) return error("AUTH_REQUIRED", "Configure a Pluggy antes de atualizar.", 428);
+            return error(code, "Não foi possível consultar o andamento da atualização.", 502);
         } catch (Exception statusError) {
-            return error("REFRESH_STATUS_FAILED", "Não foi possível consultar o andamento da atualização.", 502);
+            String kind = failureKind(statusError);
+            return error("REFRESH_STATUS_" + stage + "_" + kind,
+                    "Não foi possível consultar o andamento da atualização.", failureStatus(kind));
         }
     }
 }
