@@ -58,16 +58,16 @@ test.describe('Android release engineering', () => {
 
     expect(build).toMatch(/debug\s*\{[\s\S]*?applicationIdSuffix\s+["']\.debug["'][\s\S]*?signingConfig\s+signingConfigs\.release[\s\S]*?\}/);
     expect(workflow).toContain('Require stable QA signing identity');
-    expect(workflow).toContain('SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}');
-    expect(workflow).toContain('SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-qa.jks');
-    expect(workflow).toContain('SFP_QA_CERT_SHA256: bf036c1668644f9c5b739e827472c7b29392de54554cdfbf2890d3b764aed2d9');
-    expect(workflow).toContain('Verify pinned QA APK signature and launcher resources');
+    expect(workflow).toContain('Restore persistent QA signing key');
+    expect(workflow).toContain('Build update-safe QA APKs');
+    expect(workflow).toContain('Verify pinned QA signatures, package identities and launcher resources');
     expect(workflow).toContain('certificate SHA-256 digest');
     expect(workflow).toContain('actual_cert');
     expect(workflow).toContain('expected_cert');
-    expect(workflow).toContain('A identidade de assinatura não pode mudar silenciosamente entre builds');
+    expect(workflow).toContain('expected_package');
+    expect(workflow).toContain('com.jhony.sfp');
     expect(workflow).toContain('if: success()');
-    expect(workflow).toContain('O QA não publicará APK com assinatura efêmera');
+    expect(workflow).toContain('app-release-qa-apk');
   });
 
   test('keystore e artefatos locais estão ignorados pelo Git', () => {

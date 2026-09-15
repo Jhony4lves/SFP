@@ -56,7 +56,7 @@ jobs:
           java -cp build/qa-java com.jhony.sfp.PluggyRefreshStateTest
       - uses: android-actions/setup-android@v4
         with:
-          packages: platform-tools
+          packages: ''
       - uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: "8.11.1"
@@ -81,29 +81,41 @@ jobs:
           printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-qa.jks"
           test -s "$RUNNER_TEMP/sfp-qa.jks"
           echo "SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-qa.jks" >> "$GITHUB_ENV"
-      - name: Build update-safe QA APK
-        run: gradle :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest
-      - name: Verify pinned QA APK signature and launcher resources
+      - name: Build update-safe QA APKs
+        run: gradle :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease :app:assembleDebugAndroidTest
+      - name: Verify pinned QA signatures, package identities and launcher resources
         shell: bash
         run: |
           set -euo pipefail
-          apk="app/build/outputs/apk/debug/app-debug.apk"
-          echo "=== ASSINATURA DO APK QA ==="
-          signature="$($ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$apk")"
-          printf '%s\n' "$signature"
-          actual_cert="$(printf '%s\n' "$signature" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr '[:upper:]' '[:lower:]')"
           expected_cert="$(printf '%s' "$SFP_QA_CERT_SHA256" | tr '[:upper:]' '[:lower:]')"
-          if [ -z "$actual_cert" ] || [ "$actual_cert" != "$expected_cert" ]; then
-            echo "::error::Certificado inesperado no APK QA. A identidade de assinatura não pode mudar silenciosamente entre builds, pois isso quebra atualização in-place e pode levar à perda do cofre local."
-            exit 1
-          fi
-          echo "QA signing identity pinned: $actual_cert"
-          echo "=== RECURSOS DE LAUNCHER EMPACOTADOS NO APK DEBUG ==="
-          unzip -l "$apk" | grep -E "res/mipmap|res/drawable|ic_launcher" || true
+          verify_apk() {
+            apk="$1"
+            expected_package="$2"
+            label="$3"
+            echo "=== ASSINATURA DO APK $label ==="
+            signature="$($ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$apk")"
+            printf '%s\n' "$signature"
+            actual_cert="$(printf '%s\n' "$signature" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr '[:upper:]' '[:lower:]')"
+            if [ -z "$actual_cert" ] || [ "$actual_cert" != "$expected_cert" ]; then
+              echo "::error::Certificado inesperado no APK $label."
+              exit 1
+            fi
+            package_name="$($ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -n1)"
+            if [ "$package_name" != "$expected_package" ]; then
+              echo "::error::Package inesperado no APK $label: $package_name (esperado $expected_package)."
+              exit 1
+            fi
+            echo "$label signing identity pinned: $actual_cert"
+            echo "$label package identity: $package_name"
+          }
+          verify_apk "app/build/outputs/apk/debug/app-debug.apk" "com.jhony.sfp.debug" "DEBUG"
+          verify_apk "app/build/outputs/apk/release/app-release.apk" "com.jhony.sfp" "RELEASE-QA"
+          echo "=== RECURSOS DE LAUNCHER EMPACOTADOS NO APK RELEASE-QA ==="
+          unzip -l app/build/outputs/apk/release/app-release.apk | grep -E "res/mipmap|res/drawable|ic_launcher" || true
       - name: Record APK checksums without publishing app data
         run: |
           mkdir -p build/reports
-          sha256sum app/build/outputs/apk/debug/*.apk app/build/outputs/apk/androidTest/debug/*.apk > build/reports/android-qa-checksums.txt
+          sha256sum app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk app/build/outputs/apk/androidTest/debug/*.apk > build/reports/android-qa-checksums.txt
       - if: always()
         uses: actions/upload-artifact@v6
         with:
@@ -115,4 +127,10 @@ jobs:
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+      - if: success()
+        uses: actions/upload-artifact@v6
+        with:
+          name: app-release-qa-apk
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error

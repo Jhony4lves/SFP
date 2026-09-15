@@ -5,15 +5,15 @@ const { fixture, monitor, expectBootComplete, writeIndexedDB } = require('./help
 const BANK_TX_ID = '30000000-0000-4000-8000-000000000001';
 const EXTERNAL_KEY = `pluggy:${BANK_TX_ID}`;
 
-async function installBridge(page) {
-  await page.addInitScript(({ bankTxId }) => {
+async function installTransactionsBridge(page, transactions) {
+  await page.addInitScript(({ transactions }) => {
     const payload = {
       ok: true,
       provider: 'pluggy-personal',
       readOnly: true,
       itemCount: 1,
       accountCount: 1,
-      transactionPreviewCount: 1,
+      transactionPreviewCount: transactions.length,
       items: [{
         id: '33333333-3333-4333-8333-333333333333',
         connectorName: 'MeuPluggy',
@@ -21,17 +21,14 @@ async function installBridge(page) {
         status: 'UPDATED',
         accounts: [{
           id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-          type: 'BANK', subtype: 'CHECKING_ACCOUNT', name: 'Nubank', presentationName: 'Nubank',
-          balance: 500, currencyCode: 'BRL', transactionPreviewHasMore: false,
-          transactions: [{
-            id: bankTxId,
-            date: '2026-09-09T12:00:00.000Z',
-            description: 'FACULDADE UNILASALLE',
-            amount: 665.25,
-            type: 'DEBIT',
-            status: 'POSTED',
-            currencyCode: 'BRL'
-          }]
+          type: 'BANK',
+          subtype: 'CHECKING_ACCOUNT',
+          name: 'Nubank',
+          presentationName: 'Nubank',
+          balance: 500,
+          currencyCode: 'BRL',
+          transactionPreviewHasMore: false,
+          transactions
         }]
       }]
     };
@@ -45,7 +42,19 @@ async function installBridge(page) {
         saveItemIds: () => JSON.stringify({ ok:true, itemReferenceCount:1 })
       }
     });
-  }, { bankTxId: BANK_TX_ID });
+  }, { transactions });
+}
+
+async function installBridge(page) {
+  await installTransactionsBridge(page, [{
+    id: BANK_TX_ID,
+    date: '2026-09-09T12:00:00.000Z',
+    description: 'FACULDADE UNILASALLE',
+    amount: 665.25,
+    type: 'DEBIT',
+    status: 'POSTED',
+    currencyCode: 'BRL'
+  }]);
 }
 
 function stateFor(name) {
@@ -72,6 +81,24 @@ function stateFor(name) {
   return value;
 }
 
+function salaryStateFor(name, overrides = {}) {
+  const value = stateFor(name);
+  value.recurring = [{
+    id:70,
+    active:true,
+    type:'income',
+    desc:'Salário Águas de Niterói',
+    amount:1500,
+    day:15,
+    category:'Salário',
+    accountId:1,
+    start:'2026-01',
+    end:'',
+    ...overrides
+  }];
+  return value;
+}
+
 async function boot(page, value) {
   await page.goto('/index.html');
   await expectBootComplete(page, expect, 'Fixture QA');
@@ -80,7 +107,7 @@ async function boot(page, value) {
   await page.reload();
   await expectBootComplete(page, expect, value.settings.name);
   await page.waitForFunction(() => window.SFPOpenFinanceUnifiedSync?.version === 1);
-  await page.waitForFunction(() => window.SFPOpenFinanceRecurringReconcile?.version === 2);
+  await page.waitForFunction(() => window.SFPOpenFinanceRecurringReconcile?.version === 3);
 }
 
 async function sync(page) {
@@ -231,11 +258,215 @@ test('#205 match ambíguo não transforma lançamento bancário em recorrência 
   expect(await page.evaluate(() => recurringOccurrences('2026-09').length)).toBe(2);
 });
 
-test('#205 módulo é carregado pela suíte principal e preserva janela segura de 3 dias', async () => {
+test('#218 salário previsto com valor variável vira uma única receita realizada pelo valor real', async ({ page }) => {
+  const errors = monitor(page);
+  await installTransactionsBridge(page, [{
+    id:'40000000-0000-4000-8000-000000000001',
+    date:'2026-09-15T12:00:00.000Z',
+    description:'AGUAS DE NITEROI SA PAGAMENTO SALARIO',
+    amount:1487.63,
+    type:'CREDIT',
+    status:'POSTED',
+    currencyCode:'BRL'
+  }]);
+  const value = salaryStateFor('Open Finance salário variável #218');
+  await boot(page, value);
+
+  await sync(page);
+  await expect.poll(() => page.evaluate(() => state.transactions.length)).toBe(1);
+
+  const result = await page.evaluate(() => ({
+    tx: state.transactions[0],
+    virtuals: recurringOccurrences('2026-09').filter(item => item.recurringId === 70),
+    balance: accountBalance(1),
+    aliases: state.recurring.find(item => item.id === 70)?.openFinanceAliases || []
+  }));
+
+  expect(result.tx).toMatchObject({
+    recurringId:70,
+    recurrenceMonth:'2026-09',
+    occurrenceKey:'70:2026-09',
+    date:'2026-09-15',
+    scheduledDate:'2026-09-14',
+    kind:'income',
+    desc:'Salário Águas de Niterói',
+    category:'Salário',
+    amount:1487.63,
+    plannedAmount:1500,
+    status:'paid',
+    openFinanceRecurringMatchBasis:'income-strong-semantic'
+  });
+  expect(result.virtuals).toHaveLength(0);
+  expect(result.balance).toBeCloseTo(2487.63, 2);
+  expect(result.aliases).toContain('AGUAS DE NITEROI SA PAGAMENTO SALARIO');
+  expect(errors).toEqual([]);
+});
+
+test('#218 recorrência de salário já materializada assume o valor real do banco sem criar segunda receita', async ({ page }) => {
+  await installTransactionsBridge(page, [{
+    id:'40000000-0000-4000-8000-000000000002',
+    date:'2026-09-15T12:00:00.000Z',
+    description:'AGUAS DE NITEROI SA PAGAMENTO SALARIO',
+    amount:1487.63,
+    type:'CREDIT',
+    status:'POSTED',
+    currencyCode:'BRL'
+  }]);
+  const value = salaryStateFor('Open Finance salário materializado #218');
+  value.transactions = [{
+    id:90,
+    recurringId:70,
+    recurrenceMonth:'2026-09',
+    occurrenceKey:'70:2026-09',
+    accountId:1,
+    kind:'income',
+    desc:'Salário Águas de Niterói',
+    amount:1500,
+    date:'2026-09-15',
+    dueDay:15,
+    category:'Salário',
+    status:'paid',
+    tags:['recorrente'],
+    balanceImpact:true
+  }];
+  await boot(page, value);
+
+  await sync(page);
+  await expect.poll(() => page.evaluate(() => state.transactions.length)).toBe(1);
+
+  const tx = await page.evaluate(() => state.transactions[0]);
+  expect(tx).toMatchObject({
+    id:90,
+    recurringId:70,
+    amount:1487.63,
+    plannedAmount:1500,
+    date:'2026-09-15',
+    scheduledDate:'2026-09-14'
+  });
+  expect(tx.openFinanceExternalIds).toContain('pluggy:40000000-0000-4000-8000-000000000002');
+});
+
+test('#218 match exato por data aprende a descrição bancária para meses seguintes', async ({ page }) => {
+  await installTransactionsBridge(page, [{
+    id:'40000000-0000-4000-8000-000000000003',
+    date:'2026-09-15T12:00:00.000Z',
+    description:'PAGAMENTO AGUAS DE NITEROI SA',
+    amount:1500,
+    type:'CREDIT',
+    status:'POSTED',
+    currencyCode:'BRL'
+  }]);
+  const value = salaryStateFor('Open Finance aprender pagador #218', { desc:'Salário', category:'Salário' });
+  await boot(page, value);
+
+  await sync(page);
+
+  const result = await page.evaluate(() => ({
+    tx: state.transactions[0],
+    rule: state.recurring.find(item => item.id === 70)
+  }));
+  expect(result.tx).toMatchObject({
+    recurringId:70,
+    amount:1500,
+    plannedAmount:1500,
+    openFinanceRecurringMatchBasis:'income-exact-date'
+  });
+  expect(result.rule.openFinanceAliases).toContain('PAGAMENTO AGUAS DE NITEROI SA');
+});
+
+test('#218 duas quinzenas no mesmo mês são realizadas separadamente', async ({ page }) => {
+  await installTransactionsBridge(page, [
+    {
+      id:'40000000-0000-4000-8000-000000000004',
+      date:'2026-09-01T12:00:00.000Z',
+      description:'AGUAS DE NITEROI SA PAGAMENTO',
+      amount:695,
+      type:'CREDIT',
+      status:'POSTED',
+      currencyCode:'BRL'
+    },
+    {
+      id:'40000000-0000-4000-8000-000000000005',
+      date:'2026-09-15T12:00:00.000Z',
+      description:'AGUAS DE NITEROI SA PAGAMENTO',
+      amount:305,
+      type:'CREDIT',
+      status:'POSTED',
+      currencyCode:'BRL'
+    }
+  ]);
+  const value = salaryStateFor('Open Finance salário quinzenal #218', {
+    id:71,
+    desc:'Salário 1ª quinzena',
+    amount:700,
+    day:1
+  });
+  value.recurring.push({
+    id:72,
+    active:true,
+    type:'income',
+    desc:'Salário 2ª quinzena',
+    amount:300,
+    day:15,
+    category:'Salário',
+    accountId:1,
+    start:'2026-01',
+    end:''
+  });
+  await boot(page, value);
+
+  await sync(page);
+  await expect.poll(() => page.evaluate(() => state.transactions.length)).toBe(2);
+
+  const result = await page.evaluate(() => ({
+    transactions: state.transactions.map(item => ({
+      recurringId:item.recurringId,
+      amount:item.amount,
+      plannedAmount:item.plannedAmount,
+      date:item.date
+    })).sort((a,b) => a.date.localeCompare(b.date)),
+    virtuals: recurringOccurrences('2026-09').filter(item => item.recurringId === 71 || item.recurringId === 72)
+  }));
+
+  expect(result.transactions).toEqual([
+    { recurringId:71, amount:695, plannedAmount:700, date:'2026-09-01' },
+    { recurringId:72, amount:305, plannedAmount:300, date:'2026-09-15' }
+  ]);
+  expect(result.virtuals).toHaveLength(0);
+});
+
+test('#218 liberação de empréstimo não consome a previsão de salário', async ({ page }) => {
+  await installTransactionsBridge(page, [{
+    id:'40000000-0000-4000-8000-000000000006',
+    date:'2026-09-15T12:00:00.000Z',
+    description:'LIBERACAO DE CREDITO EMPRESTIMO PESSOAL',
+    amount:1500,
+    type:'CREDIT',
+    status:'POSTED',
+    currencyCode:'BRL'
+  }]);
+  const value = salaryStateFor('Open Finance empréstimo não é salário #218', { desc:'Salário', category:'Salário' });
+  await boot(page, value);
+
+  await sync(page);
+
+  const result = await page.evaluate(() => ({
+    tx: state.transactions.find(item => item.externalId === 'pluggy:40000000-0000-4000-8000-000000000006'),
+    virtuals: recurringOccurrences('2026-09').filter(item => item.recurringId === 70)
+  }));
+  expect(result.tx).toBeTruthy();
+  expect(result.tx.recurringId).toBeFalsy();
+  expect(result.virtuals).toHaveLength(1);
+});
+
+test('#205/#218 módulo é carregado pela suíte principal e preserva janela segura de 3 dias', async () => {
   const safeSpend = fs.readFileSync('app/src/main/assets/www/safe-spend.js','utf8');
   const reconcile = fs.readFileSync('app/src/main/assets/www/open-finance-recurring-reconcile.js','utf8');
   expect(safeSpend).toContain("script.src='open-finance-recurring-reconcile.js'");
   expect(reconcile).toContain('const SAFE_WINDOW_DAYS=3');
+  expect(reconcile).toContain('const INCOME_BOOTSTRAP_RELATIVE_TOLERANCE=.03');
+  expect(reconcile).toContain('applyRealizedIncomeAmount');
+  expect(reconcile).toContain('rememberIncomeIdentity');
   expect(reconcile).toContain('alignAlreadyLinkedRecurring');
   expect(reconcile).toContain("reason==='Sincronizar Open Finance'");
 });

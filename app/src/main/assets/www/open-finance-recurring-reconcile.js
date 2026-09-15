@@ -1,9 +1,13 @@
 (function installOpenFinanceRecurringReconcile(global){
   'use strict';
 
-  const VERSION=2;
-  const INSTALL_FLAG='__SFP_OPEN_FINANCE_RECURRING_RECONCILE_V2';
+  const VERSION=3;
+  const INSTALL_FLAG='__SFP_OPEN_FINANCE_RECURRING_RECONCILE_V3';
   const SAFE_WINDOW_DAYS=3;
+  const EXACT_AMOUNT_TOLERANCE=.011;
+  const INCOME_BOOTSTRAP_RELATIVE_TOLERANCE=.03;
+  const INCOME_STRONG_RELATIVE_TOLERANCE=.35;
+  const MAX_LEARNED_ALIASES=8;
   const SYNC_WINDOW_MS=180000;
   let syncWindowUntil=0;
   let lastPreviewResult=null;
@@ -63,10 +67,72 @@
     return transaction.openFinanceProvider==='pluggy'||external.startsWith('pluggy:')||tags.includes('open-finance')||tags.includes('pluggy');
   }
 
-  function semanticMatch(rule,transaction){
-    if(descriptionAffinity(rule?.desc,transaction?.desc)>0)return true;
+  function learnedAliases(rule){
+    return [...new Set([
+      ...(Array.isArray(rule?.openFinanceAliases)?rule.openFinanceAliases:[]),
+      ...(Array.isArray(rule?.aliases)?rule.aliases:[])
+    ].map(clean).filter(Boolean))];
+  }
+
+  function ruleDescriptionAffinity(rule,transaction){
+    const descriptions=[clean(rule?.desc),...learnedAliases(rule)].filter(Boolean);
+    let best=0;
+    for(const description of descriptions)best=Math.max(best,descriptionAffinity(description,transaction?.desc));
+    return best;
+  }
+
+  function semanticEvidence(rule,transaction){
+    const affinity=ruleDescriptionAffinity(rule,transaction);
     const ruleCategory=clean(rule?.category),txCategory=clean(transaction?.category);
-    return Boolean(ruleCategory&&txCategory&&ruleCategory!=='Outros'&&ruleCategory===txCategory);
+    const categoryMatch=Boolean(ruleCategory&&txCategory&&ruleCategory!=='Outros'&&txCategory!=='Outros'&&normalize(ruleCategory)===normalize(txCategory));
+    return{affinity,categoryMatch,any:Boolean(affinity>0||categoryMatch),strong:Boolean(affinity>=2||categoryMatch)};
+  }
+
+  function semanticMatch(rule,transaction){return semanticEvidence(rule,transaction).any}
+
+  function isLikelyFinancingIncome(transaction){
+    const text=normalize([
+      transaction?.desc,
+      transaction?.openFinanceDescription,
+      transaction?.category,
+      transaction?.openFinanceCategory
+    ].filter(Boolean).join(' '));
+    return /\b(emprestimo|loan|financiamento|credito pessoal|credito consignado|liberacao de credito)\b/.test(text);
+  }
+
+  function amountDelta(rule,transaction){
+    const planned=Math.abs(Number(rule?.amount)),actual=Math.abs(Number(transaction?.amount));
+    if(!Number.isFinite(planned)||!Number.isFinite(actual)||planned<=0||actual<=0)return{valid:false,planned,actual,delta:Infinity,relative:Infinity};
+    const delta=Math.abs(planned-actual);
+    return{valid:true,planned,actual,delta,relative:delta/Math.max(planned,.01)};
+  }
+
+  function recurringMatch(rule,transaction,distance){
+    const evidence=semanticEvidence(rule,transaction);
+    const amount=amountDelta(rule,transaction);
+    if(!amount.valid)return{ok:false,evidence,amount,basis:''};
+
+    if(rule?.type!=='income'){
+      const ok=amount.delta<=EXACT_AMOUNT_TOLERANCE&&evidence.any;
+      return{ok,evidence,amount,basis:ok?'expense-exact-semantic':''};
+    }
+
+    if(isLikelyFinancingIncome(transaction))return{ok:false,evidence,amount,basis:'financing-income-blocked'};
+
+    if(amount.delta<=EXACT_AMOUNT_TOLERANCE){
+      const ok=evidence.any||distance<=1;
+      return{ok,evidence,amount,basis:ok?(evidence.any?'income-exact-semantic':'income-exact-date'):''};
+    }
+
+    if(evidence.strong&&amount.relative<=INCOME_STRONG_RELATIVE_TOLERANCE){
+      return{ok:true,evidence,amount,basis:'income-strong-semantic'};
+    }
+
+    if(distance<=1&&amount.relative<=INCOME_BOOTSTRAP_RELATIVE_TOLERANCE){
+      return{ok:true,evidence,amount,basis:'income-near-date'};
+    }
+
+    return{ok:false,evidence,amount,basis:''};
   }
 
   function candidateOccurrences(transaction){
@@ -79,11 +145,12 @@
       for(const rule of activeRulesForMonth(month)){
         if(!sameId(rule?.accountId,transaction?.accountId))continue;
         if(rule?.type!==transaction?.kind)continue;
-        if(Math.abs(Math.abs(Number(rule?.amount))-Math.abs(Number(transaction?.amount)))>.011)continue;
         const dueDate=recurringDate(rule,month);
-        if(dayDiff(dueDate,date)>SAFE_WINDOW_DAYS)continue;
-        if(!semanticMatch(rule,transaction))continue;
-        out.push({rule,month,dueDate});
+        const distance=dayDiff(dueDate,date);
+        if(distance>SAFE_WINDOW_DAYS)continue;
+        const match=recurringMatch(rule,transaction,distance);
+        if(!match.ok)continue;
+        out.push({rule,month,dueDate,matchBasis:match.basis});
       }
     }
     const unique=[];const seen=new Set();
@@ -130,8 +197,31 @@
     return transaction?.balanceImpact;
   }
 
+  function rememberIncomeIdentity(rule,transaction){
+    if(rule?.type!=='income'||isLikelyFinancingIncome(transaction))return false;
+    const raw=clean(transaction?.openFinanceDescription||transaction?.desc);
+    if(!raw)return false;
+    const normalized=normalize(raw);
+    const aliases=learnedAliases(rule);
+    if(aliases.some(alias=>normalize(alias)===normalized))return false;
+    const next=[...aliases,raw].slice(-MAX_LEARNED_ALIASES);
+    rule.openFinanceAliases=next;
+    rule.openFinanceLastMatchedDescription=raw;
+    return true;
+  }
+
+  function applyRealizedIncomeAmount(target,rule,actualAmount){
+    if(rule?.type!=='income')return false;
+    const planned=Math.abs(Number(rule?.amount)),actual=Math.abs(Number(actualAmount));
+    if(!Number.isFinite(actual)||actual<=0)return false;
+    let changed=false;
+    if(Number.isFinite(planned)&&planned>0&&Number(target.plannedAmount)!==planned){target.plannedAmount=planned;changed=true}
+    if(Math.abs(Number(target.amount)-actual)>EXACT_AMOUNT_TOLERANCE){target.amount=actual;changed=true}
+    return changed;
+  }
+
   function convertToRecurring(transaction,match){
-    const {rule,month,dueDate}=match;
+    const {rule,month,dueDate,matchBasis}=match;
     transaction.openFinanceDescription=transaction.openFinanceDescription||transaction.desc;
     transaction.recurringId=rule.id;
     transaction.recurrenceMonth=month;
@@ -142,11 +232,14 @@
     transaction.category=clean(rule.category)||transaction.category;
     transaction.status='paid';
     transaction.tags=mergeTags(transaction.tags,[]);
+    transaction.openFinanceRecurringMatchBasis=matchBasis||'';
+    applyRealizedIncomeAmount(transaction,rule,transaction.amount);
+    rememberIncomeIdentity(rule,transaction);
     transaction.openFinanceRecurringReconciledAt=new Date().toISOString();
   }
 
   function mergeIntoMaterialized(existing,bankTransaction,match){
-    const {rule,month,dueDate}=match;
+    const {rule,month,dueDate,matchBasis}=match;
     existing.openFinanceDescription=existing.openFinanceDescription||bankTransaction.openFinanceDescription||bankTransaction.desc;
     existing.scheduledDate=existing.scheduledDate||dueDate;
     existing.date=dateOnly(bankTransaction.date)||existing.date;
@@ -158,7 +251,10 @@
     existing.category=clean(rule.category)||existing.category||bankTransaction.category;
     existing.tags=mergeTags(existing.tags,bankTransaction.tags);
     existing.balanceImpact=bankTransaction.balanceImpact;
+    existing.openFinanceRecurringMatchBasis=matchBasis||'';
+    applyRealizedIncomeAmount(existing,rule,bankTransaction.amount);
     copyOpenFinanceMetadata(existing,bankTransaction);
+    rememberIncomeIdentity(rule,bankTransaction);
     existing.openFinanceRecurringReconciledAt=new Date().toISOString();
   }
 
@@ -175,10 +271,22 @@
       const month=occurrenceMonth(record);if(!month)continue;
       const dueDate=recurringDate(rule,month),actualDate=dateOnly(source.transaction?.date);
       if(!actualDate||dayDiff(dueDate,actualDate)>SAFE_WINDOW_DAYS)continue;
-      if(Math.abs(Math.abs(Number(rule?.amount))-Math.abs(Number(source.transaction?.amount)))>.011)continue;
+      const sourceType=clean(source.transaction?.type).toUpperCase();
+      if(rule?.type==='income'&&sourceType&&sourceType!=='CREDIT')continue;
+      if(rule?.type==='expense'&&sourceType&&sourceType!=='DEBIT')continue;
       const synthetic={desc:source.transaction?.description,category:record.category};
-      if(!semanticMatch(rule,synthetic))continue;
-      if(record.date===actualDate&&record.scheduledDate===dueDate)continue;
+      if(rule?.type==='income'&&isLikelyFinancingIncome(synthetic))continue;
+      if(rule?.type!=='income'&&!semanticMatch(rule,synthetic))continue;
+
+      const amountChanged=applyRealizedIncomeAmount(record,rule,source.transaction?.amount);
+      const aliasChanged=rememberIncomeIdentity(rule,{
+        desc:source.transaction?.description,
+        openFinanceDescription:source.transaction?.description,
+        category:source.transaction?.category
+      });
+      const dateChanged=record.date!==actualDate||record.scheduledDate!==dueDate;
+      if(!dateChanged&&!amountChanged&&!aliasChanged)continue;
+
       record.openFinanceDescription=record.openFinanceDescription||source.transaction?.description||record.desc;
       record.scheduledDate=record.scheduledDate||dueDate;
       record.date=actualDate;
