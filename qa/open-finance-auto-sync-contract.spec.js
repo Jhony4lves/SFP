@@ -11,9 +11,18 @@ test('auto-sync relê ao voltar para o app e mede o ciclo de 15 minutos desde a 
 });
 
 test('auto-sync usa releitura de snapshot e não chama refreshItems automaticamente',()=>{
-  const match=source.match(/async function automaticSync[\s\S]*?\n  }\n\n  function installNavigation/);
+  const match=source.match(/async function automaticSync[\s\S]*?\n  }\n\n  function appendMoreMenuEntry/);
   expect(match).not.toBeNull();
   expect(match[0]).toContain('unified.syncAll()');
   expect(match[0]).not.toContain('refreshItems');
   expect(match[0]).not.toContain('PluggyRefreshBridge');
+});
+
+test('mobile mantém a barra prioritária de 5 itens e oferece Sincronização pelo Mais',()=>{
+  expect(source).not.toContain('grid-template-columns:repeat(6,1fr)');
+  expect(source).not.toContain('.sidebar .nav button[data-page="openfinance"]{display:flex!important');
+  expect(source).toContain('function appendMoreMenuEntry()');
+  expect(source).toContain("item.dataset.sfpMorePage=PAGE_ID;");
+  expect(source).toContain('<strong>Sincronização</strong><small>Open Finance e atualização de dados</small>');
+  expect(source).toContain("more.addEventListener('click',()=>queueMicrotask(appendMoreMenuEntry));");
 });
