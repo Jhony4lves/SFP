@@ -5674,6 +5674,19 @@ function sfpCardRemainingInstallments(c){
 }
 
 
+function sfpCardRemainingMonths(c){
+  const current=currentInvoiceMonth(c);
+  let last=current;
+  for(const purchase of state.purchases.filter(p=>p.cardId==c.id&&p.status!=='cancelled')){
+    let month=purchase.firstMonth;
+    for(let i=0;i<purchase.installments;i++,month=monthAdd(month,1)){
+      if(month>current&&purchaseInstallment(purchase,month)?.amount>0&&month>last)last=month;
+    }
+  }
+  const [year,number]=current.split('-').map(Number),[lastYear,lastNumber]=last.split('-').map(Number);
+  return (lastYear-year)*12+lastNumber-number;
+}
+
 function cardHtml(c,mini=false){
   const m=currentInvoiceMonth(c);
 
@@ -5691,7 +5704,7 @@ function cardHtml(c,mini=false){
     :0;
 
   const future=sfpCardFutureCommitment(c);
-  const remainingInstallments=sfpCardRemainingInstallments(c);
+  const remainingMonths=sfpCardRemainingMonths(c);
 
   const months=sfpCardFutureMonths(c,6);
 
@@ -5742,8 +5755,8 @@ function cardHtml(c,mini=false){
           </div>
 
           <div class="sfp-card-v2-stat">
-            <small>Parcelas futuras</small>
-            <strong>${remainingInstallments}</strong>
+            <small>Meses restantes</small>
+            <strong>${remainingMonths}</strong>
           </div>
 
         </div>

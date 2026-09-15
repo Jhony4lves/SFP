@@ -351,11 +351,12 @@
       const group=JSON.stringify([valid?installmentMerchant(tx.description,n,total):normalizedText(tx.description),total,valid?shiftMonth(forecast,1-n):forecast]);
       rows.push({tx,forecast,n,total,valid,group});
     }
-    const projected=new Map(),explicit=new Set();
+    const projected=new Map(),explicit=new Set(),monthly=new Map();
     let amount=0,nextAmount=0,count=0;
     for(const row of rows){
       if(row.forecast<=month)continue;
       amount+=Number(row.tx.amount);
+      monthly.set(row.forecast,(monthly.get(row.forecast)||0)+Number(row.tx.amount));
       if(row.forecast===shiftMonth(month,1))nextAmount+=Number(row.tx.amount);
       if(row.valid){count++;explicit.add(`${row.group}|${row.n}|${row.forecast}`);}
     }
@@ -371,9 +372,13 @@
     }
     for(const row of projected.values()){
       amount+=row.amount;count++;
+      monthly.set(row.month,(monthly.get(row.month)||0)+row.amount);
       if(row.month===shiftMonth(month,1))nextAmount+=row.amount;
     }
-    return {schema:2,month,count:count||null,amount:amount>0?round2(amount):null,
+    const lastMonth=[...monthly].filter(([,value])=>round2(value)>0).map(([key])=>key).sort().pop()||null;
+    const monthIndex=value=>{const [y,m]=value.split('-').map(Number);return y*12+m;};
+    const monthsRemaining=lastMonth?monthIndex(lastMonth)-monthIndex(month):null;
+    return {schema:3,month,monthsRemaining,lastMonth,count:count||null,amount:amount>0?round2(amount):null,
       nextAmount:nextAmount>0?round2(nextAmount):null,estimated:true,complete:false};
   }
 
@@ -381,7 +386,7 @@
     const live=liveFutureCommitments(card,month);
     if(live)return {...live,stale:false};
     const stored=card?.openFinanceFutureCommitments;
-    return stored?.schema===2&&stored.month===month?{...stored,stale:true}:null;
+    return stored?.schema===3&&stored.month===month?{...stored,stale:true}:null;
   }
 
   function patchFutureGrid(node,card,month){
@@ -389,8 +394,8 @@
     if((global.state?.purchases||[]).some(p=>sameId(p.cardId,card.id)&&p.status!=='cancelled'))return;
     const future=futureCommitments(card,month);
     const stat=label=>[...node.querySelectorAll('.sfp-card-v2-stat')].find(el=>clean(el.querySelector('small')?.textContent)===label)?.querySelector('strong');
-    const installments=stat('Parcelas futuras'),next=stat('Próxima fatura');
-    if(installments)installments.textContent=future?.count?`${future.count} identificadas${future.stale?' (última leitura)':''}`:'Não informado';
+    const installments=stat('Meses restantes'),next=stat('Próxima fatura');
+    if(installments)installments.textContent=future?.monthsRemaining?`${future.monthsRemaining} meses${future.stale?' (última leitura)':''}`:'Não informado';
     if(next)next.textContent=future?.nextAmount?`${money(future.nextAmount)} estimados`:'Não informada';
     const total=node.querySelector('.sfp-card-v2-progress-top span:last-child');
     if(total)total.textContent=future?.amount?`${money(future.amount)} futuros identificados${future.stale?' · última leitura':''}`:'Compromissos futuros não confirmados';

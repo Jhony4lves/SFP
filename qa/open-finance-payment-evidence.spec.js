@@ -179,13 +179,13 @@ test('última parcela explícita com arredondamento substitui a projeção corre
 test('retorno completo Itaú: 29 parcelas explícitas não viram 170 projeções', () => {
   const {api,card}=resolver({transactions:require('./fixtures/open-finance-itau-installment-schedule.json')});
   expect(api.displayTotal(card,'2026-09')).toBe(327.59);
-  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:29,amount:1166.78,nextAmount:180.82});
+  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:29,monthsRemaining:11,lastMonth:'2027-08',amount:1166.78,nextAmount:180.82});
 });
 
 test('retorno Nubank com sufixos 1/3 e 3/3 projeta somente a parcela ausente', () => {
   const {api,card}=resolver({transactions:require('./fixtures/open-finance-nubank-installment-schedule.json')});
   expect(api.displayTotal(card,'2026-09')).toBe(170.84);
-  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,amount:357.08,nextAmount:262.73});
+  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,monthsRemaining:2,lastMonth:'2026-11',amount:357.08,nextAmount:262.73});
 });
 
 
@@ -202,4 +202,26 @@ test('número no nome da loja só é removido quando coincide com a parcela info
     {id:'b',description:'Loja 12/7',billForecastDate:'2026-10',amount:20,installment:{installmentNumber:2,totalInstallments:2}}
   ]});
   expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,amount:30,nextAmount:30});
+});
+
+
+test('nove parcelas distribuídas em três meses representam três meses restantes', () => {
+  const {api,card}=resolver({transactions:['Loja A','Loja B','Loja C'].map((description,i)=>({
+    id:'purchase-'+i,description,billForecastDate:'2026-09',amount:10,installment:{installmentNumber:1,totalInstallments:4}
+  }))});
+  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:9,monthsRemaining:3,lastMonth:'2026-12',amount:90});
+});
+
+test('cartão com compras locais conta meses até a última parcela, ignorando cancelamentos e estornos', () => {
+  const html=fs.readFileSync('app/src/main/assets/www/index.html','utf8');
+  const source=html.match(/function sfpCardRemainingMonths\(c\)\{[\s\S]*?\n\}/)[0];
+  const purchases=[1,2,3].map(id=>({id,cardId:1,status:'active',firstMonth:'2026-09',installments:4}));
+  const context={state:{purchases:[...purchases,{cardId:1,status:'cancelled',firstMonth:'2026-09',installments:36}]},
+    currentInvoiceMonth:()=> '2026-09',
+    monthAdd:(month,n)=>{const [y,m]=month.split('-').map(Number);return new Date(Date.UTC(y,m-1+n,1)).toISOString().slice(0,7);},
+    purchaseInstallment:()=>({amount:10})};
+  vm.createContext(context);vm.runInContext(source,context);
+  expect(context.sfpCardRemainingMonths({id:1})).toBe(3);
+  context.purchaseInstallment=(_,month)=>({amount:month==='2026-12'?0:10});
+  expect(context.sfpCardRemainingMonths({id:1})).toBe(2);
 });
