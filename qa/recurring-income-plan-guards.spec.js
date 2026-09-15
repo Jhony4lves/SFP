@@ -12,6 +12,7 @@ function stateFor(name){
   value.transactions=[];
   value.recurring=[];
   value.recurringGroups=[];
+  value.trash=[];
   return value;
 }
 
@@ -24,6 +25,7 @@ async function boot(page,value){
   await expectBootComplete(page,expect,value.settings.name);
   await page.waitForFunction(()=>window.SFPRecurringIncomePlan?.version===1);
   await page.waitForFunction(()=>window.__SFP_RECURRING_INCOME_PLAN_CHILD_GUARDS_V1===true);
+  await page.waitForFunction(()=>window.__SFP_RECURRING_INCOME_PLAN_TRASH_GUARD_V1===true);
 }
 
 async function createPlan(page){
@@ -48,7 +50,6 @@ test('#218 ações genéricas destrutivas não quebram uma quinzena filha isolad
     const plan=state.recurringGroups[0];
     const [firstId,secondId]=plan.memberRecurringIds;
     const first=state.recurring.find(item=>item.id===firstId);
-    const second=state.recurring.find(item=>item.id===secondId);
 
     const before={
       rules:state.recurring.length,
@@ -85,7 +86,7 @@ test('#218 ações genéricas destrutivas não quebram uma quinzena filha isolad
   expect(result.groupStillExists).toBe(true);
 });
 
-test('#218 editar uma quinzena filha abre o plano agregado em vez do formulário genérico',async({page})=>{
+test('#218 editar uma quinzena filha abre o plano agregado e explicita total líquido',async({page})=>{
   await boot(page,stateFor('Editar filho redireciona ao plano #218'));
   await createPlan(page);
 
@@ -96,4 +97,43 @@ test('#218 editar uma quinzena filha abre o plano agregado em vez do formulário
   await expect(page.locator('#salaryPlanTarget')).toHaveValue('2273');
   await expect(page.locator('#salaryPlanFirstAmount')).toHaveValue('1591.1');
   await expect(page.locator('#salaryPlanSecondAmount')).toHaveValue('681.9');
+  await expect(page.locator('#salaryPlanTarget').locator('xpath=..')).toContainText('Total líquido planejado no mês');
+  await expect(page.locator('#salaryIncomePlanForm .note')).toContainText('total líquido mensal');
+});
+
+test('#218 restaurar qualquer item apagado do plano traz agregado e duas quinzenas juntos',async({page})=>{
+  await boot(page,stateFor('Restaurar plano salarial inteiro #218'));
+  await createPlan(page);
+
+  const deleted=await page.evaluate(async()=>{
+    const plan=state.recurringGroups[0];
+    const id=plan.id;
+    const removed=SFPRecurringIncomePlan.remove(id);
+    await save('Excluir plano salarial para teste');
+    return{
+      removed,
+      groups:state.recurringGroups.length,
+      rules:state.recurring.length,
+      trash:state.trash.map(entry=>({type:entry.type,groupId:entry.type==='recurringGroup'?entry.item?.id:entry.item?.recurringGroupId}))
+    };
+  });
+
+  expect(deleted.removed).toBe(true);
+  expect(deleted.groups).toBe(0);
+  expect(deleted.rules).toBe(0);
+  expect(deleted.trash).toHaveLength(3);
+  expect(deleted.trash.filter(entry=>entry.type==='recurringGroup')).toHaveLength(1);
+  expect(deleted.trash.filter(entry=>entry.type==='recurring')).toHaveLength(2);
+
+  await page.evaluate(()=>showTrash());
+  await page.locator('[data-restore]').first().click();
+  await expect.poll(()=>page.evaluate(()=>({groups:state.recurringGroups.length,rules:state.recurring.length,trash:state.trash.length}))).toEqual({groups:1,rules:2,trash:0});
+
+  const restored=await page.evaluate(()=>({
+    summary:SFPRecurringIncomePlan.summary(state.recurringGroups[0],'2026-09'),
+    memberIds:state.recurringGroups[0].memberRecurringIds,
+    ruleIds:state.recurring.map(item=>item.id)
+  }));
+  expect(restored.summary.targetAmount).toBe(2273);
+  expect(restored.memberIds.sort()).toEqual(restored.ruleIds.sort());
 });
