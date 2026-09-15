@@ -156,3 +156,13 @@ test('falha de transações preserva última projeção e ausência de metadados
   account.transactionsError=false;
   expect(api.futureCommitments(card,'2026-09').count).toBeNull();
 });
+
+
+test('crédito futuro reduz o valor identificado sem apagar parcelas ou contar pagamento pendente', () => {
+  const {api,card}=resolver({transactions:[
+    {id:'one',description:'Compra',date:'2026-08-11',billForecastDate:'2026-09',amount:94.36,installment:{installmentNumber:1,totalInstallments:3}},
+    {id:'refund',description:'Estorno loja',date:'2026-10-01',billForecastDate:'2026-10',amount:-10},
+    {...payment,billForecastDate:'2026-10'}
+  ]});
+  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,amount:178.72,nextAmount:84.36});
+});

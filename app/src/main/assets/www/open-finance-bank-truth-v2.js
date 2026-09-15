@@ -335,11 +335,11 @@
     for(const tx of account.transactions||[]){
       if(tx.id&&seen.has(tx.id))continue;
       if(tx.id)seen.add(tx.id);
-      if(cancelled(tx)||isPaymentCredit(tx)||Number(tx.amount)<=0)continue;
+      if(cancelled(tx)||isPaymentCredit(tx)||!Number.isFinite(Number(tx.amount))||Number(tx.amount)===0)continue;
       const forecast=clean(tx.billForecastDate);
       if(!validMonth(forecast)||forecast<month)continue;
       const meta=tx.installment||{},n=Number(meta.installmentNumber),total=Number(meta.totalInstallments);
-      const valid=Number.isInteger(n)&&Number.isInteger(total)&&n>0&&total>=n&&total<=120;
+      const valid=Number(tx.amount)>0&&Number.isInteger(n)&&Number.isInteger(total)&&n>0&&total>=n&&total<=120;
       const group=JSON.stringify([normalizedText(tx.description),total,round2(meta.totalAmount||Number(tx.amount)*total)]);
       rows.push({tx,forecast,n,total,valid,group});
     }
@@ -414,6 +414,7 @@
       if(paidAmount(card,month)>.009)return truth?.official?'Fatura quitada':'Estimativa quitada';
       return truth?.official?'Sem valor a pagar informado pelo banco':'Fatura sem total confirmado';
     }
+    if(previewAccount(card)?.account?.transactionsError&&!truth?.official)return 'Última leitura · transações indisponíveis';
     if(truth?.official)return closed(card,month)?'Fechada':`${money(remaining)} ainda em aberto`;
     if(truth?.bankBacked)return closed(card,month)?'Estimativa bancária · ciclo fechado':`Estimativa bancária · ${money(remaining)} no ciclo`;
     return closed(card,month)?'Estimativa SFP · ciclo fechado':`${money(remaining)} estimados no SFP`;
