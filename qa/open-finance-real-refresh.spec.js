@@ -195,6 +195,8 @@ test('cartão sem compras locais mostra parcelas bancárias identificadas e não
   await page.evaluate(()=>{setPage('cartoes');renderCards();});
   await expect(page.locator('#cardsGrid')).toContainText('2 identificadas');
   await expect(page.locator('#cardsGrid')).toContainText('188,72');
+  await page.evaluate(()=>{const grid=document.getElementById('cardsGrid');grid.innerHTML=grid.innerHTML.replace('2 identificadas','0');});
+  await expect(page.locator('#cardsGrid')).toContainText('2 identificadas');
   await page.evaluate(()=>{
     const original=PluggyBridge.previewData;
     PluggyBridge.previewData=()=>{const data=JSON.parse(original());Object.assign(data.items[0].accounts[0],{transactions:[],transactionsError:true});return JSON.stringify(data);};

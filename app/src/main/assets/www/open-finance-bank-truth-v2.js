@@ -569,6 +569,11 @@
     if(!global.state||!global.SFPOpenFinanceBills||!global.SFPOpenFinancePersonal)return false;
     if(!installRenderGuard()||!installDetailGuard())return false;
     patchGrid();patchInvoiceFocus();rememberBankTruth();
+    // Other renderers may replace the card HTML after renderCards returns.
+    const grid=document.getElementById('cardsGrid');
+    if(grid&&typeof global.MutationObserver==='function'){
+      new global.MutationObserver(()=>{patchGrid();patchInvoiceFocus();}).observe(grid,{childList:true});
+    }
     global[FLAG]=true;
     global.SFPOpenFinanceBankTruth=Object.freeze({
       version:VERSION,
