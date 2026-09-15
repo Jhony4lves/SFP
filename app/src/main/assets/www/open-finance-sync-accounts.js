@@ -426,8 +426,21 @@
     global.SFPOpenFinanceUnifiedSync=Object.freeze({version:VERSION,planBankSync,decoratePreview,syncAll});
   }
 
+  function ensureRealRefreshController(){
+    if(typeof document==='undefined'||document.getElementById('sfp-open-finance-real-refresh'))return;
+    const script=document.createElement('script');
+    script.id='sfp-open-finance-real-refresh';
+    script.src='open-finance-real-refresh.js';
+    document.head.appendChild(script);
+  }
+
   if(typeof document!=='undefined'){
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
-    else install();
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded',install,{once:true});
+      document.addEventListener('DOMContentLoaded',ensureRealRefreshController,{once:true});
+    }else{
+      install();
+      ensureRealRefreshController();
+    }
   }
 })(typeof window!=='undefined'?window:globalThis);
