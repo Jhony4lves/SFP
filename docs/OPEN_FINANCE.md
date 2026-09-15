@@ -39,7 +39,9 @@ Para manter o estado local o mais recente possível:
 A sincronização Open Finance é função principal do SFP e não deve ficar escondida em Configurações.
 
 - existe uma aba própria de sincronização/Open Finance na navegação;
-- ela deve ser acessível também na barra inferior mobile;
+- no desktop/DeX ela pode ter acesso direto pela navegação principal;
+- no mobile em retrato, a barra inferior permanece com exatamente cinco atalhos prioritários: **Hoje, Contas, Cartões, Calendário e Mais**;
+- **Sincronização** fica disponível dentro de **Mais → Dados**, evitando comprimir ou deformar a barra inferior;
 - o botão principal usa a nomenclatura **Atualizar dados agora**;
 - a interface informa que o MeuPluggy controla a coleta bancária e que o SFP mantém o estado local alinhado ao snapshot mais recente disponível.
 
