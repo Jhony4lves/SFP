@@ -141,13 +141,15 @@
     const input=document.getElementById('salaryPlanTarget');
     const form=document.getElementById('salaryIncomePlanForm');
     if(!input||!form)return;
+    const targetLabel='Total líquido planejado no mês';
+    const targetNote='O total líquido mensal é uma referência de caixa. Somente as duas entradas abaixo movimentam o saldo e podem ser realizadas pelo Open Finance.';
     const label=input.closest('label');
     if(label){
       const textNode=[...label.childNodes].find(node=>node.nodeType===Node.TEXT_NODE);
-      if(textNode)textNode.nodeValue='Total líquido planejado no mês';
+      if(textNode&&textNode.nodeValue!==targetLabel)textNode.nodeValue=targetLabel;
     }
     const note=form.querySelector('.note');
-    if(note)note.textContent='O total líquido mensal é uma referência de caixa. Somente as duas entradas abaixo movimentam o saldo e podem ser realizadas pelo Open Finance.';
+    if(note&&note.textContent!==targetNote)note.textContent=targetNote;
   }
 
   function installCopyGuard(){
