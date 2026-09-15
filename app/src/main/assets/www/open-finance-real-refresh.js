@@ -265,7 +265,9 @@
     };
     startupTimer=setInterval(attemptStartup,750);
     attemptStartup();
-    autoTimer=setInterval(()=>{if(document.visibilityState!=='hidden')void automaticSync('interval');},AUTO_INTERVAL_MS);
+    autoTimer=setInterval(()=>{
+      if(document.visibilityState!=='hidden'&&Date.now()-lastSnapshotReadAt>=AUTO_INTERVAL_MS)void automaticSync('interval');
+    },AUTO_INTERVAL_MS);
     document.addEventListener('visibilitychange',()=>{
       if(document.visibilityState==='visible')void automaticSync('resume');
     });
