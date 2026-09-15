@@ -152,18 +152,31 @@
     if(note&&note.textContent!==targetNote)note.textContent=targetNote;
   }
 
+  function alignIncomePlanLayout(){
+    if(typeof document==='undefined')return;
+    const root=document.getElementById('recorrencias');
+    const grid=root?.querySelector('.grid2');
+    const section=document.getElementById('recIncomePlans');
+    if(!root||!grid||!section){setTimeout(alignIncomePlanLayout,50);return;}
+    if(section.parentElement!==grid)grid.appendChild(section);
+    section.style.gridColumn='1 / -1';
+    section.style.order='-1';
+  }
+
   function installCopyGuard(){
     if(global[COPY_GUARD_FLAG]||typeof document==='undefined')return;
     global[COPY_GUARD_FLAG]=true;
-    const observer=new MutationObserver(clarifyNetIncomeCopy);
+    const observer=new MutationObserver(()=>{clarifyNetIncomeCopy();alignIncomePlanLayout();});
     observer.observe(document.documentElement,{childList:true,subtree:true});
     clarifyNetIncomeCopy();
+    alignIncomePlanLayout();
   }
 
   function installAll(){
     installChildGuards();
     installTrashRestoreGuard();
     installCopyGuard();
+    alignIncomePlanLayout();
   }
 
   function loadCore(){
