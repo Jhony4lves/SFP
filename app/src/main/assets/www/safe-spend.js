@@ -164,6 +164,11 @@
   const script=document.createElement('script');script.src='open-finance-recurring-reconcile.js';script.async=false;script.dataset.sfpOpenFinanceRecurringReconcile='1';document.head.appendChild(script);
 })();
 
+(function loadRecurringIncomePlan(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-recurring-income-plan="1"]'))return;
+  const script=document.createElement('script');script.src='recurring-income-plan.js';script.async=false;script.dataset.sfpRecurringIncomePlan='1';document.head.appendChild(script);
+})();
+
 (function loadOpenFinanceBills(){
   if(typeof document==='undefined'||document.querySelector('script[data-sfp-open-finance-bills="1"]'))return;
   const script=document.createElement('script');script.src='open-finance-bills.js';script.async=false;script.dataset.sfpOpenFinanceBills='1';document.head.appendChild(script);
