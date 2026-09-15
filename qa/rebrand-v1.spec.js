@@ -53,7 +53,7 @@ test.describe('SFP Product Reload + Rebranding V1 QA Suite (REB-01 - REB-18)', (
     const errors = monitor(page);
     await boot(page, DESKTOP);
     const navButtons = page.locator('.sidebar .nav button[data-page]');
-    expect(await navButtons.count()).toBe(19);
+    expect(await navButtons.count()).toBe(20);
     for (let i=0;i<await navButtons.count();i++) {
       const svg=navButtons.nth(i).locator('svg.nav-icon');
       await expect(svg).toBeVisible();
@@ -90,11 +90,11 @@ test.describe('SFP Product Reload + Rebranding V1 QA Suite (REB-01 - REB-18)', (
     expect(errors).toEqual([]);
   });
 
-  test('REB-06: Landscape / DeX / Tablet Navigation keeps all 19 views', async ({ page }) => {
+  test('REB-06: Landscape / DeX / Tablet Navigation keeps all 20 views', async ({ page }) => {
     const errors=monitor(page);
     await boot(page,LANDSCAPE);
     await expect(page.locator('#moreNavBtn')).toBeHidden();
-    expect(await page.locator('.sidebar .nav button[data-page]').count()).toBe(19);
+    expect(await page.locator('.sidebar .nav button[data-page]').count()).toBe(20);
     const sidebarBox=await page.locator('.sidebar').boundingBox();
     expect(sidebarBox.x).toBe(0);expect(sidebarBox.y).toBe(0);expect(sidebarBox.height).toBe(384);
     expect(errors).toEqual([]);
