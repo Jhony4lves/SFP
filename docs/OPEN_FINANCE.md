@@ -29,7 +29,7 @@ Para manter o estado local o mais recente possível:
 
 1. ao abrir o SFP, se a Pluggy estiver configurada, o app relê automaticamente o snapshot disponível;
 2. enquanto o app estiver aberto e visível, repete essa releitura a cada **15 minutos**;
-3. ao voltar do background, se já tiverem passado 15 minutos desde a última leitura da sessão, sincroniza novamente;
+3. sempre que o usuário voltar ao SFP depois de deixá-lo em background, o app relê o snapshot novamente, independentemente do intervalo de 15 minutos;
 4. a atualização automática nunca dispara repetidamente `PATCH /items/{id}` para Items MeuPluggy;
 5. o refresh real manual permanece disponível para conexões que aceitem atualização explícita;
 6. re-sync precisa permanecer idempotente: nenhuma transação, transferência, compra ou fatura pode ser duplicada.
