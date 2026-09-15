@@ -268,7 +268,7 @@ test('#218 pausar e pular plano opera nas duas recorrências filhas sem criar mo
 test('#218 módulo é carregado pelo SFP e o agregado não participa do motor de saldo', async () => {
   const safeSpend = fs.readFileSync('app/src/main/assets/www/safe-spend.js','utf8');
   const moduleSource = fs.readFileSync('app/src/main/assets/www/recurring-income-plan.js','utf8');
-  expect(safeSpend).toContain("script.src='recurring-income-plan.js'");
+  expect(safeSpend).toMatch(/script\.src='recurring-income-plan\.js(?:\?v=\d+)?'/);
   expect(moduleSource).toContain("kind:'income-split'");
   expect(moduleSource).toContain('memberRecurringIds');
   expect(moduleSource).not.toContain('balanceImpact:true');
