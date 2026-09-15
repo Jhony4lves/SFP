@@ -15,7 +15,7 @@
       complete:result.complete===true,needsUser:result.needsUser===true,failed:result.failed===true,
       code:code(result.code),items:(Array.isArray(result.items)?result.items:[]).map((row,index)=>({
         connection:index+1,accepted:row.accepted===true,status:typeof row.status==='number'?row.status:code(row.status),
-        code:code(row.code),providerCode:code(row.providerCode),executionStatus:code(row.executionStatus),
+        code:code(row.code),providerCode:code(row.providerCode),providerMessage:String(row.providerMessage||'').slice(0,300),executionStatus:code(row.executionStatus),
         lastUpdatedAt:/^\d{4}-\d{2}-\d{2}T[0-9:.Z+-]+$/.test(row.lastUpdatedAt||'')?row.lastUpdatedAt:null
       }))};
   }
@@ -64,7 +64,7 @@
   function refreshFailureText(result){
     const rows=Array.isArray(result?.items)?result.items:[];
     const codes=[code(result?.code),...rows.flatMap(row=>[code(row?.providerCode),code(row?.code)])].filter(Boolean);
-    const details=rows.map((row,index)=>`Conexão ${index+1}: HTTP ${Number(row.status)||'indisponível'} ${code(row.providerCode)||code(row.code)||'sem código'}`).join('; ');
+    const details=rows.map((row,index)=>`Conexão ${index+1}: HTTP ${Number(row.status)||'indisponível'} ${code(row.providerCode)||code(row.code)||'sem código'}${row.providerMessage?' — '+String(row.providerMessage).slice(0,300):''}`).join('; ');
     let text='A instituição não iniciou uma nova sincronização. A consulta usa os dados já disponíveis.';
     if(codes.some(value=>value.includes('BEFORE_ALLOWED_FREQUENCY')||value==='REFRESH_RATE_LIMITED'))
       text='A Pluggy bloqueou uma nova atualização por limite de frequência. A consulta usa a leitura mais recente disponível.';

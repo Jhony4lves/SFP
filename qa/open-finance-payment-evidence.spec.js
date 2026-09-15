@@ -120,3 +120,16 @@ test('cartão sem nome usa o banco da mesma conexão para resolver a fatura', ()
   expect(api.bankTruth(card, '2026-09')).toMatchObject({ amount: 170.84, official: false });
   expect(api.displayTotal(card, '2026-09')).toBe(170.84);
 });
+
+test('parcelas com compra original em julho e previsão de setembro completam R$ 327,59 sem reduzir pelo pagamento', () => {
+  const { api, card, account } = resolver({ transactions: [
+    { date:'2026-09-11', amount:253.40, status:'PENDING', billForecastDate:'2026-09' },
+    { date:'2026-07-06', amount:54.90, status:'PENDING', billForecastDate:'2026-09' },
+    { date:'2026-07-28', amount:19.29, status:'PENDING', billForecastDate:'2026-09' },
+    { date:'2026-08-10', amount:-74.25, description:'Pagamento PIX', status:'PENDING', billForecastDate:'2026-09' },
+    { date:'2026-07-06', amount:54.90, status:'POSTED', billForecastDate:'2026-08' }
+  ] });
+  expect(api.bankTruth(card,'2026-09')).toMatchObject({amount:327.59,official:false,paymentsExcluded:74.25});
+  account.transactionPreviewHasMore=true;
+  expect(api.cycleTransactions(card,'2026-09')).toBeNull();
+});

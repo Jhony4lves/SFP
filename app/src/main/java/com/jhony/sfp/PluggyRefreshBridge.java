@@ -239,18 +239,6 @@ public final class PluggyRefreshBridge {
         return ids;
     }
 
-    private static String providerErrorCode(HttpResult response) {
-        if (response == null || response.body == null || response.body.trim().isEmpty()) return "";
-        try {
-            JSONObject value = new JSONObject(response.body);
-            String code = clean(value.optString("code", ""));
-            if (code.isEmpty()) code = clean(value.optString("errorCode", ""));
-            return code;
-        } catch (Exception ignored) {
-            return "";
-        }
-    }
-
     @JavascriptInterface
     public synchronized String refreshItems() {
         try {
@@ -269,7 +257,9 @@ public final class PluggyRefreshBridge {
                     row.put("status", response.status);
                     boolean accepted = response.status >= 200 && response.status < 300;
                     row.put("accepted", accepted);
-                    String providerCode = providerErrorCode(response);
+                    PluggyRefreshError providerError = new PluggyRefreshError(accepted ? "{}" : response.body, key);
+                    String providerCode = providerError.code;
+                    if (!providerError.message.isEmpty()) row.put("providerMessage", providerError.message);
                     if (!providerCode.isEmpty()) row.put("providerCode", providerCode);
                     if (accepted) {
                         started++;

@@ -168,3 +168,13 @@ test('cartão recém-cadastrado sem total bancário não aparece como quitado',a
   await expect(page.locator('#cardsGrid .sfp-card-v2-primary').first()).toContainText('Fatura sem total confirmado');
   await expect(page.locator('#cardsGrid .sfp-card-v2-primary').first()).not.toContainText('quitada');
 });
+
+test('HTTP 400 sem código específico mostra a explicação sanitizada do provedor',async({page})=>{
+  await boot(page);
+  await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
+    refreshItems:()=>JSON.stringify({ok:false,requested:1,started:0,items:[{accepted:false,status:400,code:'REFRESH_NEEDS_ATTENTION',providerMessage:'Connector does not support updates'}]})
+  }}));
+  await page.locator('#openFinanceSyncBtn').click();
+  await expect(page.locator('#openFinancePreview')).toContainText('Connector does not support updates');
+  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().request.items[0].providerMessage)).toBe('Connector does not support updates');
+});
