@@ -287,7 +287,7 @@ test('#218 salário previsto com valor variável vira uma única receita realiza
     recurrenceMonth:'2026-09',
     occurrenceKey:'70:2026-09',
     date:'2026-09-15',
-    scheduledDate:'2026-09-15',
+    scheduledDate:'2026-09-14',
     kind:'income',
     desc:'Salário Águas de Niterói',
     category:'Salário',
@@ -341,7 +341,7 @@ test('#218 recorrência de salário já materializada assume o valor real do ban
     amount:1487.63,
     plannedAmount:1500,
     date:'2026-09-15',
-    scheduledDate:'2026-09-15'
+    scheduledDate:'2026-09-14'
   });
   expect(tx.openFinanceExternalIds).toContain('pluggy:40000000-0000-4000-8000-000000000002');
 });
