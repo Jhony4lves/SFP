@@ -1,6 +1,7 @@
 (function loadRecurringIncomePlanCore(global){
   'use strict';
 
+  /* Core contract: aggregate kind:'income-split' owns memberRecurringIds; only child recurrences enter cash flow. */
   const CORE_SRC='recurring-income-plan-core.js';
   const GUARD_FLAG='__SFP_RECURRING_INCOME_PLAN_CHILD_GUARDS_V1';
 
