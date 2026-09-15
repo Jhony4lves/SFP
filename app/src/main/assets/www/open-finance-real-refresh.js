@@ -68,7 +68,7 @@
 
   function baseAutoText(){
     const suffix=lastSnapshotReadAt?` Última leitura desta sessão: ${formatClock(lastSnapshotReadAt)}.`:'';
-    return `Atualização automática ativa: o SFP relê a Pluggy ao abrir e a cada 15 minutos enquanto o app estiver visível. Items MeuPluggy não aceitam refresh forçado pelo SFP; a coleta bancária é gerenciada pelo provedor.${suffix}`;
+    return `Atualização automática ativa: o SFP relê a Pluggy ao abrir, ao voltar para o app e a cada 15 minutos enquanto ele estiver visível. Items MeuPluggy não aceitam refresh forçado pelo SFP; a coleta bancária é gerenciada pelo provedor.${suffix}`;
   }
 
   function message(text,kind='info'){
@@ -162,7 +162,7 @@
   async function automaticSync(reason='interval'){
     if(autoBusy||busy||document.visibilityState==='hidden')return false;
     if(!configured()){
-      updateAutoNote('Atualização automática pronta. Configure a Pluggy para o SFP reler os dados ao abrir e a cada 15 minutos.');
+      updateAutoNote('Atualização automática pronta. Configure a Pluggy para o SFP reler os dados ao abrir, ao voltar para o app e a cada 15 minutos.');
       return false;
     }
     const unified=global.SFPOpenFinanceUnifiedSync;
@@ -171,7 +171,7 @@
     if(button?.disabled)return false;
 
     autoBusy=true;
-    updateAutoNote(reason==='startup'?'Abrindo o SFP: consultando automaticamente o snapshot mais recente da Pluggy…':'Atualização automática: consultando o snapshot mais recente da Pluggy…');
+    updateAutoNote(reason==='startup'?'Abrindo o SFP: consultando automaticamente o snapshot mais recente da Pluggy…':reason==='resume'?'SFP aberto novamente: consultando o snapshot mais recente da Pluggy…':'Atualização automática: consultando o snapshot mais recente da Pluggy…');
     const originalToast=global.toast;
     try{
       if(typeof originalToast==='function')global.toast=()=>{};
@@ -267,7 +267,7 @@
     attemptStartup();
     autoTimer=setInterval(()=>{if(document.visibilityState!=='hidden')void automaticSync('interval');},AUTO_INTERVAL_MS);
     document.addEventListener('visibilitychange',()=>{
-      if(document.visibilityState==='visible'&&Date.now()-lastSnapshotReadAt>=AUTO_INTERVAL_MS)void automaticSync('resume');
+      if(document.visibilityState==='visible')void automaticSync('resume');
     });
   }
 
@@ -305,7 +305,7 @@
         if(isMeuPluggyManaged(started)){
           lastAttempt.outcome='provider-managed';
           await syncCurrentData();
-          message('O MeuPluggy gerencia a atualização bancária destas conexões. O SFP releu agora o snapshot mais recente disponível; ele também fará isso automaticamente ao abrir e a cada 15 minutos.');
+          message('O MeuPluggy gerencia a atualização bancária destas conexões. O SFP releu agora o snapshot mais recente disponível; ele também fará isso automaticamente ao abrir, ao voltar para o app e a cada 15 minutos.');
           return;
         }
         lastAttempt.outcome='rejected';
