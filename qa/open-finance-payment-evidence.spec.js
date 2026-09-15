@@ -166,3 +166,12 @@ test('crédito futuro reduz o valor identificado sem apagar parcelas ou contar p
   ]});
   expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,amount:178.72,nextAmount:84.36});
 });
+
+
+test('última parcela explícita com arredondamento substitui a projeção correspondente', () => {
+  const {api,card}=resolver({transactions:[
+    {id:'one',description:'Compra',billForecastDate:'2026-09',amount:94.36,installment:{installmentNumber:1,totalInstallments:3}},
+    {id:'three',description:'Compra',billForecastDate:'2026-11',amount:94.35,installment:{installmentNumber:3,totalInstallments:3}}
+  ]});
+  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,amount:188.71,nextAmount:94.36});
+});

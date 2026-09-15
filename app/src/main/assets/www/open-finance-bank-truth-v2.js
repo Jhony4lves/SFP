@@ -340,7 +340,7 @@
       if(!validMonth(forecast)||forecast<month)continue;
       const meta=tx.installment||{},n=Number(meta.installmentNumber),total=Number(meta.totalInstallments);
       const valid=Number(tx.amount)>0&&Number.isInteger(n)&&Number.isInteger(total)&&n>0&&total>=n&&total<=120;
-      const group=JSON.stringify([normalizedText(tx.description),total,round2(meta.totalAmount||Number(tx.amount)*total)]);
+      const group=JSON.stringify([normalizedText(tx.description),total,valid?shiftMonth(forecast,1-n):forecast]);
       rows.push({tx,forecast,n,total,valid,group});
     }
     const projected=new Map(),explicit=new Set();
