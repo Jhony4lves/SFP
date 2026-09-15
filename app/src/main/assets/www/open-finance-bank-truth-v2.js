@@ -327,6 +327,67 @@
     return localCalculated(card,month);
   }
 
+  // These are identified future commitments, not an assertion of complete bank coverage.
+  function liveFutureCommitments(card,month){
+    const account=previewAccount(card)?.account;
+    if(!account||account.transactionsError||account.transactionPreviewHasMore)return null;
+    const seen=new Set(),rows=[];
+    for(const tx of account.transactions||[]){
+      if(tx.id&&seen.has(tx.id))continue;
+      if(tx.id)seen.add(tx.id);
+      if(cancelled(tx)||isPaymentCredit(tx)||Number(tx.amount)<=0)continue;
+      const forecast=clean(tx.billForecastDate);
+      if(!validMonth(forecast)||forecast<month)continue;
+      const meta=tx.installment||{},n=Number(meta.installmentNumber),total=Number(meta.totalInstallments);
+      const valid=Number.isInteger(n)&&Number.isInteger(total)&&n>0&&total>=n&&total<=120;
+      const group=JSON.stringify([normalizedText(tx.description),total,round2(meta.totalAmount||Number(tx.amount)*total)]);
+      rows.push({tx,forecast,n,total,valid,group});
+    }
+    const projected=new Map(),explicit=new Set();
+    let amount=0,nextAmount=0,count=0;
+    for(const row of rows){
+      if(row.forecast<=month)continue;
+      amount+=Number(row.tx.amount);
+      if(row.forecast===shiftMonth(month,1))nextAmount+=Number(row.tx.amount);
+      if(row.valid){count++;explicit.add(`${row.group}|${row.n}|${row.forecast}`);}
+    }
+    for(const row of rows){
+      if(!row.valid)continue;
+      // Repeated indistinguishable purchases cannot safely be grouped for projection.
+      if(rows.filter(other=>other.group===row.group&&other.n===row.n&&other.forecast===row.forecast).length>1)continue;
+      for(let n=row.n+1;n<=row.total;n++){
+        const target=shiftMonth(row.forecast,n-row.n),key=`${row.group}|${n}|${target}`;
+        if(target<=month||explicit.has(key)||projected.has(key))continue;
+        projected.set(key,{month:target,amount:Number(row.tx.amount)});
+      }
+    }
+    for(const row of projected.values()){
+      amount+=row.amount;count++;
+      if(row.month===shiftMonth(month,1))nextAmount+=row.amount;
+    }
+    return {month,count:count||null,amount:amount>0?round2(amount):null,
+      nextAmount:nextAmount>0?round2(nextAmount):null,estimated:true,complete:false};
+  }
+
+  function futureCommitments(card,month){
+    const live=liveFutureCommitments(card,month);
+    if(live)return {...live,stale:false};
+    const stored=card?.openFinanceFutureCommitments;
+    return stored?.month===month?{...stored,stale:true}:null;
+  }
+
+  function patchFutureGrid(node,card,month){
+    // Local plans remain authoritative when present; never add a second bank projection to them.
+    if((global.state?.purchases||[]).some(p=>sameId(p.cardId,card.id)&&p.status!=='cancelled'))return;
+    const future=futureCommitments(card,month);
+    const stat=label=>[...node.querySelectorAll('.sfp-card-v2-stat')].find(el=>clean(el.querySelector('small')?.textContent)===label)?.querySelector('strong');
+    const installments=stat('Parcelas futuras'),next=stat('Próxima fatura');
+    if(installments)installments.textContent=future?.count?`${future.count} identificadas${future.stale?' (última leitura)':''}`:'Não informado';
+    if(next)next.textContent=future?.nextAmount?`${money(future.nextAmount)} estimados`:'Não informada';
+    const total=node.querySelector('.sfp-card-v2-progress-top span:last-child');
+    if(total)total.textContent=future?.amount?`${money(future.amount)} futuros identificados${future.stale?' · última leitura':''}`:'Compromissos futuros não confirmados';
+  }
+
   function paidAmount(card,month){
     try{return round2(Number(global.invoiceStatus?.(card?.id,month)?.paidAmount)||0);}
     catch(_){return 0;}
@@ -375,6 +436,7 @@
       const hasOpenFinance=truth||Number.isFinite(Number(card.openFinanceUsedAmount))||card.openFinanceBalanceDueDate||card.openFinanceBalanceCloseDate;
       if(!hasOpenFinance)return;
       patchCalendarText(node,card,month);
+      patchFutureGrid(node,card,month);
       const primary=node.querySelector('.sfp-card-v2-primary');
       if(primary){
         const label=primary.querySelector('small'),strong=primary.querySelector('strong'),status=primary.querySelector('span');
@@ -427,6 +489,10 @@
     let changed=false;
     const month=activeMonth();
     for(const card of global.state.cards){
+      const future=liveFutureCommitments(card,month);
+      if(future&&JSON.stringify(card.openFinanceFutureCommitments)!==JSON.stringify(future)){
+        card.openFinanceFutureCommitments=future;changed=true;
+      }
       const truth=liveBill(card,month)||linkedBillFromAccount(card,month)||cycleTransactions(card,month);
       if(!truth)continue;
       card.openFinanceBankBills??={};
@@ -510,6 +576,7 @@
       cycleBounds,
       bankTruth,
       displayTotal,
+      futureCommitments,
       closed,
       linkedBillFromAccount,
       postedCycleFromAccount,

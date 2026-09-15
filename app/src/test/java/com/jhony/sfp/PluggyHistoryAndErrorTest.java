@@ -6,6 +6,11 @@ import java.time.LocalDate;
 import static org.junit.Assert.*;
 
 public class PluggyHistoryAndErrorTest {
+    @Test public void cursorEndpointUsesOnlySupportedQueryParameters() throws Exception {
+        assertEquals("accountId=account&dateFrom=2025-09-15",
+                PluggyBridge.transactionQuery("account", LocalDate.of(2026, 9, 15), "CREDIT"));
+    }
+
     @Test public void extendedHistoryKeepsCurrentInstallmentsWithoutImportingOldBills() throws Exception {
         LocalDate today = LocalDate.of(2026, 9, 15);
         JSONObject july = new JSONObject().put("date", "2026-07-06T00:00:00.000Z").put("status", "PENDING").put("billForecastDate", "2026-09");

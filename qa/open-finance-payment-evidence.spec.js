@@ -133,3 +133,26 @@ test('parcelas com compra original em julho e previsão de setembro completam R$
   account.transactionPreviewHasMore=true;
   expect(api.cycleTransactions(card,'2026-09')).toBeNull();
 });
+
+test('Nubank sem compras locais projeta as duas parcelas restantes de 1/3 sem alterar a fatura', () => {
+  const {api,card}=resolver({transactions:[{id:'purchase',description:'Compra parcelada',date:'2026-08-11',billForecastDate:'2026-09',amount:94.36,status:'PENDING',installment:{installmentNumber:1,totalInstallments:3}},payment]});
+  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,amount:188.72,nextAmount:94.36,complete:false});
+  expect(api.displayTotal(card,'2026-09')).toBe(94.36);
+});
+
+test('parcela futura explícita substitui a projeção da mesma parcela sem duplicar', () => {
+  const tx={description:'Compra parcelada',amount:94.36,status:'PENDING',installment:{installmentNumber:1,totalInstallments:3}};
+  const {api,card}=resolver({transactions:[{...tx,id:'one',date:'2026-08-11',billForecastDate:'2026-09'}, {...tx,id:'two',date:'2026-10-11',billForecastDate:'2026-10',installment:{installmentNumber:2,totalInstallments:3}}]});
+  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,amount:188.72,nextAmount:94.36});
+});
+
+test('falha de transações preserva última projeção e ausência de metadados não confirma zero parcelas', () => {
+  const {api,card,account}=resolver({transactions:[{id:'one',description:'Compra',date:'2026-08-11',billForecastDate:'2026-09',amount:94.36,installment:{installmentNumber:1,totalInstallments:3}}]});
+  api.rememberBankTruth();
+  account.transactions=[];account.transactionsError=true;
+  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,amount:188.72,stale:true});
+  delete card.openFinanceFutureCommitments;
+  expect(api.futureCommitments(card,'2026-09')).toBeNull();
+  account.transactionsError=false;
+  expect(api.futureCommitments(card,'2026-09').count).toBeNull();
+});

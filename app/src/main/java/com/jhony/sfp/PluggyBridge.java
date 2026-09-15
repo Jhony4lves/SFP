@@ -733,15 +733,28 @@ public final class PluggyBridge {
         }
     }
 
+    static String transactionQuery(String accountId, LocalDate today, String accountType) throws Exception {
+        return "accountId=" + URLEncoder.encode(accountId, StandardCharsets.UTF_8.name())
+                + "&dateFrom=" + transactionHistoryStart(today, accountType)
+                + ("CREDIT".equalsIgnoreCase(accountType) ? "" : "&dateTo=" + today);
+    }
+
+    private static final class TransactionReadException extends Exception {
+        final int status;
+        final String explanation;
+        TransactionReadException(int status, String body, String key) {
+            super("TRANSACTIONS_HTTP_" + status);
+            this.status = status;
+            this.explanation = new PluggyRefreshError(body, key).message;
+        }
+    }
+
     private JSONObject listRecentTransactionsInternal(String key, String accountId, String accountType) throws Exception {
     if (!UUID_PATTERN.matcher(accountId).matches()) throw new IllegalArgumentException("INVALID_ACCOUNT_ID");
 
     LocalDate today = LocalDate.now(ZoneOffset.UTC);
     LocalDate from = transactionHistoryStart(today, accountType);
-    String currentQuery = "accountId=" + URLEncoder.encode(accountId, StandardCharsets.UTF_8.name())
-            + "&dateFrom=" + URLEncoder.encode(from.toString(), StandardCharsets.UTF_8.name())
-            + "&dateTo=" + URLEncoder.encode(today.toString(), StandardCharsets.UTF_8.name())
-            + "&pageSize=500";
+    String currentQuery = transactionQuery(accountId, today, accountType);
 
     JSONArray transactions = new JSONArray();
     Set<String> visitedQueries = new LinkedHashSet<>();
@@ -767,7 +780,7 @@ public final class PluggyBridge {
         }
         if (response.status == 403) throw new SecurityException("TRANSACTION_ACCESS_FORBIDDEN");
         if (response.status < 200 || response.status >= 300) {
-            throw new IllegalStateException("TRANSACTIONS_HTTP_" + response.status);
+            throw new TransactionReadException(response.status, response.body, key);
         }
         pageCount++;
 
@@ -821,7 +834,7 @@ public final class PluggyBridge {
     result.put("pageCount", pageCount);
     result.put("windowDays", java.time.temporal.ChronoUnit.DAYS.between(from, today));
     result.put("dateFrom", from.toString());
-    result.put("dateTo", today.toString());
+    result.put("dateTo", "CREDIT".equalsIgnoreCase(accountType) ? "" : today.toString());
     return result;
 }
 
@@ -896,6 +909,17 @@ public final class PluggyBridge {
                     } catch (Exception transactionError) {
                         enriched.put("transactions", new JSONArray());
                         enriched.put("transactionsError", true);
+                        enriched.put("transactionPreviewHasMore", true);
+                        LocalDate attemptedDate = LocalDate.now(ZoneOffset.UTC);
+                        enriched.put("transactionDateFrom", transactionHistoryStart(attemptedDate, cleanString(account, "type")).toString());
+                        enriched.put("transactionDateTo", attemptedDate.toString());
+                        if (transactionError instanceof TransactionReadException) {
+                            TransactionReadException failure = (TransactionReadException) transactionError;
+                            enriched.put("transactionsHttpStatus", failure.status);
+                            enriched.put("transactionsErrorMessage", failure.explanation);
+                        } else {
+                            enriched.put("transactionsErrorMessage", "Não foi possível concluir a leitura das transações.");
+                        }
                     }
                     if ("CREDIT".equalsIgnoreCase(cleanString(account, "type"))) {
                         try {

@@ -178,3 +178,29 @@ test('HTTP 400 sem código específico mostra a explicação sanitizada do prove
   await expect(page.locator('#openFinancePreview')).toContainText('Connector does not support updates');
   expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().request.items[0].providerMessage)).toBe('Connector does not support updates');
 });
+
+test('cartão sem compras locais mostra parcelas bancárias identificadas e não zera durante falha',async({page})=>{
+  await boot(page);
+  await page.addScriptTag({url:'/open-finance-bank-truth-v2.js'});
+  await page.waitForFunction(()=>window.SFPOpenFinanceBankTruth);
+  await page.evaluate(()=>{
+    const original=PluggyBridge.previewData;
+    PluggyBridge.previewData=()=>{
+      const data=JSON.parse(original());
+      data.items[0].accounts[0].transactions=[{id:'installment',description:'Compra parcelada',date:'2026-08-11',billForecastDate:'2026-09',amount:94.36,status:'PENDING',installment:{installmentNumber:1,totalInstallments:3}}];
+      return JSON.stringify(data);
+    };
+  });
+  await page.locator('#openFinanceSyncBtn').click();
+  await page.evaluate(()=>{setPage('cartoes');renderCards();});
+  await expect(page.locator('#cardsGrid')).toContainText('2 identificadas');
+  await expect(page.locator('#cardsGrid')).toContainText('188,72');
+  await page.evaluate(()=>{
+    const original=PluggyBridge.previewData;
+    PluggyBridge.previewData=()=>{const data=JSON.parse(original());Object.assign(data.items[0].accounts[0],{transactions:[],transactionsError:true});return JSON.stringify(data);};
+    setPage(document.getElementById('openFinanceSyncBtn').closest('.tab').id);
+  });
+  await page.locator('#openFinanceSyncBtn').click();
+  await page.evaluate(()=>{setPage('cartoes');renderCards();});
+  await expect(page.locator('#cardsGrid')).toContainText('2 identificadas (última leitura)');
+});

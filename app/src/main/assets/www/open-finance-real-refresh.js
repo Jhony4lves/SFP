@@ -70,6 +70,8 @@
       text='A Pluggy bloqueou uma nova atualização por limite de frequência. A consulta usa a leitura mais recente disponível.';
     else if(codes.some(value=>/MFA|CREDENTIAL|AUTH_REJECTED|AUTH_REQUIRED/.test(value)))
       text='A conexão precisa de autenticação. Revalide o Open Finance para atualizar.';
+    else if(rows.some(row=>/MeuPluggy item cant be updated/i.test(row.providerMessage||'')))
+      text='Esta conexão é gerenciada pelo MeuPluggy e não permite iniciar atualização pelo SFP. Atualize no MeuPluggy; o SFP consulta e importa os dados disponíveis.';
     else if(codes.includes('REFRESH_NEEDS_ATTENTION'))
       text='A Pluggy recusou a atualização da conexão. O diagnóstico registra o retorno recebido.';
     return `${text} ${details||codes.join(', ')}`.trim();
