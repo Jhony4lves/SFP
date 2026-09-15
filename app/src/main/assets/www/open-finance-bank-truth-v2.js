@@ -327,6 +327,14 @@
     return localCalculated(card,month);
   }
 
+  function installmentMerchant(description,n,total){
+    const text=normalizedText(description).replace(/\s+/g,' ');
+    const suffix=text.match(/(\d{1,3})\s*\/\s*(\d{1,3})\s*$/);
+    // Remove a changing installment label only when both numbers match bank metadata.
+    return suffix&&Number(suffix[1])===n&&Number(suffix[2])===total
+      ?text.slice(0,suffix.index).trim():text;
+  }
+
   // These are identified future commitments, not an assertion of complete bank coverage.
   function liveFutureCommitments(card,month){
     const account=previewAccount(card)?.account;
@@ -340,7 +348,7 @@
       if(!validMonth(forecast)||forecast<month)continue;
       const meta=tx.installment||{},n=Number(meta.installmentNumber),total=Number(meta.totalInstallments);
       const valid=Number(tx.amount)>0&&Number.isInteger(n)&&Number.isInteger(total)&&n>0&&total>=n&&total<=120;
-      const group=JSON.stringify([normalizedText(tx.description),total,valid?shiftMonth(forecast,1-n):forecast]);
+      const group=JSON.stringify([valid?installmentMerchant(tx.description,n,total):normalizedText(tx.description),total,valid?shiftMonth(forecast,1-n):forecast]);
       rows.push({tx,forecast,n,total,valid,group});
     }
     const projected=new Map(),explicit=new Set();
@@ -365,7 +373,7 @@
       amount+=row.amount;count++;
       if(row.month===shiftMonth(month,1))nextAmount+=row.amount;
     }
-    return {month,count:count||null,amount:amount>0?round2(amount):null,
+    return {schema:2,month,count:count||null,amount:amount>0?round2(amount):null,
       nextAmount:nextAmount>0?round2(nextAmount):null,estimated:true,complete:false};
   }
 
@@ -373,7 +381,7 @@
     const live=liveFutureCommitments(card,month);
     if(live)return {...live,stale:false};
     const stored=card?.openFinanceFutureCommitments;
-    return stored?.month===month?{...stored,stale:true}:null;
+    return stored?.schema===2&&stored.month===month?{...stored,stale:true}:null;
   }
 
   function patchFutureGrid(node,card,month){

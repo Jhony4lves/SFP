@@ -1,0 +1,239 @@
+[
+  {
+    "date": "2026-10-11T03:00:00.000Z",
+    "amount": 94.35,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-11",
+    "installment": {
+      "installmentNumber": 3,
+      "totalInstallments": 3
+    },
+    "id": "nubank-0",
+    "description": "Loja 1 3/3"
+  },
+  {
+    "date": "2026-09-12T23:20:53.001Z",
+    "amount": 86.9,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-10",
+    "installment": null,
+    "id": "nubank-1",
+    "description": "Loja 2"
+  },
+  {
+    "date": "2026-09-12T22:15:17.001Z",
+    "amount": 26,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-10",
+    "installment": null,
+    "id": "nubank-2",
+    "description": "Loja 3"
+  },
+  {
+    "date": "2026-09-11T20:47:04.001Z",
+    "amount": 11.99,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-10",
+    "installment": null,
+    "id": "nubank-3",
+    "description": "Loja 4"
+  },
+  {
+    "date": "2026-09-09T21:22:10.001Z",
+    "amount": 8,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-10",
+    "installment": null,
+    "id": "nubank-4",
+    "description": "Loja 5"
+  },
+  {
+    "date": "2026-09-09T20:41:14.001Z",
+    "amount": 16,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-10",
+    "installment": null,
+    "id": "nubank-5",
+    "description": "Loja 6"
+  },
+  {
+    "date": "2026-09-09T18:12:40.001Z",
+    "amount": 12.99,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-10",
+    "installment": null,
+    "id": "nubank-6",
+    "description": "Loja 7"
+  },
+  {
+    "date": "2026-09-09T15:59:13.001Z",
+    "amount": 6.49,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-10",
+    "installment": null,
+    "id": "nubank-7",
+    "description": "Loja 8"
+  },
+  {
+    "date": "2026-09-02T12:00:00.001Z",
+    "amount": -81.64,
+    "status": "PENDING",
+    "type": "CREDIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-8",
+    "description": "Loja 9"
+  },
+  {
+    "date": "2026-08-28T15:41:43.001Z",
+    "amount": 2.99,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-9",
+    "description": "Loja 8"
+  },
+  {
+    "date": "2026-08-21T19:28:14.001Z",
+    "amount": 8,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-10",
+    "description": "Loja 10"
+  },
+  {
+    "date": "2026-08-14T09:46:24.001Z",
+    "amount": 3.5,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-11",
+    "description": "Loja 8"
+  },
+  {
+    "date": "2026-08-13T20:46:39.001Z",
+    "amount": 9,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-12",
+    "description": "Loja 11"
+  },
+  {
+    "date": "2026-08-13T17:32:42.001Z",
+    "amount": 7,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-13",
+    "description": "Loja 8"
+  },
+  {
+    "date": "2026-08-13T09:59:49.001Z",
+    "amount": 3.5,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-14",
+    "description": "Loja 8"
+  },
+  {
+    "date": "2026-08-12T23:33:54.089Z",
+    "amount": 8.96,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-15",
+    "description": "Loja 12"
+  },
+  {
+    "date": "2026-08-12T21:37:29.001Z",
+    "amount": 7,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-16",
+    "description": "Loja 11"
+  },
+  {
+    "date": "2026-08-12T21:08:15.686Z",
+    "amount": 11.21,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-17",
+    "description": "Loja 13"
+  },
+  {
+    "date": "2026-08-11T21:29:22.940Z",
+    "amount": 86.96,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-18",
+    "description": "Loja 14"
+  },
+  {
+    "date": "2026-08-11T20:52:51.001Z",
+    "amount": 94.36,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": {
+      "installmentNumber": 1,
+      "totalInstallments": 3
+    },
+    "id": "nubank-19",
+    "description": "Loja 1 1/3"
+  },
+  {
+    "date": "2026-08-10T00:23:42.731Z",
+    "amount": -59.99,
+    "status": "PENDING",
+    "type": "CREDIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-20",
+    "description": "Pagamento de fatura"
+  },
+  {
+    "date": "2026-08-10T00:18:39.051Z",
+    "amount": 10,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "nubank-21",
+    "description": "Loja 16"
+  },
+  {
+    "date": "2026-08-09T03:00:00.000Z",
+    "amount": -59.99,
+    "status": "POSTED",
+    "type": "CREDIT",
+    "billForecastDate": null,
+    "installment": null,
+    "id": "nubank-22",
+    "description": "Pagamento de fatura",
+    "billId": "old-bill"
+  }
+]

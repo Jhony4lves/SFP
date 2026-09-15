@@ -175,3 +175,31 @@ test('última parcela explícita com arredondamento substitui a projeção corre
   ]});
   expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,amount:188.71,nextAmount:94.36});
 });
+
+test('retorno completo Itaú: 29 parcelas explícitas não viram 170 projeções', () => {
+  const {api,card}=resolver({transactions:require('./fixtures/open-finance-itau-installment-schedule.json')});
+  expect(api.displayTotal(card,'2026-09')).toBe(327.59);
+  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:29,amount:1166.78,nextAmount:180.82});
+});
+
+test('retorno Nubank com sufixos 1/3 e 3/3 projeta somente a parcela ausente', () => {
+  const {api,card}=resolver({transactions:require('./fixtures/open-finance-nubank-installment-schedule.json')});
+  expect(api.displayTotal(card,'2026-09')).toBe(170.84);
+  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,amount:357.08,nextAmount:262.73});
+});
+
+
+test('falha de consulta não reutiliza a projeção inflada da .18', () => {
+  const {api,card,account}=resolver();
+  account.transactionsError=true;
+  card.openFinanceFutureCommitments={month:'2026-09',count:170,amount:6677.53,nextAmount:361.65};
+  expect(api.futureCommitments(card,'2026-09')).toBeNull();
+});
+
+test('número no nome da loja só é removido quando coincide com a parcela informada', () => {
+  const {api,card}=resolver({transactions:[
+    {id:'a',description:'Loja 24/7',billForecastDate:'2026-09',amount:10,installment:{installmentNumber:1,totalInstallments:2}},
+    {id:'b',description:'Loja 12/7',billForecastDate:'2026-10',amount:20,installment:{installmentNumber:2,totalInstallments:2}}
+  ]});
+  expect(api.futureCommitments(card,'2026-09')).toMatchObject({count:2,amount:30,nextAmount:30});
+});
