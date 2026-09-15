@@ -47,16 +47,38 @@ async function boot(page){
   await page.reload();
   await expectBootComplete(page,expect,'Open Finance real refresh');
   await page.addScriptTag({url:'/open-finance-real-refresh.js'});
-  await page.waitForFunction(()=>Number(window.SFPOpenFinanceRealRefresh?.version)>=1);
+  await page.waitForFunction(()=>Number(window.SFPOpenFinanceRealRefresh?.version)>=4);
   await page.waitForFunction(()=>document.getElementById('openFinanceSyncBtn')?.dataset?.sfpRealRefresh==='1');
+  await page.waitForFunction(()=>window.__sfpRefreshCalls.preview>=1);
+  await page.waitForFunction(()=>!document.getElementById('openFinanceSyncBtn')?.disabled);
+  await page.evaluate(()=>setPage('openfinance'));
 }
 
-test('Atualizar faturas solicita refresh da instituição antes de reler a Pluggy',async({page})=>{
+test('Open Finance vira aba própria e ação principal usa nome claro',async({page})=>{
+  await boot(page);
+  await expect(page.locator('.sidebar .nav button[data-page="openfinance"]')).toHaveCount(1);
+  await expect(page.locator('#openfinance #openFinancePersonalPanel')).toHaveCount(1);
+  await expect(page.locator('#config #openFinancePersonalPanel')).toHaveCount(0);
+  await expect(page.locator('#openFinanceSyncBtn')).toHaveText('Atualizar dados agora');
+  await expect(page.locator('#openFinanceAutoSyncNote')).toContainText('a cada 15 minutos');
+  await expect(page.locator('#openFinanceAutoSyncNote')).toContainText('MeuPluggy');
+  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.autoIntervalMs)).toBe(15*60*1000);
+});
+
+test('abertura relê snapshot automaticamente sem disparar refresh/PATCH',async({page})=>{
+  await boot(page);
+  const calls=await page.evaluate(()=>({...window.__sfpRefreshCalls}));
+  expect(calls.preview).toBeGreaterThanOrEqual(1);
+  expect(calls.refresh).toBe(0);
+  expect(calls.status).toBe(0);
+});
+
+test('Atualizar dados solicita refresh da instituição antes de reler a Pluggy',async({page})=>{
   await boot(page);
   const before=await page.evaluate(()=>({...window.__sfpRefreshCalls}));
   const button=page.locator('#openFinanceSyncBtn');
   await expect(button).toBeVisible();
-  await expect(button).toHaveText('Sincronizar contas e faturas');
+  await expect(button).toHaveText('Atualizar dados agora');
 
   await button.click();
 
@@ -66,6 +88,23 @@ test('Atualizar faturas solicita refresh da instituição antes de reler a Plugg
   expect(after.status).toBeGreaterThanOrEqual(1);
   expect(after.preview).toBeGreaterThan(before.preview);
   await expect(page.locator('#openFinancePreview')).toContainText('Dados atualizados diretamente da instituição');
+});
+
+test('Items MeuPluggy são tratados como limitação do provedor e relidos sem erro genérico',async({page})=>{
+  await boot(page);
+  await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
+    refreshItems:()=>{window.__sfpRefreshCalls.refresh++;return JSON.stringify({ok:false,requested:3,started:0,items:[
+      {accepted:false,status:400,code:'REFRESH_NEEDS_ATTENTION',providerMessage:'MeuPluggy item cant be updated'},
+      {accepted:false,status:400,code:'REFRESH_NEEDS_ATTENTION',providerMessage:'MeuPluggy item cant be updated'},
+      {accepted:false,status:400,code:'REFRESH_NEEDS_ATTENTION',providerMessage:'MeuPluggy item cant be updated'}
+    ]});}
+  }}));
+  const beforePreview=await page.evaluate(()=>window.__sfpRefreshCalls.preview);
+  await page.locator('#openFinanceSyncBtn').click();
+  await page.waitForFunction(before=>window.__sfpRefreshCalls.preview>before,beforePreview);
+  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('provider-managed');
+  await expect(page.locator('#openFinancePreview')).toContainText('MeuPluggy gerencia a atualização bancária');
+  expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(1);
 });
 
 test('refresh bloqueado não dispara segundo PATCH e preserva leitura disponível',async({page})=>{
@@ -148,7 +187,7 @@ test('refresh de parte das instituições identifica a conexão recusada',async(
   expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('partially-refreshed');
 });
 
-test('app zerado informa vínculo pendente sem anunciar faturas recalculadas',async({page})=>{
+test('app zerado informa vínculo pendente sem anunciar atualização total',async({page})=>{
   await boot(page);
   await page.evaluate(()=>{state.cards=[];state.accounts=[];state.purchases=[];state.invoices=[];renderAll();});
   await page.locator('#openFinanceSyncBtn').click();
