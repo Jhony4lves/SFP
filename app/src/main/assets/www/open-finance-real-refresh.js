@@ -9,16 +9,35 @@
   let observer=null;
   let lastAttempt=null;
   const code=value=>/^[A-Z][A-Z0-9_:-]{0,79}$/.test(String(value||''))?String(value):'';
+  const safeText=value=>String(value||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,300);
+  const safeStatus=value=>Number.isFinite(Number(value))?Number(value):code(value);
+
   function evidence(result){
     if(!result)return null;
-    return {ok:result.ok===true,requested:Number(result.requested)||0,started:Number(result.started)||0,
-      complete:result.complete===true,needsUser:result.needsUser===true,failed:result.failed===true,
-      code:code(result.code),items:(Array.isArray(result.items)?result.items:[]).map((row,index)=>({
-        connection:index+1,accepted:row.accepted===true,status:typeof row.status==='number'?row.status:code(row.status),
-        code:code(row.code),providerCode:code(row.providerCode),providerMessage:String(row.providerMessage||'').slice(0,300),executionStatus:code(row.executionStatus),
+    return {
+      ok:result.ok===true,
+      requested:Number(result.requested)||0,
+      started:Number(result.started)||0,
+      complete:result.complete===true,
+      needsUser:result.needsUser===true,
+      failed:result.failed===true,
+      status:safeStatus(result.status),
+      code:code(result.code),
+      message:safeText(result.message),
+      stage:code(result.stage),
+      items:(Array.isArray(result.items)?result.items:[]).map((row,index)=>({
+        connection:index+1,
+        accepted:row.accepted===true,
+        status:safeStatus(row.status),
+        code:code(row.code),
+        providerCode:code(row.providerCode),
+        providerMessage:safeText(row.providerMessage),
+        executionStatus:code(row.executionStatus),
         lastUpdatedAt:/^\d{4}-\d{2}-\d{2}T[0-9:.Z+-]+$/.test(row.lastUpdatedAt||'')?row.lastUpdatedAt:null
-      }))};
+      }))
+    };
   }
+
   function diagnostic(){return lastAttempt?JSON.parse(JSON.stringify(lastAttempt)):null;}
   function exportDiagnostic(){
     global.download?.(JSON.stringify(diagnostic(),null,2),'sfp-sincronizacao-diagnostico.json','application/json');
@@ -64,26 +83,35 @@
   function refreshFailureText(result){
     const rows=Array.isArray(result?.items)?result.items:[];
     const codes=[code(result?.code),...rows.flatMap(row=>[code(row?.providerCode),code(row?.code)])].filter(Boolean);
-    const details=rows.map((row,index)=>`Conexão ${index+1}: HTTP ${Number(row.status)||'indisponível'} ${code(row.providerCode)||code(row.code)||'sem código'}${row.providerMessage?' — '+String(row.providerMessage).slice(0,300):''}`).join('; ');
+    const topStatus=Number(result?.status)||0;
+    const topMessage=safeText(result?.message);
+    const details=rows.map((row,index)=>`Conexão ${index+1}: HTTP ${Number(row.status)||'indisponível'} ${code(row.providerCode)||code(row.code)||'sem código'}${row.providerMessage?' — '+safeText(row.providerMessage):''}`).join('; ');
     let text='A instituição não iniciou uma nova sincronização. A consulta usa os dados já disponíveis.';
     if(codes.some(value=>value.includes('BEFORE_ALLOWED_FREQUENCY')||value==='REFRESH_RATE_LIMITED'))
       text='A Pluggy bloqueou uma nova atualização por limite de frequência. A consulta usa a leitura mais recente disponível.';
-    else if(codes.some(value=>/MFA|CREDENTIAL|AUTH_REJECTED|AUTH_REQUIRED/.test(value)))
-      text='A conexão precisa de autenticação. Revalide o Open Finance para atualizar.';
+    else if(codes.some(value=>/MFA|CREDENTIAL|AUTH_REJECTED|AUTH_REQUIRED|AUTH_/.test(value)))
+      text='A conexão precisa de autenticação ou a autenticação da Pluggy falhou. A leitura disponível foi preservada.';
+    else if(codes.some(value=>/DNS|NETWORK|TIMEOUT|TLS|IO/.test(value)))
+      text='A comunicação com a Pluggy falhou antes de chegar à instituição. A leitura disponível foi preservada.';
+    else if(codes.some(value=>/ITEM_DISCOVERY|ITEMS_/.test(value)))
+      text='A autenticação respondeu, mas o SFP não conseguiu descobrir as conexões Open Finance para atualizar.';
     else if(rows.some(row=>/MeuPluggy item cant be updated/i.test(row.providerMessage||'')))
       text='Esta conexão é gerenciada pelo MeuPluggy e não permite iniciar atualização pelo SFP. Atualize no MeuPluggy; o SFP consulta e importa os dados disponíveis.';
     else if(codes.includes('REFRESH_NEEDS_ATTENTION'))
       text='A Pluggy recusou a atualização da conexão. O diagnóstico registra o retorno recebido.';
-    return `${text} ${details||codes.join(', ')}`.trim();
+
+    const topDetails=[];
+    if(topStatus)topDetails.push(`HTTP ${topStatus}`);
+    if(code(result?.code))topDetails.push(code(result.code));
+    if(topMessage)topDetails.push(topMessage);
+    return `${text} ${details||topDetails.join(' — ')||codes.join(', ')}`.trim();
   }
 
   async function syncCurrentData(){
     const unified=global.SFPOpenFinanceUnifiedSync;
     if(typeof unified?.syncAll==='function')return await unified.syncAll();
     const personal=global.SFPOpenFinancePersonal;
-    if(personal&&typeof personal.syncInvoices==='function'){
-      return await personal.syncInvoices();
-    }
+    if(personal&&typeof personal.syncInvoices==='function')return await personal.syncInvoices();
     if(personal&&typeof personal.preview==='function'){
       const result=await personal.preview();
       try{global.renderAll?.();}catch(_){}
@@ -100,8 +128,7 @@
     }
     if(busy)return;
     busy=true;
-    lastAttempt={schema:'sfp-refresh-diagnostic-v1',attemptedAt:new Date().toISOString(),
-      request:null,status:null,polls:0,outcome:'requesting',privacy:{credentials:false,itemIds:false,accountIds:false}};
+    lastAttempt={schema:'sfp-refresh-diagnostic-v2',attemptedAt:new Date().toISOString(),request:null,status:null,polls:0,outcome:'requesting',privacy:{credentials:false,itemIds:false,accountIds:false}};
 
     const originalText=button?.textContent||'Atualizar faturas agora';
     if(button){
@@ -112,14 +139,18 @@
     try{
       const bridge=global.PluggyRefreshBridge;
       if(!bridge||typeof bridge.refreshItems!=='function'){
+        lastAttempt.outcome='bridge-unavailable';
         message('Este APK ainda não tem o refresh bancário em tempo real. Usando a leitura disponível.');
         await syncCurrentData();
         return;
       }
 
-      const started=parse(bridge.refreshItems());
+      let started=parse(bridge.refreshItems());
+      if(!started){
+        started={ok:false,requested:0,started:0,status:500,code:'NATIVE_RESPONSE_INVALID',message:'A ponte nativa retornou uma resposta inválida.',items:[]};
+      }
       lastAttempt.request=evidence(started);
-      if(!started?.ok||Number(started?.started||0)<=0){
+      if(!started.ok||Number(started.started||0)<=0){
         lastAttempt.outcome='rejected';
         await syncCurrentData();
         message(refreshFailureText(started),'error');
@@ -133,21 +164,29 @@
       for(let attempt=0;attempt<30;attempt++){
         await wait(attempt===0?1500:2500);
         finalStatus=parse(bridge.refreshStatus?.());
+        if(!finalStatus){
+          lastAttempt.status=evidence({ok:false,status:500,code:'STATUS_RESPONSE_INVALID',message:'A ponte nativa retornou um status inválido.',items:[]});
+          lastAttempt.polls=attempt+1;
+          lastAttempt.outcome='status-invalid';
+          await syncCurrentData();
+          message('A atualização foi solicitada, mas o SFP não conseguiu confirmar o status final. A leitura disponível foi preservada.','error');
+          return;
+        }
         lastAttempt.status=evidence(finalStatus);
         lastAttempt.polls=attempt+1;
-        if(finalStatus?.needsUser){
+        if(finalStatus.needsUser){
           lastAttempt.outcome='needs-user';
           await syncCurrentData();
           message('A instituição pediu autenticação adicional. Revalide a conexão Open Finance para concluir a atualização.','error');
           return;
         }
-        if(finalStatus?.failed){
+        if(finalStatus.failed){
           lastAttempt.outcome='provider-failed';
           await syncCurrentData();
           message('A atualização terminou com erro ou dados parciais na instituição. A consulta usa os dados disponíveis; confira o diagnóstico.','error');
           return;
         }
-        if(finalStatus?.ok&&finalStatus?.complete){
+        if(finalStatus.ok&&finalStatus.complete){
           if(button)button.textContent='Aplicando dados novos…';
           const applied=await syncCurrentData();
           lastAttempt.outcome=applied?.ok===false?'apply-failed':Number(started.started)<Number(started.requested)?'partially-refreshed':'completed';
@@ -169,7 +208,6 @@
       try{await syncCurrentData();}catch(_){}
       message('Falha ao atualizar a instituição. Não foi possível confirmar uma nova leitura bancária.','error');
     }finally{
-      // Failed/partial sync returns before renderAll; refresh the evidence labels as well.
       global.SFPOpenFinanceBankTruth?.patchGrid?.();
       global.SFPOpenFinanceBankTruth?.patchInvoiceFocus?.();
       busy=false;
@@ -198,7 +236,7 @@
   }
 
   global.SFPOpenFinanceRealRefresh=Object.freeze({
-    version:2,
+    version:3,
     diagnostic,
     exportDiagnostic,
     hook,
