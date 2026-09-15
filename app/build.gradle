@@ -14,7 +14,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.jhony.sfp"
+        applicationId "com.jhony.sfpdiag"
         minSdk 26
         targetSdk 35
         versionCode sfpVersionCode
@@ -39,9 +39,6 @@ android {
         debug {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
-            // QA APKs must keep a stable signature across CI runs. Otherwise Android
-            // requires uninstalling the previous com.jhony.sfp.debug build, which wipes
-            // the app-private Pluggy vault and its Android Keystore key.
             if (System.getenv("SFP_KEYSTORE_PATH")) {
                 signingConfig signingConfigs.release
             }
@@ -68,7 +65,6 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.webkit:webkit:1.12.1'
     implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
-    // Modelo latino embarcado: OCR de faturas funciona offline desde a primeira abertura.
     implementation 'com.google.mlkit:text-recognition:16.0.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test:runner:1.6.2'
