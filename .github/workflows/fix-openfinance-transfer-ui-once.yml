@@ -40,7 +40,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
 
       - name: Test only affected Open Finance and S24 navigation
-        run: npx playwright test qa/open-finance-mobile-navigation.spec.js qa/open-finance-unified-sync.spec.js qa/open-finance-auto-sync-contract.spec.js
+        run: npx playwright test qa/open-finance-mobile-navigation.spec.js qa/open-finance-delayed-transfer-pairing.spec.js qa/open-finance-unified-sync.spec.js qa/open-finance-auto-sync-contract.spec.js
 
       - uses: actions/setup-java@v5
         with:
