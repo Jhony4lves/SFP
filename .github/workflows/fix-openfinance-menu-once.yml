@@ -1,0 +1,95 @@
+name: Fix Open Finance menu once
+
+on:
+  push:
+    branches: ["feat/openfinance-auto-sync-navigation-226"]
+    paths: [".github/workflows/fix-openfinance-menu-once.yml"]
+
+permissions:
+  contents: write
+
+env:
+  SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}
+  SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
+  SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
+  SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
+
+jobs:
+  fix-test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Patch duplicate mobile menu and bump version
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          menu = Path('app/src/main/assets/www/financial-insights-ui.js')
+          text = menu.read_text(encoding='utf-8')
+          old = "{title:'Dados',items:[['lancamentos','Lançamentos','Histórico e edição'],['extratos','Extratos','Importação OFX e CSV'],['dados','Central de Dados','Backup, importação e exportação']]},"
+          new = "{title:'Dados',items:[['lancamentos','Lançamentos','Histórico e edição'],['extratos','Extratos','Importação OFX e CSV'],['dados','Central de Dados','Backup, importação e exportação'],['openfinance','Sincronização','Atualização de contas, cartões e faturas']]},"
+          if old not in text:
+              raise SystemExit('Construtor V2 do menu não encontrado; abortando sem alteração cega.')
+          menu.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          gradle = Path('gradle.properties')
+          props = gradle.read_text(encoding='utf-8')
+          props = props.replace('SFP_VERSION_CODE=43', 'SFP_VERSION_CODE=44')
+          props = props.replace('SFP_VERSION_NAME=2.2.0-openfinance.24', 'SFP_VERSION_NAME=2.2.0-openfinance.25')
+          gradle.write_text(props, encoding='utf-8')
+          PY
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Test only affected Open Finance navigation
+        run: npx playwright test qa/open-finance-mobile-navigation.spec.js qa/open-finance-auto-sync-contract.spec.js qa/open-finance-real-refresh.spec.js
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "8.11.1"
+      - run: yes | sdkmanager --licenses >/dev/null || true
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Restore stable signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          for var in SFP_KEYSTORE_BASE64 SFP_KEYSTORE_PASSWORD SFP_KEY_ALIAS SFP_KEY_PASSWORD; do
+            test -n "${!var:-}" || { echo "::error::$var ausente"; exit 1; }
+          done
+          printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-qa.jks"
+          echo "SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-qa.jks" >> "$GITHUB_ENV"
+
+      - name: Build release APK
+        run: gradle :app:testDebugUnitTest :app:assembleRelease
+
+      - name: Commit source fix and remove one-shot workflow
+        shell: bash
+        run: |
+          rm .github/workflows/fix-openfinance-menu-once.yml
+          git config user.name "Jhony4lves"
+          git config user.email "jhonyr.rocha@gmail.com"
+          git add app/src/main/assets/www/financial-insights-ui.js gradle.properties .github/workflows/fix-openfinance-menu-once.yml
+          git commit -m "fix(openfinance): exibir Sincronização no menu Mais V2"
+          git push origin HEAD:feat/openfinance-auto-sync-navigation-226
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: app-release-openfinance25
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
