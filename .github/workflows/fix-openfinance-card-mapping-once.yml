@@ -27,20 +27,14 @@ jobs:
 
           path = Path('app/src/main/assets/www/open-finance-personal.js')
           text = path.read_text(encoding='utf-8')
-          old = '''  function suggestSfpEntity(account,itemName){
-            if(typeof global.state==='undefined'||!global.state)return null;
-            const credit=account?.type==='CREDIT';
-            const list=credit?(Array.isArray(global.state.cards)?global.state.cards:[]):(Array.isArray(global.state.accounts)?global.state.accounts:[]);
-            const external=[account?.marketingName,account?.name,account?.presentationName,itemName].map(cleanText).filter(Boolean).join(' ');
-            let best=null;
-            for(const entity of list){
-              const score=entityScore(external,entity?.name);
-              if(!best||score>best.score)best={entity,score};
-            }
-            return best&&best.score>=4?best:null;
-          }
-          '''
-          new = '''  function lexicalEntityScore(external,candidate){
+          start_marker = '  function suggestSfpEntity(account,itemName){'
+          end_marker = '  function dateOnly(value){'
+          start = text.find(start_marker)
+          end = text.find(end_marker, start)
+          if start < 0 or end < 0 or end <= start:
+              raise SystemExit('Mapping function markers not found; refusing broad edit')
+
+          new = r'''  function lexicalEntityScore(external,candidate){
             const a=normalize(external),b=normalize(candidate);
             if(!a||!b)return 0;
             if(a===b)return 8;
@@ -107,10 +101,9 @@ jobs:
             }
             return best&&best.score>=4&&!tied?best:null;
           }
+
           '''
-          if old not in text:
-              raise SystemExit('Expected suggestSfpEntity block not found; refusing broad edit')
-          path.write_text(text.replace(old,new,1),encoding='utf-8')
+          path.write_text(text[:start] + new + text[end:], encoding='utf-8')
 
           qa = Path('qa/open-finance-card-mapping.spec.js')
           qa.write_text(r'''const { test, expect } = require('@playwright/test');
