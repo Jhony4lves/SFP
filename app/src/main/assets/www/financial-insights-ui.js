@@ -90,7 +90,7 @@
   const MORE_GROUPS=[
     {title:'Planejar',items:[['recorrencias','Recorrências','Assinaturas e gastos fixos'],['orcamento','Orçamento','Tetos e regras'],['dividas','Dívidas','Quitação e acordos'],['metas','Metas','Objetivos de poupança']]},
     {title:'Analisar',items:[['visao','Visão Geral','Análise e fluxo'],['dashboard','Dashboard','Resumo e indicadores'],['patrimonio','Patrimônio','Ativos e evolução'],['relatorios','Relatórios','Leituras e comparativos'],['simuladores','Simuladores','Cenários e projeções']]},
-    {title:'Dados',items:[['lancamentos','Lançamentos','Histórico e edição'],['extratos','Extratos','Importação OFX e CSV'],['dados','Central de Dados','Backup, importação e exportação']]},
+    {title:'Dados',items:[['lancamentos','Lançamentos','Histórico e edição'],['extratos','Extratos','Importação OFX e CSV'],['dados','Central de Dados','Backup, importação e exportação'],['openfinance','Sincronização','Open Finance e atualização de dados']]},
     {title:'Assistência e sistema',items:[['sophy','Sophy','Assistente contextual'],['auditoria','Auditoria','Integridade dos dados'],['config','Configurações','Preferências do aplicativo']]}
   ];
   function ensureStyles(){if(document.getElementById(STYLE_ID))return;const style=document.createElement('style');style.id=STYLE_ID;style.textContent=`

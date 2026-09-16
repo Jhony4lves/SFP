@@ -26,3 +26,11 @@ test('mobile mantém a barra prioritária de 5 itens e oferece Sincronização p
   expect(source).toContain('<strong>Sincronização</strong><small>Open Finance e atualização de dados</small>');
   expect(source).toContain("more.addEventListener('click',()=>queueMicrotask(appendMoreMenuEntry));");
 });
+
+test('menu Mais mobile tem um único dono e o V2 expõe Sincronização',()=>{
+  const safeSpend=fs.readFileSync(path.resolve(__dirname,'../app/src/main/assets/www/safe-spend-ui.js'),'utf8');
+  const insights=fs.readFileSync(path.resolve(__dirname,'../app/src/main/assets/www/financial-insights-ui.js'),'utf8');
+  expect(safeSpend).not.toContain('sfpMobilePriorityNavV1');
+  expect(insights).toContain("const STYLE_ID='sfpMobilePriorityNavV2';");
+  expect((insights.match(/\['openfinance','Sincronização','Open Finance e atualização de dados'\]/g)||[]).length).toBe(1);
+});
