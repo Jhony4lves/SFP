@@ -141,9 +141,9 @@ jobs:
                   ;;
 
                 .github/workflows/qa.yml)
-                  # Mudança no próprio seletor: validação manual/completa é mais segura.
-                  full=true
-                  static=true
+                  # Alterar o seletor não deve fazê-lo cair automaticamente em QA web completo.
+                  # O próprio Actions valida a sintaxe do workflow; o comportamento web só é
+                  # testado quando algum arquivo funcional do app também é afetado.
                   ;;
               esac
             done <<< "${changed_files}"
@@ -175,7 +175,13 @@ jobs:
           echo "sophy_benchmark=${sophy_benchmark}" >> "$GITHUB_OUTPUT"
 
           echo "=== PLANO DE QA ==="
-          echo "mode=${full:+full}"
+          if [ "${full}" = true ]; then
+            echo "mode=full"
+          elif [ "${#tests[@]}" -gt 0 ]; then
+            echo "mode=impacted"
+          else
+            echo "mode=none"
+          fi
           echo "static=${static}"
           echo "invoice_pdf=${invoice_pdf}"
           echo "invoice_image=${invoice_image}"
