@@ -15,19 +15,220 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: npm
+
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:static
-      - run: npm run test:invoice-pdf
-      - run: npm run test:invoice-image
-      - run: npm run test:sophy-arch
-      - run: npm run test:sophy-benchmark
-      - run: npm run test:financial
-      - run: npm run test:qa
+
+      - name: Select impacted web QA
+        id: qa
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          declare -A tests=()
+          full=false
+          static=false
+          invoice_pdf=false
+          invoice_image=false
+          sophy_arch=false
+          sophy_benchmark=false
+
+          add_glob() {
+            local pattern="$1"
+            local match
+            for match in $pattern; do
+              tests["$match"]=1
+            done
+          }
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] || [ -z "${BASE_SHA:-}" ] || [ "${BASE_SHA}" = "0000000000000000000000000000000000000000" ]; then
+            full=true
+            static=true
+            invoice_pdf=true
+            invoice_image=true
+            sophy_arch=true
+            sophy_benchmark=true
+            changed_files="manual/full QA"
+          else
+            git fetch --no-tags origin "${BASE_SHA}" || true
+            changed_files="$(git diff --name-only "${BASE_SHA}" "${GITHUB_SHA}")"
+
+            echo "=== ARQUIVOS ALTERADOS ==="
+            printf '%s\n' "${changed_files}"
+
+            while IFS= read -r file; do
+              [ -z "${file}" ] && continue
+
+              case "${file}" in
+                qa/*.spec.js)
+                  tests["${file}"]=1
+                  ;;
+
+                app/src/main/assets/www/open-finance-*.js)
+                  static=true
+                  add_glob 'qa/open-finance*.spec.js'
+                  ;;
+
+                app/src/main/assets/www/safe-spend*.js)
+                  static=true
+                  add_glob 'qa/safe-spend*.spec.js'
+                  tests["qa/financial.spec.js"]=1
+                  ;;
+
+                app/src/main/assets/www/invoice-pdf-engine.js|app/src/main/assets/www/invoice-manual-reconciliation.js)
+                  static=true
+                  invoice_pdf=true
+                  add_glob 'qa/*invoice*.spec.js'
+                  ;;
+
+                app/src/main/assets/www/invoice-image-engine.js)
+                  static=true
+                  invoice_image=true
+                  add_glob 'qa/*invoice*.spec.js'
+                  ;;
+
+                app/src/main/assets/www/sophy-*.js)
+                  static=true
+                  sophy_arch=true
+                  sophy_benchmark=true
+                  add_glob 'qa/sophy*.spec.js'
+                  ;;
+
+                app/src/main/assets/www/financial-*.js|app/src/main/assets/www/what-if-engine.js)
+                  static=true
+                  tests["qa/financial.spec.js"]=1
+                  add_glob 'qa/*financial*.spec.js'
+                  add_glob 'qa/account-integrity.spec.js'
+                  add_glob 'qa/budget-integrity.spec.js'
+                  add_glob 'qa/card-integrity.spec.js'
+                  add_glob 'qa/debt*.spec.js'
+                  ;;
+
+                app/src/main/assets/www/ui-hardening.js|app/src/main/assets/www/ui-hardening.css)
+                  static=true
+                  add_glob 'qa/*ui*.spec.js'
+                  add_glob 'qa/*ux*.spec.js'
+                  add_glob 'qa/*a11y*.spec.js'
+                  add_glob 'qa/contrast*.spec.js'
+                  ;;
+
+                app/src/main/assets/www/index.html|playwright.config.js|qa/helpers.js|qa/helpers.mjs|qa/env-setup.js|package.json|package-lock.json)
+                  full=true
+                  static=true
+                  ;;
+
+                docs/*|*.md|gradle.properties)
+                  # Não afeta o comportamento web.
+                  ;;
+
+                app/src/main/java/*|app/src/main/AndroidManifest.xml|app/build.gradle*|build.gradle*|settings.gradle*)
+                  # Coberto pelo job Android; não força Playwright.
+                  ;;
+
+                app/src/main/assets/www/*.js|app/src/main/assets/www/*.css)
+                  # Arquivo de produção sem regra específica: segurança primeiro.
+                  full=true
+                  static=true
+                  ;;
+
+                .github/workflows/qa.yml)
+                  # Mudança no próprio seletor: validação manual/completa é mais segura.
+                  full=true
+                  static=true
+                  ;;
+              esac
+            done <<< "${changed_files}"
+          fi
+
+          if [ "${full}" = true ]; then
+            echo "mode=full" >> "$GITHUB_OUTPUT"
+            echo "browser_required=true" >> "$GITHUB_OUTPUT"
+            echo "tests=__FULL__" >> "$GITHUB_OUTPUT"
+          else
+            if [ "${#tests[@]}" -gt 0 ]; then
+              mapfile -t sorted_tests < <(printf '%s\n' "${!tests[@]}" | sort)
+              printf -v joined '%s ' "${sorted_tests[@]}"
+              joined="${joined% }"
+              echo "browser_required=true" >> "$GITHUB_OUTPUT"
+              echo "tests=${joined}" >> "$GITHUB_OUTPUT"
+              echo "mode=impacted" >> "$GITHUB_OUTPUT"
+            else
+              echo "browser_required=false" >> "$GITHUB_OUTPUT"
+              echo "tests=" >> "$GITHUB_OUTPUT"
+              echo "mode=none" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+          echo "static=${static}" >> "$GITHUB_OUTPUT"
+          echo "invoice_pdf=${invoice_pdf}" >> "$GITHUB_OUTPUT"
+          echo "invoice_image=${invoice_image}" >> "$GITHUB_OUTPUT"
+          echo "sophy_arch=${sophy_arch}" >> "$GITHUB_OUTPUT"
+          echo "sophy_benchmark=${sophy_benchmark}" >> "$GITHUB_OUTPUT"
+
+          echo "=== PLANO DE QA ==="
+          echo "mode=${full:+full}"
+          echo "static=${static}"
+          echo "invoice_pdf=${invoice_pdf}"
+          echo "invoice_image=${invoice_image}"
+          echo "sophy_arch=${sophy_arch}"
+          echo "sophy_benchmark=${sophy_benchmark}"
+          if [ "${full}" = false ] && [ "${#tests[@]}" -gt 0 ]; then
+            printf 'playwright=%s\n' "${!tests[@]}" | sort
+          fi
+
+      - name: Install Chromium for impacted Playwright tests
+        if: steps.qa.outputs.browser_required == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Static checks
+        if: steps.qa.outputs.static == 'true'
+        run: npm run test:static
+
+      - name: Invoice PDF engine
+        if: steps.qa.outputs.invoice_pdf == 'true'
+        run: npm run test:invoice-pdf
+
+      - name: Invoice image engine
+        if: steps.qa.outputs.invoice_image == 'true'
+        run: npm run test:invoice-image
+
+      - name: Sophy architecture
+        if: steps.qa.outputs.sophy_arch == 'true'
+        run: npm run test:sophy-arch
+
+      - name: Sophy benchmark
+        if: steps.qa.outputs.sophy_benchmark == 'true'
+        run: npm run test:sophy-benchmark
+
+      - name: Run full Playwright QA
+        if: steps.qa.outputs.mode == 'full'
+        run: npm run test:qa
+
+      - name: Run impacted Playwright QA
+        if: steps.qa.outputs.mode == 'impacted'
+        shell: bash
+        env:
+          IMPACTED_TESTS: ${{ steps.qa.outputs.tests }}
+        run: |
+          set -euo pipefail
+          read -r -a tests <<< "$IMPACTED_TESTS"
+          echo "Executando ${#tests[@]} arquivo(s) de teste impactado(s):"
+          printf ' - %s\n' "${tests[@]}"
+          npx playwright test "${tests[@]}"
+
+      - name: No web QA required
+        if: steps.qa.outputs.mode == 'none'
+        run: echo "Nenhum teste web foi afetado por esta alteração."
+
       - if: always()
         uses: actions/upload-artifact@v6
         with:
