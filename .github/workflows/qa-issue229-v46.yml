@@ -1,0 +1,22 @@
+name: Targeted issue 229 QA
+
+on:
+  push:
+    branches:
+      - fix/openfinance-transfer-retroactive-ui-229
+
+jobs:
+  issue229:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Static checks
+        run: npm run test:static
+      - name: Run only affected Open Finance QA
+        run: npx playwright test qa/open-finance-unified-sync.spec.js --reporter=line
