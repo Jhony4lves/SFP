@@ -113,6 +113,11 @@ jobs:
                   add_glob 'qa/debt*.spec.js'
                   ;;
 
+                app/src/main/assets/www/audit-hardening.js)
+                  static=true
+                  add_glob 'qa/audit*.spec.js'
+                  ;;
+
                 app/src/main/assets/www/ui-hardening.js|app/src/main/assets/www/ui-hardening.css)
                   static=true
                   add_glob 'qa/*ui*.spec.js'
