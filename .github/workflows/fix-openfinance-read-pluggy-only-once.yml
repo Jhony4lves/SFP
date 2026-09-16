@@ -1,0 +1,44 @@
+name: Fix Open Finance read Pluggy only once
+
+on:
+  push:
+    branches: ["fix/openfinance-read-pluggy-only"]
+    paths: [".github/workflows/fix-openfinance-read-pluggy-only-once.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  fix-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Apply read-only Pluggy synchronization fix
+        run: python3 qa/tmp-fix-openfinance-read-pluggy-only.py
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Static checks
+        run: node qa/static-check.mjs
+
+      - name: Test affected Open Finance flow only
+        run: npx playwright test qa/open-finance-real-refresh.spec.js qa/open-finance-unified-sync.spec.js qa/open-finance-auto-sync-contract.spec.js qa/open-finance-refresh-diagnostic-v2.spec.js
+
+      - name: Commit validated fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Jhony4lves"
+          git config user.email "jhonyr.rocha@gmail.com"
+          rm .github/workflows/fix-openfinance-read-pluggy-only-once.yml qa/tmp-fix-openfinance-read-pluggy-only.py
+          git add app/src/main/assets/www/open-finance-real-refresh.js qa/open-finance-real-refresh.spec.js .github/workflows/fix-openfinance-read-pluggy-only-once.yml qa/tmp-fix-openfinance-read-pluggy-only.py
+          git commit -m "fix(openfinance): sincronizar lendo snapshot da Pluggy"
+          git push origin HEAD:fix/openfinance-read-pluggy-only
