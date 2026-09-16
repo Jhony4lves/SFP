@@ -10,15 +10,15 @@ permissions:
 
 jobs:
   patch:
+    if: github.event.head_commit.message != 'openfinance-card-map-applied'
     runs-on: ubuntu-latest
-    if: ${{ github.event.head_commit.message != 'fix(open-finance): map generic cards safely' }}
     steps:
       - uses: actions/checkout@v5
         with:
           ref: feat/openfinance-auto-sync-navigation-226
           fetch-depth: 0
 
-      - name: Apply focused mapping fix and regression QA
+      - name: Apply focused card mapping fix
         shell: bash
         run: |
           set -euo pipefail
@@ -50,6 +50,8 @@ jobs:
             return common>=2?4:common===1?2:0;
           }
 
+          function sameEntityId(a,b){return String(a??'')!==''&&String(a??'')===String(b??'');}
+
           function priorCardByOpenFinanceAccount(account,list){
             const accountId=cleanText(account?.id);if(!accountId)return null;
             const ids=new Set((Array.isArray(global.state?.purchases)?global.state.purchases:[])
@@ -65,15 +67,14 @@ jobs:
             return payAccount?entityScore(itemName,payAccount?.name):0;
           }
 
-          function sameEntityId(a,b){return String(a??'')===String(b??'')&&String(a??'')!=='';}
-
           function lastFourScore(account,entity){
-            const lastFour=cleanText(account?.lastFour).replace(/\\D/g,'').slice(-4);
+            const lastFour=cleanText(account?.lastFour).replace(/\D/g,'').slice(-4);
             if(lastFour.length!==4)return 0;
-            const explicit=[entity?.lastFour,entity?.number].map(cleanText).some(value=>value.replace(/\\D/g,'').slice(-4)===lastFour);
+            const explicit=[entity?.lastFour,entity?.number].map(cleanText)
+              .some(value=>value.replace(/\D/g,'').slice(-4)===lastFour);
             if(explicit)return 8;
-            const name=cleanText(entity?.name);
-            return new RegExp(`(^|\\\\D)${lastFour}(\\\\D|$)`).test(name)?7:0;
+            const nameMatches=cleanText(entity?.name).match(/\d{4}(?!\d)/g)||[];
+            return nameMatches.includes(lastFour)?7:0;
           }
 
           function suggestSfpEntity(account,itemName){
@@ -123,7 +124,7 @@ jobs:
             await expectBootComplete(page, expect, value.settings.name);
           }
 
-          test('OPEN-FINANCE-CARD-MAP-01 mapeia Platinum da Nu Pagamentos sem depender do nome Nubank no cartão', async ({ page }) => {
+          test('OPEN-FINANCE-CARD-MAP-01 mapeia Platinum da Nu Pagamentos pelo nome e pela conta pagadora', async ({ page }) => {
             const errors = monitor(page);
             const value = fixture('Open Finance Platinum mapping');
             value.accounts = [
@@ -151,7 +152,7 @@ jobs:
             expect(errors).toEqual([]);
           });
 
-          test('OPEN-FINANCE-CARD-MAP-02 mantém sem vínculo quando dois cartões da mesma instituição empatam', async ({ page }) => {
+          test('OPEN-FINANCE-CARD-MAP-02 não chuta quando dois cartões da mesma instituição empatam', async ({ page }) => {
             const errors = monitor(page);
             const value = fixture('Open Finance ambiguous mapping');
             value.accounts = [{ id: 1, name: 'Nubank', type: 'Conta corrente', initial: 0 }];
@@ -195,11 +196,11 @@ jobs:
 
           props = Path('gradle.properties')
           p = props.read_text(encoding='utf-8')
+          if 'SFP_VERSION_CODE=44' not in p or 'SFP_VERSION_NAME=2.2.0-openfinance.25' not in p:
+              raise SystemExit('Unexpected Android version; refusing blind version edit')
           p = p.replace('SFP_VERSION_CODE=44','SFP_VERSION_CODE=45',1)
           p = p.replace('SFP_VERSION_NAME=2.2.0-openfinance.25','SFP_VERSION_NAME=2.2.0-openfinance.26',1)
           props.write_text(p,encoding='utf-8')
-
-          Path('.github/workflows/fix-openfinance-card-mapping-once.yml').unlink()
           PY
 
       - name: Commit focused fix
@@ -208,7 +209,7 @@ jobs:
           set -euo pipefail
           git config user.name 'SFP QA Bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add app/src/main/assets/www/open-finance-personal.js qa/open-finance-card-mapping.spec.js gradle.properties .github/workflows/fix-openfinance-card-mapping-once.yml
+          git add app/src/main/assets/www/open-finance-personal.js qa/open-finance-card-mapping.spec.js gradle.properties
           git diff --cached --check
-          git commit -m 'fix(open-finance): map generic cards safely'
+          git commit -m 'openfinance-card-map-applied'
           git push origin HEAD:feat/openfinance-auto-sync-navigation-226
