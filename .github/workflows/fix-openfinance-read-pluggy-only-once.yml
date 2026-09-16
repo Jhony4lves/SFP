@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0
 
       - name: Apply read-only Pluggy synchronization fix
-        run: python3 qa/tmp-fix-openfinance-read-pluggy-only.py
+        run: python3 qa/tmp-fix-openfinance-read-pluggy-only-v2.py
 
       - uses: actions/setup-node@v5
         with:
@@ -38,7 +38,7 @@ jobs:
           set -euo pipefail
           git config user.name "Jhony4lves"
           git config user.email "jhonyr.rocha@gmail.com"
-          rm .github/workflows/fix-openfinance-read-pluggy-only-once.yml qa/tmp-fix-openfinance-read-pluggy-only.py
-          git add app/src/main/assets/www/open-finance-real-refresh.js qa/open-finance-real-refresh.spec.js .github/workflows/fix-openfinance-read-pluggy-only-once.yml qa/tmp-fix-openfinance-read-pluggy-only.py
+          rm .github/workflows/fix-openfinance-read-pluggy-only-once.yml qa/tmp-fix-openfinance-read-pluggy-only.py qa/tmp-fix-openfinance-read-pluggy-only-v2.py
+          git add app/src/main/assets/www/open-finance-real-refresh.js qa/open-finance-real-refresh.spec.js qa/open-finance-unified-sync.spec.js .github/workflows/fix-openfinance-read-pluggy-only-once.yml qa/tmp-fix-openfinance-read-pluggy-only.py qa/tmp-fix-openfinance-read-pluggy-only-v2.py
           git commit -m "fix(openfinance): sincronizar lendo snapshot da Pluggy"
           git push origin HEAD:fix/openfinance-read-pluggy-only
