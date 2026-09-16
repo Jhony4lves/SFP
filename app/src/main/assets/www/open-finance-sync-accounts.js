@@ -89,6 +89,11 @@
     return !anchor||dateOnly(date)>anchor;
   }
 
+  function candidateBalanceImpact(candidate){
+    if(candidate?.existingRecord&&typeof candidate.existingRecord.balanceImpact==='boolean')return candidate.existingRecord.balanceImpact;
+    return balanceImpactFor(candidate?.entity,candidate?.date);
+  }
+
   function exactBankRecord(entity,transaction){
     const key=externalKey(transaction);if(!key)return null;
     return (global.state?.transactions||[]).find(entry=>sameId(entry?.accountId,entity?.id)&&hasExternalKey(entry,key))||null;
@@ -146,8 +151,8 @@
   function buildTransfer(expense,income){
     const keys=[externalKey(expense.transaction),externalKey(income.transaction)].filter(Boolean);
     const byAccount={};
-    byAccount[expense.entity.id]=balanceImpactFor(expense.entity,expense.date);
-    byAccount[income.entity.id]=balanceImpactFor(income.entity,income.date);
+    byAccount[expense.entity.id]=candidateBalanceImpact(expense);
+    byAccount[income.entity.id]=candidateBalanceImpact(income);
     return{
       id:typeof global.uid==='function'?global.uid():Date.now()+Math.floor(Math.random()*1000),
       desc:clean(expense.transaction?.description)||clean(income.transaction?.description)||'Transferência Open Finance',
@@ -190,7 +195,7 @@
 
   function planBankSync(result){
     const api=global.SFPOpenFinancePersonal;
-    const plan={create:[],link:[],transferCreate:[],transferLink:[],already:0,pending:0,review:0,unmapped:0,partial:0,errors:0,bankAccounts:0};
+    const plan={create:[],link:[],transferCreate:[],transferLink:[],transferCleanup:[],already:0,pending:0,review:0,unmapped:0,partial:0,errors:0,bankAccounts:0};
     const raw=[];
 
     for(const item of Array.isArray(result?.items)?result.items:[]){
@@ -211,11 +216,16 @@
           if(kind!=='expense'&&kind!=='income'){plan.review++;continue;}
           if(kind==='expense'&&isCardPaymentDescription(transaction?.description)){plan.review++;continue;}
 
+          const candidate={account,item,entity:suggestion.entity,transaction,kind,date:dateOnly(transaction?.date),amount};
           const exact=exactBankRecord(suggestion.entity,transaction);
-          if(exact){plan.already++;continue;}
+          if(exact){
+            if(transferSignal(transaction?.description)||transferSignal(exact?.desc))raw.push({...candidate,existingRecord:exact});
+            else plan.already++;
+            continue;
+          }
           const heuristic=api?.likelyExisting?.(account,transaction,suggestion);
           if(heuristic?.record){plan.link.push({record:heuristic.record,account,item,transaction});continue;}
-          raw.push({account,item,entity:suggestion.entity,transaction,kind,date:dateOnly(transaction?.date),amount});
+          raw.push(candidate);
         }
       }
     }
@@ -224,12 +234,19 @@
     for(const pair of paired.pairs){
       const keys=[externalKey(pair.expense.transaction),externalKey(pair.income.transaction)].filter(Boolean);
       const exact=exactTransferRecord(keys);
-      if(exact){plan.already++;continue;}
+      if(exact){
+        plan.already++;
+        if(pair.expense.existingRecord||pair.income.existingRecord)plan.transferCleanup.push({record:exact,pair});
+        continue;
+      }
       const heuristic=heuristicTransferRecord(pair.expense,pair.income);
       if(heuristic){plan.transferLink.push({record:heuristic,pair});continue;}
       plan.transferCreate.push(pair);
     }
-    plan.create=paired.remaining;
+    for(const candidate of paired.remaining){
+      if(candidate.existingRecord)plan.already++;
+      else plan.create.push(candidate);
+    }
     return plan;
   }
 
@@ -300,18 +317,33 @@
     return{created,linked};
   }
 
+  function removeStandaloneTransferLegs(pair){
+    const records=[pair?.expense?.existingRecord,pair?.income?.existingRecord].filter(Boolean);
+    let removed=0;
+    for(const record of records){
+      const index=(global.state?.transactions||[]).indexOf(record);
+      if(index>=0){global.state.transactions.splice(index,1);removed++;}
+    }
+    return removed;
+  }
+
   function applyBankPlan(bank){
-    let linked=0,created=0,transfers=0;
+    let linked=0,created=0,transfers=0,cleaned=0;
     for(const row of bank.link){if(markLinked(row.record,row.account,row.item,row.transaction))linked++}
+    for(const row of bank.transferCleanup||[]){cleaned+=removeStandaloneTransferLegs(row.pair)}
     for(const row of bank.transferLink){
       const {record,pair}=row;
       const first=markLinked(record,pair.expense.account,pair.expense.item,pair.expense.transaction);
       const second=markLinked(record,pair.income.account,pair.income.item,pair.income.transaction);
+      cleaned+=removeStandaloneTransferLegs(pair);
       if(first||second)linked++;
     }
     for(const candidate of bank.create){global.state.transactions.push(buildBankTransaction(candidate));created++}
-    for(const pair of bank.transferCreate){global.state.transfers.push(buildTransfer(pair.expense,pair.income));transfers++}
-    return{created,linked,transfers};
+    for(const pair of bank.transferCreate){
+      cleaned+=removeStandaloneTransferLegs(pair);
+      global.state.transfers.push(buildTransfer(pair.expense,pair.income));transfers++;
+    }
+    return{created,linked,transfers,cleaned};
   }
 
   function mutedPreview(){
@@ -353,7 +385,7 @@
       try{
         const cardApplied=applyCardPlan(card);
         const bankApplied=applyBankPlan(bank);
-        const mutations=cardApplied.created+cardApplied.linked+bankApplied.created+bankApplied.linked+bankApplied.transfers;
+        const mutations=cardApplied.created+cardApplied.linked+bankApplied.created+bankApplied.linked+bankApplied.transfers+bankApplied.cleaned;
         if(mutations){
           if(typeof global.save!=='function')throw new Error('Persistência do SFP indisponível.');
           await global.save('Sincronizar Open Finance');
@@ -365,6 +397,7 @@
           `${bankApplied.transfers} transferência(s) conciliada(s)`,
           `${cardApplied.linked+bankApplied.linked} registro(s) vinculado(s) sem duplicar`
         ];
+        if(bankApplied.cleaned)detail.push(`${bankApplied.cleaned} ponta(s) isolada(s) promovida(s) para transferência`);
         if(card.pending+bank.pending)detail.push(`${card.pending+bank.pending} pendente(s) aguardando confirmação`);
         if(card.review+bank.review)detail.push(`${card.review+bank.review} item(ns) mantido(s) em revisão`);
         if(card.unmapped+bank.unmapped)detail.push(`${card.unmapped+bank.unmapped} conta(s)/cartão(ões) sem vínculo seguro`);
@@ -376,7 +409,7 @@
         setStatus(unmapped||bank.partial?'warning':'success',title,detail.join(' • '));
         const added=cardApplied.created+bankApplied.created+bankApplied.transfers;
         if(added)notify(`${added} novo(s) registro(s) adicionado(s) pelo Open Finance.`,'success');
-        else if(cardApplied.linked+bankApplied.linked)notify('Dados conciliados sem criar duplicatas.','success');
+        else if(cardApplied.linked+bankApplied.linked||bankApplied.cleaned)notify('Dados conciliados sem criar duplicatas.','success');
         else if(unmapped)notify('Cadastre as contas e cartões no SFP e confira os vínculos antes de sincronizar.','warning');
         else notify(bank.partial?'Nada novo entre as transações recebidas; a cobertura bancária ainda é parcial.':'Tudo já estava sincronizado.',bank.partial?'info':'success');
         return{ok:true,card,bank,cardApplied,bankApplied};
