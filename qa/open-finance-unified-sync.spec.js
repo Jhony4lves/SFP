@@ -251,6 +251,7 @@ test('Sincronização mantém instituições e transações recolhidas por padr�
   await expect(institution).toBeVisible();
   expect(await institution.evaluate(node => node.open)).toBe(false);
   await institution.locator(':scope > summary').click();
+  await expect.poll(() => institution.evaluate(node => node.open)).toBe(true);
 
   const txDetails = institution.locator('details[data-open-finance-transactions]').first();
   await expect(txDetails).toBeVisible();

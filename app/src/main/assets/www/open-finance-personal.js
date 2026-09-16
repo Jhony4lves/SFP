@@ -415,6 +415,8 @@ function suggestSfpEntity(account,itemName){
   function renderPreview(result){
     const root=$('openFinancePreview');
     if(!root)return;
+    const openItems=new Set(Array.from(root.querySelectorAll('details[data-open-finance-item][open]'))
+      .map(node=>cleanText(node.dataset.openFinanceKey)).filter(Boolean));
     root.replaceChildren();
 
     const items=Array.isArray(result?.items)?result.items:[];
@@ -433,14 +435,16 @@ function suggestSfpEntity(account,itemName){
       accountCount+=accounts.length;
       transactionCount+=accounts.reduce((sum,account)=>sum+(Array.isArray(account?.transactions)?account.transactions.length:0),0);
       const name=itemDisplayName(item);
+      const itemKey=cleanText(item?.id)||normalize(name);
       const needsAttention=Boolean(item?.accountsError)||accounts.some(account=>
         account?.transactionsError||account?.transactionPreviewHasMore||!suggestSfpEntity(account,name)
       );
 
       const section=document.createElement('details');
       section.dataset.openFinanceItem='1';
+      section.dataset.openFinanceKey=itemKey;
       section.style.marginTop='10px';
-      section.open=needsAttention;
+      section.open=needsAttention||openItems.has(itemKey);
 
       const heading=document.createElement('summary');
       heading.className='item';
