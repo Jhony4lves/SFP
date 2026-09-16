@@ -23,6 +23,15 @@ if anchor not in spec_text:
 if 'clippedLabels' not in spec_text:
     spec.write_text(spec_text.replace(anchor, extra, 1), encoding='utf-8')
 
+unified = Path('qa/open-finance-unified-sync.spec.js')
+unified_text = unified.read_text(encoding='utf-8')
+old_label = "await expect(page.locator('#openFinanceSyncBtn')).toHaveText('Sincronizar contas e faturas');"
+new_label = "await expect(page.locator('#openFinanceSyncBtn')).toHaveText('Atualizar dados agora');"
+if old_label not in unified_text and new_label not in unified_text:
+    raise SystemExit('Expectativa do botão Open Finance não encontrada')
+if old_label in unified_text:
+    unified.write_text(unified_text.replace(old_label, new_label), encoding='utf-8')
+
 gradle = Path('gradle.properties')
 props = gradle.read_text(encoding='utf-8')
 if 'SFP_VERSION_CODE=44' not in props or 'SFP_VERSION_NAME=2.2.0-openfinance.25' not in props:
