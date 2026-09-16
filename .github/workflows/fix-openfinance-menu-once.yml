@@ -22,83 +22,33 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Consolidate mobile More menu into one owner
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          # 1) Remove the legacy V1 menu from safe-spend-ui.js entirely.
-          safe = Path('app/src/main/assets/www/safe-spend-ui.js')
-          safe_text = safe.read_text(encoding='utf-8')
-          marker = "\n(function(global){\n  'use strict';\n\n  const STYLE_ID='sfpMobilePriorityNavV1';"
-          if marker not in safe_text:
-              raise SystemExit('Menu V1 não encontrado; abortando para não remover código errado.')
-          safe_text = safe_text.split(marker, 1)[0].rstrip() + '\n'
-          if 'sfpMobilePriorityNavV1' in safe_text:
-              raise SystemExit('Menu V1 ainda presente após consolidação.')
-          safe.write_text(safe_text, encoding='utf-8')
-
-          # 2) Make V2 the canonical/only More menu and include Open Finance there.
-          menu = Path('app/src/main/assets/www/financial-insights-ui.js')
-          menu_text = menu.read_text(encoding='utf-8')
-          old = "{title:'Dados',items:[['lancamentos','Lançamentos','Histórico e edição'],['extratos','Extratos','Importação OFX e CSV'],['dados','Central de Dados','Backup, importação e exportação']]},"
-          new = "{title:'Dados',items:[['lancamentos','Lançamentos','Histórico e edição'],['extratos','Extratos','Importação OFX e CSV'],['dados','Central de Dados','Backup, importação e exportação'],['openfinance','Sincronização','Open Finance e atualização de dados']]},"
-          if old not in menu_text:
-              raise SystemExit('Construtor V2 esperado não encontrado; abortando sem alteração cega.')
-          menu_text = menu_text.replace(old, new, 1)
-          if menu_text.count("['openfinance','Sincronização','Open Finance e atualização de dados']") != 1:
-              raise SystemExit('O menu canônico não ficou com exatamente uma entrada de Sincronização.')
-          menu.write_text(menu_text, encoding='utf-8')
-
-          # 3) Regression contract: there must be one mobile menu owner only.
-          spec = Path('qa/open-finance-auto-sync-contract.spec.js')
-          spec_text = spec.read_text(encoding='utf-8')
-          guard = """
-
-test('menu Mais mobile tem um único dono e o V2 expõe Sincronização',()=>{
-  const safeSpend=fs.readFileSync(path.resolve(__dirname,'../app/src/main/assets/www/safe-spend-ui.js'),'utf8');
-  const insights=fs.readFileSync(path.resolve(__dirname,'../app/src/main/assets/www/financial-insights-ui.js'),'utf8');
-  expect(safeSpend).not.toContain('sfpMobilePriorityNavV1');
-  expect(insights).toContain("const STYLE_ID='sfpMobilePriorityNavV2';");
-  expect((insights.match(/\['openfinance','Sincronização','Open Finance e atualização de dados'\]/g)||[]).length).toBe(1);
-});
-"""
-          if "menu Mais mobile tem um único dono" not in spec_text:
-              spec_text = spec_text.rstrip() + guard
-              spec.write_text(spec_text, encoding='utf-8')
-
-          # 4) Bump installable candidate version monotonically.
-          gradle = Path('gradle.properties')
-          props = gradle.read_text(encoding='utf-8')
-          if 'SFP_VERSION_CODE=43' not in props or 'SFP_VERSION_NAME=2.2.0-openfinance.24' not in props:
-              raise SystemExit('Versão base inesperada; abortando bump automático.')
-          props = props.replace('SFP_VERSION_CODE=43', 'SFP_VERSION_CODE=44', 1)
-          props = props.replace('SFP_VERSION_NAME=2.2.0-openfinance.24', 'SFP_VERSION_NAME=2.2.0-openfinance.25', 1)
-          gradle.write_text(props, encoding='utf-8')
-          PY
+      - name: Consolidate mobile More menu
+        run: python3 qa/fix-menu-once.py
 
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: npm
+
       - run: npm ci
       - run: npx playwright install --with-deps chromium
 
-      - name: Test only impacted navigation and Open Finance behavior
+      - name: Test impacted navigation and Open Finance behavior
         run: npx playwright test qa/open-finance-mobile-navigation.spec.js qa/open-finance-auto-sync-contract.spec.js qa/open-finance-real-refresh.spec.js qa/rebrand-v1.spec.js
 
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
+
       - uses: android-actions/setup-android@v4
         with:
           packages: ''
+
       - uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: "8.11.1"
+
       - run: yes | sdkmanager --licenses >/dev/null || true
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
@@ -107,7 +57,7 @@ test('menu Mais mobile tem um único dono e o V2 expõe Sincronização',()=>{
         run: |
           set -euo pipefail
           for var in SFP_KEYSTORE_BASE64 SFP_KEYSTORE_PASSWORD SFP_KEY_ALIAS SFP_KEY_PASSWORD; do
-            test -n "${!var:-}" || { echo "::error::$var ausente"; exit 1; }
+            test -n "${!var:-}" || exit 1
           done
           printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-qa.jks"
           echo "SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-qa.jks" >> "$GITHUB_ENV"
@@ -115,13 +65,13 @@ test('menu Mais mobile tem um único dono e o V2 expõe Sincronização',()=>{
       - name: Build release APK
         run: gradle :app:testDebugUnitTest :app:assembleRelease
 
-      - name: Commit consolidation and remove one-shot workflow
+      - name: Commit consolidation
         shell: bash
         run: |
-          rm .github/workflows/fix-openfinance-menu-once.yml
+          rm .github/workflows/fix-openfinance-menu-once.yml qa/fix-menu-once.py
           git config user.name "Jhony4lves"
           git config user.email "jhonyr.rocha@gmail.com"
-          git add app/src/main/assets/www/safe-spend-ui.js app/src/main/assets/www/financial-insights-ui.js qa/open-finance-auto-sync-contract.spec.js gradle.properties .github/workflows/fix-openfinance-menu-once.yml
+          git add -A
           git commit -m "fix(nav): manter um único menu Mais no mobile"
           git push origin HEAD:feat/openfinance-auto-sync-navigation-226
 
