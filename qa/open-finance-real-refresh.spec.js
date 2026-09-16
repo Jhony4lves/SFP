@@ -73,7 +73,7 @@ test('abertura relê snapshot automaticamente sem disparar refresh/PATCH',async(
   expect(calls.status).toBe(0);
 });
 
-test('Atualizar dados solicita refresh da instituição antes de reler a Pluggy',async({page})=>{
+test('Atualizar dados relê a Pluggy sem solicitar refresh da instituição',async({page})=>{
   await boot(page);
   const before=await page.evaluate(()=>({...window.__sfpRefreshCalls}));
   const button=page.locator('#openFinanceSyncBtn');
@@ -82,109 +82,51 @@ test('Atualizar dados solicita refresh da instituição antes de reler a Pluggy'
 
   await button.click();
 
-  await page.waitForFunction(beforePreview=>window.__sfpRefreshCalls.refresh===1&&window.__sfpRefreshCalls.status>=1&&window.__sfpRefreshCalls.preview>beforePreview,before.preview);
+  await page.waitForFunction(beforePreview=>window.__sfpRefreshCalls.preview>beforePreview,before.preview);
   const after=await page.evaluate(()=>({...window.__sfpRefreshCalls}));
-  expect(after.refresh).toBe(1);
-  expect(after.status).toBeGreaterThanOrEqual(1);
+  expect(after.refresh).toBe(0);
+  expect(after.status).toBe(0);
   expect(after.preview).toBeGreaterThan(before.preview);
-  await expect(page.locator('#openFinancePreview')).toContainText('Dados atualizados diretamente da instituição');
+  const diagnostic=await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic());
+  expect(diagnostic.outcome).toBe('completed');
+  expect(diagnostic.request).toMatchObject({ok:true,source:'pluggy',mode:'read-only'});
+  await expect(page.locator('#openFinancePreview')).toContainText('Dados mais recentes disponíveis na Pluggy foram aplicados ao SFP');
 });
 
-test('Items MeuPluggy são tratados como limitação do provedor e relidos sem erro genérico',async({page})=>{
+test('sincronização manual continua funcionando mesmo se refresh/PATCH do provedor estiver proibido',async({page})=>{
   await boot(page);
   await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
-    refreshItems:()=>{window.__sfpRefreshCalls.refresh++;return JSON.stringify({ok:false,requested:3,started:0,items:[
-      {accepted:false,status:400,code:'REFRESH_NEEDS_ATTENTION',providerMessage:'MeuPluggy item cant be updated'},
-      {accepted:false,status:400,code:'REFRESH_NEEDS_ATTENTION',providerMessage:'MeuPluggy item cant be updated'},
-      {accepted:false,status:400,code:'REFRESH_NEEDS_ATTENTION',providerMessage:'MeuPluggy item cant be updated'}
-    ]});}
+    refreshItems:()=>{throw new Error('refreshItems não deveria ser chamado');},
+    refreshStatus:()=>{throw new Error('refreshStatus não deveria ser chamado');}
   }}));
-  const beforePreview=await page.evaluate(()=>window.__sfpRefreshCalls.preview);
+  const before=await page.evaluate(()=>window.__sfpRefreshCalls.preview);
   await page.locator('#openFinanceSyncBtn').click();
-  await page.waitForFunction(before=>window.__sfpRefreshCalls.preview>before,beforePreview);
-  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('provider-managed');
-  await expect(page.locator('#openFinancePreview')).toContainText('MeuPluggy gerencia a atualização bancária');
-  expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(1);
+  await page.waitForFunction(beforePreview=>window.__sfpRefreshCalls.preview>beforePreview,before);
+  expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(0);
+  expect(await page.evaluate(()=>window.__sfpRefreshCalls.status)).toBe(0);
+  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('completed');
 });
 
-test('refresh bloqueado não dispara segundo PATCH e preserva leitura disponível',async({page})=>{
-  await boot(page);
-  await page.evaluate(()=>{
-    Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
-      refreshItems:()=>{window.__sfpRefreshCalls.refresh++;return JSON.stringify({ok:false,requested:1,started:0,message:'rate limit',items:[{id:'item-1',accepted:false,status:429,code:'REFRESH_RATE_LIMITED'}]});},
-      refreshStatus:()=>{window.__sfpRefreshCalls.status++;return JSON.stringify({ok:true,complete:true,items:[]});}
-    }});
-  });
-  const beforePreview=await page.evaluate(()=>window.__sfpRefreshCalls.preview);
-  await page.locator('#openFinanceSyncBtn').click();
-  await page.waitForFunction(before=>window.__sfpRefreshCalls.refresh===1&&window.__sfpRefreshCalls.preview>before,beforePreview);
-  const calls=await page.evaluate(()=>({...window.__sfpRefreshCalls}));
-  expect(calls.refresh).toBe(1);
-  expect(calls.status).toBe(0);
-  await expect(page.locator('#openFinancePreview')).toContainText('limite de frequência');
-});
-
-test('refresh aplica o Bill novo do banco mesmo sem compras novas',async({page})=>{
+test('leitura da Pluggy aplica o Bill novo mesmo sem compras novas',async({page})=>{
   await boot(page);
   await page.evaluate(()=>{
     const original=PluggyBridge.previewData;
     Object.defineProperty(window,'PluggyBridge',{configurable:true,value:{...PluggyBridge,
       previewData:()=>{
         const payload=JSON.parse(original());
-        if(window.__sfpRefreshCalls.status>0){
-          payload.items[0].accounts[0].bills=[{id:'itau-sep',dueDate:'2026-09-21',
-            billClosingDate:'2026-09-12',totalAmount:327.59,payments:[]}];
-        }
+        payload.items[0].accounts[0].bills=[{id:'itau-sep',dueDate:'2026-09-21',
+          billClosingDate:'2026-09-12',totalAmount:327.59,payments:[]}];
         return JSON.stringify(payload);
       }
     }});
   });
   await page.locator('#openFinanceSyncBtn').click();
   await expect.poll(()=>page.evaluate(()=>invoiceStatus(2,'2026-09').officialTotal)).toBe(327.59);
-  expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(1);
+  expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(0);
   await expect(page.locator('#openFinanceSyncBtn')).toBeEnabled();
   await page.reload();
   await expectBootComplete(page,expect,'Open Finance real refresh');
   expect(await page.evaluate(()=>invoiceStatus(2,'2026-09').officialTotal)).toBe(327.59);
-});
-
-test('recusa mostra HTTP e código sem incluir credenciais ou identificadores no diagnóstico',async({page})=>{
-  await boot(page);
-  await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
-    refreshItems:()=>JSON.stringify({ok:false,requested:1,started:0,apiKey:'secret-token',items:[
-      {id:'private-item-id',accepted:false,status:403,providerCode:'FORBIDDEN',message:'secret-token'}
-    ]})
-  }}));
-  await page.locator('#openFinanceSyncBtn').click();
-  await expect(page.locator('#openFinancePreview')).toContainText('HTTP 403 FORBIDDEN');
-  await expect(page.getByRole('button',{name:'Exportar diagnóstico da sincronização'})).toBeVisible();
-  const diagnostic=await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic());
-  expect(diagnostic.outcome).toBe('rejected');
-  expect(diagnostic.request.items[0].providerCode).toBe('FORBIDDEN');
-  expect(JSON.stringify(diagnostic)).not.toMatch(/secret-token|private-item-id/);
-});
-
-test('erro terminal do provedor não é anunciado como atualização concluída',async({page})=>{
-  await boot(page);
-  await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
-    refreshItems:()=>JSON.stringify({ok:true,requested:1,started:1}),
-    refreshStatus:()=>JSON.stringify({ok:true,complete:false,failed:true,items:[{status:'OUTDATED',executionStatus:'ERROR'}]})
-  }}));
-  await page.locator('#openFinanceSyncBtn').click();
-  await expect(page.locator('#openFinancePreview')).toContainText('erro ou dados parciais');
-  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('provider-failed');
-});
-
-test('refresh de parte das instituições identifica a conexão recusada',async({page})=>{
-  await boot(page);
-  await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
-    refreshItems:()=>JSON.stringify({ok:true,requested:2,started:1,items:[{accepted:true,status:200},{accepted:false,status:429,code:'REFRESH_RATE_LIMITED'}]}),
-    refreshStatus:()=>JSON.stringify({ok:true,complete:true,items:[{status:'UPDATED',executionStatus:'SUCCESS'}]})
-  }}));
-  await page.locator('#openFinanceSyncBtn').click();
-  await expect(page.locator('#openFinancePreview')).toContainText('Somente parte das conexões');
-  await expect(page.locator('#openFinancePreview')).toContainText('HTTP 429');
-  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('partially-refreshed');
 });
 
 test('app zerado informa vínculo pendente sem anunciar atualização total',async({page})=>{
@@ -206,16 +148,6 @@ test('cartão recém-cadastrado sem total bancário não aparece como quitado',a
   await page.evaluate(()=>setPage('cartoes'));
   await expect(page.locator('#cardsGrid .sfp-card-v2-primary').first()).toContainText('Fatura sem total confirmado');
   await expect(page.locator('#cardsGrid .sfp-card-v2-primary').first()).not.toContainText('quitada');
-});
-
-test('HTTP 400 sem código específico mostra a explicação sanitizada do provedor',async({page})=>{
-  await boot(page);
-  await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
-    refreshItems:()=>JSON.stringify({ok:false,requested:1,started:0,items:[{accepted:false,status:400,code:'REFRESH_NEEDS_ATTENTION',providerMessage:'Connector does not support updates'}]})
-  }}));
-  await page.locator('#openFinanceSyncBtn').click();
-  await expect(page.locator('#openFinancePreview')).toContainText('Connector does not support updates');
-  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().request.items[0].providerMessage)).toBe('Connector does not support updates');
 });
 
 test('cartão sem compras locais mostra parcelas bancárias identificadas e não zera durante falha',async({page})=>{

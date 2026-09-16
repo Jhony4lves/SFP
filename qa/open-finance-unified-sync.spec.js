@@ -73,8 +73,10 @@ async function boot(page, value) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await expectBootComplete(page, expect, value.settings.name);
-  await page.waitForFunction(() => window.SFPOpenFinanceUnifiedSync?.version === 1);
-  await expect(page.locator('#openFinanceSyncBtn')).toHaveText('Sincronizar contas e faturas');
+  await page.waitForFunction(() => window.SFPOpenFinanceUnifiedSync?.version === 1 && document.querySelector('.sidebar .nav button[data-page="openfinance"]'));
+  await page.evaluate(() => window.setPage?.('openfinance'));
+  await expect(page.locator('#openFinanceSyncBtn')).toBeVisible();
+  await expect(page.locator('#openFinanceSyncBtn')).toHaveText('Atualizar dados agora');
 }
 
 test('#203 separa prévia, importa conta + cartão, concilia existente e permanece idempotente', async ({ page }) => {
