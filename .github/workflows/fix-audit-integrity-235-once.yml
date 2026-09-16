@@ -40,7 +40,8 @@ jobs:
           set -euo pipefail
           git config user.name "Jhony4lves"
           git config user.email "jhonyr.rocha@gmail.com"
-          rm .github/workflows/fix-audit-integrity-235-once.yml qa/tmp-fix-audit-integrity-235.py
-          git add -A
+          rm qa/tmp-fix-audit-integrity-235.py
+          git restore .github/workflows/qa.yml
+          git add app/src/main/assets/www/audit-hardening.js qa/audit-historical-integrity-repair.spec.js qa/tmp-fix-audit-integrity-235.py
           git commit -m "fix(audit): reparar histórico seguro e explicar críticos (#235)"
           git push origin HEAD:fix/audit-integrity-safe-repair-235
