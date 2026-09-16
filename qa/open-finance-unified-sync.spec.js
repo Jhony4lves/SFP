@@ -54,6 +54,40 @@ async function installBridge(page, { partialBank = false, partialCard = false } 
   }, { partialBank, partialCard });
 }
 
+async function installMutableTransferBridge(page) {
+  await page.addInitScript(() => {
+    window.__qaTransferPayload = { ok:true, provider:'pluggy-personal', readOnly:true, itemCount:0, accountCount:0, transactionPreviewCount:0, items:[] };
+    Object.defineProperty(window, 'PluggyBridge', {
+      configurable: true,
+      value: {
+        getCredentialStatus: () => JSON.stringify({ ok:true, configured:true, clientIdMasked:'11111111…1111', itemReferenceCount:2 }),
+        saveCredentials: () => JSON.stringify({ ok:true, configured:true }),
+        previewData: () => JSON.stringify(window.__qaTransferPayload),
+        clearCredentials: () => true,
+        saveItemIds: () => JSON.stringify({ ok:true, itemReferenceCount:2 })
+      }
+    });
+  });
+}
+
+function transferPayload(includeIncome) {
+  const items = [{
+    id:'item-itau', connectorName:'MeuPluggy', institution:'Itaú', status:'UPDATED',
+    accounts:[{
+      id:'acc-itau', type:'BANK', subtype:'CHECKING_ACCOUNT', name:'Itaú', presentationName:'Itaú', balance:500, currencyCode:'BRL',
+      transactions:[{ id:'pix-out', date:'2026-09-15T12:00:00.000Z', description:'Pix enviado JHONY RIBEIRO DA ROCHA ALVES', amount:149.69, type:'DEBIT', status:'POSTED', currencyCode:'BRL' }]
+    }]
+  }];
+  if(includeIncome)items.push({
+    id:'item-nubank', connectorName:'MeuPluggy', institution:'Nubank', status:'UPDATED',
+    accounts:[{
+      id:'acc-nubank', type:'BANK', subtype:'CHECKING_ACCOUNT', name:'Nubank', presentationName:'Nubank', balance:300, currencyCode:'BRL',
+      transactions:[{ id:'pix-in', date:'2026-09-15T12:05:00.000Z', description:'Pix recebido JHONY RIBEIRO DA ROCHA ALVES', amount:149.69, type:'CREDIT', status:'POSTED', currencyCode:'BRL' }]
+    }]
+  });
+  return { ok:true, provider:'pluggy-personal', readOnly:true, itemCount:items.length, accountCount:items.length, transactionPreviewCount:items.length, items };
+}
+
 function stateFor(name) {
   const value = fixture(name);
   value.mesAtual = '2026-09';
@@ -73,7 +107,7 @@ async function boot(page, value) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await expectBootComplete(page, expect, value.settings.name);
-  await page.waitForFunction(() => window.SFPOpenFinanceUnifiedSync?.version === 1 && document.querySelector('.sidebar .nav button[data-page="openfinance"]'));
+  await page.waitForFunction(() => window.SFPOpenFinanceUnifiedSync?.version === 2 && document.querySelector('.sidebar .nav button[data-page="openfinance"]'));
   await page.evaluate(() => window.setPage?.('openfinance'));
   await expect(page.locator('#openFinanceSyncBtn')).toBeVisible();
   await expect(page.locator('#openFinanceSyncBtn')).toHaveText('Atualizar dados agora');
@@ -159,4 +193,68 @@ test('#203 bridge pagina /v2/transactions por cursor em vez de truncar em 30', a
   expect(bridge).toContain('cleanString(root, "next")');
   expect(bridge).toContain('next.startsWith("?")');
   expect(bridge).not.toContain('MAX_TRANSACTION_PREVIEW_PER_ACCOUNT = 30');
+});
+
+
+test('#229 promove saída antiga para transferência quando a entrada chega em sincronização posterior', async ({ page }) => {
+  const errors = monitor(page);
+  await installMutableTransferBridge(page);
+  const value = fixture('open-finance-base.json');
+  value.settings = value.settings || {};
+  value.settings.name = 'Transferência retroativa #229';
+  value.mesAtual = '2026-09';
+  value.baseDate = '2026-09-01';
+  value.accounts = [
+    { id:1, name:'Itaú', type:'Conta corrente', initial:1000, balanceMode:'snapshot', balanceDate:'2026-09-01' },
+    { id:2, name:'Nubank', type:'Conta corrente', initial:500, balanceMode:'snapshot', balanceDate:'2026-09-01' }
+  ];
+  value.cards = [];
+  value.transactions = [];
+  value.purchases = [];
+  value.transfers = [];
+  await boot(page, value);
+  await page.waitForTimeout(900);
+
+  await page.evaluate(payload => { window.__qaTransferPayload = payload; }, transferPayload(false));
+  await page.locator('#openFinanceSyncBtn').click();
+  await expect.poll(() => page.evaluate(() => state.transactions.filter(t => t.externalId === 'pluggy:pix-out').length)).toBe(1);
+  expect(await page.evaluate(() => state.transfers.length)).toBe(0);
+  const oldImpact = await page.evaluate(() => state.transactions.find(t => t.externalId === 'pluggy:pix-out')?.balanceImpact);
+
+  await page.evaluate(payload => { window.__qaTransferPayload = payload; }, transferPayload(true));
+  await page.locator('#openFinanceSyncBtn').click();
+  await expect.poll(() => page.evaluate(() => state.transfers.length)).toBe(1);
+
+  const promoted = await page.evaluate(() => ({
+    standalone: state.transactions.filter(t => ['pluggy:pix-out','pluggy:pix-in'].includes(t.externalId)),
+    transfers: state.transfers.map(t => ({ amount:t.amount, fromId:t.fromId, toId:t.toId, keys:t.openFinanceExternalIds, byAccount:t.balanceImpactByAccount, matchedBy:t.matchedBy }))
+  }));
+  expect(promoted.standalone).toHaveLength(0);
+  expect(promoted.transfers).toHaveLength(1);
+  expect(promoted.transfers[0]).toMatchObject({ amount:149.69, fromId:1, toId:2, matchedBy:'open-finance-bank-pair' });
+  expect(promoted.transfers[0].keys).toEqual(expect.arrayContaining(['pluggy:pix-out','pluggy:pix-in']));
+  expect(promoted.transfers[0].byAccount['1']).toBe(oldImpact);
+
+  await page.locator('#openFinanceSyncBtn').click();
+  await expect.poll(() => page.evaluate(() => state.transfers.length)).toBe(1);
+  expect(await page.evaluate(() => state.transactions.filter(t => ['pluggy:pix-out','pluggy:pix-in'].includes(t.externalId)).length)).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test('Sincronização mantém instituições e transações recolhidas por padrão', async ({ page }) => {
+  await installBridge(page);
+  const value = stateFor('Open Finance compacto');
+  await boot(page, value);
+  await page.locator('#openFinancePreviewBtn').click();
+
+  const institution = page.locator('#openFinancePreview details[data-open-finance-item]').first();
+  await expect(institution).toBeVisible();
+  expect(await institution.evaluate(node => node.open)).toBe(false);
+  await institution.locator(':scope > summary').click();
+
+  const txDetails = institution.locator('details[data-open-finance-transactions]').first();
+  await expect(txDetails).toBeVisible();
+  expect(await txDetails.evaluate(node => node.open)).toBe(false);
+  await txDetails.locator(':scope > summary').click();
+  await expect(txDetails.locator('.item').first()).toBeVisible();
 });

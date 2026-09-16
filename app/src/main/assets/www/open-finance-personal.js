@@ -1,7 +1,7 @@
 (function installOpenFinancePersonal(global){
   'use strict';
 
-  const VERSION=3;
+  const VERSION=4;
   const PANEL_ID='openFinancePersonalPanel';
   const $=id=>document.getElementById(id);
   let lastPreview=null;
@@ -345,7 +345,9 @@ function suggestSfpEntity(account,itemName){
   }
 
   function appendAccount(container,account,itemName,staging){
-    const block=document.createElement('div');block.style.marginBottom='10px';
+    const block=document.createElement('div');
+    block.dataset.openFinanceAccount='1';
+    block.style.marginBottom='10px';
     const row=document.createElement('div');row.className='item';
     const left=document.createElement('div');
     const title=document.createElement('b');title.textContent=accountLabel(account);
@@ -374,21 +376,30 @@ function suggestSfpEntity(account,itemName){
     row.append(left,right);block.appendChild(row);
 
     const transactions=Array.isArray(account?.transactions)?account.transactions:[];
-    const txNote=document.createElement('div');txNote.className='note';txNote.style.marginTop='6px';
-    if(account?.transactionsError){
-      txNote.textContent='Conta lida, mas as transações recentes não puderam ser consultadas agora.';
-      staging.transactionErrors++;
-    }else if(account?.transactionPreviewHasMore){
-      txNote.textContent=`A consulta retornou apenas parte das transações recentes. Por segurança, este cartão não será alterado até a leitura vir completa.`;
-      staging.partialAccounts++;
-    }else if(!transactions.length){
-      txNote.textContent=`Nenhuma transação retornada na janela recente de ${Number(account?.transactionWindowDays)||45} dias.`;
-    }else{
-      txNote.textContent=`${transactions.length} transação(ões) recentes disponíveis para conferência.`;
+    if(account?.transactionsError||account?.transactionPreviewHasMore||!transactions.length){
+      const txNote=document.createElement('div');txNote.className='note';txNote.style.marginTop='6px';
+      if(account?.transactionsError){
+        txNote.textContent='Conta lida, mas as transações recentes não puderam ser consultadas agora.';
+        staging.transactionErrors++;
+      }else if(account?.transactionPreviewHasMore){
+        txNote.textContent='A consulta retornou apenas parte das transações recentes. Por segurança, este cartão não será alterado até a leitura vir completa.';
+        staging.partialAccounts++;
+      }else{
+        txNote.textContent=`Nenhuma transação retornada na janela recente de ${Number(account?.transactionWindowDays)||45} dias.`;
+      }
+      block.appendChild(txNote);
     }
-    block.appendChild(txNote);
 
     if(transactions.length){
+      const details=document.createElement('details');
+      details.dataset.openFinanceTransactions='1';
+      details.style.marginTop='6px';
+      const summary=document.createElement('summary');
+      summary.textContent=`Ver ${transactions.length} transação(ões) recentes`;
+      summary.style.cursor='pointer';
+      summary.style.padding='8px 4px';
+      details.appendChild(summary);
+
       const txList=document.createElement('div');txList.className='list';txList.style.marginTop='6px';
       transactions.slice(0,6).forEach(transaction=>appendTransaction(txList,account,transaction,suggestion,staging));
       if(transactions.length>6){
@@ -396,7 +407,7 @@ function suggestSfpEntity(account,itemName){
         more.textContent=`+ ${transactions.length-6} transação(ões) recebidas. Todas entram na análise, mesmo que a tela mostre só as primeiras.`;
         txList.appendChild(more);
       }
-      block.appendChild(txList);
+      details.appendChild(txList);block.appendChild(details);
     }
     container.appendChild(block);
   }
@@ -422,16 +433,28 @@ function suggestSfpEntity(account,itemName){
       accountCount+=accounts.length;
       transactionCount+=accounts.reduce((sum,account)=>sum+(Array.isArray(account?.transactions)?account.transactions.length:0),0);
       const name=itemDisplayName(item);
+      const needsAttention=Boolean(item?.accountsError)||accounts.some(account=>
+        account?.transactionsError||account?.transactionPreviewHasMore||!suggestSfpEntity(account,name)
+      );
 
-      const section=document.createElement('div');section.style.marginTop='12px';
-      const heading=document.createElement('div');heading.className='head';heading.style.marginBottom='8px';
+      const section=document.createElement('details');
+      section.dataset.openFinanceItem='1';
+      section.style.marginTop='10px';
+      section.open=needsAttention;
+
+      const heading=document.createElement('summary');
+      heading.className='item';
+      heading.style.cursor='pointer';
+      heading.style.listStylePosition='inside';
       const headingText=document.createElement('div');
-      const title=document.createElement('h2');title.textContent=name;
-      const subtitle=document.createElement('p');
+      const title=document.createElement('b');title.textContent=name;
+      const subtitle=document.createElement('small');
       subtitle.textContent=`${cleanText(item?.connectorName)||'MeuPluggy'} • ${cleanText(item?.status)||'status não informado'} • ${accounts.length} conta(s)`;
-      headingText.append(title,subtitle);heading.appendChild(headingText);section.appendChild(heading);
+      headingText.append(title,subtitle);
+      const hint=document.createElement('small');hint.textContent=needsAttention?'Requer atenção':'Toque para conferir';
+      heading.append(headingText,hint);section.appendChild(heading);
 
-      const list=document.createElement('div');list.className='list';
+      const list=document.createElement('div');list.className='list';list.style.marginTop='6px';
       if(accounts.length)accounts.forEach(account=>appendAccount(list,account,name,staging));
       else{
         const empty=document.createElement('div');empty.className='note';
@@ -442,7 +465,7 @@ function suggestSfpEntity(account,itemName){
     }
 
     const summary=document.createElement('div');summary.className='note';summary.style.marginTop='12px';
-    summary.textContent=`Consulta concluída: ${items.length} Item(s), ${accountCount} conta(s)/cartão(ões) e ${transactionCount} transação(ões) recentes.`;
+    summary.textContent=`Consulta concluída: ${items.length} Item(s), ${accountCount} conta(s)/cartão(ões) e ${transactionCount} transação(ões) recentes. Abra apenas a instituição que quiser conferir.`;
     root.prepend(summary);
 
     const stagingBox=document.createElement('div');stagingBox.className='note';stagingBox.style.marginTop='8px';

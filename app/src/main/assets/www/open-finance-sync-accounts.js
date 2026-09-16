@@ -1,7 +1,7 @@
 (function installOpenFinanceUnifiedSync(global){
   'use strict';
 
-  const VERSION=1;
+  const VERSION=2;
   const INSTALL_FLAG='__SFP_OPEN_FINANCE_UNIFIED_SYNC_V1';
   const $=id=>document.getElementById(id);
   const clean=value=>value==null?'':String(value).trim();
@@ -143,11 +143,16 @@
     };
   }
 
+  function candidateBalanceImpact(candidate){
+    if(candidate?.existingRecord)return candidate.existingRecord.balanceImpact===true;
+    return balanceImpactFor(candidate?.entity,candidate?.date);
+  }
+
   function buildTransfer(expense,income){
     const keys=[externalKey(expense.transaction),externalKey(income.transaction)].filter(Boolean);
     const byAccount={};
-    byAccount[expense.entity.id]=balanceImpactFor(expense.entity,expense.date);
-    byAccount[income.entity.id]=balanceImpactFor(income.entity,income.date);
+    byAccount[expense.entity.id]=candidateBalanceImpact(expense);
+    byAccount[income.entity.id]=candidateBalanceImpact(income);
     return{
       id:typeof global.uid==='function'?global.uid():Date.now()+Math.floor(Math.random()*1000),
       desc:clean(expense.transaction?.description)||clean(income.transaction?.description)||'Transferência Open Finance',
@@ -190,7 +195,7 @@
 
   function planBankSync(result){
     const api=global.SFPOpenFinancePersonal;
-    const plan={create:[],link:[],transferCreate:[],transferLink:[],already:0,pending:0,review:0,unmapped:0,partial:0,errors:0,bankAccounts:0};
+    const plan={create:[],link:[],transferCreate:[],transferPromote:[],transferLink:[],already:0,pending:0,review:0,unmapped:0,partial:0,errors:0,bankAccounts:0};
     const raw=[];
 
     for(const item of Array.isArray(result?.items)?result.items:[]){
@@ -211,11 +216,16 @@
           if(kind!=='expense'&&kind!=='income'){plan.review++;continue;}
           if(kind==='expense'&&isCardPaymentDescription(transaction?.description)){plan.review++;continue;}
 
+          const candidate={account,item,entity:suggestion.entity,transaction,kind,date:dateOnly(transaction?.date),amount};
           const exact=exactBankRecord(suggestion.entity,transaction);
-          if(exact){plan.already++;continue;}
+          if(exact){
+            if(transferSignal(transaction?.description))raw.push({...candidate,existingRecord:exact});
+            else plan.already++;
+            continue;
+          }
           const heuristic=api?.likelyExisting?.(account,transaction,suggestion);
           if(heuristic?.record){plan.link.push({record:heuristic.record,account,item,transaction});continue;}
-          raw.push({account,item,entity:suggestion.entity,transaction,kind,date:dateOnly(transaction?.date),amount});
+          raw.push(candidate);
         }
       }
     }
@@ -227,9 +237,16 @@
       if(exact){plan.already++;continue;}
       const heuristic=heuristicTransferRecord(pair.expense,pair.income);
       if(heuristic){plan.transferLink.push({record:heuristic,pair});continue;}
+      if(pair.expense.existingRecord||pair.income.existingRecord){
+        plan.transferPromote.push(pair);
+        continue;
+      }
       plan.transferCreate.push(pair);
     }
-    plan.create=paired.remaining;
+    plan.create=paired.remaining.filter(candidate=>{
+      if(candidate.existingRecord){plan.already++;return false;}
+      return true;
+    });
     return plan;
   }
 
@@ -250,7 +267,7 @@
       if(card.review)cardBits.push(`${card.review} pagamento(s)/crédito(s) em revisão`);
       if(card.unmapped)cardBits.push(`${card.unmapped} cartão(ões) sem vínculo`);
       if(card.partial)cardBits.push(`${card.partial} cartão(ões) com leitura parcial`);
-      const bankBits=[`${bank.create.length} lançamento(s) novo(s)`,`${bank.transferCreate.length} transferência(s) pareável(is)`,`${bank.link.length+bank.transferLink.length} conciliável(is)`,`${bank.already} já sincronizado(s)`];
+      const bankBits=[`${bank.create.length} lançamento(s) novo(s)`,`${bank.transferCreate.length+bank.transferPromote.length} transferência(s) pareável(is)`,`${bank.link.length+bank.transferLink.length} conciliável(is)`,`${bank.already} já sincronizado(s)`];
       if(bank.pending)bankBits.push(`${bank.pending} pendente(s)`);
       if(bank.review)bankBits.push(`${bank.review} em revisão`);
       if(bank.unmapped)bankBits.push(`${bank.unmapped} conta(s) sem vínculo`);
@@ -300,8 +317,18 @@
     return{created,linked};
   }
 
+  function removeExistingBankRecord(record){
+    const list=global.state?.transactions;
+    if(!Array.isArray(list)||!record)return false;
+    let index=list.indexOf(record);
+    if(index<0&&record?.id!==undefined)index=list.findIndex(entry=>sameId(entry?.id,record.id));
+    if(index<0)return false;
+    list.splice(index,1);
+    return true;
+  }
+
   function applyBankPlan(bank){
-    let linked=0,created=0,transfers=0;
+    let linked=0,created=0,transfers=0,promoted=0;
     for(const row of bank.link){if(markLinked(row.record,row.account,row.item,row.transaction))linked++}
     for(const row of bank.transferLink){
       const {record,pair}=row;
@@ -310,8 +337,15 @@
       if(first||second)linked++;
     }
     for(const candidate of bank.create){global.state.transactions.push(buildBankTransaction(candidate));created++}
+    for(const pair of bank.transferPromote||[]){
+      const transfer=buildTransfer(pair.expense,pair.income);
+      if(pair.expense.existingRecord)removeExistingBankRecord(pair.expense.existingRecord);
+      if(pair.income.existingRecord)removeExistingBankRecord(pair.income.existingRecord);
+      global.state.transfers.push(transfer);
+      transfers++;promoted++;
+    }
     for(const pair of bank.transferCreate){global.state.transfers.push(buildTransfer(pair.expense,pair.income));transfers++}
-    return{created,linked,transfers};
+    return{created,linked,transfers,promoted};
   }
 
   function mutedPreview(){
