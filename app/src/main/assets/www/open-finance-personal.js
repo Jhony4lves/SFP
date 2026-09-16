@@ -110,18 +110,73 @@
     return common>=2?3:common===1?1:0;
   }
 
-  function suggestSfpEntity(account,itemName){
-    if(typeof global.state==='undefined'||!global.state)return null;
-    const credit=account?.type==='CREDIT';
-    const list=credit?(Array.isArray(global.state.cards)?global.state.cards:[]):(Array.isArray(global.state.accounts)?global.state.accounts:[]);
-    const external=[account?.marketingName,account?.name,account?.presentationName,itemName].map(cleanText).filter(Boolean).join(' ');
-    let best=null;
-    for(const entity of list){
-      const score=entityScore(external,entity?.name);
-      if(!best||score>best.score)best={entity,score};
-    }
-    return best&&best.score>=4?best:null;
+  function lexicalEntityScore(external,candidate){
+  const a=normalize(external),b=normalize(candidate);
+  if(!a||!b)return 0;
+  if(a===b)return 8;
+  if(a.includes(b)||b.includes(a))return 6;
+  const at=tokens(a),bt=tokens(b);
+  let common=0;for(const token of at)if(bt.has(token))common++;
+  return common>=2?4:common===1?2:0;
+}
+
+function sameEntityId(a,b){return String(a??'')!==''&&String(a??'')===String(b??'');}
+
+function priorCardByOpenFinanceAccount(account,list){
+  const accountId=cleanText(account?.id);if(!accountId)return null;
+  const ids=new Set((Array.isArray(global.state?.purchases)?global.state.purchases:[])
+    .filter(purchase=>cleanText(purchase?.openFinanceAccountId)===accountId)
+    .map(purchase=>String(purchase?.cardId)));
+  const matches=list.filter(entity=>ids.has(String(entity?.id)));
+  return matches.length===1?matches[0]:null;
+}
+
+function paymentAccountInstitutionScore(entity,itemName){
+  const accounts=Array.isArray(global.state?.accounts)?global.state.accounts:[];
+  const payAccount=accounts.find(account=>sameEntityId(account?.id,entity?.payAccountId));
+  return payAccount?entityScore(itemName,payAccount?.name):0;
+}
+
+function lastFourScore(account,entity){
+  const lastFour=cleanText(account?.lastFour).replace(/\D/g,'').slice(-4);
+  if(lastFour.length!==4)return 0;
+  const explicit=[entity?.lastFour,entity?.number].map(cleanText)
+    .some(value=>value.replace(/\D/g,'').slice(-4)===lastFour);
+  if(explicit)return 8;
+  const nameMatches=cleanText(entity?.name).match(/\d{4}(?!\d)/g)||[];
+  return nameMatches.includes(lastFour)?7:0;
+}
+
+function suggestSfpEntity(account,itemName){
+  if(typeof global.state==='undefined'||!global.state)return null;
+  const credit=account?.type==='CREDIT';
+  const list=credit?(Array.isArray(global.state.cards)?global.state.cards:[]):(Array.isArray(global.state.accounts)?global.state.accounts:[]);
+  if(!list.length)return null;
+
+  if(credit){
+    const prior=priorCardByOpenFinanceAccount(account,list);
+    if(prior)return{entity:prior,score:100,reason:'prior-open-finance-account'};
   }
+
+  const fields=[account?.marketingName,account?.name,account?.presentationName,itemName].map(cleanText).filter(Boolean);
+  const combined=fields.join(' ');
+  let best=null,tied=false;
+  for(const entity of list){
+    let score=entityScore(combined,entity?.name);
+    for(const field of fields)score=Math.max(score,lexicalEntityScore(field,entity?.name));
+
+    if(credit){
+      const institutionScore=paymentAccountInstitutionScore(entity,itemName);
+      if(institutionScore>=6)score+=5;
+      else if(institutionScore>=4)score+=3;
+      score+=lastFourScore(account,entity);
+    }
+
+    if(!best||score>best.score){best={entity,score};tied=false;}
+    else if(score===best.score&&score>0)tied=true;
+  }
+  return best&&best.score>=4&&!tied?best:null;
+}
 
   function dateOnly(value){return cleanText(value).slice(0,10);}
 
