@@ -1,0 +1,41 @@
+name: Apply issue 229 and compact Open Finance UI
+
+on:
+  push:
+    branches:
+      - fix/openfinance-transfer-retroactive-ui-229
+    paths:
+      - .github/workflows/apply-issue229-ui.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: fix/openfinance-transfer-retroactive-ui-229
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Apply focused changes
+        run: python scripts/apply_issue229_ui.py
+      - name: Validate patch shape
+        run: |
+          git diff --check
+          git status --short
+          grep -q "transferPromote" app/src/main/assets/www/open-finance-sync-accounts.js
+          grep -q "data-open-finance-item" qa/open-finance-unified-sync.spec.js
+          grep -q "SFP_VERSION_CODE=46" gradle.properties
+      - name: Commit focused changes
+        run: |
+          git config user.name "SFP QA Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/src/main/assets/www/open-finance-sync-accounts.js \
+                  app/src/main/assets/www/open-finance-personal.js \
+                  qa/open-finance-unified-sync.spec.js \
+                  gradle.properties
+          git commit -m "fix(openfinance): promote delayed transfers and compact sync UI"
+          git push origin HEAD:fix/openfinance-transfer-retroactive-ui-229
