@@ -211,10 +211,22 @@ document.addEventListener('click',event=>{
     return !!global.matchMedia?.('(max-width:650px) and (orientation:portrait)').matches;
   }
 
+  function claimMoreNavigation(more){
+    if(!more) return;
+    more.onclick=showPriorityMoreMenu;
+    if(more.dataset.sfpPriorityMoreOwner==='1') return;
+    more.dataset.sfpPriorityMoreOwner='1';
+    more.addEventListener('click',event=>{
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      showPriorityMoreMenu();
+    },true);
+  }
+
   function installNavigation(){
     ensureStyles();
     const more=document.getElementById('moreNavBtn');
-    if(more) more.onclick=showPriorityMoreMenu;
+    claimMoreNavigation(more);
     global.showMoreMenu=showPriorityMoreMenu;
     syncMoreActive();
     const nav=document.querySelector('.sidebar .nav');
@@ -243,7 +255,9 @@ document.addEventListener('click',event=>{
     let attempts=0;
     const timer=global.setInterval(()=>{
       installNavigation();
-      if(installSophyDateGuard()||++attempts>20) global.clearInterval(timer);
+      installSophyDateGuard();
+      attempts+=1;
+      if(attempts>20) global.clearInterval(timer);
     },150);
   }
 
