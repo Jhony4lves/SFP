@@ -26,6 +26,17 @@ jobs:
           python3 qa/tmp-patch-integrity-239.py
           python3 qa/tmp-compat-version-239.py
           python3 qa/tmp-null-accounts-239.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/assets/www/audit-hardening.js')
+          s=p.read_text(encoding='utf-8')
+          old="    window.renderAudit=function(){\n      const out=originalRenderAudit.apply(this,arguments);"
+          new="    window.renderAudit=function(){\n      if(!state)return null;\n      const out=originalRenderAudit.apply(this,arguments);"
+          if s.count(old)!=1:
+              raise SystemExit(f'audit boot guard anchor: expected 1 match, found {s.count(old)}')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          print('Audit boot guard applied')
+          PY
       - name: Instrument page errors with stack
         run: |
           python3 - <<'PY'
