@@ -1,0 +1,25 @@
+name: SFP Open Finance Truth Focus
+
+on:
+  push:
+    branches:
+      - fix/calendar-openfinance-history-242-243
+
+concurrency:
+  group: sfp-openfinance-truth-focus-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run #242 #243 #244 regressions
+        run: npx playwright test qa/open-finance-financial-truth-242-244.spec.js --project=chromium --workers=1
