@@ -707,7 +707,7 @@
     }
     const run=document.getElementById('runAudit');
     if(run)run.onclick=window.renderAudit;
-    window.renderAudit();
+    if(typeof state!=='undefined'&&state&&Array.isArray(state.accounts)&&Array.isArray(state.invoices)) window.renderAudit();
   }
 
   function install(){
