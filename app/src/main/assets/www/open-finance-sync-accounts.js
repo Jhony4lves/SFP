@@ -7,6 +7,21 @@
   const clean=value=>value==null?'':String(value).trim();
   const dateOnly=value=>clean(value).slice(0,10);
   const sameId=(a,b)=>String(a)===String(b);
+  const generatedInternalIds=new Set();
+
+  function nextInternalId(){
+    const used=new Set(generatedInternalIds);
+    const collections=['accounts','cards','transactions','purchases','transfers','debts','invoices','invoiceAdjustments','recurring','goals'];
+    for(const name of collections){
+      for(const row of Array.isArray(global.state?.[name])?global.state[name]:[]){
+        if(row?.id!==undefined&&row?.id!==null)used.add(String(row.id));
+      }
+    }
+    let candidate=Date.now();
+    while(used.has(String(candidate)))candidate++;
+    generatedInternalIds.add(String(candidate));
+    return candidate;
+  }
 
   function normalize(value){
     return clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
@@ -120,7 +135,7 @@
     const {account,item,entity,transaction,kind,date,amount}=candidate;
     const key=externalKey(transaction);
     return{
-      id:typeof global.uid==='function'?global.uid():Date.now()+Math.floor(Math.random()*1000),
+      id:nextInternalId(),
       accountId:entity.id,
       kind,
       desc:clean(transaction?.description)||'Lançamento Open Finance',
@@ -154,7 +169,7 @@
     byAccount[expense.entity.id]=candidateBalanceImpact(expense);
     byAccount[income.entity.id]=candidateBalanceImpact(income);
     return{
-      id:typeof global.uid==='function'?global.uid():Date.now()+Math.floor(Math.random()*1000),
+      id:nextInternalId(),
       desc:clean(expense.transaction?.description)||clean(income.transaction?.description)||'Transferência Open Finance',
       amount:expense.amount,
       date:expense.date,
@@ -457,7 +472,7 @@
       setTimeout(install,50);return;
     }
     global[INSTALL_FLAG]=true;
-    global.SFPOpenFinanceUnifiedSync=Object.freeze({version:VERSION,planBankSync,decoratePreview,syncAll});
+    global.SFPOpenFinanceUnifiedSync=Object.freeze({version:VERSION,planBankSync,decoratePreview,syncAll,nextInternalId});
   }
 
   function ensureRealRefreshController(){

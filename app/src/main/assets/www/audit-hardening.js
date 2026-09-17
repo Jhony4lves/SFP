@@ -546,6 +546,78 @@
     const invoiceById=id=>(state.invoices||[]).find(inv=>String(inv.id)===String(id));
     const cardName=inv=>card(inv?.cardId)?.name||inv?.cardId||'cartão';
 
+    const sameEntityId=(a,b)=>String(a)===String(b);
+
+    function invoiceHasLocalDetail(inv){
+      if(!inv)return false;
+      let purchaseRows=[];
+      try{
+        purchaseRows=typeof installments==='function'
+          ?(installments(inv.month)||[]).filter(row=>sameEntityId(row?.card?.id??row?.purchase?.cardId,inv.cardId))
+          :[];
+      }catch(_){purchaseRows=[]}
+      let adjustments=[];
+      try{adjustments=typeof invoiceAdjustments==='function'?(invoiceAdjustments(inv.cardId,inv.month)||[]):[]}catch(_){adjustments=[]}
+      const imports=(state.invoiceImports||[]).filter(row=>sameEntityId(row?.cardId,inv.cardId)&&[row?.month,row?.invoiceMonth,row?.targetMonth].includes(inv.month));
+      const importedRows=imports.some(row=>Number(row?.count??row?.importedCount??row?.created??0)>0);
+      return purchaseRows.length>0||adjustments.length>0||importedRows;
+    }
+
+    function openFinanceOfficialWithoutLocalDetail(inv){
+      if(!inv)return false;
+      const official=Number(inv.officialTotal);
+      const calc=Number(invoiceCalculated(inv.cardId,inv.month))||0;
+      const authoritative=String(inv.officialTotalSource||'').trim()==='open-finance-bill'||Boolean(String(inv.openFinanceBillId||'').trim());
+      return authoritative&&Number.isFinite(official)&&official>0&&Math.abs(calc)<=.01&&!invoiceHasLocalDetail(inv);
+    }
+
+    function duplicateTransactionGroups(){
+      const groups=new Map();
+      for(const tx of state.transactions||[]){
+        const key=String(tx?.id);
+        if(!groups.has(key))groups.set(key,[]);
+        groups.get(key).push(tx);
+      }
+      return Array.from(groups.entries()).filter(([,rows])=>rows.length>1).map(([id,rows])=>({id,rows}));
+    }
+
+    function transactionReferencePaths(id){
+      const hits=[],seen=new Set(),target=String(id);
+      const visit=(value,path)=>{
+        if(!value||typeof value!=='object'||seen.has(value))return;
+        seen.add(value);
+        if(Array.isArray(value)){
+          value.forEach((child,index)=>visit(child,`${path}[${index}]`));
+          return;
+        }
+        for(const [key,child] of Object.entries(value)){
+          const next=path?`${path}.${key}`:key;
+          if(/transaction.*id/i.test(key)&&child!==null&&child!==undefined&&String(child)===target)hits.push(next);
+          if(child&&typeof child==='object')visit(child,next);
+        }
+      };
+      for(const [key,value] of Object.entries(state||{})){
+        if(key==='transactions')continue;
+        visit(value,key);
+      }
+      return hits;
+    }
+
+    function duplicateTransactionPlans(){
+      return duplicateTransactionGroups().map(group=>({...group,references:transactionReferencePaths(group.id)}));
+    }
+
+    function safeDuplicateTransactionPlans(){
+      return duplicateTransactionPlans().filter(group=>group.references.length===0);
+    }
+
+    function nextUniqueTransactionId(used){
+      let candidate=Date.now();
+      while(used.has(String(candidate)))candidate++;
+      used.add(String(candidate));
+      return candidate;
+    }
+
     function historicalRepairPlan(inv){
       if(!inv||inv.historicalOnly)return null;
       const official=Number(inv.officialTotal);
@@ -588,7 +660,18 @@
       for(const raw of Array.isArray(result.issues)?result.issues:[]){
         const issue={...raw};
         const inv=issue.invoiceId!=null?invoiceById(issue.invoiceId):null;
+        if(issue.type==='invoice-total-mismatch'&&openFinanceOfficialWithoutLocalDetail(inv))continue;
         if(inv?.historicalOnly&&issue.type==='invoice-total-mismatch')continue;
+        const duplicateMatch=issue.level==='critical'?String(issue.text||'').match(/^ID duplicado em transactions:\s*(.+)$/i):null;
+        if(duplicateMatch){
+          const duplicateId=duplicateMatch[1].trim();
+          const duplicatePlan=duplicateTransactionPlans().find(row=>row.id===duplicateId);
+          issue.type='duplicate-transaction-id';
+          issue.duplicateId=duplicateId;
+          issue.solution=duplicatePlan?.references?.length
+            ?`Este ID é referenciado em ${duplicatePlan.references.length} vínculo(s) interno(s). O SFP não vai reindexá-lo automaticamente; exporte o diagnóstico para revisão.`
+            :'O SFP pode reindexar somente as cópias extras desse ID, preservando todos os valores e saldos.';
+        }
         const plan=inv?historicalRepairPlan(inv):null;
         if(plan&&issue.type==='invoice-total-mismatch'){
           issue.type='historical-invoice-partial';
@@ -686,13 +769,60 @@
       return done;
     };
 
+    window.repairSafeDuplicateTransactionIds=async()=>{
+      const allPlans=duplicateTransactionPlans();
+      const rows=allPlans.filter(group=>group.references.length===0);
+      if(!rows.length){
+        const blocked=allPlans.length;
+        toast(blocked?'Os IDs duplicados encontrados possuem referências internas e não serão alterados automaticamente.':'Nenhum ID duplicado de transação precisa de correção.','info');
+        return false;
+      }
+      const changedCount=rows.reduce((sum,row)=>sum+Math.max(0,row.rows.length-1),0);
+      const ok=await sfpConfirm({
+        title:'Corrigir IDs duplicados',
+        message:`O SFP encontrou ${rows.length} grupo(s) de ID duplicado sem referências ambíguas. Apenas ${changedCount} cópia(s) extra(s) receberão novos IDs internos; valores, datas, contas, descrições, saldos e quantidade de lançamentos serão preservados. Continuar?`,
+        confirmText:'Corrigir IDs',cancelText:'Cancelar'
+      });
+      if(!ok)return false;
+      const beforeBalances=balancesSnapshot(),beforeCount=(state.transactions||[]).length;
+      const changed=[];
+      const used=new Set((state.transactions||[]).map(tx=>String(tx.id)));
+      for(const group of rows){
+        for(const tx of group.rows.slice(1)){
+          changed.push({tx,id:tx.id});
+          tx.id=nextUniqueTransactionId(used);
+        }
+      }
+      await save('Corrigir IDs duplicados de transações');
+      const safe=sameBalances(beforeBalances,balancesSnapshot())&&beforeCount===(state.transactions||[]).length;
+      if(!safe){
+        changed.forEach(row=>{row.tx.id=row.id});
+        await save('Reverter correção de IDs duplicados por proteção de integridade');
+        renderAll();
+        showFeedback('A correção de IDs foi revertida porque alteraria a integridade financeira. Nenhuma mudança foi mantida.',{title:'Proteção de integridade',type:'error'});
+        return false;
+      }
+      renderAll();
+      showFeedback(`${changed.length} ID(s) interno(s) duplicado(s) foram reindexados sem alterar nenhum valor financeiro.`,{title:'IDs corrigidos',type:'success'});
+      return true;
+    };
+
     window.renderAudit=function(){
+      if(!state)return null;
       const out=originalRenderAudit.apply(this,arguments);
       const rows=safeRows();
       const button=document.getElementById('repairSafeHistoricalAudit');
       if(button){
         button.disabled=!rows.length;
         button.textContent=rows.length?`Corrigir ${rows.length} inconsistência${rows.length===1?'':'s'} histórica${rows.length===1?'':'s'} segura${rows.length===1?'':'s'}`:'Nenhuma correção histórica segura';
+      }
+      const duplicatePlans=duplicateTransactionPlans();
+      const safeDuplicates=duplicatePlans.filter(group=>group.references.length===0);
+      const duplicateButton=document.getElementById('repairSafeDuplicateTransactionIds');
+      if(duplicateButton){
+        const copies=safeDuplicates.reduce((sum,row)=>sum+Math.max(0,row.rows.length-1),0);
+        duplicateButton.disabled=!copies;
+        duplicateButton.textContent=copies?`Corrigir ${copies} ID${copies===1?'':'s'} duplicado${copies===1?'':'s'} com segurança`:(duplicatePlans.length?'IDs duplicados exigem revisão':'Nenhum ID duplicado');
       }
       document.querySelectorAll('[data-audit-repair]').forEach(btn=>btn.onclick=()=>window.repairHistoricalInvoice(+btn.dataset.auditRepair));
       return out;
@@ -703,6 +833,12 @@
       const button=document.createElement('button');
       button.type='button';button.className='btn2 wide';button.id='repairSafeHistoricalAudit';
       button.onclick=()=>window.repairSafeHistoricalAudit();
+      anchor.parentElement?.insertBefore(button,anchor);
+    }
+    if(anchor&&!document.getElementById('repairSafeDuplicateTransactionIds')){
+      const button=document.createElement('button');
+      button.type='button';button.className='btn2 wide';button.id='repairSafeDuplicateTransactionIds';
+      button.onclick=()=>window.repairSafeDuplicateTransactionIds();
       anchor.parentElement?.insertBefore(button,anchor);
     }
     const run=document.getElementById('runAudit');
