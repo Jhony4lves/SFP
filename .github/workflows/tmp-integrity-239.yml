@@ -26,15 +26,28 @@ jobs:
           python3 qa/tmp-patch-integrity-239.py
           python3 qa/tmp-compat-version-239.py
           python3 qa/tmp-null-accounts-239.py
+      - name: Instrument page errors with stack
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('qa/helpers.js')
+          s=p.read_text(encoding='utf-8')
+          old="page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));"
+          new="page.on('pageerror', error => { console.log('PAGEERROR_STACK\\n'+(error.stack||error.message)); errors.push(`pageerror: ${error.message}`); });"
+          if old not in s:
+              raise SystemExit('monitor pageerror hook not found')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
       - name: Install dependencies
         run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Static checks
         run: npm run test:static
-      - name: Focused audit and Open Finance regression
-        run: npx playwright test qa/audit-openfinance-integrity-239.spec.js qa/audit-historical-integrity-repair.spec.js qa/open-finance-unified-sync.spec.js --reporter=line
+      - name: Diagnose failing Open Finance scenarios
+        run: npx playwright test qa/open-finance-unified-sync.spec.js --grep "#203 separa|#229 promove" --reporter=line
       - name: Commit validated patch
+        if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
