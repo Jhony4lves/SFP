@@ -9,6 +9,23 @@ permissions:
   contents: write
 
 jobs:
+  baseline-openfinance:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: feat/openfinance-auto-sync-navigation-226
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run the two integration scenarios on untouched base
+        run: npx playwright test qa/open-finance-unified-sync.spec.js --grep "#203 separa|#229 promove" --reporter=line
+
   patch-test-commit:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
