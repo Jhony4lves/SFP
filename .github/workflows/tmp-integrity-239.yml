@@ -9,23 +9,6 @@ permissions:
   contents: write
 
 jobs:
-  baseline-openfinance:
-    if: github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: feat/openfinance-auto-sync-navigation-226
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - name: Run the two integration scenarios on untouched base
-        run: npx playwright test qa/open-finance-unified-sync.spec.js --grep "#203 separa|#229 promove" --reporter=line
-
   patch-test-commit:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
@@ -42,6 +25,7 @@ jobs:
         run: |
           python3 qa/tmp-patch-integrity-239.py
           python3 qa/tmp-compat-version-239.py
+          python3 qa/tmp-null-accounts-239.py
       - name: Install dependencies
         run: npm ci
       - name: Install Chromium
@@ -56,6 +40,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/src/main/assets/www/audit-hardening.js \
                   app/src/main/assets/www/open-finance-sync-accounts.js \
+                  app/src/main/assets/www/open-finance-bills.js \
                   qa/audit-openfinance-integrity-239.spec.js
           git diff --cached --quiet && exit 0
           git commit -m "fix(integrity): reconcile Open Finance audit and duplicate ids (#239)"
