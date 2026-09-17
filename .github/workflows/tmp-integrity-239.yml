@@ -22,7 +22,9 @@ jobs:
           node-version: 22
           cache: npm
       - name: Apply narrow integrity patch
-        run: python3 qa/tmp-patch-integrity-239.py
+        run: |
+          python3 qa/tmp-patch-integrity-239.py
+          python3 qa/tmp-compat-version-239.py
       - name: Install dependencies
         run: npm ci
       - name: Install Chromium
