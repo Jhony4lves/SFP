@@ -22,4 +22,4 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Run #242 #243 #244 regressions
-        run: npx playwright test qa/open-finance-financial-truth-242-244.spec.js --project=chromium --workers=1
+        run: npx playwright test qa/open-finance-financial-truth-242-244.spec.js --workers=1
