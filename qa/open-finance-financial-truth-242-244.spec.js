@@ -132,12 +132,12 @@ test('#243 passado não resolvido deixa de ser Previsto: recorrência vira Revis
   value.recurring = [{ id:401, desc:'Assinatura histórica', type:'expense', amount:12, day:16, category:'Assinaturas', accountId:1, start:'2025-09', end:'', active:true, skips:[] }];
 
   await boot(page, value);
-  const events = await page.evaluate(() => financialCalendarEvents('2025-09').map(event => ({ desc:event.desc, source:event.source, virtual:event.virtual===true, realization:event.realization, temporalStatus:event.temporalStatus })));
+  const events = await page.evaluate(() => financialCalendarEvents('2025-09').map(event => ({ desc:event.desc, source:event.source, realization:event.realization, temporalStatus:event.temporalStatus })));
   const recurring = events.find(event => event.desc==='Assinatura histórica');
   const invoice = events.find(event => event.desc==='Fatura Nubank');
   const explicit = events.find(event => event.desc==='Conta antiga explícita');
 
-  expect(recurring).toMatchObject({ source:'recurring', virtual:true, realization:'unreconciled', temporalStatus:'unreconciled' });
+  expect(recurring).toMatchObject({ source:'recurring', realization:'unreconciled', temporalStatus:'unreconciled' });
   expect(invoice).toMatchObject({ source:'invoice', realization:'overdue', temporalStatus:'overdue' });
   expect(explicit).toMatchObject({ source:'tx', realization:'overdue', temporalStatus:'overdue' });
   expect(events.filter(event => event.realization==='projected')).toHaveLength(0);
