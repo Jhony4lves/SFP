@@ -12,7 +12,7 @@ concurrency:
 jobs:
   focused-playwright:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -21,5 +21,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Run #242 #243 #244 regressions
-        run: npx playwright test qa/open-finance-financial-truth-242-244.spec.js --workers=1
+      - name: Run Open Finance integrity gate
+        run: >-
+          npx playwright test
+          qa/open-finance-financial-truth-242-244.spec.js
+          qa/open-finance-unified-sync.spec.js
+          qa/audit-openfinance-integrity-239.spec.js
+          qa/audit-historical-integrity-repair.spec.js
+          --workers=1
