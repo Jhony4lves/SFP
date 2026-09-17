@@ -14,6 +14,7 @@
   let startupTimer=null;
   let lastAttempt=null;
   let lastSnapshotReadAt=0;
+  let financialTruthReady=null;
   const code=value=>/^[A-Z][A-Z0-9_:-]{0,79}$/.test(String(value||''))?String(value):'';
   const safeText=value=>String(value||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,300);
   const safeStatus=value=>Number.isFinite(Number(value))?Number(value):code(value);
@@ -54,6 +55,30 @@
   function parse(raw){
     if(raw&&typeof raw==='object')return raw;
     try{return JSON.parse(String(raw||''));}catch(_){return null;}
+  }
+
+  function ensureFinancialTruthController(){
+    if(global.SFPOpenFinanceFinancialTruth?.version>=1)return Promise.resolve(global.SFPOpenFinanceFinancialTruth);
+    if(financialTruthReady)return financialTruthReady;
+    financialTruthReady=new Promise(resolve=>{
+      if(typeof document==='undefined'){resolve(null);return;}
+      const existing=document.getElementById('sfp-open-finance-financial-truth');
+      if(existing){
+        let attempts=0;
+        const timer=setInterval(()=>{
+          attempts++;
+          if(global.SFPOpenFinanceFinancialTruth?.version>=1||attempts>80){clearInterval(timer);resolve(global.SFPOpenFinanceFinancialTruth||null);}
+        },25);
+        return;
+      }
+      const script=document.createElement('script');
+      script.id='sfp-open-finance-financial-truth';
+      script.src='open-finance-financial-truth-v1.js';
+      script.onload=()=>resolve(global.SFPOpenFinanceFinancialTruth||null);
+      script.onerror=()=>resolve(null);
+      document.head.appendChild(script);
+    });
+    return financialTruthReady;
   }
 
   function formatClock(timestamp){
@@ -135,6 +160,7 @@
 
   async function syncCurrentData(){
     let result=null;
+    await ensureFinancialTruthController();
     const unified=global.SFPOpenFinanceUnifiedSync;
     if(typeof unified?.syncAll==='function')result=await unified.syncAll();
     else{
@@ -146,6 +172,11 @@
       }
     }
     if(result&&result.ok!==false){
+      const truth=await global.SFPOpenFinanceFinancialTruth?.reconcileLatest?.();
+      if(truth)result.financialTruth=truth;
+      if(truth?.ok===false&&truth?.code!=='SNAPSHOT_UNAVAILABLE'){
+        result.financialTruthWarning=truth.message||'A verdade bancária não pôde ser conciliada.';
+      }
       lastSnapshotReadAt=Date.now();
       updateAutoNote(baseAutoText());
     }
@@ -175,7 +206,7 @@
     const originalToast=global.toast;
     try{
       if(typeof originalToast==='function')global.toast=()=>{};
-      const result=await unified.syncAll();
+      const result=await syncCurrentData();
       if(result?.ok!==false){
         lastSnapshotReadAt=Date.now();
         updateAutoNote(baseAutoText());
@@ -326,7 +357,14 @@
         mode:'read-only',
         message:safeText(applied.message),
         bank:{unmapped:Number(applied?.bank?.unmapped)||0},
-        card:{unmapped:Number(applied?.card?.unmapped)||0}
+        card:{unmapped:Number(applied?.card?.unmapped)||0},
+        truth:applied?.financialTruth?{
+          ok:applied.financialTruth.ok!==false,
+          snapshots:Number(applied.financialTruth.snapshots)||0,
+          payments:Number(applied.financialTruth.payments)||0,
+          already:Number(applied.financialTruth.already)||0,
+          review:Number(applied.financialTruth.review)||0
+        }:null
       };
 
       if(applied.ok===false){
@@ -336,7 +374,9 @@
       }
 
       lastAttempt.outcome='completed';
-      if(Number(applied?.card?.unmapped||0)+Number(applied?.bank?.unmapped||0)>0){
+      if(applied.financialTruthWarning){
+        message(`Dados sincronizados, mas a conciliação de saldo/fatura precisa de atenção: ${safeText(applied.financialTruthWarning)}`,'error');
+      }else if(Number(applied?.card?.unmapped||0)+Number(applied?.bank?.unmapped||0)>0){
         message('Dados da Pluggy consultados. Há contas ou cartões sem vínculo: cadastre-os no SFP e confira os vínculos para importar.');
       }else{
         message('Dados mais recentes disponíveis na Pluggy foram aplicados ao SFP.','success');
@@ -374,6 +414,8 @@
     return true;
   }
 
+  void ensureFinancialTruthController();
+
   if(!hook()){
     observer=new MutationObserver(()=>{
       if(hook()&&observer){observer.disconnect();observer=null;}
@@ -383,7 +425,7 @@
   }
 
   global.SFPOpenFinanceRealRefresh=Object.freeze({
-    version:6,
+    version:7,
     autoIntervalMs:AUTO_INTERVAL_MS,
     diagnostic,
     exportDiagnostic,
