@@ -1,4 +1,4 @@
-name: Temporary Integrity 239 Patch
+name: Temporary Integrity 239 Validation
 
 on:
   push:
@@ -6,66 +6,23 @@ on:
       - fix/audit-openfinance-integrity-239
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch-test-commit:
-    if: github.actor != 'github-actions[bot]'
+  focused-validation:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-      - name: Apply narrow integrity patch
-        run: |
-          python3 qa/tmp-patch-integrity-239.py
-          python3 qa/tmp-compat-version-239.py
-          python3 qa/tmp-null-accounts-239.py
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('app/src/main/assets/www/audit-hardening.js')
-          s=p.read_text(encoding='utf-8')
-          old="    window.renderAudit=function(){\n      const out=originalRenderAudit.apply(this,arguments);"
-          new="    window.renderAudit=function(){\n      if(!state)return null;\n      const out=originalRenderAudit.apply(this,arguments);"
-          if s.count(old)!=1:
-              raise SystemExit(f'audit boot guard anchor: expected 1 match, found {s.count(old)}')
-          p.write_text(s.replace(old,new,1),encoding='utf-8')
-          print('Audit boot guard applied')
-          PY
-      - name: Instrument page errors with stack
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('qa/helpers.js')
-          s=p.read_text(encoding='utf-8')
-          old="page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));"
-          new="page.on('pageerror', error => { console.log('PAGEERROR_STACK\\n'+(error.stack||error.message)); errors.push(`pageerror: ${error.message}`); });"
-          if old not in s:
-              raise SystemExit('monitor pageerror hook not found')
-          p.write_text(s.replace(old,new,1),encoding='utf-8')
-          PY
       - name: Install dependencies
         run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Static checks
         run: npm run test:static
-      - name: Diagnose failing Open Finance scenarios
-        run: npx playwright test qa/open-finance-unified-sync.spec.js --grep "#203 separa|#229 promove" --reporter=line
-      - name: Commit validated patch
-        if: success()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/assets/www/audit-hardening.js \
-                  app/src/main/assets/www/open-finance-sync-accounts.js \
-                  app/src/main/assets/www/open-finance-bills.js \
-                  qa/audit-openfinance-integrity-239.spec.js
-          git diff --cached --quiet && exit 0
-          git commit -m "fix(integrity): reconcile Open Finance audit and duplicate ids (#239)"
-          git push
+      - name: Focused audit and Open Finance regression
+        run: npx playwright test qa/audit-openfinance-integrity-239.spec.js qa/audit-historical-integrity-repair.spec.js qa/open-finance-unified-sync.spec.js --reporter=line
