@@ -1,8 +1,8 @@
-(function installOpenFinanceBankTruthV6(global){
+(function installOpenFinanceBankTruthV7(global){
   'use strict';
 
-  const VERSION=6;
-  const FLAG='__SFP_OF_BANK_TRUTH_V6';
+  const VERSION=7;
+  const FLAG='__SFP_OF_BANK_TRUTH_V7';
   if(global[FLAG])return;
 
   const round2=value=>Math.round((Number(value)||0)*100)/100;
@@ -253,17 +253,24 @@
       if(!maxDate||txDate>maxDate)maxDate=txDate;
     }
 
-    if(!count)return null;
+    const supplement=confirmedOnly?{amount:0,count:0,evidence:[]}:missingInstallmentSupplement(card,month,account,bounds);
+    if(!count&&!supplement.count)return null;
+    const bankDebits=round2(debits);
+    debits+=supplement.amount;
     const amount=round2(Math.max(0,debits-credits));
     return{
       amount,
-      source:pendingCount?'open-finance-cycle-transactions':'open-finance-posted-cycle',
+      source:supplement.count?'open-finance-cycle-reconciled':(pendingCount?'open-finance-cycle-transactions':'open-finance-posted-cycle'),
       official:false,
       bankBacked:true,
       billId:null,
       transactionCount:count,
       pendingCount,
       debitAmount:round2(debits),
+      bankDebitAmount:bankDebits,
+      localSupplementAmount:supplement.amount,
+      localSupplementCount:supplement.count,
+      localSupplementEvidence:supplement.evidence,
       creditAmount:round2(credits),
       paymentsExcluded:round2(paymentsExcluded),
       periodStart:bounds.startDate,
@@ -383,6 +390,89 @@
     // Remove a changing installment label only when both numbers match bank metadata.
     return suffix&&Number(suffix[1])===n&&Number(suffix[2])===total
       ?text.slice(0,suffix.index).trim():text;
+  }
+
+  function merchantTokens(value){
+    return normalizedText(value)
+      .replace(/\bparcela\b/g,' ')
+      .replace(/\b\d{1,3}\s*\/\s*\d{1,3}\b/g,' ')
+      .replace(/[^a-z0-9]+/g,' ')
+      .trim().split(/\s+/).filter(token=>token.length>=3);
+  }
+
+  function merchantAffinity(a,b){
+    const left=merchantTokens(a),right=merchantTokens(b);
+    if(!left.length||!right.length)return false;
+    let common=0;
+    for(const token of left){
+      if(right.some(other=>token===other||(token.length>=5&&other.length>=5&&(token.startsWith(other)||other.startsWith(token)))))common++;
+    }
+    return common>=2||(common===1&&left.length===1&&right.length===1);
+  }
+
+  function installmentMeta(transaction){
+    const meta=transaction?.installment||{};
+    const n=Math.trunc(Number(meta.installmentNumber)||0),total=Math.trunc(Number(meta.totalInstallments)||0);
+    return{n,total,valid:n>0&&total>1&&n<=total&&total<=120};
+  }
+
+  function sameLocalInstallment(transaction,purchase,installment,{requireNumber=true}={}){
+    const amount=Math.abs(Number(transaction?.amount)),localAmount=Math.abs(Number(installment?.amount));
+    if(!Number.isFinite(amount)||amount<=0||!Number.isFinite(localAmount)||Math.abs(amount-localAmount)>=.02)return false;
+    if(!merchantAffinity(purchase?.desc,transaction?.description))return false;
+    const meta=installmentMeta(transaction);
+    if(requireNumber){
+      return meta.valid&&meta.total===Number(installment?.total)&&meta.n===Number(installment?.n);
+    }
+    return !meta.valid||(meta.total===Number(installment?.total)&&meta.n===Number(installment?.n));
+  }
+
+  function missingInstallmentSupplement(card,month,account,bounds){
+    if(!card||month!==activeMonth(card)||typeof global.purchaseInstallment!=='function')return{amount:0,count:0,evidence:[]};
+    const transactions=Array.isArray(account?.transactions)?account.transactions:[];
+    const evidence=[];
+    let amount=0,count=0;
+
+    for(const purchase of global.state?.purchases||[]){
+      if(!sameId(purchase?.cardId,card.id)||purchase?.status==='cancelled'||Number(purchase?.installments)<=1)continue;
+      let installment=null;
+      try{installment=global.purchaseInstallment(purchase,month);}catch(_){}
+      if(!installment||Number(installment.total)<=1||Number(installment.n)<=0)continue;
+
+      // Se a cobrança atual já existe no snapshot, nunca complemente.
+      const currentPresent=transactions.some(tx=>
+        !cancelled(tx)&&Number(tx?.amount)>0
+        &&belongsToCycle(tx,month,bounds,card)
+        &&sameLocalInstallment(tx,purchase,installment,{requireNumber:false})
+      );
+      if(currentPresent)continue;
+
+      // Exigimos uma parcela adjacente explicitamente numerada pela instituição.
+      const adjacent=transactions
+        .map(tx=>({tx,meta:installmentMeta(tx)}))
+        .filter(row=>
+          !cancelled(row.tx)&&Number(row.tx?.amount)>0&&row.meta.valid
+          &&row.meta.total===Number(installment.total)
+          &&Math.abs(row.meta.n-Number(installment.n))===1
+          &&merchantAffinity(purchase?.desc,row.tx?.description)
+          &&Math.abs(Math.abs(Number(row.tx.amount))-Math.abs(Number(installment.amount)))<.02
+        )
+        .sort((a,b)=>Math.abs(a.meta.n-Number(installment.n))-Math.abs(b.meta.n-Number(installment.n)))[0];
+
+      if(!adjacent)continue;
+      const providerAmount=Math.abs(Number(adjacent.tx.amount));
+      amount+=providerAmount;count++;
+      evidence.push({
+        purchaseId:purchase.id,
+        installmentNumber:Number(installment.n),
+        totalInstallments:Number(installment.total),
+        localAmount:round2(installment.amount),
+        providerAmount:round2(providerAmount),
+        adjacentTransactionId:clean(adjacent.tx.id)||null,
+        adjacentInstallmentNumber:adjacent.meta.n
+      });
+    }
+    return{amount:round2(amount),count,evidence};
   }
 
   // These are identified future commitments, not an assertion of complete bank coverage.
