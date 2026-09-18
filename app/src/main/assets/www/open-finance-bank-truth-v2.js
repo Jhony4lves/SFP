@@ -439,12 +439,17 @@
       try{installment=global.purchaseInstallment(purchase,month);}catch(_){}
       if(!installment||Number(installment.total)<=1||Number(installment.n)<=0)continue;
 
-      // Se a cobrança atual já existe no snapshot, nunca complemente.
-      const currentPresent=transactions.some(tx=>
-        !cancelled(tx)&&Number(tx?.amount)>0
-        &&belongsToCycle(tx,month,bounds,card)
-        &&sameLocalInstallment(tx,purchase,installment,{requireNumber:false})
-      );
+      // Se qualquer cobrança da mesma série já existe no ciclo atual, nunca complemente.
+      // Isso cobre estados legados em que o mês local da parcela ficou deslocado,
+      // mas a cobrança bancária correta já foi reclassificada para o ciclo ativo.
+      const currentPresent=transactions.some(tx=>{
+        if(cancelled(tx)||Number(tx?.amount)<=0||!belongsToCycle(tx,month,bounds,card))return false;
+        const txAmount=Math.abs(Number(tx.amount)),localAmount=Math.abs(Number(installment.amount));
+        if(!Number.isFinite(txAmount)||!Number.isFinite(localAmount)||Math.abs(txAmount-localAmount)>=.02)return false;
+        if(!merchantAffinity(purchase?.desc,tx?.description))return false;
+        const meta=installmentMeta(tx);
+        return !meta.valid||meta.total===Number(installment.total);
+      });
       if(currentPresent)continue;
 
       // Exigimos uma parcela adjacente explicitamente numerada pela instituição.
