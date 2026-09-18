@@ -92,6 +92,14 @@ function normalizeGeneric(payload) {
       needsUser: payload.refresh.needsUser === true,
       failed: payload.refresh.failed === true
     } : null,
+    sync: payload?.sync && typeof payload.sync === 'object' ? {
+      bankUnmapped: finite(payload.sync.bankUnmapped),
+      cardUnmapped: finite(payload.sync.cardUnmapped),
+      snapshots: finite(payload.sync.snapshots),
+      payments: finite(payload.sync.payments),
+      already: finite(payload.sync.already),
+      review: finite(payload.sync.review)
+    } : null,
     accounts: (Array.isArray(payload?.accounts) ? payload.accounts : []).slice(0, 50).map(account => ({
       institution: safeInstitution(account?.institution),
       providerBalance: finite(account?.providerBalance),
@@ -217,6 +225,27 @@ export function analyze(input) {
     });
   }
 
+  if ((payload.sync?.bankUnmapped || 0) > 0) {
+    anomalies.push({
+      code: 'OPENFINANCE_BANK_UNMAPPED',
+      count: payload.sync.bankUnmapped
+    });
+  }
+
+  if ((payload.sync?.cardUnmapped || 0) > 0) {
+    anomalies.push({
+      code: 'OPENFINANCE_CARD_UNMAPPED',
+      count: payload.sync.cardUnmapped
+    });
+  }
+
+  if ((payload.sync?.review || 0) > 0) {
+    anomalies.push({
+      code: 'OPENFINANCE_REVIEW_REQUIRED',
+      count: payload.sync.review
+    });
+  }
+
   return {
     ok: anomalies.length === 0,
     anomalyCount: anomalies.length,
@@ -226,7 +255,10 @@ export function analyze(input) {
       accounts: payload.accounts.length,
       cards: payload.cards.length,
       loans: payload.loans.length,
-      refreshOutcome: payload.refresh?.outcome || null
+      refreshOutcome: payload.refresh?.outcome || null,
+      review: payload.sync?.review ?? null,
+      bankUnmapped: payload.sync?.bankUnmapped ?? null,
+      cardUnmapped: payload.sync?.cardUnmapped ?? null
     },
     normalized: payload
   };
