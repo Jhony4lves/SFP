@@ -1,8 +1,8 @@
-(function installOpenFinanceBankTruthV4(global){
+(function installOpenFinanceBankTruthV6(global){
   'use strict';
 
-  const VERSION=5;
-  const FLAG='__SFP_OF_BANK_TRUTH_V5';
+  const VERSION=6;
+  const FLAG='__SFP_OF_BANK_TRUTH_V6';
   if(global[FLAG])return;
 
   const round2=value=>Math.round((Number(value)||0)*100)/100;
@@ -186,11 +186,47 @@
     return ['POSTED','COMPLETED','CLEARED','SETTLED','CONFIRMED'].some(token=>status.includes(token));
   }
 
-  function belongsToCycle(transaction,month,bounds){
+  function purchaseHasTransactionKey(purchase,key){
+    if(!purchase||!key)return false;
+    if(clean(purchase.externalId)===key)return true;
+    return Array.isArray(purchase.openFinanceExternalIds)&&purchase.openFinanceExternalIds.includes(key);
+  }
+
+  function linkedInstallmentEvidence(card,transaction,month){
+    if(!card||!validMonth(month)||typeof global.purchaseInstallment!=='function')return false;
+    const id=clean(transaction?.id),amount=Math.abs(Number(transaction?.amount));
+    if(!id||!Number.isFinite(amount)||amount<=0)return false;
+    const key=`pluggy:${id}`;
+    const purchase=(global.state?.purchases||[]).find(p=>
+      sameId(p?.cardId,card.id)
+      &&p?.status!=='cancelled'
+      &&purchaseHasTransactionKey(p,key)
+    );
+    if(!purchase)return false;
+    try{
+      const installment=global.purchaseInstallment(purchase,month);
+      const localAmount=Math.abs(Number(installment?.amount));
+      return Number.isFinite(localAmount)&&Math.abs(localAmount-amount)<.02;
+    }catch(_){return false;}
+  }
+
+  function belongsToCycle(transaction,month,bounds,card=null){
     const forecast=clean(transaction?.billForecastDate);
+    // Quando o banco informa explicitamente a fatura, essa evidência continua soberana.
     if(validMonth(forecast))return forecast===month;
     const txDate=isoDate(transaction?.date);
-    return validDate(txDate)&&txDate>=bounds.startDate&&txDate<=bounds.endDate;
+    if(!validDate(txDate))return false;
+
+    const active=card?activeMonth(card):'';
+    if(validMonth(active)&&linkedInstallmentEvidence(card,transaction,active)){
+      // Alguns emissores (Nubank confirmado fisicamente) tratam uma compra do próprio
+      // dia de fechamento como pertencente à fatura seguinte. O SFP antes deixava esse
+      // dia no ciclo anterior. Para uma transação Pluggy já vinculada à parcela local,
+      // movemos a fronteira inteira: sai do ciclo anterior e entra no ciclo ativo.
+      if(month===active&&addDays(txDate,1)===bounds.startDate)return true;
+      if(shiftMonth(month,1)===active&&txDate===bounds.endDate)return false;
+    }
+    return txDate>=bounds.startDate&&txDate<=bounds.endDate;
   }
 
   function cycleTransactions(card,month,{confirmedOnly=false}={}){
@@ -204,7 +240,7 @@
       if(cancelled(transaction))continue;
       if(confirmedOnly&&!confirmed(transaction))continue;
       const txDate=isoDate(transaction?.date),amount=Number(transaction?.amount);
-      if(!belongsToCycle(transaction,month,bounds)||!Number.isFinite(amount)||Math.abs(amount)<.0001)continue;
+      if(!belongsToCycle(transaction,month,bounds,card)||!Number.isFinite(amount)||Math.abs(amount)<.0001)continue;
 
       if(amount<0){
         if(isPaymentCredit(transaction)){paymentsExcluded+=Math.abs(amount);continue;}
@@ -249,7 +285,7 @@
     for(const transaction of Array.isArray(account.transactions)?account.transactions:[]){
       const billId=clean(transaction?.billId),amount=Number(transaction?.amount),txDate=isoDate(transaction?.date);
       if(cancelled(transaction)||!billId||!Number.isFinite(amount)||!validDate(txDate))continue;
-      if(!belongsToCycle(transaction,month,bounds))continue;
+      if(!belongsToCycle(transaction,month,bounds,card))continue;
       const group=groups.get(billId)||{billId,debits:0,credits:0,paymentsExcluded:0,count:0,pendingCount:0,maxDate:''};
       if(amount<0){
         if(isPaymentCredit(transaction))group.paymentsExcluded+=Math.abs(amount);
