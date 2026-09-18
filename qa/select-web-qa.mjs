@@ -12,9 +12,11 @@ function matchesAny(path, patterns) {
 }
 
 function addMatching(set, specs, patterns) {
+  const before = set.size;
   for (const spec of specs) {
     if (matchesAny(spec, patterns)) set.add(spec);
   }
+  return set.size - before;
 }
 
 export function selectWebQa(changedFiles, availableSpecs = qaSpecsFromDisk()) {
@@ -94,16 +96,16 @@ export function selectWebQa(changedFiles, availableSpecs = qaSpecsFromDisk()) {
 
     if (/^app\/src\/main\/assets\/www\/open-finance-.*\.js$/.test(file)) {
       staticCheck = true;
-      addMatching(tests, availableSpecs, [/^qa\/open-finance.*\.spec\.js$/]);
+      if (addMatching(tests, availableSpecs, [/^qa\/open-finance.*\.spec\.js$/]) === 0) forceFull();
       continue;
     }
 
     if (/^app\/src\/main\/assets\/www\/safe-spend.*\.js$/.test(file)) {
       staticCheck = true;
-      addMatching(tests, availableSpecs, [
+      if (addMatching(tests, availableSpecs, [
         /^qa\/safe-spend.*\.spec\.js$/,
         /^qa\/financial\.spec\.js$/
-      ]);
+      ]) === 0) forceFull();
       continue;
     }
 
@@ -113,14 +115,14 @@ export function selectWebQa(changedFiles, availableSpecs = qaSpecsFromDisk()) {
     ) {
       staticCheck = true;
       invoicePdf = true;
-      addMatching(tests, availableSpecs, [/^qa\/.*invoice.*\.spec\.js$/]);
+      if (addMatching(tests, availableSpecs, [/^qa\/.*invoice.*\.spec\.js$/]) === 0) forceFull();
       continue;
     }
 
     if (file === 'app/src/main/assets/www/invoice-image-engine.js') {
       staticCheck = true;
       invoiceImage = true;
-      addMatching(tests, availableSpecs, [/^qa\/.*invoice.*\.spec\.js$/]);
+      if (addMatching(tests, availableSpecs, [/^qa\/.*invoice.*\.spec\.js$/]) === 0) forceFull();
       continue;
     }
 
@@ -128,7 +130,7 @@ export function selectWebQa(changedFiles, availableSpecs = qaSpecsFromDisk()) {
       staticCheck = true;
       sophyArch = true;
       sophyBenchmark = true;
-      addMatching(tests, availableSpecs, [/^qa\/sophy.*\.spec\.js$/]);
+      if (addMatching(tests, availableSpecs, [/^qa\/sophy.*\.spec\.js$/]) === 0) forceFull();
       continue;
     }
 
@@ -137,20 +139,20 @@ export function selectWebQa(changedFiles, availableSpecs = qaSpecsFromDisk()) {
       file === 'app/src/main/assets/www/what-if-engine.js'
     ) {
       staticCheck = true;
-      addMatching(tests, availableSpecs, [
+      if (addMatching(tests, availableSpecs, [
         /^qa\/financial.*\.spec\.js$/,
         /^qa\/account-integrity\.spec\.js$/,
         /^qa\/budget-integrity\.spec\.js$/,
         /^qa\/card-integrity\.spec\.js$/,
         /^qa\/debt.*\.spec\.js$/,
         /^qa\/what-if.*\.spec\.js$/
-      ]);
+      ]) === 0) forceFull();
       continue;
     }
 
     if (file === 'app/src/main/assets/www/audit-hardening.js') {
       staticCheck = true;
-      addMatching(tests, availableSpecs, [/^qa\/audit.*\.spec\.js$/]);
+      if (addMatching(tests, availableSpecs, [/^qa\/audit.*\.spec\.js$/]) === 0) forceFull();
       continue;
     }
 
@@ -159,14 +161,14 @@ export function selectWebQa(changedFiles, availableSpecs = qaSpecsFromDisk()) {
       file === 'app/src/main/assets/www/ui-hardening.css'
     ) {
       staticCheck = true;
-      addMatching(tests, availableSpecs, [
+      if (addMatching(tests, availableSpecs, [
         /^qa\/.*ui.*\.spec\.js$/,
         /^qa\/.*ux.*\.spec\.js$/,
         /^qa\/.*a11y.*\.spec\.js$/,
         /^qa\/contrast.*\.spec\.js$/,
         /^qa\/visual.*\.spec\.js$/,
         /^qa\/theme-floating-selects\.spec\.js$/
-      ]);
+      ]) === 0) forceFull();
       continue;
     }
 
