@@ -1,0 +1,33 @@
+name: SFP Open Finance Truth Focus
+
+on:
+  push:
+    branches:
+      - fix/calendar-openfinance-history-242-243
+
+concurrency:
+  group: sfp-openfinance-truth-focus-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Static checks
+        run: npm run test:static
+      - name: Run Open Finance truth + integrity gate
+        run: >-
+          npx playwright test
+          qa/open-finance-financial-truth-242-244.spec.js
+          qa/open-finance-unified-sync.spec.js
+          qa/audit-openfinance-integrity-239.spec.js
+          qa/audit-historical-integrity-repair.spec.js
+          --workers=1
