@@ -134,14 +134,14 @@ test('células vazias não exibem "Sem eventos" e dias com eventos mostram conta
   // Dia 15: 1 despesa/recorrência prevista
   const day15 = dayButton(page, 15);
   await expect(day15).toBeVisible();
-  await expect(day15.locator('.cal-dot.projected')).toBeVisible();
+  await expect(day15.locator('.cal-dot.unreconciled')).toBeVisible();
   await expect(day15.locator('.cal-flow.exp')).toBeVisible();
   await expect(day15.locator('.cal-count')).toHaveText('1 evento');
 
   // Dia 25: 3 despesas previstas (mostra "3 eventos", sem inventar "+1" residual)
   const day25 = dayButton(page, 25);
   await expect(day25).toBeVisible();
-  await expect(day25.locator('.cal-dot.projected')).toBeVisible();
+  await expect(day25.locator('.cal-dot.overdue')).toBeVisible();
   await expect(day25.locator('.cal-flow.exp')).toBeVisible();
   await expect(day25.locator('.cal-count')).toHaveText('3 eventos');
 });

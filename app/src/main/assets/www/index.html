@@ -3575,12 +3575,24 @@ function isoDateFromParts(y,m,d){return `${y}-${String(m).padStart(2,'0')}-${Str
 function isBusinessDayISO(date){let d=dateObj(date).getDay();return d>=1&&d<=5}
 function previousBusinessDayISO(date){let d=dateObj(date);d.setDate(d.getDate()-1);let out=localCivilDate(d);while(!isBusinessDayISO(out)){d.setDate(d.getDate()-1);out=localCivilDate(d)}return out}
 function payrollDateForAnchor(monthKey,anchorDay){let[y,mo]=monthKey.split('-').map(Number),day=clampDay(y,mo,+anchorDay||1);return previousBusinessDayISO(isoDateFromParts(y,mo,day))}
+const BRAZIL_PAYROLL_FIXED_HOLIDAYS=new Set(['01-01','04-21','05-01','09-07','10-12','11-02','11-15','11-20','12-25']);
+function isKnownPayrollHolidayISO(date,extra=[]){let value=String(date||'').slice(0,10),monthDay=value.slice(5);return BRAZIL_PAYROLL_FIXED_HOLIDAYS.has(monthDay)||(Array.isArray(extra)&&extra.includes(value))}
+function isPayrollPaymentAllowedISO(date,extra=[]){let d=dateObj(date),weekday=d.getDay();return weekday!==0&&weekday!==1&&weekday!==6&&!isKnownPayrollHolidayISO(date,extra)}
+function previousAllowedPayrollDateISO(date,extra=[]){let d=dateObj(date),out=localCivilDate(d);while(!isPayrollPaymentAllowedISO(out,extra)){d.setDate(d.getDate()-1);out=localCivilDate(d)}return out}
+function payrollCompanyDateForMonth(monthKey,rule={}){
+ let[y,mo]=String(monthKey||'').split('-').map(Number),base;
+ if(!y||!mo)return'';
+ if(rule.payrollBase==='previous-month-end'){let d=new Date(y,mo-1,1);d.setDate(d.getDate()-1);base=localCivilDate(d)}
+ else{let day=clampDay(y,mo,+rule.payrollAnchor||+rule.day||15);base=isoDateFromParts(y,mo,day)}
+ return previousAllowedPayrollDateISO(base,rule.payrollBlockedDates||[])
+}
 function recurringDateForMonth(r,m){
+ if(r.dateRule==='salary-company-advance')return payrollCompanyDateForMonth(m,r)
  if(r.dateRule==='business-day-before-anchor'||r.payrollAnchor){return payrollDateForAnchor(m,r.payrollAnchor||r.day)}
  let[y,mo]=m.split('-').map(Number),day=clampDay(y,mo,+r.day||1);return `${m}-${String(day).padStart(2,'0')}`
 }
-function isPayrollRecurring(r){return r&&(r.dateRule==='business-day-before-anchor'||r.payrollAnchor||((r.type==='income'||r.kind==='income')&&/sal[aá]rio/i.test(r.desc||'')))}
-window.previousBusinessDayISO=previousBusinessDayISO;window.payrollDateForAnchor=payrollDateForAnchor;window.recurringDateForMonth=recurringDateForMonth;
+function isPayrollRecurring(r){return r&&(r.dateRule==='salary-company-advance'||r.dateRule==='business-day-before-anchor'||r.payrollAnchor||((r.type==='income'||r.kind==='income')&&/sal[aá]rio/i.test(r.desc||'')))}
+window.previousBusinessDayISO=previousBusinessDayISO;window.payrollDateForAnchor=payrollDateForAnchor;window.payrollCompanyDateForMonth=payrollCompanyDateForMonth;window.recurringDateForMonth=recurringDateForMonth;
 function accountBalanceDateLabel(value){if(!value)return'data-base não informada';let date=new Date(value+'T12:00');return Number.isNaN(date.getTime())?'data-base inválida':`saldo-base ${date.toLocaleDateString('pt-BR')}`}
 let toastTimer=null;
 function toast(msg,type='info'){
@@ -3710,7 +3722,7 @@ function normalize(){
  state.version=VERSION;state.schemaVersion=SCHEMA_VERSION;state.baseDate??='2026-08-18';
  for(const k of ['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','invoiceImports','transferEvidence','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'])state[k]??=[];
  state.settings??=clone(seed.settings);if(state.settings.onboardingDone!==true&&hasPersistedUserData(state))state.settings.onboardingDone=true;state.settings.theme=(state.settings.theme&&['dark','light','system'].includes(state.settings.theme))?state.settings.theme:'dark';state.categoryBudgets??={};Object.entries(state.categoryBudgets).forEach(([cat,value])=>{let n=Number(value);if(!Number.isFinite(n)||n<=0)delete state.categoryBudgets[cat];else state.categoryBudgets[cat]=Math.round(n*100)/100});state.mesAtual??=localCivilMonth();state.ui??={};state.ui.invoiceMonthByCard??={};
- state.cards.forEach(c=>c.history??=[]);state.purchases.forEach(p=>p.refunds??=[]);state.invoices.forEach(i=>{i.payments??=[];i.paidAmount??=0});state.recurring.forEach(r=>{if(isPayrollRecurring(r)){r.dateRule='business-day-before-anchor';r.payrollAnchor=+r.payrollAnchor||+r.day||1}});state.transactions.forEach(t=>{if(t.recurringId&&!t.recurrenceMonth){let rule=state.recurring.find(r=>r.id===t.recurringId),civilMonth=ym(t.date),next=monthAdd(civilMonth,1);t.recurrenceMonth=rule&&recurringDateForMonth(rule,next)===t.date?next:civilMonth}if(t.recurringId&&t.recurrenceMonth&&!t.occurrenceKey)t.occurrenceKey=`${t.recurringId}:${t.recurrenceMonth}`});
+ state.cards.forEach(c=>c.history??=[]);state.purchases.forEach(p=>p.refunds??=[]);state.invoices.forEach(i=>{i.payments??=[];i.paidAmount??=0});state.recurring.forEach(r=>{if(r?.dateRule==='salary-company-advance')return;if(isPayrollRecurring(r)){r.dateRule='business-day-before-anchor';r.payrollAnchor=+r.payrollAnchor||+r.day||1}});state.transactions.forEach(t=>{if(t.recurringId&&!t.recurrenceMonth){let rule=state.recurring.find(r=>r.id===t.recurringId),civilMonth=ym(t.date),next=monthAdd(civilMonth,1);t.recurrenceMonth=rule&&recurringDateForMonth(rule,next)===t.date?next:civilMonth}if(t.recurringId&&t.recurrenceMonth&&!t.occurrenceKey)t.occurrenceKey=`${t.recurringId}:${t.recurrenceMonth}`});
  state.sophy??={personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},rollingSummary:'',settings:{proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true}};
  state.sophy.messages??=[];state.sophy.memories??=[];state.sophy.personaState??='cheerful';state.sophy.introDone??=false;state.sophy.context??={};state.sophy.rollingSummary??='';
  state.sophy.settings??={proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true};
@@ -5674,6 +5686,19 @@ function sfpCardRemainingInstallments(c){
 }
 
 
+function sfpCardRemainingMonths(c){
+  const current=currentInvoiceMonth(c);
+  let last=current;
+  for(const purchase of state.purchases.filter(p=>p.cardId==c.id&&p.status!=='cancelled')){
+    let month=purchase.firstMonth;
+    for(let i=0;i<purchase.installments;i++,month=monthAdd(month,1)){
+      if(month>current&&purchaseInstallment(purchase,month)?.amount>0&&month>last)last=month;
+    }
+  }
+  const [year,number]=current.split('-').map(Number),[lastYear,lastNumber]=last.split('-').map(Number);
+  return (lastYear-year)*12+lastNumber-number;
+}
+
 function cardHtml(c,mini=false){
   const m=currentInvoiceMonth(c);
 
@@ -5691,7 +5716,7 @@ function cardHtml(c,mini=false){
     :0;
 
   const future=sfpCardFutureCommitment(c);
-  const remainingInstallments=sfpCardRemainingInstallments(c);
+  const remainingMonths=sfpCardRemainingMonths(c);
 
   const months=sfpCardFutureMonths(c,6);
 
@@ -5742,8 +5767,8 @@ function cardHtml(c,mini=false){
           </div>
 
           <div class="sfp-card-v2-stat">
-            <small>Parcelas futuras</small>
-            <strong>${remainingInstallments}</strong>
+            <small>Meses restantes</small>
+            <strong>${remainingMonths}</strong>
           </div>
 
         </div>
@@ -6427,6 +6452,12 @@ const FINANCIAL_SEMANTICS=Object.freeze({
 function toCents(value){return Math.round((Number(value)||0)*100)}
 function financialCalendarEvents(m=state.mesAtual){
  const events=dueEvents(m).map(e=>({...e,id:`${e.source}:${e.sourceId??e.date+e.desc}`,realization:e.status==='paid'?'realized':'projected',origin:e.source}));
+ // Salário da competência seguinte pode cair no fim do mês civil atual.
+ // Ex.: competência agosto/2026, 1ª quinzena em 31/07/2026.
+ recurringOccurrences(monthAdd(m,1)).filter(t=>ym(t.date)===m).forEach(t=>events.push({
+   date:t.date,desc:t.desc,amount:t.amount,type:t.kind,status:t.status,source:'recurring',sourceId:t.id,accountId:t.accountId,
+   id:`recurring:${t.id}`,realization:t.status==='paid'?'realized':'projected',origin:'recurring',recurrenceMonth:t.recurrenceMonth
+ }));
  state.invoices.forEach(inv=>(inv.payments||[]).filter(p=>ym(p.date)===m).forEach((p,i)=>events.push({id:`invoice-payment:${inv.id}:${i}`,date:p.date,desc:`Pagamento fatura ${card(inv.cardId)?.name||''}`,amount:p.amount,type:'expense',status:'paid',realization:'realized',origin:'invoice-payment',source:'invoice-payment',cardId:inv.cardId,sourceId:`${inv.cardId}:${inv.id}`})));
  const seen=new Set();return events.filter(e=>{const key=e.id;if(seen.has(key))return false;seen.add(key);return true}).sort((a,b)=>a.date.localeCompare(b.date));
 }

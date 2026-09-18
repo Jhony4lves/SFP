@@ -52,6 +52,24 @@ test.describe('Android release engineering', () => {
     expect(workflow).toContain('EXPECTED_TAG="v${VERSION_NAME}"');
   });
 
+  test('APK de QA usa assinatura persistente, identidade fixada e não publica build efêmera', () => {
+    const build = read('app/build.gradle');
+    const workflow = read('.github/workflows/qa.yml');
+
+    expect(build).toMatch(/debug\s*\{[\s\S]*?applicationIdSuffix\s+["']\.debug["'][\s\S]*?signingConfig\s+signingConfigs\.release[\s\S]*?\}/);
+    expect(workflow).toContain('Require stable QA signing identity');
+    expect(workflow).toContain('Restore persistent QA signing key');
+    expect(workflow).toContain('Build update-safe QA APKs');
+    expect(workflow).toContain('Verify pinned QA signatures, package identities and launcher resources');
+    expect(workflow).toContain('certificate SHA-256 digest');
+    expect(workflow).toContain('actual_cert');
+    expect(workflow).toContain('expected_cert');
+    expect(workflow).toContain('expected_package');
+    expect(workflow).toContain('com.jhony.sfp');
+    expect(workflow).toContain('if: success()');
+    expect(workflow).toContain('app-release-qa-apk');
+  });
+
   test('keystore e artefatos locais estão ignorados pelo Git', () => {
     const ignore = read('.gitignore');
 

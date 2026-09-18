@@ -1,0 +1,591 @@
+[
+  {
+    "date": "2027-08-20T03:00:00.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-08",
+    "installment": {
+      "installmentNumber": 12,
+      "totalInstallments": 12
+    },
+    "id": "itau-0",
+    "description": "Loja 1 12/12"
+  },
+  {
+    "date": "2027-07-20T03:00:00.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-07",
+    "installment": {
+      "installmentNumber": 11,
+      "totalInstallments": 12
+    },
+    "id": "itau-1",
+    "description": "Loja 1 11/12"
+  },
+  {
+    "date": "2027-06-21T03:00:00.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-06",
+    "installment": {
+      "installmentNumber": 10,
+      "totalInstallments": 12
+    },
+    "id": "itau-2",
+    "description": "Loja 1 10/12"
+  },
+  {
+    "date": "2027-05-20T03:00:00.000Z",
+    "amount": 19.29,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-05",
+    "installment": {
+      "installmentNumber": 10,
+      "totalInstallments": 10
+    },
+    "id": "itau-3",
+    "description": "Loja 2 10/10"
+  },
+  {
+    "date": "2027-05-20T03:00:00.000Z",
+    "amount": 54.9,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-05",
+    "installment": {
+      "installmentNumber": 10,
+      "totalInstallments": 10
+    },
+    "id": "itau-4",
+    "description": "Loja 3 10/10"
+  },
+  {
+    "date": "2027-05-20T03:00:00.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-05",
+    "installment": {
+      "installmentNumber": 9,
+      "totalInstallments": 12
+    },
+    "id": "itau-5",
+    "description": "Loja 1 09/12"
+  },
+  {
+    "date": "2027-04-20T03:00:00.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-04",
+    "installment": {
+      "installmentNumber": 8,
+      "totalInstallments": 12
+    },
+    "id": "itau-6",
+    "description": "Loja 1 08/12"
+  },
+  {
+    "date": "2027-04-20T03:00:00.000Z",
+    "amount": 54.9,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-04",
+    "installment": {
+      "installmentNumber": 9,
+      "totalInstallments": 10
+    },
+    "id": "itau-7",
+    "description": "Loja 3 09/10"
+  },
+  {
+    "date": "2027-04-20T03:00:00.000Z",
+    "amount": 19.29,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-04",
+    "installment": {
+      "installmentNumber": 9,
+      "totalInstallments": 10
+    },
+    "id": "itau-8",
+    "description": "Loja 2 09/10"
+  },
+  {
+    "date": "2027-03-22T03:00:00.000Z",
+    "amount": 19.29,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-03",
+    "installment": {
+      "installmentNumber": 8,
+      "totalInstallments": 10
+    },
+    "id": "itau-9",
+    "description": "Loja 2 08/10"
+  },
+  {
+    "date": "2027-03-22T03:00:00.000Z",
+    "amount": 54.9,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-03",
+    "installment": {
+      "installmentNumber": 8,
+      "totalInstallments": 10
+    },
+    "id": "itau-10",
+    "description": "Loja 3 08/10"
+  },
+  {
+    "date": "2027-03-22T03:00:00.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-03",
+    "installment": {
+      "installmentNumber": 7,
+      "totalInstallments": 12
+    },
+    "id": "itau-11",
+    "description": "Loja 1 07/12"
+  },
+  {
+    "date": "2027-02-22T03:00:00.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-02",
+    "installment": {
+      "installmentNumber": 6,
+      "totalInstallments": 12
+    },
+    "id": "itau-12",
+    "description": "Loja 1 06/12"
+  },
+  {
+    "date": "2027-02-22T03:00:00.000Z",
+    "amount": 54.9,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-02",
+    "installment": {
+      "installmentNumber": 7,
+      "totalInstallments": 10
+    },
+    "id": "itau-13",
+    "description": "Loja 3 07/10"
+  },
+  {
+    "date": "2027-02-22T03:00:00.000Z",
+    "amount": 19.29,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-02",
+    "installment": {
+      "installmentNumber": 7,
+      "totalInstallments": 10
+    },
+    "id": "itau-14",
+    "description": "Loja 2 07/10"
+  },
+  {
+    "date": "2027-01-20T03:00:00.000Z",
+    "amount": 19.29,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-01",
+    "installment": {
+      "installmentNumber": 6,
+      "totalInstallments": 10
+    },
+    "id": "itau-15",
+    "description": "Loja 2 06/10"
+  },
+  {
+    "date": "2027-01-20T03:00:00.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-01",
+    "installment": {
+      "installmentNumber": 5,
+      "totalInstallments": 12
+    },
+    "id": "itau-16",
+    "description": "Loja 1 05/12"
+  },
+  {
+    "date": "2027-01-20T03:00:00.000Z",
+    "amount": 54.9,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2027-01",
+    "installment": {
+      "installmentNumber": 6,
+      "totalInstallments": 10
+    },
+    "id": "itau-17",
+    "description": "Loja 3 06/10"
+  },
+  {
+    "date": "2026-12-21T03:00:00.000Z",
+    "amount": 19.29,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-12",
+    "installment": {
+      "installmentNumber": 5,
+      "totalInstallments": 10
+    },
+    "id": "itau-18",
+    "description": "Loja 2 05/10"
+  },
+  {
+    "date": "2026-12-21T03:00:00.000Z",
+    "amount": 54.9,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-12",
+    "installment": {
+      "installmentNumber": 5,
+      "totalInstallments": 10
+    },
+    "id": "itau-19",
+    "description": "Loja 3 05/10"
+  },
+  {
+    "date": "2026-12-21T03:00:00.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-12",
+    "installment": {
+      "installmentNumber": 4,
+      "totalInstallments": 12
+    },
+    "id": "itau-20",
+    "description": "Loja 1 04/12"
+  },
+  {
+    "date": "2026-11-23T03:00:00.000Z",
+    "amount": 66.63,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-11",
+    "installment": {
+      "installmentNumber": 3,
+      "totalInstallments": 3
+    },
+    "id": "itau-21",
+    "description": "Loja 4 03/03"
+  },
+  {
+    "date": "2026-11-23T03:00:00.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-11",
+    "installment": {
+      "installmentNumber": 3,
+      "totalInstallments": 12
+    },
+    "id": "itau-22",
+    "description": "Loja 1 03/12"
+  },
+  {
+    "date": "2026-11-23T03:00:00.000Z",
+    "amount": 19.29,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-11",
+    "installment": {
+      "installmentNumber": 4,
+      "totalInstallments": 10
+    },
+    "id": "itau-23",
+    "description": "Loja 2 04/10"
+  },
+  {
+    "date": "2026-11-23T03:00:00.000Z",
+    "amount": 54.9,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-11",
+    "installment": {
+      "installmentNumber": 4,
+      "totalInstallments": 10
+    },
+    "id": "itau-24",
+    "description": "Loja 3 04/10"
+  },
+  {
+    "date": "2026-10-20T03:00:00.000Z",
+    "amount": 54.9,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-10",
+    "installment": {
+      "installmentNumber": 3,
+      "totalInstallments": 10
+    },
+    "id": "itau-25",
+    "description": "Loja 3 03/10"
+  },
+  {
+    "date": "2026-10-20T03:00:00.000Z",
+    "amount": 19.29,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-10",
+    "installment": {
+      "installmentNumber": 3,
+      "totalInstallments": 10
+    },
+    "id": "itau-26",
+    "description": "Loja 2 03/10"
+  },
+  {
+    "date": "2026-10-20T03:00:00.000Z",
+    "amount": 66.63,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-10",
+    "installment": {
+      "installmentNumber": 2,
+      "totalInstallments": 3
+    },
+    "id": "itau-27",
+    "description": "Loja 4 02/03"
+  },
+  {
+    "date": "2026-10-20T03:00:00.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-10",
+    "installment": {
+      "installmentNumber": 2,
+      "totalInstallments": 12
+    },
+    "id": "itau-28",
+    "description": "Loja 1 02/12"
+  },
+  {
+    "date": "2026-09-21T03:00:00.000Z",
+    "amount": 54.9,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": {
+      "installmentNumber": 2,
+      "totalInstallments": 10
+    },
+    "id": "itau-29",
+    "description": "Loja 3 02/10"
+  },
+  {
+    "date": "2026-09-21T03:00:00.000Z",
+    "amount": 19.29,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": {
+      "installmentNumber": 2,
+      "totalInstallments": 10
+    },
+    "id": "itau-30",
+    "description": "Loja 2 02/10"
+  },
+  {
+    "date": "2026-09-11T12:49:37.000Z",
+    "amount": 6.35,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-31",
+    "description": "Loja 5"
+  },
+  {
+    "date": "2026-09-09T21:21:02.000Z",
+    "amount": 14.44,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-32",
+    "description": "Loja 6"
+  },
+  {
+    "date": "2026-09-08T12:50:01.000Z",
+    "amount": 4.8,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-33",
+    "description": "Loja 5"
+  },
+  {
+    "date": "2026-09-05T00:55:56.000Z",
+    "amount": 18.98,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-34",
+    "description": "Loja 7"
+  },
+  {
+    "date": "2026-09-04T22:31:32.000Z",
+    "amount": 10,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-35",
+    "description": "Loja 8"
+  },
+  {
+    "date": "2026-09-04T19:22:06.000Z",
+    "amount": 11.54,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-36",
+    "description": "Loja 5"
+  },
+  {
+    "date": "2026-09-04T12:49:59.000Z",
+    "amount": 2.1,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-37",
+    "description": "Loja 5"
+  },
+  {
+    "date": "2026-09-04T00:47:42.000Z",
+    "amount": 8,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-38",
+    "description": "Loja 9"
+  },
+  {
+    "date": "2026-09-03T13:09:26.000Z",
+    "amount": 3.5,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-39",
+    "description": "Loja 5"
+  },
+  {
+    "date": "2026-09-03T02:24:30.000Z",
+    "amount": 18.5,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-40",
+    "description": "Loja 10"
+  },
+  {
+    "date": "2026-09-02T19:22:05.000Z",
+    "amount": 3.5,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-41",
+    "description": "Loja 5"
+  },
+  {
+    "date": "2026-09-02T13:09:08.000Z",
+    "amount": 3.5,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-42",
+    "description": "Loja 5"
+  },
+  {
+    "date": "2026-09-01T18:25:07.000Z",
+    "amount": 18.58,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-43",
+    "description": "Loja 11"
+  },
+  {
+    "date": "2026-09-01T14:39:48.000Z",
+    "amount": 8.99,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-44",
+    "description": "Loja 12"
+  },
+  {
+    "date": "2026-08-29T18:47:03.000Z",
+    "amount": 13.98,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-45",
+    "description": "Loja 7"
+  },
+  {
+    "date": "2026-08-10T11:58:18.000Z",
+    "amount": -74.25,
+    "status": "PENDING",
+    "type": "CREDIT",
+    "billForecastDate": "2026-09",
+    "installment": null,
+    "id": "itau-46",
+    "description": "Pagamento de fatura"
+  },
+  {
+    "date": "2026-08-10T11:52:06.000Z",
+    "amount": 40,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": {
+      "installmentNumber": 1,
+      "totalInstallments": 12
+    },
+    "id": "itau-47",
+    "description": "Loja 1 01/12"
+  },
+  {
+    "date": "2026-08-05T00:42:14.000Z",
+    "amount": 66.64,
+    "status": "PENDING",
+    "type": "DEBIT",
+    "billForecastDate": "2026-09",
+    "installment": {
+      "installmentNumber": 1,
+      "totalInstallments": 3
+    },
+    "id": "itau-48",
+    "description": "Loja 4 01/03"
+  }
+]
