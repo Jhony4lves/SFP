@@ -11,11 +11,14 @@ test('auto-sync relê ao voltar para o app e mede o ciclo de 15 minutos desde a 
 });
 
 test('auto-sync usa releitura de snapshot e não chama refreshItems automaticamente',()=>{
-  const match=source.match(/async function automaticSync[\s\S]*?\n  }\n\n  function appendMoreMenuEntry/);
-  expect(match).not.toBeNull();
-  expect(match[0]).toContain('unified.syncAll()');
-  expect(match[0]).not.toContain('refreshItems');
-  expect(match[0]).not.toContain('PluggyRefreshBridge');
+  const syncData=source.match(/async function syncCurrentData\(\)[\s\S]*?\n  }\n\n  function configured/);
+  const automatic=source.match(/async function automaticSync[\s\S]*?\n  }\n\n  function appendMoreMenuEntry/);
+  expect(syncData).not.toBeNull();
+  expect(automatic).not.toBeNull();
+  expect(syncData[0]).toContain('unified.syncAll()');
+  expect(automatic[0]).toContain('syncCurrentData()');
+  expect(syncData[0]+automatic[0]).not.toContain('refreshItems');
+  expect(syncData[0]+automatic[0]).not.toContain('PluggyRefreshBridge');
 });
 
 test('mobile mantém a barra prioritária de 5 itens e oferece Sincronização pelo Mais',()=>{
