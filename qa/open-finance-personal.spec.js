@@ -108,6 +108,7 @@ async function boot(page, value) {
   await writeIndexedDB(page, value);
   await page.reload();
   await expectBootComplete(page, expect, value.settings.name);
+  await page.evaluate(() => setPage('openfinance'));
   await expect(page.locator('#openFinancePersonalPanel')).toBeVisible();
 }
 
