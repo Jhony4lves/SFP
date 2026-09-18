@@ -26,7 +26,7 @@
     try{
       const account=previewAccount(card)?.account||null;
       const cycle=global.SFPOpenFinanceBills?.cycleForCard?.(card,account);
-      return validMonth(cycle?.month)?cycle.month:fallback;
+      return cycle?.source&&cycle.source!=='sfp-local'&&validMonth(cycle?.month)?cycle.month:fallback;
     }catch(_){return fallback;}
   };
   let persistenceBusy=false;
@@ -466,6 +466,11 @@
         if(label)label.textContent=`Fatura atual · ${monthLabel(month)}`;
         if(strong)strong.textContent=money(displayTotal(card,month));
         if(status)status.textContent=statusText(card,month);
+      }
+      const hasLocalPlans=(global.state?.purchases||[]).some(p=>sameId(p.cardId,card.id)&&p.status!=='cancelled');
+      if(hasLocalPlans){
+        const next=[...node.querySelectorAll('.sfp-card-v2-stat')].find(el=>clean(el.querySelector('small')?.textContent)==='Próxima fatura')?.querySelector('strong');
+        if(next)next.textContent=money(displayTotal(card,shiftMonth(month,1)));
       }
       if(node.dataset.sfpBankTruthClick!=='1'){
         node.dataset.sfpBankTruthClick='1';
