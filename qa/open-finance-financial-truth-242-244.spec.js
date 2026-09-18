@@ -227,3 +227,58 @@ test('#243 recorrência virtual de mês histórico não reduz Safe-to-Spend, mas
   expect(projection.safeToSpendCents).toBe(95000);
   expect(projection.projectedCents).toBe(95000);
 });
+
+
+test('#245 saldo global coberto não vira falso crítico quando falta dinheiro só na conta pagadora', async ({ page }) => {
+  const value = fixture('Cobertura por conta física #245');
+  value.settings = value.settings || {};
+  value.settings.name = 'Cobertura por conta física #245';
+  value.mesAtual = '2026-09';
+  value.baseDate = '2026-09-01';
+  value.accounts = [
+    { id:1, name:'Mercado Pago', type:'Carteira digital', initial:0, balanceMode:'snapshot', balanceDate:'2026-09-17' },
+    { id:2, name:'Itaú', type:'Conta corrente', initial:532.21, balanceMode:'snapshot', balanceDate:'2026-09-17' }
+  ];
+  value.cards = [];
+  value.purchases = [];
+  value.transfers = [];
+  value.invoices = [];
+  value.recurring = [];
+  value.debts = [];
+  value.creditFacilities = [];
+  value.transactions = [{
+    id:2109,
+    accountId:1,
+    kind:'expense',
+    desc:'Mercado Pago',
+    amount:120.48,
+    date:'2026-09-21',
+    status:'pending',
+    balanceImpact:false,
+    category:'Outros'
+  }];
+
+  await boot(page, value);
+  const result = await page.evaluate(() => {
+    const reference=new Date(2026,8,17,12,0,0);
+    const liquidity=SFPFinancialIntegrityV2.liquiditySnapshot({reference,days:365});
+    const intelligence=financialIntelligenceSnapshot({reference,months:4});
+    return {
+      available:liquidity.operationalAvailableCents,
+      safe:liquidity.safeToSpendCents,
+      preserve:liquidity.preserveCents,
+      min:liquidity.projection.minBalanceCents,
+      negativeRisk:liquidity.projection.negativeRisk,
+      accountRisks:liquidity.accountRisks,
+      critical: intelligence.insights.filter(i=>i.severity==='critical').map(i=>i.type)
+    };
+  });
+  expect(result.available).toBe(53221);
+  expect(result.safe).toBe(41173);
+  expect(result.preserve).toBe(12048);
+  expect(result.min).toBe(41173);
+  expect(result.negativeRisk).toBe(false);
+  expect(result.accountRisks).toHaveLength(1);
+  expect(result.accountRisks[0]).toMatchObject({accountId:1,accountName:'Mercado Pago',requiredTransferCents:12048,minDate:'2026-09-21'});
+  expect(result.critical).not.toContain('cashflow_risk');
+});
