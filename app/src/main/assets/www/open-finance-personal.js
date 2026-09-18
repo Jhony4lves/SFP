@@ -488,6 +488,63 @@ function suggestSfpEntity(account,itemName){
     return'Outros';
   }
 
+  function installmentEvidence(card,transaction){
+    const meta=transaction?.installment||{};
+    const installmentNumber=Math.trunc(Number(meta.installmentNumber)||0);
+    const totalInstallments=Math.trunc(Number(meta.totalInstallments)||0);
+    const charge=Math.abs(Number(transaction?.amount));
+    if(!Number.isFinite(charge)||charge<=0||totalInstallments<=1||installmentNumber<=0||installmentNumber>totalInstallments||totalInstallments>120)return null;
+    const providerTotal=Math.abs(Number(meta.totalAmount));
+    const forecast=cleanText(transaction?.billForecastDate);
+    const observedMonth=/^\d{4}-\d{2}$/.test(forecast)?forecast:invoiceMonthForCard(card,transaction?.date);
+    if(!/^\d{4}-\d{2}$/.test(observedMonth))return null;
+    const officialTotal=Number.isFinite(providerTotal)&&providerTotal>0;
+    const total=officialTotal?providerTotal:Math.round(charge*totalInstallments*100)/100;
+    return{
+      installmentNumber,
+      totalInstallments,
+      charge,
+      total,
+      firstMonth:monthShift(observedMonth,-(installmentNumber-1)),
+      observedMonth,
+      estimated:!officialTotal,
+      meta
+    };
+  }
+
+  function canRefineInstallmentProjection(purchase,card,transaction){
+    if(!purchase)return false;
+    const evidence=installmentEvidence(card,transaction);if(!evidence)return false;
+    const providerManaged=cleanText(purchase.openFinanceProvider)==='pluggy'||(Array.isArray(purchase.tags)&&purchase.tags.includes('open-finance'));
+    if(!providerManaged)return false;
+    const legacySingle=Number(purchase.installments||1)===1&&Math.abs(Math.abs(Number(purchase.total)||0)-evidence.charge)<.02;
+    const estimatedProjection=purchase.openFinanceInstallmentEstimated===true;
+    if(!legacySingle&&!estimatedProjection)return false;
+    return Number(purchase.installments)!==evidence.totalInstallments
+      ||Math.abs(Math.abs(Number(purchase.total)||0)-evidence.total)>.011
+      ||cleanText(purchase.firstMonth)!==evidence.firstMonth
+      ||Boolean(purchase.openFinanceInstallmentEstimated)!==evidence.estimated;
+  }
+
+  function refineInstallmentProjection(purchase,card,transaction){
+    if(!canRefineInstallmentProjection(purchase,card,transaction))return false;
+    const evidence=installmentEvidence(card,transaction);if(!evidence)return false;
+    purchase.installments=evidence.totalInstallments;
+    purchase.total=evidence.total;
+    purchase.firstMonth=evidence.firstMonth;
+    purchase.openFinanceInstallment=evidence.meta&&typeof evidence.meta==='object'?{...evidence.meta}:null;
+    purchase.openFinanceInstallmentEstimated=evidence.estimated;
+    purchase.openFinanceInstallmentObservedAmount=evidence.charge;
+    purchase.openFinanceInstallmentObservedNumber=evidence.installmentNumber;
+    purchase.openFinanceInstallmentObservedMonth=evidence.observedMonth;
+    purchase.openFinanceInstallmentProjectionUpdatedAt=new Date().toISOString();
+    const projectionNote=evidence.estimated
+      ?`Parcelamento projetado por evidência Open Finance: ${evidence.installmentNumber}/${evidence.totalInstallments}, usando ${money(evidence.charge,transaction?.currencyCode)} por parcela enquanto o total original não é informado pelo banco.`
+      :`Parcelamento refinado pelo Open Finance: ${evidence.installmentNumber}/${evidence.totalInstallments}, total informado pela instituição ${money(evidence.total,transaction?.currencyCode)}.`;
+    purchase.note=[cleanText(purchase.note),projectionNote].filter(Boolean).join(' ');
+    return true;
+  }
+
   function buildPurchase(account,item,card,transaction){
     const key=externalTransactionKey(transaction);
     const date=dateOnly(transaction?.date);
@@ -495,15 +552,15 @@ function suggestSfpEntity(account,itemName){
     const meta=transaction?.installment||{};
     const installmentNumber=Math.max(0,Number(meta.installmentNumber)||0);
     const totalInstallments=Math.max(1,Number(meta.totalInstallments)||1);
-    const providerTotal=Math.abs(Number(meta.totalAmount));
     const charge=Math.abs(Number(transaction?.amount));
-    const reconstructInstallment=totalInstallments>1&&installmentNumber>0&&Number.isFinite(providerTotal)&&providerTotal>0;
-    const installments=reconstructInstallment?totalInstallments:1;
-    const total=reconstructInstallment?providerTotal:charge;
-    const firstMonth=reconstructInstallment?monthShift(currentMonth,-(installmentNumber-1)):currentMonth;
+    const evidence=installmentEvidence(card,transaction);
+    const installments=evidence?.totalInstallments||1;
+    const total=evidence?.total||charge;
+    const firstMonth=evidence?.firstMonth||currentMonth;
     const noteBits=['Importado automaticamente pelo Open Finance (Pluggy).'];
-    if(reconstructInstallment)noteBits.push(`Parcela observada ${installmentNumber}/${totalInstallments}; total informado pela instituição ${money(providerTotal,transaction?.currencyCode||account?.currencyCode)}.`);
-    else if(totalInstallments>1)noteBits.push(`Parcela ${installmentNumber||'?'} / ${totalInstallments}; total original não foi informado, então somente a cobrança atual foi registrada.`);
+    if(evidence&&!evidence.estimated)noteBits.push(`Parcela observada ${evidence.installmentNumber}/${evidence.totalInstallments}; total informado pela instituição ${money(evidence.total,transaction?.currencyCode||account?.currencyCode)}.`);
+    else if(evidence?.estimated)noteBits.push(`Parcela observada ${evidence.installmentNumber}/${evidence.totalInstallments}; como o banco não informou o total original, as parcelas restantes foram projetadas provisoriamente em ${money(evidence.charge,transaction?.currencyCode||account?.currencyCode)} cada e serão refinadas quando surgir evidência melhor.`);
+    else if(totalInstallments>1)noteBits.push(`Parcela ${installmentNumber||'?'} / ${totalInstallments}; metadados insuficientes para projetar com segurança as parcelas restantes.`);
     return{
       id:typeof global.uid==='function'?global.uid():Date.now()+Math.floor(Math.random()*1000),
       cardId:card.id,
@@ -524,21 +581,33 @@ function suggestSfpEntity(account,itemName){
       openFinanceItemId:cleanText(item?.id),
       openFinanceStatus:cleanText(transaction?.status),
       openFinanceSyncedAt:new Date().toISOString(),
-      openFinanceInstallment:meta&&typeof meta==='object'?{...meta}:null
+      openFinanceInstallment:meta&&typeof meta==='object'?{...meta}:null,
+      openFinanceInstallmentEstimated:Boolean(evidence?.estimated),
+      openFinanceInstallmentObservedAmount:evidence?.charge??null,
+      openFinanceInstallmentObservedNumber:evidence?.installmentNumber??null,
+      openFinanceInstallmentObservedMonth:evidence?.observedMonth??null
     };
   }
 
   function linkExistingPurchase(purchase,account,item,transaction){
-    const key=externalTransactionKey(transaction);if(!purchase||!key)return false;
-    const ids=Array.isArray(purchase.openFinanceExternalIds)?purchase.openFinanceExternalIds.slice():[];
-    if(ids.includes(key)||cleanText(purchase.externalId)===key)return false;
-    ids.push(key);
-    purchase.openFinanceExternalIds=ids;
-    purchase.openFinanceProvider='pluggy';
-    purchase.openFinanceAccountId=cleanText(account?.id);
-    purchase.openFinanceItemId=cleanText(item?.id);
-    purchase.openFinanceLastLinkedAt=new Date().toISOString();
-    return true;
+    if(!purchase)return false;
+    const card=(global.state?.cards||[]).find(candidate=>String(candidate?.id)===String(purchase.cardId));
+    let changed=refineInstallmentProjection(purchase,card,transaction);
+    const key=externalTransactionKey(transaction);
+    if(key&&!purchaseHasExternalKey(purchase,key)){
+      const ids=Array.isArray(purchase.openFinanceExternalIds)?purchase.openFinanceExternalIds.slice():[];
+      ids.push(key);
+      purchase.openFinanceExternalIds=ids;
+      if(!cleanText(purchase.externalId))purchase.externalId=key;
+      changed=true;
+    }
+    if(changed){
+      purchase.openFinanceProvider='pluggy';
+      purchase.openFinanceAccountId=cleanText(account?.id);
+      purchase.openFinanceItemId=cleanText(item?.id);
+      purchase.openFinanceLastLinkedAt=new Date().toISOString();
+    }
+    return changed;
   }
 
   function planInvoiceSync(result){
@@ -560,7 +629,8 @@ function suggestSfpEntity(account,itemName){
           const match=likelyExisting(account,transaction,suggestion);
           if(match?.record){
             const key=externalTransactionKey(transaction);
-            if(key&&purchaseHasExternalKey(match.record,key))plan.already++;
+            const card=suggestion.entity;
+            if((key&&purchaseHasExternalKey(match.record,key))&&!canRefineInstallmentProjection(match.record,card,transaction))plan.already++;
             else plan.link.push({purchase:match.record,account,item,transaction});
             continue;
           }
@@ -777,7 +847,8 @@ function suggestSfpEntity(account,itemName){
     likelyExisting,
     planInvoiceSync,
     invoiceMonthForCard,
-    externalTransactionKey
+    externalTransactionKey,
+    refineInstallmentProjection
   });
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});

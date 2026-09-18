@@ -142,7 +142,7 @@
     const form=document.getElementById('salaryIncomePlanForm');
     if(!input||!form)return;
     const targetLabel='Total líquido planejado no mês';
-    const targetNote='O total líquido mensal é uma referência de caixa. Somente as duas entradas abaixo movimentam o saldo e podem ser realizadas pelo Open Finance.';
+    const targetNote='O total líquido mensal é uma referência de caixa. Somente as duas entradas abaixo movimentam o saldo e podem ser realizadas pelo Open Finance. Regra da folha: 1ª quinzena no fim do mês anterior e 2ª quinzena no dia 15; sábado, domingo, segunda ou feriado antecipam o pagamento.';
     const label=input.closest('label');
     if(label){
       const textNode=[...label.childNodes].find(node=>node.nodeType===Node.TEXT_NODE);

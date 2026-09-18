@@ -210,7 +210,7 @@
 
   function planBankSync(result){
     const api=global.SFPOpenFinancePersonal;
-    const plan={create:[],link:[],transferCreate:[],transferPromote:[],transferLink:[],already:0,pending:0,review:0,unmapped:0,partial:0,errors:0,bankAccounts:0};
+    const plan={create:[],link:[],transferCreate:[],transferPromote:[],transferLink:[],already:0,pending:0,review:0,cardPayments:0,unmapped:0,partial:0,errors:0,bankAccounts:0};
     const raw=[];
 
     for(const item of Array.isArray(result?.items)?result.items:[]){
@@ -229,7 +229,7 @@
           if(isPending(transaction)){plan.pending++;continue;}
           const kind=transactionKind(account,transaction);
           if(kind!=='expense'&&kind!=='income'){plan.review++;continue;}
-          if(kind==='expense'&&isCardPaymentDescription(transaction?.description)){plan.review++;continue;}
+          if(kind==='expense'&&isCardPaymentDescription(transaction?.description)){plan.cardPayments++;continue;}
 
           const candidate={account,item,entity:suggestion.entity,transaction,kind,date:dateOnly(transaction?.date),amount};
           const exact=exactBankRecord(suggestion.entity,transaction);
@@ -284,6 +284,7 @@
       if(card.partial)cardBits.push(`${card.partial} cartão(ões) com leitura parcial`);
       const bankBits=[`${bank.create.length} lançamento(s) novo(s)`,`${bank.transferCreate.length+bank.transferPromote.length} transferência(s) pareável(is)`,`${bank.link.length+bank.transferLink.length} conciliável(is)`,`${bank.already} já sincronizado(s)`];
       if(bank.pending)bankBits.push(`${bank.pending} pendente(s)`);
+      if(bank.cardPayments)bankBits.push(`${bank.cardPayments} pagamento(s) de fatura para conciliação`);
       if(bank.review)bankBits.push(`${bank.review} em revisão`);
       if(bank.unmapped)bankBits.push(`${bank.unmapped} conta(s) sem vínculo`);
       if(bank.partial)bankBits.push(`${bank.partial} conta(s) com cobertura parcial`);
@@ -327,7 +328,14 @@
 
   function applyCardPlan(card){
     let linked=0,created=0;
-    for(const row of card.link||[]){if(markLinked(row.purchase,row.account,row.item,row.transaction))linked++}
+    const api=global.SFPOpenFinancePersonal;
+    for(const row of card.link||[]){
+      let changed=false;
+      const entity=(global.state?.cards||[]).find(candidate=>sameId(candidate?.id,row.purchase?.cardId));
+      if(typeof api?.refineInstallmentProjection==='function'&&api.refineInstallmentProjection(row.purchase,entity,row.transaction))changed=true;
+      if(markLinked(row.purchase,row.account,row.item,row.transaction))changed=true;
+      if(changed)linked++;
+    }
     for(const purchase of card.create||[]){global.state.purchases.push(purchase);created++}
     return{created,linked};
   }
@@ -415,6 +423,7 @@
           `${cardApplied.linked+bankApplied.linked} registro(s) vinculado(s) sem duplicar`
         ];
         if(card.pending+bank.pending)detail.push(`${card.pending+bank.pending} pendente(s) aguardando confirmação`);
+        if(bank.cardPayments)detail.push(`${bank.cardPayments} pagamento(s) de fatura detectado(s) para conciliação especial`);
         if(card.review+bank.review)detail.push(`${card.review+bank.review} item(ns) mantido(s) em revisão`);
         if(card.unmapped+bank.unmapped)detail.push(`${card.unmapped+bank.unmapped} conta(s)/cartão(ões) sem vínculo seguro`);
         if(bank.partial)detail.push(`${bank.partial} conta(s) bancária(s) com cobertura parcial; somente os registros recebidos foram processados`);
@@ -453,7 +462,7 @@
     if(subtitle)subtitle.textContent='Meu Pluggy • Conector 200 • sincronização de contas e faturas';
     const notes=panel.querySelectorAll(':scope > .note');
     const finalNote=notes[notes.length-1];
-    if(finalNote)finalNote.textContent='A sincronização importa compras confirmadas de cartões e movimentações confirmadas de contas vinculadas com segurança ao SFP. Registros já cadastrados são conciliados em vez de duplicados; pagamentos de fatura, créditos de cartão e transações pendentes ficam em revisão. Leitura parcial de cartão bloqueia o lote; conta bancária parcial processa somente os lançamentos confirmados que a Pluggy realmente retornou, sem presumir cobertura completa.';
+    if(finalNote)finalNote.textContent='A sincronização importa compras confirmadas de cartões e movimentações confirmadas de contas vinculadas com segurança ao SFP. Registros já cadastrados são conciliados em vez de duplicados; pagamentos de fatura confirmados são tratados como conciliação especial e nunca viram uma segunda despesa; créditos de cartão e transações pendentes ficam em revisão. Leitura parcial de cartão bloqueia o lote; conta bancária parcial processa somente os lançamentos confirmados que a Pluggy realmente retornou, sem presumir cobertura completa.';
 
     preview.addEventListener('click',event=>{
       event.preventDefault();event.stopImmediatePropagation();previewOnly();

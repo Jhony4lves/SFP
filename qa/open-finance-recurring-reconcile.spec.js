@@ -106,8 +106,9 @@ async function boot(page, value) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await expectBootComplete(page, expect, value.settings.name);
-  await page.waitForFunction(() => window.SFPOpenFinanceUnifiedSync?.version === 1);
-  await page.waitForFunction(() => window.SFPOpenFinanceRecurringReconcile?.version === 3);
+  await page.waitForFunction(() => Number(window.SFPOpenFinanceUnifiedSync?.version) >= 2);
+  await page.waitForFunction(() => Number(window.SFPOpenFinanceRecurringReconcile?.version) >= 3);
+  await page.evaluate(() => setPage('openfinance'));
 }
 
 async function sync(page) {
@@ -297,7 +298,10 @@ test('#218 salário previsto com valor variável vira uma única receita realiza
     openFinanceRecurringMatchBasis:'income-strong-semantic'
   });
   expect(result.virtuals).toHaveLength(0);
-  expect(result.balance).toBeCloseTo(2487.63, 2);
+  // account.balance do Open Finance é snapshot atual e já inclui o salário POSTED;
+  // não some a receita novamente sobre os R$ 500 informados pelo banco.
+  expect(result.balance).toBeCloseTo(500, 2);
+  expect(result.tx.balanceImpact).toBe(false);
   expect(result.aliases).toContain('AGUAS DE NITEROI SA PAGAMENTO SALARIO');
   expect(errors).toEqual([]);
 });

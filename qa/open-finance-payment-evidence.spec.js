@@ -14,7 +14,7 @@ function resolver({ transactions = [], bills = [], partial = false, stored = {},
     SFPOpenFinanceBills: { getLastPreview: () => ({ ok: true, items: [item] }) },
     SFPOpenFinancePersonal: { suggestSfpEntity: () => ({ entity: card }) },
     invoiceCalculated: () => 241.49, invoiceStatus: () => ({}),
-    renderCards() {}, openCardDetail() {}, setInterval() {}, clearInterval() {}
+    renderCards() {}, openCardDetail() {}, openInvoiceDetail() {}, setInterval() {}, clearInterval() {}
   };
   vm.createContext(context);
   if(realMapping)vm.runInContext(fs.readFileSync('app/src/main/assets/www/open-finance-personal.js','utf8'),context);

@@ -52,7 +52,7 @@ async function boot(page,value){
 }
 
 async function openOpenFinance(page){
-  await page.evaluate(()=>setPage('config'));
+  await page.evaluate(()=>setPage('openfinance'));
   await expect(page.locator('#openFinancePersonalPanel')).toBeVisible();
   await expect(page.locator('#openFinanceSyncBtn')).toBeVisible();
 }

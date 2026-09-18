@@ -23,7 +23,7 @@ async function boot(page, value) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await expectBootComplete(page, expect, value.settings.name);
-  await page.waitForFunction(() => window.SFPRecurringIncomePlan?.version === 1);
+  await page.waitForFunction(() => Number(window.SFPRecurringIncomePlan?.version) >= 2);
 }
 
 async function createSalaryPlan(page, overrides = {}) {
@@ -34,9 +34,7 @@ async function createSalaryPlan(page, overrides = {}) {
     start:'2026-09',
     end:'',
     firstAmount:1591.10,
-    firstDay:1,
     secondAmount:681.90,
-    secondDay:15,
     ...input
   }), overrides);
 }
@@ -231,7 +229,6 @@ test('#218 editar plano preserva ids e aliases Open Finance das recorrências fi
       start:'2026-09',
       end:'',
       firstAmount:1610,
-      firstDay:1,
       secondAmount:690,
       secondDay:15
     });

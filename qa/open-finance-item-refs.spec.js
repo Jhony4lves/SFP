@@ -26,6 +26,7 @@ async function boot(page){
   await writeIndexedDB(page,value);
   await page.reload();
   await expectBootComplete(page,expect,value.settings.name);
+  await page.evaluate(()=>setPage('openfinance'));
   await expect(page.locator('#openFinanceItemRefsBox')).toBeVisible();
 }
 

@@ -119,6 +119,17 @@ test('#203 separa prévia, importa conta + cartão, concilia existente e permane
   const value = stateFor('Open Finance unificado #203');
   await boot(page, value);
 
+  // O auto-sync de abertura é intencional. Espere-o terminar e restaure a fixture
+  // para que este teste continue medindo explicitamente preview -> primeiro sync.
+  await expect.poll(() => page.evaluate(() => state.transactions.some(t => t.desc === 'FACULDADE UNILASALLE'))).toBe(true);
+  await page.evaluate(cleanState => {
+    state = JSON.parse(JSON.stringify(cleanState));
+    normalize();
+    lastSavedState = JSON.parse(JSON.stringify(state));
+    renderAll();
+    setPage('openfinance');
+  }, value);
+
   await page.locator('#openFinancePreviewBtn').click();
   await expect(page.locator('#openFinanceStagingSummary')).toContainText('Faturas:');
   await expect(page.locator('#openFinanceStagingSummary')).toContainText('Contas:');
