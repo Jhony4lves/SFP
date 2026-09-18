@@ -3722,7 +3722,7 @@ function normalize(){
  state.version=VERSION;state.schemaVersion=SCHEMA_VERSION;state.baseDate??='2026-08-18';
  for(const k of ['accounts','cards','transactions','transfers','purchases','invoiceAdjustments','invoices','recurring','debts','goals','assets','statements','invoiceImports','transferEvidence','classificationRules','snapshots','trash','undo','closedMonths','csvTemplates','favorites','creditFacilities'])state[k]??=[];
  state.settings??=clone(seed.settings);if(state.settings.onboardingDone!==true&&hasPersistedUserData(state))state.settings.onboardingDone=true;state.settings.theme=(state.settings.theme&&['dark','light','system'].includes(state.settings.theme))?state.settings.theme:'dark';state.categoryBudgets??={};Object.entries(state.categoryBudgets).forEach(([cat,value])=>{let n=Number(value);if(!Number.isFinite(n)||n<=0)delete state.categoryBudgets[cat];else state.categoryBudgets[cat]=Math.round(n*100)/100});state.mesAtual??=localCivilMonth();state.ui??={};state.ui.invoiceMonthByCard??={};
- state.cards.forEach(c=>c.history??=[]);state.purchases.forEach(p=>p.refunds??=[]);state.invoices.forEach(i=>{i.payments??=[];i.paidAmount??=0});state.recurring.forEach(r=>{if(isPayrollRecurring(r)){r.dateRule='business-day-before-anchor';r.payrollAnchor=+r.payrollAnchor||+r.day||1}});state.transactions.forEach(t=>{if(t.recurringId&&!t.recurrenceMonth){let rule=state.recurring.find(r=>r.id===t.recurringId),civilMonth=ym(t.date),next=monthAdd(civilMonth,1);t.recurrenceMonth=rule&&recurringDateForMonth(rule,next)===t.date?next:civilMonth}if(t.recurringId&&t.recurrenceMonth&&!t.occurrenceKey)t.occurrenceKey=`${t.recurringId}:${t.recurrenceMonth}`});
+ state.cards.forEach(c=>c.history??=[]);state.purchases.forEach(p=>p.refunds??=[]);state.invoices.forEach(i=>{i.payments??=[];i.paidAmount??=0});state.recurring.forEach(r=>{if(r?.dateRule==='salary-company-advance')return;if(isPayrollRecurring(r)){r.dateRule='business-day-before-anchor';r.payrollAnchor=+r.payrollAnchor||+r.day||1}});state.transactions.forEach(t=>{if(t.recurringId&&!t.recurrenceMonth){let rule=state.recurring.find(r=>r.id===t.recurringId),civilMonth=ym(t.date),next=monthAdd(civilMonth,1);t.recurrenceMonth=rule&&recurringDateForMonth(rule,next)===t.date?next:civilMonth}if(t.recurringId&&t.recurrenceMonth&&!t.occurrenceKey)t.occurrenceKey=`${t.recurringId}:${t.recurrenceMonth}`});
  state.sophy??={personaState:'cheerful',messages:[],memories:[],lastProactiveAt:null,introDone:false,context:{},rollingSummary:'',settings:{proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true}};
  state.sophy.messages??=[];state.sophy.memories??=[];state.sophy.personaState??='cheerful';state.sophy.introDone??=false;state.sophy.context??={};state.sophy.rollingSummary??='';
  state.sophy.settings??={proactivityEnabled:true,provider:'groq',model:'openai/gpt-oss-120b',onlineEnabled:true};
@@ -6452,6 +6452,12 @@ const FINANCIAL_SEMANTICS=Object.freeze({
 function toCents(value){return Math.round((Number(value)||0)*100)}
 function financialCalendarEvents(m=state.mesAtual){
  const events=dueEvents(m).map(e=>({...e,id:`${e.source}:${e.sourceId??e.date+e.desc}`,realization:e.status==='paid'?'realized':'projected',origin:e.source}));
+ // Salário da competência seguinte pode cair no fim do mês civil atual.
+ // Ex.: competência agosto/2026, 1ª quinzena em 31/07/2026.
+ recurringOccurrences(monthAdd(m,1)).filter(t=>ym(t.date)===m).forEach(t=>events.push({
+   date:t.date,desc:t.desc,amount:t.amount,type:t.kind,status:t.status,source:'recurring',sourceId:t.id,accountId:t.accountId,
+   id:`recurring:${t.id}`,realization:t.status==='paid'?'realized':'projected',origin:'recurring',recurrenceMonth:t.recurrenceMonth
+ }));
  state.invoices.forEach(inv=>(inv.payments||[]).filter(p=>ym(p.date)===m).forEach((p,i)=>events.push({id:`invoice-payment:${inv.id}:${i}`,date:p.date,desc:`Pagamento fatura ${card(inv.cardId)?.name||''}`,amount:p.amount,type:'expense',status:'paid',realization:'realized',origin:'invoice-payment',source:'invoice-payment',cardId:inv.cardId,sourceId:`${inv.cardId}:${inv.id}`})));
  const seen=new Set();return events.filter(e=>{const key=e.id;if(seen.has(key))return false;seen.add(key);return true}).sort((a,b)=>a.date.localeCompare(b.date));
 }
