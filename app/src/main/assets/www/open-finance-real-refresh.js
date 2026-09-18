@@ -417,7 +417,12 @@
         return;
       }
 
-      if(lastAttempt.outcome==='refreshed'){
+      const unmapped=Number(applied?.card?.unmapped||0)+Number(applied?.bank?.unmapped||0);
+      if(applied.financialTruthWarning){
+        message(`Dados sincronizados, mas a conciliação de saldo/fatura precisa de atenção: ${safeText(applied.financialTruthWarning)}`,'error');
+      }else if(unmapped>0){
+        message('Dados atualizados. Há contas ou cartões sem vínculo: cadastre-os no SFP e confira os vínculos para importar.','info');
+      }else if(lastAttempt.outcome==='refreshed'){
         message('A instituição concluiu a atualização e os dados novos foram aplicados ao SFP.','success');
       }else if(lastAttempt.outcome==='partially-refreshed'){
         message('Parte das conexões foi atualizada; o SFP também aplicou o snapshot mais recente das demais.','info');
