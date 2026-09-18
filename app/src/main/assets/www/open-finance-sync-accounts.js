@@ -328,7 +328,14 @@
 
   function applyCardPlan(card){
     let linked=0,created=0;
-    for(const row of card.link||[]){if(markLinked(row.purchase,row.account,row.item,row.transaction))linked++}
+    const api=global.SFPOpenFinancePersonal;
+    for(const row of card.link||[]){
+      let changed=false;
+      const entity=(global.state?.cards||[]).find(candidate=>sameId(candidate?.id,row.purchase?.cardId));
+      if(typeof api?.refineInstallmentProjection==='function'&&api.refineInstallmentProjection(row.purchase,entity,row.transaction))changed=true;
+      if(markLinked(row.purchase,row.account,row.item,row.transaction))changed=true;
+      if(changed)linked++;
+    }
     for(const purchase of card.create||[]){global.state.purchases.push(purchase);created++}
     return{created,linked};
   }
