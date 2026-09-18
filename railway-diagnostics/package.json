@@ -1,10 +1,10 @@
 {
   "name": "sfp-openfinance-diagnostics",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.mjs",
+    "start": "node start.mjs",
     "test": "node --test test.mjs"
   },
   "engines": {
