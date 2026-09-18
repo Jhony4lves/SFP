@@ -847,7 +847,8 @@ function suggestSfpEntity(account,itemName){
     likelyExisting,
     planInvoiceSync,
     invoiceMonthForCard,
-    externalTransactionKey
+    externalTransactionKey,
+    refineInstallmentProjection
   });
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
