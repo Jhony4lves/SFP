@@ -55,6 +55,12 @@ assert.equal(plan(['some-new-root-file.txt']).mode, 'full');
 }
 
 {
+  const p = selectWebQa(['app/src/main/assets/www/open-finance-sync.js'], []);
+  assert.equal(p.mode, 'full');
+  assert.equal(p.browserRequired, true);
+}
+
+{
   const p = plan(['app/src/main/assets/www/invoice-pdf-engine.js']);
   assert.equal(p.mode, 'impacted');
   assert.equal(p.invoicePdf, true);
