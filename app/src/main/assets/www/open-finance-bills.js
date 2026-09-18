@@ -37,12 +37,16 @@ function outstanding(id){try{return round(global.cardOutstanding(id))}catch(_){r
 function billMonth(b){return ym(b?.dueDate)||ym(b?.billClosingDate)}
 function settlementEvidence(card,m,account){
   if(!card||!/^\d{4}-\d{2}$/.test(clean(m)))return{month:m||null,unsettled:false,reason:'invalid-cycle'};
+  const inv=findInvoice(card.id,m),status=clean(inv?.status).toLowerCase(),localPaid=Math.abs(Number(inv?.paidAmount)||0),storedBillPaid=round((Array.isArray(inv?.openFinanceBillPayments)?inv.openFinanceBillPayments:[]).reduce((sum,p)=>sum+Math.abs(Number(p?.amount)||0),0));
   const rawBill=(Array.isArray(account?.bills)?account.bills:[]).find(b=>billMonth(b)===m),hasRawTotal=rawBill?.totalAmount!==null&&rawBill?.totalAmount!==undefined&&clean(rawBill?.totalAmount)!=='',rawTotal=hasRawTotal?Math.abs(Number(rawBill.totalAmount)):NaN,rawPaid=Number.isFinite(rawTotal)?round((Array.isArray(rawBill?.payments)?rawBill.payments:[]).reduce((sum,p)=>sum+Math.abs(Number(p?.amount)||0),0)):null;
-  if(Number.isFinite(rawTotal)){const left=round(Math.max(0,rawTotal-rawPaid));return{month:m,unsettled:left>.009,reason:left>.009?'current-bill-has-balance':'current-bill-settled',bill:{id:clean(rawBill?.id)||null,total:round(rawTotal),paid:rawPaid,remaining:left}}}
-  const inv=findInvoice(card.id,m),status=clean(inv?.status).toLowerCase(),total=Number(global.invoiceTotal?.(card.id,m)),localPaid=Math.abs(Number(inv?.paidAmount)||0),billPaid=round((Array.isArray(inv?.openFinanceBillPayments)?inv.openFinanceBillPayments:[]).reduce((sum,p)=>sum+Math.abs(Number(p?.amount)||0),0)),effectivePaid=Math.max(localPaid,billPaid),left=Number.isFinite(total)?round(Math.max(0,total-effectivePaid)):null;
+  if(Number.isFinite(rawTotal)){
+    const effectivePaid=Math.max(rawPaid||0,localPaid,storedBillPaid),left=round(Math.max(0,rawTotal-effectivePaid)),settled=status==='paid'||left<=.009;
+    return{month:m,unsettled:!settled,reason:settled?(status==='paid'?'local-status-paid':'current-bill-settled'):'current-bill-has-balance',bill:{id:clean(rawBill?.id)||null,total:round(rawTotal),providerPaid:rawPaid,effectivePaid:round(effectivePaid),remaining:left}};
+  }
+  const total=Number(global.invoiceTotal?.(card.id,m)),effectivePaid=Math.max(localPaid,storedBillPaid),left=Number.isFinite(total)?round(Math.max(0,total-effectivePaid)):null;
   let reason='local-cycle-has-balance',unsettled=true;
   if(status==='paid'){reason='local-status-paid';unsettled=false}else if(!Number.isFinite(total)||total<=.009){reason='local-total-empty';unsettled=false}else if(left<=.009){reason='local-payments-settled';unsettled=false}
-  return{month:m,unsettled,reason,invoice:{status:status||'open',total:Number.isFinite(total)?round(total):null,paidAmount:round(localPaid),openFinanceBillPaid:billPaid,effectivePaid:round(effectivePaid),remaining:left,officialTotalSource:inv?.officialTotalSource||null,openFinanceBillId:inv?.openFinanceBillId||null}}
+  return{month:m,unsettled,reason,invoice:{status:status||'open',total:Number.isFinite(total)?round(total):null,paidAmount:round(localPaid),openFinanceBillPaid:storedBillPaid,effectivePaid:round(effectivePaid),remaining:left,officialTotalSource:inv?.officialTotalSource||null,openFinanceBillId:inv?.openFinanceBillId||null}}
 }
 function unsettledCycle(card,m,account){return settlementEvidence(card,m,account).unsettled}
 function currentCycleMonth(card){if(!card)return civilMonth();const p=previewAccount(card.id);return bankCycle(p?.account||null,card).month}
