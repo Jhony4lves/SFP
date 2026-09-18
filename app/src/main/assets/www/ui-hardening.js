@@ -98,6 +98,43 @@
     filter?.style.removeProperty('margin');
   }
 
+  function hasActiveFeedback(){
+    const toast=document.getElementById('toast');
+    if(toast?.classList.contains('show') && (toast.textContent||'').trim()) return true;
+    const card=document.getElementById('feedbackCard');
+    if(card?.classList.contains('show') && (card.textContent||'').trim()) return true;
+    const banner=document.getElementById('inAppBanner');
+    return !!(banner && !banner.classList.contains('hidden') && (banner.textContent||'').trim());
+  }
+
+  function installManagementSuccessFeedback(){
+    const specs=[
+      {formId:'accountForm',idId:'accountId',list:'accounts',label:'Conta'},
+      {formId:'debtForm',idId:'debtId',list:'debts',label:'Dívida'},
+      {formId:'recForm',idId:'recId',list:'recurring',label:'Recorrência'}
+    ];
+    specs.forEach(spec=>{
+      const form=document.getElementById(spec.formId);
+      const original=form?.onsubmit;
+      if(!form || typeof original!=='function' || original.__sfpSuccessFeedback) return;
+      const wrapped=async function(event){
+        const id=String(document.getElementById(spec.idId)?.value||'').trim();
+        const before=Array.isArray(window.state?.[spec.list])?window.state[spec.list].length:0;
+        const result=await original.call(this,event);
+        const list=Array.isArray(window.state?.[spec.list])?window.state[spec.list]:[];
+        const saved=id?list.some(item=>String(item?.id)===id):list.length>before;
+        const modal=document.getElementById('modalRoot');
+        const flowClosed=!modal || modal.classList.contains('hidden');
+        if(saved && flowClosed && !hasActiveFeedback() && typeof window.toast==='function'){
+          window.toast(id?`${spec.label} atualizada com sucesso.`:`${spec.label} salva com sucesso.`,'success');
+        }
+        return result;
+      };
+      wrapped.__sfpSuccessFeedback=true;
+      form.onsubmit=wrapped;
+    });
+  }
+
   function esc(value){
     return String(value??'').replace(/[&<>"']/g,ch=>({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
@@ -285,7 +322,6 @@
     });
   }
 
-
   let passiveModalSession=null;
 
   function visiblePassiveModal(){
@@ -382,6 +418,8 @@
     installDialogs();
     installAndroidBackBridge();
     installPseudoButtonKeyboard();
+    installManagementSuccessFeedback();
+    setTimeout(installManagementSuccessFeedback,0);
     syncPassiveModal();
 
     const observer=new MutationObserver(records=>{
@@ -398,6 +436,7 @@
           }
         }
       }
+      installManagementSuccessFeedback();
       syncPassiveModal();
     });
     observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
