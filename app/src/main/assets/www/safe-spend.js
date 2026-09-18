@@ -265,3 +265,19 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
 })();
+
+(function loadFinancialSemanticGuard(){
+  if(typeof document==='undefined'||document.querySelector('script[data-sfp-financial-semantic-guard="1"]'))return;
+  const load=()=>{
+    if(document.querySelector('script[data-sfp-financial-semantic-guard="1"]'))return;
+    const script=document.createElement('script');
+    script.src='financial-semantic-guard.js';
+    script.async=false;
+    script.dataset.sfpFinancialSemanticGuard='1';
+    document.head.appendChild(script);
+  };
+  if(globalThis.SFPFinancialIntegrityV2){load();return;}
+  const integrity=document.querySelector('script[data-sfp-financial-integrity-v2="1"]');
+  if(integrity)integrity.addEventListener('load',load,{once:true});
+  else setTimeout(load,0);
+})();
