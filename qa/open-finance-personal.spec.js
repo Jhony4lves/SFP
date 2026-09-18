@@ -168,6 +168,12 @@ test('OPEN-FINANCE-02 consulta lê 3 Items/6 contas/transações sem mutar o est
   const value = openFinanceState('Open Finance Preview');
   await boot(page, value);
 
+  // A sincronização automática de abertura é comportamento intencional e pode
+  // aplicar o snapshot antes do teste de preview. Espere essa etapa estabilizar,
+  // então meça somente a consulta manual, que precisa continuar read-only.
+  await page.waitForFunction(() => window.__pluggyMock.previewCalls >= 1);
+  await page.waitForTimeout(150);
+  await page.evaluate(() => { window.__pluggyMock.previewCalls = 0; });
   const before = await page.evaluate(() => JSON.stringify(state));
   await page.locator('#openFinancePreviewBtn').click();
 
