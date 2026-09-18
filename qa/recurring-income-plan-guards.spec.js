@@ -23,7 +23,7 @@ async function boot(page,value){
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await expectBootComplete(page,expect,value.settings.name);
-  await page.waitForFunction(()=>window.SFPRecurringIncomePlan?.version===1);
+  await page.waitForFunction(()=>Number(window.SFPRecurringIncomePlan?.version)>=2);
   await page.waitForFunction(()=>window.__SFP_RECURRING_INCOME_PLAN_CHILD_GUARDS_V1===true);
   await page.waitForFunction(()=>window.__SFP_RECURRING_INCOME_PLAN_TRASH_GUARD_V1===true);
 }
@@ -36,7 +36,6 @@ async function createPlan(page){
     start:'2026-09',
     end:'',
     firstAmount:1591.10,
-    firstDay:1,
     secondAmount:681.90,
     secondDay:15
   }));
