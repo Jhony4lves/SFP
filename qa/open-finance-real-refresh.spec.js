@@ -73,7 +73,7 @@ test('abertura relê snapshot automaticamente sem disparar refresh/PATCH',async(
   expect(calls.status).toBe(0);
 });
 
-test('Atualizar dados relê a Pluggy sem solicitar refresh da instituição',async({page})=>{
+test('Atualizar dados tenta refresh real antes de reler a Pluggy',async({page})=>{
   await boot(page);
   const before=await page.evaluate(()=>({...window.__sfpRefreshCalls}));
   const button=page.locator('#openFinanceSyncBtn');
@@ -84,27 +84,28 @@ test('Atualizar dados relê a Pluggy sem solicitar refresh da instituição',asy
 
   await page.waitForFunction(beforePreview=>window.__sfpRefreshCalls.preview>beforePreview,before.preview);
   const after=await page.evaluate(()=>({...window.__sfpRefreshCalls}));
-  expect(after.refresh).toBe(0);
-  expect(after.status).toBe(0);
+  expect(after.refresh).toBe(1);
+  expect(after.status).toBeGreaterThanOrEqual(1);
   expect(after.preview).toBeGreaterThan(before.preview);
   const diagnostic=await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic());
-  expect(diagnostic.outcome).toBe('completed');
-  expect(diagnostic.request).toMatchObject({ok:true,source:'pluggy',mode:'read-only'});
-  await expect(page.locator('#openFinancePreview')).toContainText('Dados mais recentes disponíveis na Pluggy foram aplicados ao SFP');
+  expect(diagnostic.outcome).toBe('refreshed');
+  expect(diagnostic.request).toMatchObject({ok:true,requested:1,started:1});
+  await expect(page.locator('#openFinancePreview')).toContainText('dados novos foram aplicados ao SFP');
 });
 
-test('sincronização manual continua funcionando mesmo se refresh/PATCH do provedor estiver proibido',async({page})=>{
+test('MeuPluggy recusando PATCH cai para snapshot sem bloquear sincronização',async({page})=>{
   await boot(page);
   await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
-    refreshItems:()=>{throw new Error('refreshItems não deveria ser chamado');},
-    refreshStatus:()=>{throw new Error('refreshStatus não deveria ser chamado');}
+    refreshItems:()=>{window.__sfpRefreshCalls.refresh++;return JSON.stringify({ok:false,requested:1,started:0,items:[{accepted:false,status:400,code:'REFRESH_NEEDS_ATTENTION',providerMessage:'MeuPluggy item cant be updated'}]});},
+    refreshStatus:()=>{window.__sfpRefreshCalls.status++;return JSON.stringify({ok:true,complete:true,items:[]});}
   }}));
   const before=await page.evaluate(()=>window.__sfpRefreshCalls.preview);
   await page.locator('#openFinanceSyncBtn').click();
   await page.waitForFunction(beforePreview=>window.__sfpRefreshCalls.preview>beforePreview,before);
-  expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(0);
+  expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(1);
   expect(await page.evaluate(()=>window.__sfpRefreshCalls.status)).toBe(0);
-  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('completed');
+  expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('provider-managed');
+  await expect(page.locator('#openFinancePreview')).toContainText('MeuPluggy não permite refresh forçado');
 });
 
 test('leitura da Pluggy aplica o Bill novo mesmo sem compras novas',async({page})=>{
@@ -122,7 +123,7 @@ test('leitura da Pluggy aplica o Bill novo mesmo sem compras novas',async({page}
   });
   await page.locator('#openFinanceSyncBtn').click();
   await expect.poll(()=>page.evaluate(()=>invoiceStatus(2,'2026-09').officialTotal)).toBe(327.59);
-  expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(0);
+  expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(1);
   await expect(page.locator('#openFinanceSyncBtn')).toBeEnabled();
   await page.reload();
   await expectBootComplete(page,expect,'Open Finance real refresh');
@@ -166,7 +167,7 @@ test('cartão sem compras locais mostra parcelas bancárias identificadas e não
   await page.evaluate(()=>{setPage('cartoes');renderCards();});
   await expect(page.locator('#cardsGrid')).toContainText('2 meses');
   await expect(page.locator('#cardsGrid')).toContainText('188,72');
-  await page.waitForFunction(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome==='completed');
+  await page.waitForFunction(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome==='refreshed');
   await page.evaluate(()=>{const grid=document.getElementById('cardsGrid');grid.innerHTML=grid.innerHTML.replace('2 meses','0');});
   await expect(page.locator('#cardsGrid')).toContainText('2 meses');
   await page.evaluate(()=>{
