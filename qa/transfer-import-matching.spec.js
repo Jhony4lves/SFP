@@ -41,10 +41,23 @@ async function importRows(page, accountId, rows, file) {
   }, { accountId, rows, file });
 
   await page.evaluate(() => {
-    window.__qaPendingStatementImport = importStatement();
-    return window.__qaPendingStatementImport;
+    window.__qaStatementImportResult = { done: false, error: null };
+    window.__qaPendingStatementImport = importStatement()
+      .then(() => { window.__qaStatementImportResult.done = true; })
+      .catch(error => {
+        window.__qaStatementImportResult = {
+          done: true,
+          error: String(error?.stack || error?.message || error)
+        };
+      });
   });
-  await page.evaluate(() => { window.__qaPendingStatementImport = null; });
+  await expect.poll(() => page.evaluate(() => window.__qaStatementImportResult?.done)).toBe(true);
+  const importError = await page.evaluate(() => window.__qaStatementImportResult?.error || null);
+  expect(importError).toBeNull();
+  await page.evaluate(() => {
+    window.__qaPendingStatementImport = null;
+    window.__qaStatementImportResult = null;
+  });
   return preview;
 }
 
