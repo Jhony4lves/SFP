@@ -69,6 +69,7 @@ test('#212 fatura quitada avança setembro para outubro mesmo com datas Pluggy a
 
   const result=await page.evaluate(()=>({
     cycle:SFPOpenFinanceBills.bankCycle(JSON.parse(PluggyBridge.previewData()).items[0].accounts[0],card(1)),
+    compatibilityCycle:SFPOpenFinanceBills.cycleForCard(card(1),JSON.parse(PluggyBridge.previewData()).items[0].accounts[0]),
     month:SFPOpenFinanceBills.currentCycleMonth(card(1)),
     septemberStatus:invoiceDisplayStatus(1,'2026-09'),
     octoberBank:SFPOpenFinanceBankTruth.bankTruth(card(1),'2026-10'),
@@ -77,6 +78,7 @@ test('#212 fatura quitada avança setembro para outubro mesmo com datas Pluggy a
   }));
 
   expect(result.month).toBe('2026-10');
+  expect(result.compatibilityCycle.month).toBe('2026-10');
   expect(result.cycle).toMatchObject({
     month:'2026-10',
     candidateMonth:'2026-09',
