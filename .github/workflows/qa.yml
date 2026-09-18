@@ -113,6 +113,7 @@ jobs:
           name: web-qa-reports
           path: build/reports/playwright-html
           if-no-files-found: warn
+          retention-days: 14
 
   android-qa-build:
     runs-on: ubuntu-latest
@@ -143,9 +144,4 @@ jobs:
           name: android-qa-checksums
           path: build/reports/android-qa-checksums.txt
           if-no-files-found: error
-      - if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: warn
+          retention-days: 14
