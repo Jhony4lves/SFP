@@ -158,6 +158,60 @@
   setTimeout(install,0);
 })();
 
+/*
+ * SFP_MATCHED_TRANSFER_SNAPSHOT_GUARD_V1
+ *
+ * Uma transferência conciliada entre dois extratos pode atravessar contas
+ * com datas-base diferentes. O core inline legado grava apenas um
+ * balanceImpact global usando a ponta importada por último, embora cada
+ * statementEvidence já preserve conta e data próprias. Isso torna o saldo
+ * dependente da ordem de importação.
+ *
+ * Enquanto finalizeStatementTransferMatch() não persistir nativamente
+ * balanceImpactByAccount, este guard deriva o impacto de cada ponta pela
+ * data-base da respectiva conta. accountBalance() já prioriza esse mapa.
+ */
+(function installMatchedTransferSnapshotGuard(){
+  if(typeof document==='undefined')return;
+
+  const install=()=>{
+    try{
+      if(typeof finalizeStatementTransferMatch!=='function'||typeof afterAccountSnapshot!=='function'){
+        setTimeout(install,0);
+        return;
+      }
+      if(finalizeStatementTransferMatch.__sfpPerAccountSnapshotImpact===true)return;
+
+      const original=finalizeStatementTransferMatch;
+      const wrapped=function(){
+        const transfer=original.apply(this,arguments);
+        if(!transfer||transfer.matchedBy!=='statement-cross-account')return transfer;
+
+        const impacts={};
+        (transfer.statementEvidence||[]).forEach(e=>{
+          if(e?.accountId==null||!e?.date)return;
+          impacts[e.accountId]=afterAccountSnapshot(e.accountId,e.date)===true;
+        });
+
+        if(Object.keys(impacts).length){
+          transfer.balanceImpactByAccount=impacts;
+          transfer.balanceImpact=Object.values(impacts).some(Boolean);
+        }
+        return transfer;
+      };
+
+      Object.defineProperty(wrapped,'__sfpPerAccountSnapshotImpact',{value:true});
+      Object.defineProperty(wrapped,'__sfpOriginalFinalizeStatementTransferMatch',{value:original});
+      finalizeStatementTransferMatch=wrapped;
+      if(typeof window!=='undefined')window.finalizeStatementTransferMatch=wrapped;
+    }catch(error){
+      console.error('SFP matched transfer snapshot guard:',error);
+    }
+  };
+
+  setTimeout(install,0);
+})();
+
 (function loadFinancialIntegrityV2(){
   if(typeof document==='undefined'||document.querySelector('script[data-sfp-financial-integrity-v2="1"]'))return;
   const script=document.createElement('script');
