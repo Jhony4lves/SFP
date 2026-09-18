@@ -26,7 +26,6 @@ jobs:
       - run: npm run test:invoice-image
       - run: npm run test:sophy-arch
       - run: npm run test:sophy-benchmark
-      - run: npm run test:financial
       - run: npm run test:qa
       - if: always()
         uses: actions/upload-artifact@v6

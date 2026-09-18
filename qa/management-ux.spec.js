@@ -32,7 +32,13 @@ test('MGMT-01/02/05/07: edições preservam entidades ricas', async ({ page }) =
 
 test('MGMT-03/04/09/10: fatura, compra, estados e bindings permanecem', async ({ page }) => {
   const value = fixture('UX-04'); value.purchases.push({ id: 9, cardId: 1, desc: 'Notebook', total: 1200, purchaseDate: '2026-01-05', installments: 3, firstMonth: '2026-01', status: 'active', refunds: [] });
-  await boot(page, value); await page.evaluate(() => { setPage('cartoes'); document.querySelector('#invoiceMonth').value='2026-01'; renderCards(); });
+  await boot(page, value);
+  await page.evaluate(() => {
+    setPage('cartoes');
+    const input=document.querySelector('#invoiceMonth');
+    input.value='2026-01';
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+  });
   await expect(page.locator('#invoiceMobile')).toContainText('Notebook');
   for (const id of ['cardForm','cardsGrid','invoiceCard','invoiceMonth','closeInvoice','payInvoice','invoiceTable','invoiceMobile','cardImportFile','cardHistory']) await expect(page.locator(`#${id}`)).toHaveCount(1);
   await page.evaluate(() => { state.accounts=[]; state.cards=[]; state.debts=[]; state.goals=[]; renderAll(); });

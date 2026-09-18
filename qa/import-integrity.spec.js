@@ -207,6 +207,8 @@ test('fatura completa pode ser reimportada e inclui só as linhas novas, concili
   const result = await page.evaluate(async () => {
     document.querySelector('#cardImportCard').value = '1';
     document.querySelector('#cardImportMonth').value = '2026-09';
+    document.querySelector('#invoiceCard').value = '1';
+    document.querySelector('#invoiceMonth').value = '2026-10';
     const through30 = [
       { date: '2026-08-30', desc: 'Compra já conhecida', amount: 50, fitid: 'CARD-30', invoiceKind: 'purchase' }
     ];

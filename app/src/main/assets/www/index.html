@@ -6194,8 +6194,8 @@ function renderCards(){
   let c=card(cid);
 
   let m=
-    $('invoiceMonth')?.value||
     state.ui.invoiceMonthByCard?.[cid]||
+    $('invoiceMonth')?.value||
     currentInvoiceMonth(c);
 
   if($('invoiceMonth'))

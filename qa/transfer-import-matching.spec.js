@@ -23,10 +23,10 @@ function addAccount(value, id, name, initial = 0) {
 }
 
 async function importRows(page, accountId, rows, file) {
-  return page.evaluate(async ({ accountId, rows, file }) => {
+  const preview = await page.evaluate(({ accountId, rows, file }) => {
     document.querySelector('#stmtAccount').value = String(accountId);
     prepareStatement(rows, file);
-    const preview = statementDraft.map(r => ({
+    return statementDraft.map(r => ({
       action: r.action,
       key: r.key,
       duplicate: r.duplicate,
@@ -38,9 +38,27 @@ async function importRows(page, accountId, rows, file) {
       semanticClass: r.semanticClass,
       economicImpact: r.economicImpact
     }));
-    await importStatement();
-    return preview;
   }, { accountId, rows, file });
+
+  await page.evaluate(() => {
+    window.__qaStatementImportResult = { done: false, error: null };
+    window.__qaPendingStatementImport = importStatement()
+      .then(() => { window.__qaStatementImportResult.done = true; })
+      .catch(error => {
+        window.__qaStatementImportResult = {
+          done: true,
+          error: String(error?.stack || error?.message || error)
+        };
+      });
+  });
+  await expect.poll(() => page.evaluate(() => window.__qaStatementImportResult?.done)).toBe(true);
+  const importError = await page.evaluate(() => window.__qaStatementImportResult?.error || null);
+  expect(importError).toBeNull();
+  await page.evaluate(() => {
+    window.__qaPendingStatementImport = null;
+    window.__qaStatementImportResult = null;
+  });
+  return preview;
 }
 
 test.describe('Conciliação de transferências entre extratos', () => {
