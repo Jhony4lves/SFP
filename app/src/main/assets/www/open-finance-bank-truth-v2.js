@@ -20,7 +20,15 @@
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   };
   const localMonth=()=>localToday().slice(0,7);
-  const activeMonth=()=>validMonth(global.state?.mesAtual)?global.state.mesAtual:localMonth();
+  const activeMonth=card=>{
+    if(card){
+      try{
+        const bankMonth=global.SFPOpenFinanceBills?.currentCycleMonth?.(card);
+        if(validMonth(bankMonth))return bankMonth;
+      }catch(_){}
+    }
+    return validMonth(global.state?.mesAtual)?global.state.mesAtual:localMonth();
+  };
   let persistenceBusy=false;
 
   function shiftMonth(month,delta){
@@ -441,11 +449,12 @@
   }
 
   function patchGrid(){
-    const cards=global.state?.cards||[],month=activeMonth();
+    const cards=global.state?.cards||[];
     const nodes=[...document.querySelectorAll('#cardsGrid .management-card--interactive')];
     nodes.forEach((node,index)=>{
       const card=cards[index];
       if(!card)return;
+      const month=activeMonth(card);
       const truth=bankTruth(card,month);
       const hasOpenFinance=truth||Number.isFinite(Number(card.openFinanceUsedAmount))||card.openFinanceBalanceDueDate||card.openFinanceBalanceCloseDate;
       if(!hasOpenFinance)return;
@@ -460,7 +469,7 @@
       }
       if(node.dataset.sfpBankTruthClick!=='1'){
         node.dataset.sfpBankTruthClick='1';
-        node.addEventListener('click',()=>{global.state.ui??={};global.state.ui.invoiceMonthByCard??={};global.state.ui.invoiceMonthByCard[card.id]=activeMonth();},true);
+        node.addEventListener('click',()=>{global.state.ui??={};global.state.ui.invoiceMonthByCard??={};global.state.ui.invoiceMonthByCard[card.id]=activeMonth(card);},true);
       }
     });
   }
@@ -473,7 +482,7 @@
   function patchInvoiceFocus(){
     const card=selectedCard();
     if(!card)return;
-    const month=document.getElementById('invoiceMonth')?.value||global.state?.ui?.invoiceMonthByCard?.[card.id]||activeMonth();
+    const month=document.getElementById('invoiceMonth')?.value||global.state?.ui?.invoiceMonthByCard?.[card.id]||activeMonth(card);
     if(!validMonth(month))return;
     const truth=bankTruth(card,month);
     if(!truth&&!Number.isFinite(Number(card.openFinanceUsedAmount)))return;
@@ -486,7 +495,7 @@
 
   function patchDetail(card){
     if(!card)return;
-    const month=activeMonth(),modal=document.querySelector('#modalRoot .modal');
+    const month=activeMonth(card),modal=document.querySelector('#modalRoot .modal');
     if(!modal)return;
     // O detalhe aberto representa o ciclo bancário ativo. Persista esse mês antes
     // do botão "Abrir fatura" para impedir que currentInvoiceMonth() salte para
@@ -507,8 +516,8 @@
     const result=preview();
     if(!result?.ok||!Array.isArray(global.state?.cards))return false;
     let changed=false;
-    const month=activeMonth();
     for(const card of global.state.cards){
+      const month=activeMonth(card);
       const future=liveFutureCommitments(card,month);
       if(future&&JSON.stringify(card.openFinanceFutureCommitments)!==JSON.stringify(future)){
         card.openFinanceFutureCommitments=future;changed=true;
@@ -592,7 +601,7 @@
       if(card){
         global.state.ui??={};
         global.state.ui.invoiceMonthByCard??={};
-        global.state.ui.invoiceMonthByCard[card.id]=activeMonth();
+        global.state.ui.invoiceMonthByCard[card.id]=activeMonth(card);
       }
       return original.apply(this,arguments);
     };
