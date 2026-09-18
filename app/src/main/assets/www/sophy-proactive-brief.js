@@ -5,6 +5,9 @@
   const PANEL_ID='sophyProactiveBrief';
   const STYLE_ID='sophyProactiveBriefStylesV2';
   const INSTALL_FLAG='__SFP_SOPHY_A3_INSTALLED';
+  const DISMISSED_BRIEF_KEY='sfp_sophy_dismissed_brief_fingerprint_v1';
+  const MONTH_CONTEXT_PATCH_FLAG='__SFP_SOPHY_MONTH_CONTEXT_V1';
+  const GROQ_CONTEXT_PATCH_FLAG='__SFP_SOPHY_GROQ_MONTH_CONTEXT_V1';
   const clone=value=>value==null?value:JSON.parse(JSON.stringify(value));
   const cents=value=>Number.isFinite(Number(value))?Math.round(Number(value)):0;
   const safeArray=value=>Array.isArray(value)?value:[];
@@ -13,6 +16,7 @@
   const datePt=value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return value||'—';const [y,m,d]=String(value).split('-');return `${d}/${m}/${y}`};
   const pct=value=>`${Math.round((Number(value)||0)*100)}%`;
   const materialBucket=(value,step=2000)=>Math.round(cents(value)/step)*step;
+  const brlNumber=value=>Math.round((Number(value)||0)*100)/100;
 
   const actionByType=Object.freeze({
     cashflow_pressure:'calendario',cashflow_risk:'calendario',upcoming_obligations:'calendario',
@@ -131,13 +135,163 @@
     ].join('\n');
   }
 
+  function civilDate(reference=new Date()){
+    try{return typeof global.localCivilDate==='function'?global.localCivilDate(reference):`${reference.getFullYear()}-${String(reference.getMonth()+1).padStart(2,'0')}-${String(reference.getDate()).padStart(2,'0')}`}
+    catch(_){return new Date(reference).toISOString().slice(0,10)}
+  }
+
+  function monthEndIso(month){
+    const match=String(month||'').match(/^(\d{4})-(\d{2})$/);if(!match)return null;
+    const date=new Date(Number(match[1]),Number(match[2]),0,12,0,0,0);
+    return civilDate(date);
+  }
+
+  function dayDistance(from,to){
+    const a=new Date(`${from}T12:00:00`),b=new Date(`${to}T12:00:00`);
+    if(Number.isNaN(a.getTime())||Number.isNaN(b.getTime()))return 0;
+    return Math.max(0,Math.ceil((b-a)/86400000));
+  }
+
+  function eventAmountBRL(event){return brlNumber(Math.abs(Number(event?.amount)||0));}
+
+  function monthlyPlanningContext({month=null,reference=new Date()}={}){
+    const appState=getState();
+    const today=civilDate(reference),todayMonth=today.slice(0,7),target=String(month||appState?.mesAtual||todayMonth).slice(0,7);
+    const monthEnd=monthEndIso(target)||today;
+    let realized={incomeBRL:0,expenseBRL:0,resultBRL:0};
+    try{
+      if(typeof global.cashView==='function'){
+        const cash=global.cashView(target)||{};
+        realized={incomeBRL:brlNumber(cash.income),expenseBRL:brlNumber(cash.expense),resultBRL:brlNumber(cash.result)};
+      }
+    }catch(_){}
+
+    let projection=null,liquidity=null,events=[];
+    try{
+      const horizon=dayDistance(today,monthEnd)+1;
+      if(global.SFPFinancialIntegrityV2?.buildProjection)projection=global.SFPFinancialIntegrityV2.buildProjection(horizon,reference);
+      if(global.SFPFinancialIntegrityV2?.liquiditySnapshot)liquidity=global.SFPFinancialIntegrityV2.liquiditySnapshot({reference,days:horizon});
+      const all=safeArray(projection?.allEvents);
+      events=all.filter(event=>{
+        if(event?.cashIgnored||!['income','expense'].includes(event?.type))return false;
+        const due=String(event?.dueDate||event?.date||'').slice(0,10),effective=String(event?.effectiveDate||due).slice(0,10);
+        if(event?.overdue&&target===todayMonth)return true;
+        if(due.slice(0,7)!==target)return false;
+        return target>todayMonth||effective>=today;
+      });
+    }catch(_){}
+
+    if(!projection&&typeof global.dueEvents==='function'){
+      try{
+        events=safeArray(global.dueEvents(target)).filter(event=>{
+          if(!['income','expense'].includes(event?.type))return false;
+          const due=String(event?.date||'').slice(0,10),status=String(event?.status||'');
+          return due.slice(0,7)===target&&status!=='paid'&&status!=='closed'&&(target>todayMonth||due>=today);
+        });
+      }catch(_){}
+    }
+
+    const remainingIncomeBRL=brlNumber(events.filter(e=>e.type==='income').reduce((sum,e)=>sum+eventAmountBRL(e),0));
+    const remainingExpenseBRL=brlNumber(events.filter(e=>e.type==='expense').reduce((sum,e)=>sum+eventAmountBRL(e),0));
+    const overdueExpenseBRL=brlNumber(events.filter(e=>e.type==='expense'&&e.overdue).reduce((sum,e)=>sum+eventAmountBRL(e),0));
+    let currentOperationalBalanceBRL=0;
+    if(liquidity&&Number.isFinite(Number(liquidity.operationalAvailableCents)))currentOperationalBalanceBRL=brlNumber(liquidity.operationalAvailableCents/100);
+    else{
+      try{currentOperationalBalanceBRL=brlNumber(typeof global.allAccountBalance==='function'?global.allAccountBalance():0)}catch(_){}
+    }
+    const resourcesThroughMonthEndBRL=brlNumber(currentOperationalBalanceBRL+remainingIncomeBRL);
+    const projectedMonthEndBalanceBRL=projection&&Number.isFinite(Number(projection.projectedCents))
+      ?brlNumber(projection.projectedCents/100)
+      :brlNumber(resourcesThroughMonthEndBRL-remainingExpenseBRL);
+
+    return {
+      version:1,scope:'cashflow',month:target,asOf:today,readOnly:true,
+      currentOperationalBalanceBRL,
+      realized,
+      remaining:{
+        incomeBRL:remainingIncomeBRL,
+        expenseBRL:remainingExpenseBRL,
+        netBRL:brlNumber(remainingIncomeBRL-remainingExpenseBRL),
+        overdueExpenseBRL,
+        events:events.slice(0,30).map(event=>({
+          type:event.type,description:event.desc||event.description||'Evento financeiro',date:event.dueDate||event.date||null,
+          amountBRL:eventAmountBRL(event),status:event.status||'planned',overdue:Boolean(event.overdue),source:event.source||null,accountId:event.accountId??null
+        }))
+      },
+      resourcesThroughMonthEndBRL,
+      projectedMonthEndBalanceBRL,
+      safeToSpendBRL:liquidity&&Number.isFinite(Number(liquidity.safeToSpendCents))?brlNumber(liquidity.safeToSpendCents/100):null,
+      preserveBRL:liquidity&&Number.isFinite(Number(liquidity.preserveCents))?brlNumber(liquidity.preserveCents/100):null,
+      semantics:'Saldo atual não é receita. resourcesThroughMonthEndBRL = saldo operacional atual + entradas conhecidas restantes. projectedMonthEndBalanceBRL considera também as saídas conhecidas até o fim do mês.'
+    };
+  }
+
+  function promptMonth(prompt,reference=new Date()){
+    const text=String(prompt||'').toLowerCase();
+    const months={janeiro:1,fevereiro:2,marco:3,'março':3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+    const yearMatch=text.match(/\b(20\d{2})\b/),fallbackYear=reference.getFullYear();
+    for(const [name,index] of Object.entries(months))if(text.includes(name))return `${yearMatch?yearMatch[1]:fallbackYear}-${String(index).padStart(2,'0')}`;
+    const numeric=text.match(/\b(0?[1-9]|1[0-2])[\/-](20\d{2})\b/);if(numeric)return `${numeric[2]}-${String(Number(numeric[1])).padStart(2,'0')}`;
+    return String(getState()?.mesAtual||civilDate(reference).slice(0,7)).slice(0,7);
+  }
+
+  function promptNeedsMonthlyContext(prompt){
+    const text=String(prompt||'');
+    return /(restante do m[eê]s|fim do m[eê]s|despesas?\s+(?:que\s+)?falt|receitas?\s+(?:que\s+)?falt|ainda\s+(?:vai|vou|falta|faltam|entra|entrar|receb)|quanto.*(?:m[eê]s|entrar|pagar|sobrar)|somando.*(?:entr|receb)|proje[cç][aã]o.*m[eê]s|o que ainda (?:entra|sai|falta))/i.test(text);
+  }
+
+  function installMonthlyContextBridge(){
+    if(global[MONTH_CONTEXT_PATCH_FLAG])return;
+    const broker=global.sophyContextBroker,tool=global.sophyToolRegistry?.tools?.get_financial_context;
+    if(!broker||typeof broker.buildContext!=='function'||!tool)return;
+    const original=broker.buildContext.bind(broker);
+    broker.buildContext=function(scope='overview',options={}){
+      const base=original(scope,options);
+      if(scope==='cashflow')return {...base,...monthlyPlanningContext({month:options?.month})};
+      if(scope==='overview')return {...base,monthPlanning:monthlyPlanningContext({month:options?.month})};
+      return base;
+    };
+    tool.description='Obtém dados determinísticos e read-only do Local Financial Core. Para fluxo de caixa, inclui saldo operacional atual, receitas/despesas realizadas, entradas e obrigações restantes do mês, recursos até o fim do mês e saldo projetado. Use antes de pedir ao usuário valores que podem já existir no SFP.';
+    global[MONTH_CONTEXT_PATCH_FLAG]=true;
+  }
+
+  function installGroqMonthlyContext(){
+    if(global[GROQ_CONTEXT_PATCH_FLAG])return;
+    const provider=global.sophyProviderRegistry?.groq;if(!provider||typeof provider.generateResponse!=='function')return;
+    const original=provider.generateResponse;
+    const wrapped=async function(args={}){
+      if(!promptNeedsMonthlyContext(args?.prompt))return original.call(this,args);
+      let context=null;try{context=monthlyPlanningContext({month:promptMonth(args.prompt)})}catch(_){}
+      if(!context)return original.call(this,args);
+      const appendix=[
+        'CONTEXTO FINANCEIRO DETERMINÍSTICO DO SFP (read-only):',
+        JSON.stringify(context),
+        'REGRAS PARA ESTA RESPOSTA: use os valores acima diretamente; não peça ao usuário números que já estejam presentes. Diferencie saldo atual de receita. Se algum componente estiver ausente, diga exatamente qual está ausente em vez de afirmar genericamente que não tem acesso. Não invente valores e não altere dados.'
+      ].join('\n');
+      const rolling=[args?.rollingSummary,appendix].filter(Boolean).join('\n\n');
+      return original.call(this,{...args,rollingSummary:rolling});
+    };
+    wrapped.__sfpMonthlyContextWrapped=true;wrapped.__sfpOriginalGenerateResponse=original;provider.generateResponse=wrapped;global[GROQ_CONTEXT_PATCH_FLAG]=true;
+  }
+
+  function sessionStore(){try{return global.sessionStorage||null}catch(_){return null}}
+  function dismissedFingerprint(){try{return sessionStore()?.getItem(DISMISSED_BRIEF_KEY)||''}catch(_){return''}}
+  function isBriefDismissed(brief){return Boolean(brief?.fingerprint&&dismissedFingerprint()===brief.fingerprint)}
+  function dismissBrief(brief,panel){
+    if(!brief?.fingerprint||!panel)return;
+    try{sessionStore()?.setItem(DISMISSED_BRIEF_KEY,brief.fingerprint)}catch(_){}
+    panel.hidden=true;
+  }
+
   function ensureStyles(){
     if(typeof document==='undefined'||document.getElementById(STYLE_ID))return;
     const style=document.createElement('style');style.id=STYLE_ID;style.textContent=`
       .sophy-proactive-brief{flex:0 0 auto;border:1px solid var(--color-border);border-radius:14px;background:linear-gradient(180deg,#0b1b2d,#081626);padding:10px 12px;display:grid;gap:8px;box-shadow:var(--shadow-sm)}
+      .sophy-proactive-brief[hidden]{display:none!important}
       .sophy-proactive-brief[data-priority="critical"]{border-color:var(--color-negative-border);background:linear-gradient(180deg,rgba(244,63,94,.09),#081626 78%)}
       .sophy-proactive-brief[data-priority="warning"]{border-color:var(--color-warning-border);background:linear-gradient(180deg,rgba(245,158,11,.075),#081626 78%)}
-      .sophy-brief-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.sophy-brief-head>div{min-width:0}
+      .sophy-brief-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.sophy-brief-head>div:first-child{min-width:0}
+      .sophy-brief-head-side{display:flex;align-items:center;gap:5px;flex:0 0 auto}.sophy-brief-dismiss{width:34px;height:34px;min-height:34px;padding:0;border:0;border-radius:9px;background:transparent;color:var(--color-text-secondary);font-size:22px;line-height:1}.sophy-brief-dismiss:hover,.sophy-brief-dismiss:focus-visible{background:rgba(255,255,255,.06);color:var(--color-text);outline:1px solid var(--color-border-strong)}
       .sophy-brief-head b{display:block;font-size:12.5px;color:var(--color-text)}.sophy-brief-head p{margin:2px 0 0;color:var(--color-text-secondary);font-size:11px;line-height:1.4}
       .sophy-brief-evidence{display:flex;gap:6px;flex-wrap:wrap}.sophy-brief-evidence span{font-size:11px;color:var(--color-text-secondary);background:#071423;border:1px solid rgba(26,52,82,.7);border-radius:999px;padding:4px 8px;white-space:nowrap}.sophy-brief-evidence strong{color:var(--color-text);font-weight:750}
       .sophy-brief-foot{display:flex;align-items:center;justify-content:space-between;gap:8px}.sophy-brief-foot details{min-width:0;flex:1;color:var(--color-text-secondary);font-size:11px}.sophy-brief-foot summary{cursor:pointer;font-weight:700}.sophy-brief-foot details p{margin:5px 0 0;line-height:1.4}
@@ -161,11 +315,13 @@
   function renderSophyProactiveBrief(){
     ensureStyles();const panel=ensurePanel();if(!panel)return null;
     let brief;try{brief=snapshot()}catch(error){brief=null}
-    if(!brief){panel.innerHTML='<div class="sophy-brief-head"><div><b id="sophyBriefTitle">Brief financeiro</b><p>Temporariamente indisponível. A conversa da Sophy continua funcionando.</p></div></div>';return null}
-    panel.dataset.priority=brief.priority;
+    if(!brief){panel.hidden=false;panel.innerHTML='<div class="sophy-brief-head"><div><b id="sophyBriefTitle">Brief financeiro</b><p>Temporariamente indisponível. A conversa da Sophy continua funcionando.</p></div></div>';return null}
+    if(isBriefDismissed(brief)){panel.hidden=true;return brief}
+    panel.hidden=false;panel.dataset.priority=brief.priority;
     const chips=safeArray(brief.evidence).slice(0,4).map(item=>`<span${item.kind==='money'?' data-money':''}>${escapeHtml(item.label)}: <strong>${escapeHtml(item.value)}</strong></span>`).join('');
     const badgeClass=brief.priority==='critical'?'negative':brief.priority==='warning'?'warning':'positive';
-    panel.innerHTML=`<div class="sophy-brief-head"><div><b id="sophyBriefTitle">${escapeHtml(brief.title)}</b><p data-money>${escapeHtml(brief.summary)}</p></div><span class="badge ${badgeClass}">${priorityLabel(brief.priority)}</span></div><div class="sophy-brief-evidence">${chips}</div><div class="sophy-brief-foot"><details><summary>Por que a Sophy mostrou isso?</summary><p data-money>${escapeHtml(brief.reason)}</p></details><div class="sophy-brief-actions"><button type="button" class="btn2" data-sophy-brief-open="${escapeHtml(brief.actionPage)}">Abrir</button><button type="button" class="ghost" id="sophyBriefDetailBtn">Detalhar</button></div></div><div class="sophy-brief-detail" id="sophyBriefDetail" data-money>${escapeHtml(detailText(brief))}</div>`;
+    panel.innerHTML=`<div class="sophy-brief-head"><div><b id="sophyBriefTitle">${escapeHtml(brief.title)}</b><p data-money>${escapeHtml(brief.summary)}</p></div><div class="sophy-brief-head-side"><span class="badge ${badgeClass}">${priorityLabel(brief.priority)}</span><button type="button" class="sophy-brief-dismiss" id="sophyBriefDismissBtn" aria-label="Ocultar este aviso" title="Ocultar este aviso nesta sessão">×</button></div></div><div class="sophy-brief-evidence">${chips}</div><div class="sophy-brief-foot"><details><summary>Por que a Sophy mostrou isso?</summary><p data-money>${escapeHtml(brief.reason)}</p></details><div class="sophy-brief-actions"><button type="button" class="btn2" data-sophy-brief-open="${escapeHtml(brief.actionPage)}">Abrir</button><button type="button" class="ghost" id="sophyBriefDetailBtn">Detalhar</button></div></div><div class="sophy-brief-detail" id="sophyBriefDetail" data-money>${escapeHtml(detailText(brief))}</div>`;
+    panel.querySelector('#sophyBriefDismissBtn')?.addEventListener('click',()=>dismissBrief(brief,panel));
     panel.querySelector('[data-sophy-brief-open]')?.addEventListener('click',event=>{const page=event.currentTarget?.dataset?.sophyBriefOpen;if(page&&typeof global.setPage==='function')global.setPage(page);});
     panel.querySelector('#sophyBriefDetailBtn')?.addEventListener('click',()=>{const detail=panel.querySelector('#sophyBriefDetail');if(!detail)return;const open=detail.classList.toggle('is-open');panel.querySelector('#sophyBriefDetailBtn').textContent=open?'Ocultar':'Detalhar';});
     if(typeof global.applyPrivacy==='function')global.applyPrivacy();
@@ -248,6 +404,7 @@
 
   function install(){
     if(global[INSTALL_FLAG])return;global[INSTALL_FLAG]=true;
+    installMonthlyContextBridge();installGroqMonthlyContext();
     if(typeof global.sophyCheckProactivity==='function')global.sophyCheckProactivity=proactiveCheck;
     wrapGlobal('setPage',id=>{if(id==='sophy')queueMicrotask(()=>{renderSophyProactiveBrief();decorateFinancialBubbles()})});
     wrapGlobal('renderAll',()=>queueMicrotask(()=>renderSophyProactiveBrief()));
@@ -255,7 +412,7 @@
     ensureStyles();renderSophyProactiveBrief();installChatObserver();decorateFinancialBubbles();
   }
 
-  global.SFPProactiveBrief=Object.freeze({version:VERSION,build,detailText});
+  global.SFPProactiveBrief=Object.freeze({version:VERSION,build,detailText,monthlyPlanningContext,promptNeedsMonthlyContext});
   global.sophyProactiveBriefSnapshot=snapshot;
   global.renderSophyProactiveBrief=renderSophyProactiveBrief;
   global.sophyCheckProactivityA3=proactiveCheck;

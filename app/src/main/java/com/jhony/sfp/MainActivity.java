@@ -80,6 +80,23 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (view == null || url == null || !url.startsWith("https://appassets.androidplatform.net/assets/www/")) return;
+                // Load this controller after the document is ready so it can intercept the
+                // existing "Atualizar faturas agora" button without rewriting the legacy UI.
+                view.evaluateJavascript(
+                        "(function(){" +
+                                "if(document.getElementById('sfp-open-finance-real-refresh'))return;" +
+                                "var s=document.createElement('script');" +
+                                "s.id='sfp-open-finance-real-refresh';" +
+                                "s.src='https://appassets.androidplatform.net/assets/www/open-finance-real-refresh.js';" +
+                                "document.head.appendChild(s);" +
+                                "})()",
+                        null);
+            }
+
+            @Override
             public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
                 if (request == null || request.getUrl() == null) return true;
                 return handleNavigation(request.getUrl());
@@ -149,6 +166,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.addJavascriptInterface(new AndroidBridge(this), "AndroidBridge");
+        webView.addJavascriptInterface(new PluggyBridge(this), "PluggyBridge");
+        webView.addJavascriptInterface(new PluggyRefreshBridge(this), "PluggyRefreshBridge");
         // Always rebuild the document from the APK bundle. IndexedDB/local storage remain intact,
         // while stale WebView DOM/cache from an older APK can no longer resurrect old navigation.
         webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
