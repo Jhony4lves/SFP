@@ -15,18 +15,98 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: npm
+
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:static
-      - run: npm run test:invoice-pdf
-      - run: npm run test:invoice-image
-      - run: npm run test:sophy-arch
-      - run: npm run test:sophy-benchmark
-      - run: npm run test:qa
+
+      - name: Validate QA impact selector
+        run: npm run test:qa-selector
+
+      - name: Select impacted web QA
+        id: qa
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            plan="$(node qa/select-web-qa.mjs --full)"
+            echo "Full QA: evento $GITHUB_EVENT_NAME."
+          else
+            git fetch --no-tags origin "$BASE_SHA" "$HEAD_SHA"
+            merge_base="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"
+            mapfile -t changed_files < <(git diff --name-only "$merge_base" "$HEAD_SHA")
+
+            echo "=== ARQUIVOS ALTERADOS ==="
+            printf '%s\n' "${changed_files[@]}"
+
+            plan="$(node qa/select-web-qa.mjs "${changed_files[@]}")"
+          fi
+
+          echo "=== PLANO DE QA ==="
+          echo "$plan" | python3 -m json.tool
+
+          echo "mode=$(jq -r '.mode' <<<"$plan")" >> "$GITHUB_OUTPUT"
+          echo "browser_required=$(jq -r '.browserRequired' <<<"$plan")" >> "$GITHUB_OUTPUT"
+          echo "tests=$(jq -r '.tests | join(" ")' <<<"$plan")" >> "$GITHUB_OUTPUT"
+          echo "static=$(jq -r '.staticCheck' <<<"$plan")" >> "$GITHUB_OUTPUT"
+          echo "invoice_pdf=$(jq -r '.invoicePdf' <<<"$plan")" >> "$GITHUB_OUTPUT"
+          echo "invoice_image=$(jq -r '.invoiceImage' <<<"$plan")" >> "$GITHUB_OUTPUT"
+          echo "sophy_arch=$(jq -r '.sophyArch' <<<"$plan")" >> "$GITHUB_OUTPUT"
+          echo "sophy_benchmark=$(jq -r '.sophyBenchmark' <<<"$plan")" >> "$GITHUB_OUTPUT"
+
+      - name: Install Chromium for Playwright
+        if: steps.qa.outputs.browser_required == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Static checks
+        if: steps.qa.outputs.static == 'true'
+        run: npm run test:static
+
+      - name: Invoice PDF engine
+        if: steps.qa.outputs.invoice_pdf == 'true'
+        run: npm run test:invoice-pdf
+
+      - name: Invoice image engine
+        if: steps.qa.outputs.invoice_image == 'true'
+        run: npm run test:invoice-image
+
+      - name: Sophy architecture
+        if: steps.qa.outputs.sophy_arch == 'true'
+        run: npm run test:sophy-arch
+
+      - name: Sophy benchmark
+        if: steps.qa.outputs.sophy_benchmark == 'true'
+        run: npm run test:sophy-benchmark
+
+      - name: Run full Playwright QA
+        if: steps.qa.outputs.mode == 'full'
+        run: npm run test:qa
+
+      - name: Run impacted Playwright QA
+        if: steps.qa.outputs.mode == 'impacted'
+        shell: bash
+        env:
+          IMPACTED_TESTS: ${{ steps.qa.outputs.tests }}
+        run: |
+          set -euo pipefail
+          read -r -a tests <<< "$IMPACTED_TESTS"
+          echo "Executando ${#tests[@]} arquivo(s) de teste impactado(s):"
+          printf ' - %s\n' "${tests[@]}"
+          node -r ./qa/env-setup.js ./node_modules/.bin/playwright test "${tests[@]}"
+
+      - name: No browser QA required
+        if: steps.qa.outputs.mode == 'none' || steps.qa.outputs.mode == 'support-only'
+        run: echo "Nenhum teste Playwright foi necessário para esta alteração."
+
       - if: always()
         uses: actions/upload-artifact@v6
         with:
