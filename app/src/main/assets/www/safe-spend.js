@@ -265,3 +265,57 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
 })();
+
+/*
+ * SFP_DEBT_INSTALLMENT_STATUS_GUARD_V1
+ *
+ * paidInstallments é um contador legado. Pagamentos modernos guardam também
+ * o número exato da parcela em history[].installment. Quando uma parcela é
+ * paga fora de ordem, usar apenas o contador faz outra parcela parecer paga.
+ * Este guard respeita parcelas explicitamente registradas e usa o contador
+ * somente para preencher pagamentos legados sem número de parcela.
+ */
+(function installDebtInstallmentStatusGuard(){
+  if(typeof document==='undefined')return;
+
+  const install=()=>{
+    try{
+      if(typeof debtDueForMonth!=='function'||typeof state==='undefined'){
+        setTimeout(install,0);
+        return;
+      }
+      if(debtDueForMonth.__sfpExactInstallmentStatus===true)return;
+
+      const original=debtDueForMonth;
+      const guarded=function(month){
+        const rows=original(month);
+        for(const row of rows||[]){
+          const debt=row?.debt;
+          if(!debt)continue;
+          const history=(debt.history||[]).filter(h=>h?.type==='payment');
+          const explicit=new Set(history
+            .map(h=>Number(h.installment))
+            .filter(n=>Number.isInteger(n)&&n>=1&&n<=Number(debt.installments||0)));
+          const legacyCount=Math.max(0,Number(debt.paidInstallments||0)-explicit.size);
+          const paid=new Set(explicit);
+          for(let n=1,remaining=legacyCount;n<=Number(debt.installments||0)&&remaining>0;n++){
+            if(paid.has(n))continue;
+            paid.add(n);
+            remaining--;
+          }
+          row.status=paid.has(Number(row.n))?'paid':'planned';
+        }
+        return rows;
+      };
+
+      Object.defineProperty(guarded,'__sfpExactInstallmentStatus',{value:true});
+      Object.defineProperty(guarded,'__sfpOriginalDebtDueForMonth',{value:original});
+      debtDueForMonth=guarded;
+      if(typeof window!=='undefined')window.debtDueForMonth=guarded;
+    }catch(error){
+      console.error('SFP debt installment status guard:',error);
+    }
+  };
+
+  setTimeout(install,0);
+})();
