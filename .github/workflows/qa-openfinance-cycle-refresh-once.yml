@@ -1,0 +1,36 @@
+name: SFP Open Finance Cycle Refresh Focus
+
+on:
+  push:
+    branches:
+      - fix/openfinance-cycle-refresh-207-212
+
+concurrency:
+  group: sfp-openfinance-cycle-refresh-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Static checks
+        run: npm run test:static
+      - name: Cycle and refresh gate
+        run: >-
+          npx playwright test
+          qa/open-finance-cycle-refresh-207-212.spec.js
+          qa/open-finance-real-refresh.spec.js
+          qa/open-finance-bills.spec.js
+          qa/open-finance-bank-truth-v4-regression.spec.js
+          qa/open-finance-nubank-credit-truth.spec.js
+          qa/open-finance-payment-evidence.spec.js
+          qa/open-finance-financial-truth-242-244.spec.js
+          --workers=1
