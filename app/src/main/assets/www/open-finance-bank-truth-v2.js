@@ -192,15 +192,10 @@
     return Array.isArray(purchase.openFinanceExternalIds)&&purchase.openFinanceExternalIds.includes(key);
   }
 
-  function linkedClosingDayEvidence(card,transaction,month,bounds){
-    if(!card||month!==activeMonth(card)||typeof global.purchaseInstallment!=='function')return false;
-    const id=clean(transaction?.id),txDate=isoDate(transaction?.date),amount=Math.abs(Number(transaction?.amount));
-    if(!id||!validDate(txDate)||!Number.isFinite(amount)||amount<=0)return false;
-    // O ciclo reconstruído começa no dia seguinte ao fechamento anterior. Alguns emissores
-    // (Nubank confirmado fisicamente) lançam a compra feita no próprio dia de fechamento
-    // na fatura seguinte. Só promovemos esse dia de fronteira quando a mesma transação
-    // já está vinculada, por ID Pluggy, a uma parcela local desse mês.
-    if(addDays(txDate,1)!==bounds.startDate)return false;
+  function linkedInstallmentEvidence(card,transaction,month){
+    if(!card||!validMonth(month)||typeof global.purchaseInstallment!=='function')return false;
+    const id=clean(transaction?.id),amount=Math.abs(Number(transaction?.amount));
+    if(!id||!Number.isFinite(amount)||amount<=0)return false;
     const key=`pluggy:${id}`;
     const purchase=(global.state?.purchases||[]).find(p=>
       sameId(p?.cardId,card.id)
@@ -217,11 +212,21 @@
 
   function belongsToCycle(transaction,month,bounds,card=null){
     const forecast=clean(transaction?.billForecastDate);
-    if(validMonth(forecast)&&forecast===month)return true;
+    // Quando o banco informa explicitamente a fatura, essa evidência continua soberana.
+    if(validMonth(forecast))return forecast===month;
     const txDate=isoDate(transaction?.date);
-    if(validDate(txDate)&&txDate>=bounds.startDate&&txDate<=bounds.endDate)return true;
-    // Evidência exata do vínculo local vence apenas no limite do ciclo ativo.
-    return linkedClosingDayEvidence(card,transaction,month,bounds);
+    if(!validDate(txDate))return false;
+
+    const active=card?activeMonth(card):'';
+    if(validMonth(active)&&linkedInstallmentEvidence(card,transaction,active)){
+      // Alguns emissores (Nubank confirmado fisicamente) tratam uma compra do próprio
+      // dia de fechamento como pertencente à fatura seguinte. O SFP antes deixava esse
+      // dia no ciclo anterior. Para uma transação Pluggy já vinculada à parcela local,
+      // movemos a fronteira inteira: sai do ciclo anterior e entra no ciclo ativo.
+      if(month===active&&addDays(txDate,1)===bounds.startDate)return true;
+      if(shiftMonth(month,1)===active&&txDate===bounds.endDate)return false;
+    }
+    return txDate>=bounds.startDate&&txDate<=bounds.endDate;
   }
 
   function cycleTransactions(card,month,{confirmedOnly=false}={}){
