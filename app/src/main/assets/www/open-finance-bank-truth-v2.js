@@ -488,6 +488,12 @@
     if(!card)return;
     const month=activeMonth(),modal=document.querySelector('#modalRoot .modal');
     if(!modal)return;
+    // O detalhe aberto representa o ciclo bancário ativo. Persista esse mês antes
+    // do botão "Abrir fatura" para impedir que currentInvoiceMonth() salte para
+    // o próximo ciclo depois do dia de fechamento.
+    global.state.ui??={};
+    global.state.ui.invoiceMonthByCard??={};
+    global.state.ui.invoiceMonthByCard[card.id]=month;
     patchCalendarText(modal,card,month);
     const current=[...modal.querySelectorAll('.metric')].find(el=>/Fatura atual/i.test(el.textContent||''));
     if(current){
