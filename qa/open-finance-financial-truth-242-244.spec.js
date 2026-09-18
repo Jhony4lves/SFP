@@ -82,6 +82,11 @@ test('#242/#244 aplica saldo zero, preserva Itaú e quita fatura POSTED sem dupl
   const value = realCaseState();
   await boot(page, value);
 
+  await page.evaluate(() => window.setPage?.('openfinance'));
+  await page.locator('#openFinancePreviewBtn').click();
+  await expect(page.locator('#openFinanceStagingSummary')).toContainText('1 pagamento(s) de fatura para conciliação');
+  await expect(page.locator('#openFinanceStagingSummary')).not.toContainText('1 em revisão');
+
   await expect.poll(() => page.evaluate(() => ({
     nubank: typeof accountBalance==='function'?accountBalance(1):null,
     itau: typeof accountBalance==='function'?accountBalance(2):null,
@@ -148,4 +153,77 @@ test('#243 passado não resolvido deixa de ser Previsto: recorrência vira Revis
   await expect(page.locator('#calendar .cal-dot.projected')).toHaveCount(0);
   await expect(page.locator('#calendario .calendar-legend')).toContainText('Vencido');
   await expect(page.locator('#calendario .calendar-legend')).toContainText('Revisar');
+});
+
+
+test('#244 snapshot ancora movimentos antigos e mantém impacto somente depois da data bancária', async ({ page }) => {
+  const value = fixture('open-finance-base.json');
+  value.settings = value.settings || {};
+  value.settings.name = 'Âncora bancária #244';
+  value.mesAtual = '2026-09';
+  value.baseDate = '2026-09-01';
+  value.accounts = [{ id:1, name:'Nubank', type:'Conta corrente', initial:100, balanceMode:'snapshot', balanceDate:'2026-09-01', reconciled:null }];
+  value.cards = [];
+  value.transactions = [
+    { id:11, accountId:1, kind:'expense', desc:'Antes do snapshot', amount:20, date:'2026-09-16', status:'paid', balanceImpact:true, category:'Outros' },
+    { id:12, accountId:1, kind:'expense', desc:'Depois do snapshot', amount:30, date:'2026-09-18', status:'paid', balanceImpact:true, category:'Outros' }
+  ];
+  value.transfers = [];
+  value.invoices = [];
+  value.recurring = [];
+
+  await boot(page, value);
+  const report = await page.evaluate(async () => window.SFPOpenFinanceFinancialTruth.reconcileSnapshot({
+    ok:true,
+    items:[{
+      id:'item-nubank',
+      institution:'Nubank',
+      updatedAt:'2026-09-17T12:00:00.000Z',
+      accounts:[{ id:'acc-nubank', type:'BANK', subtype:'CHECKING_ACCOUNT', name:'Nubank', marketingName:'Nubank', presentationName:'Nubank', balance:500, transactions:[] }]
+    }]
+  }));
+  expect(report.ok).toBe(true);
+
+  const result = await page.evaluate(() => ({
+    balance:accountBalance(1),
+    initial:state.accounts[0].initial,
+    balanceDate:state.accounts[0].balanceDate,
+    source:state.accounts[0].reconciled?.source,
+    impacts:state.transactions.map(t => ({ id:t.id, impact:t.balanceImpact }))
+  }));
+  expect(result).toEqual({
+    balance:470,
+    initial:500,
+    balanceDate:'2026-09-17',
+    source:'open-finance',
+    impacts:[{id:11,impact:false},{id:12,impact:true}]
+  });
+});
+
+test('#243 recorrência virtual de mês histórico não reduz Safe-to-Spend, mas recorrência futura continua válida', async ({ page }) => {
+  const value = fixture('open-finance-base.json');
+  value.settings = value.settings || {};
+  value.settings.name = 'Safe-to-Spend histórico #243';
+  value.mesAtual = '2026-09';
+  value.baseDate = '2025-09-01';
+  value.accounts = [{ id:1, name:'Nubank', type:'Conta corrente', initial:1000, balanceMode:'snapshot', balanceDate:'2026-09-17' }];
+  value.cards = [];
+  value.transactions = [];
+  value.transfers = [];
+  value.invoices = [];
+  value.purchases = [];
+  value.debts = [];
+  value.creditFacilities = [];
+  value.recurring = [
+    { id:401, desc:'Recorrência antiga sem evidência', type:'expense', amount:100, day:16, category:'Outros', accountId:1, start:'2025-09', end:'2025-09', active:true, skips:[] },
+    { id:402, desc:'Recorrência futura válida', type:'expense', amount:50, day:20, category:'Outros', accountId:1, start:'2026-09', end:'2026-09', active:true, skips:[] }
+  ];
+
+  await boot(page, value);
+  await page.waitForFunction(() => window.SFPFinancialIntegrityV2?.version === 2);
+  const projection = await page.evaluate(() => window.SFPFinancialIntegrityV2.buildProjection(30, new Date('2026-09-17T12:00:00')));
+  const recurring = projection.allEvents.filter(event => event.source==='recurring').map(event => ({ desc:event.desc, dueDate:event.dueDate, amount:event.amount }));
+  expect(recurring).toEqual([{ desc:'Recorrência futura válida', dueDate:'2026-09-20', amount:50 }]);
+  expect(projection.safeToSpendCents).toBe(95000);
+  expect(projection.projectedCents).toBe(95000);
 });
