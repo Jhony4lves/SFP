@@ -23,10 +23,10 @@ function addAccount(value, id, name, initial = 0) {
 }
 
 async function importRows(page, accountId, rows, file) {
-  return page.evaluate(async ({ accountId, rows, file }) => {
+  const preview = await page.evaluate(({ accountId, rows, file }) => {
     document.querySelector('#stmtAccount').value = String(accountId);
     prepareStatement(rows, file);
-    const preview = statementDraft.map(r => ({
+    return statementDraft.map(r => ({
       action: r.action,
       key: r.key,
       duplicate: r.duplicate,
@@ -38,9 +38,14 @@ async function importRows(page, accountId, rows, file) {
       semanticClass: r.semanticClass,
       economicImpact: r.economicImpact
     }));
-    await importStatement();
-    return preview;
   }, { accountId, rows, file });
+
+  await page.evaluate(() => {
+    window.__qaPendingStatementImport = importStatement();
+    return window.__qaPendingStatementImport;
+  });
+  await page.evaluate(() => { window.__qaPendingStatementImport = null; });
+  return preview;
 }
 
 test.describe('Conciliação de transferências entre extratos', () => {
