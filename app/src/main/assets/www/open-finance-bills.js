@@ -10,9 +10,18 @@ function curMonth(card){const d=new Date(),m=`${d.getFullYear()}-${String(d.getM
 function civilMonth(){try{const m=clean(global.localCivilMonth?.());if(/^\d{4}-\d{2}$/.test(m))return m}catch(_){}const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
 function monthShift(month,delta){const m=clean(month).match(/^(\d{4})-(\d{2})$/);if(!m)return month;const d=new Date(Date.UTC(+m[1],+m[2]-1+Number(delta||0),1));return`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`}
 function bankCycle(account,card){
-  const due=date(account?.creditData?.balanceDueDate)||date(card?.openFinanceBalanceDueDate),close=date(account?.creditData?.balanceCloseDate)||date(card?.openFinanceBalanceCloseDate);
-  const dueMonth=/^\d{4}-\d{2}-\d{2}$/.test(due)?due.slice(0,7):'',closeMonth=/^\d{4}-\d{2}-\d{2}$/.test(close)?close.slice(0,7):'',closeDay=/^\d{4}-\d{2}-\d{2}$/.test(close)?Number(close.slice(8,10)):NaN;
-  const source=dueMonth?'balanceDueDate':closeMonth?'balanceCloseDate':'sfp-local',providerCandidate=dueMonth||closeMonth||'',current=civilMonth(),localCandidate=curMonth(card);
+  const current=civilMonth(),currentInv=findInvoice(card?.id,current);
+  const valid=value=>/^\d{4}-\d{2}-\d{2}$/.test(date(value));
+  const dateChoice=(...values)=>{
+    const list=values.map(date).filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(v));
+    return list.find(v=>v.slice(0,7)>=current)||list[0]||'';
+  };
+  const due=dateChoice(account?.creditData?.balanceDueDate,card?.openFinanceBalanceDueDate,currentInv?.documentDueDate);
+  const close=dateChoice(account?.creditData?.balanceCloseDate,card?.openFinanceBalanceCloseDate,currentInv?.documentCloseDate);
+  const dueMonth=valid(due)?due.slice(0,7):'',closeMonth=valid(close)?close.slice(0,7):'',closeDay=valid(close)?Number(close.slice(8,10)):NaN;
+  const forecastMonths=(Array.isArray(account?.transactions)?account.transactions:[]).map(t=>clean(t?.billForecastDate)).filter(m=>/^\d{4}-\d{2}$/.test(m)&&m>=current).sort();
+  const forecastMonth=forecastMonths[0]||'';
+  const source=dueMonth?'balanceDueDate':closeMonth?'balanceCloseDate':forecastMonth?'transactionForecast':'sfp-local',providerCandidate=dueMonth||closeMonth||forecastMonth||'',localCandidate=curMonth(card);
   let month=providerCandidate||localCandidate,heldByUnsettledPrevious=false,advancedPastSettledCurrent=false,staleProviderCycle=false;
   if(source!=='sfp-local'){
     const next=monthShift(current,1);
@@ -44,9 +53,14 @@ function settlementEvidence(card,m,account){
     return{month:m,unsettled:!settled,reason:settled?(status==='paid'?'local-status-paid':'current-bill-settled'):'current-bill-has-balance',bill:{id:clean(rawBill?.id)||null,total:round(rawTotal),providerPaid:rawPaid,effectivePaid:round(effectivePaid),remaining:left}};
   }
   const total=Number(global.invoiceTotal?.(card.id,m)),effectivePaid=Math.max(localPaid,storedBillPaid),left=Number.isFinite(total)?round(Math.max(0,total-effectivePaid)):null;
+  const forecastDebit=round((Array.isArray(account?.transactions)?account.transactions:[]).filter(t=>clean(t?.billForecastDate)===m&&!/CANCEL|REVERSED|DECLINED|FAILED/.test(clean(t?.status).toUpperCase())&&Number(t?.amount)>0).reduce((sum,t)=>sum+Number(t.amount),0));
   let reason='local-cycle-has-balance',unsettled=true;
-  if(status==='paid'){reason='local-status-paid';unsettled=false}else if(!Number.isFinite(total)||total<=.009){reason='local-total-empty';unsettled=false}else if(left<=.009){reason='local-payments-settled';unsettled=false}
-  return{month:m,unsettled,reason,invoice:{status:status||'open',total:Number.isFinite(total)?round(total):null,paidAmount:round(localPaid),openFinanceBillPaid:storedBillPaid,effectivePaid:round(effectivePaid),remaining:left,officialTotalSource:inv?.officialTotalSource||null,openFinanceBillId:inv?.openFinanceBillId||null}}
+  if(status==='paid'){reason='local-status-paid';unsettled=false}
+  else if(Number.isFinite(total)&&total>.009&&left>.009){reason='local-cycle-has-balance';unsettled=true}
+  else if(forecastDebit>.009){reason='bank-forecast-has-balance';unsettled=true}
+  else if(!Number.isFinite(total)||total<=.009){reason='local-total-empty';unsettled=false}
+  else if(left<=.009){reason='local-payments-settled';unsettled=false}
+  return{month:m,unsettled,reason,bankForecastDebit:forecastDebit,invoice:{status:status||'open',total:Number.isFinite(total)?round(total):null,paidAmount:round(localPaid),openFinanceBillPaid:storedBillPaid,effectivePaid:round(effectivePaid),remaining:left,officialTotalSource:inv?.officialTotalSource||null,openFinanceBillId:inv?.openFinanceBillId||null}}
 }
 function unsettledCycle(card,m,account){return settlementEvidence(card,m,account).unsettled}
 function currentCycleMonth(card){if(!card)return civilMonth();const p=previewAccount(card.id);return bankCycle(p?.account||null,card).month}
