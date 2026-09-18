@@ -11,8 +11,12 @@ test('auto-sync relê ao voltar para o app e mede o ciclo de 15 minutos desde a 
 });
 
 test('auto-sync usa releitura de snapshot e não chama refreshItems automaticamente',()=>{
-  const syncData=source.match(/async function syncCurrentData\(\)[\s\S]*?\n  }\n\n  function configured/);
-  const automatic=source.match(/async function automaticSync[\s\S]*?\n  }\n\n  function appendMoreMenuEntry/);
+  const syncStart=source.indexOf('async function syncCurrentData()');
+  const syncEnd=source.indexOf('function applicationEvidence',syncStart);
+  const autoStart=source.indexOf('async function automaticSync');
+  const autoEnd=source.indexOf('function appendMoreMenuEntry',autoStart);
+  const syncData=syncStart>=0&&syncEnd>syncStart?[source.slice(syncStart,syncEnd)]:null;
+  const automatic=autoStart>=0&&autoEnd>autoStart?[source.slice(autoStart,autoEnd)]:null;
   expect(syncData).not.toBeNull();
   expect(automatic).not.toBeNull();
   expect(syncData[0]).toContain('unified.syncAll()');
