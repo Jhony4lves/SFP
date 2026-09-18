@@ -160,6 +160,7 @@ test('#246 registro legado importado como 1x é promovido no re-sync sem duplica
   await page.reload();
   await expectBootComplete(page, expect, value.settings.name);
   await page.waitForFunction(() => window.SFPOpenFinanceUnifiedSync?.version === 2);
+  await page.evaluate(() => window.SFPOpenFinanceUnifiedSync.syncAll());
 
   await expect.poll(() => page.evaluate(() => ({
     count:state.purchases.length,
