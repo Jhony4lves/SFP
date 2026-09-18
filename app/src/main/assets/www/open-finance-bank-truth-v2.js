@@ -26,7 +26,13 @@
     try{
       const account=previewAccount(card)?.account||null;
       const cycle=global.SFPOpenFinanceBills?.cycleForCard?.(card,account);
-      return cycle?.source&&cycle.source!=='sfp-local'&&validMonth(cycle?.month)?cycle.month:fallback;
+      const bankMonth=cycle?.month;
+      if(!cycle?.source||cycle.source==='sfp-local'||!validMonth(bankMonth))return fallback;
+      // Snapshot bancário antigo nunca faz a UI voltar de mês. O banco só pode
+      // confirmar o mês selecionado ou avançar exatamente um ciclo, e o avanço
+      // já foi validado por cycleForCard() contra a liquidação da fatura anterior.
+      if(bankMonth===fallback||bankMonth===shiftMonth(fallback,1))return bankMonth;
+      return fallback;
     }catch(_){return fallback;}
   };
   let persistenceBusy=false;
