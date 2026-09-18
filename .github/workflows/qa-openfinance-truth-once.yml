@@ -28,6 +28,7 @@ jobs:
           npx playwright test
           qa/open-finance-financial-truth-242-244.spec.js
           qa/open-finance-future-installments-246.spec.js
+          qa/payroll-aguas-rule-247.spec.js
           qa/financial-integrity-wave2.spec.js
           qa/open-finance-unified-sync.spec.js
           qa/audit-openfinance-integrity-239.spec.js
