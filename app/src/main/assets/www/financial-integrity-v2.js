@@ -99,6 +99,11 @@
       (global.dueEvents?.(month)||[]).forEach(raw=>{
         if(!raw?.date||raw.date>end)return;
         const past=raw.date<today,future=raw.date>today;
+        // Ocorrências recorrentes virtuais de meses históricos não são dívidas confirmadas.
+        // Elas continuam disponíveis no calendário para revisão, mas não podem ser trazidas
+        // para hoje como atraso nem reduzir Safe-to-Spend/projeções sem evidência real.
+        const historicalVirtualRecurring=past&&raw.source==='recurring'&&isoMonth(raw.date)<isoMonth(today);
+        if(historicalVirtualRecurring)return;
         const shouldKeep=past?raw.type==='expense'&&!isPaid(raw.status):(!isPaid(raw.status)||future);
         if(!shouldKeep)return;
         const normalized=normalizeEconomicEvent(raw,reference),key=idKey(normalized);
