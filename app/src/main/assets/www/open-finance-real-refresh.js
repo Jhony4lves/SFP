@@ -334,24 +334,68 @@
     }
     if(busy)return;
     busy=true;
-    lastAttempt={schema:'sfp-refresh-diagnostic-v2',attemptedAt:new Date().toISOString(),request:null,status:null,polls:0,outcome:'reading-pluggy',privacy:{credentials:false,itemIds:false,accountIds:false}};
+    lastAttempt={schema:'sfp-refresh-diagnostic-v2',attemptedAt:new Date().toISOString(),request:null,status:null,polls:0,outcome:'requesting',privacy:{credentials:false,itemIds:false,accountIds:false}};
 
     const originalText=button?.textContent||'Atualizar dados agora';
     if(button){
       button.disabled=true;
-      button.textContent='Consultando Pluggy…';
+      button.textContent='Pedindo atualização ao banco…';
     }
 
     try{
+      const bridge=global.PluggyRefreshBridge;
+      let started=null,refreshed=false;
+
+      if(bridge&&typeof bridge.refreshItems==='function'){
+        started=parse(bridge.refreshItems())||{ok:false,requested:0,started:0,status:500,code:'NATIVE_RESPONSE_INVALID',message:'Resposta inválida da ponte nativa.',items:[]};
+        lastAttempt.request=evidence(started);
+
+        if(started.ok&&Number(started.started||0)>0){
+          if(button)button.textContent='Banco sincronizando…';
+          message(`Atualização solicitada em ${Number(started.started)} conexão(ões). Aguardando a instituição…`);
+          for(let attempt=0;attempt<30;attempt++){
+            await wait(attempt===0?1500:2500);
+            const status=parse(bridge.refreshStatus?.());
+            lastAttempt.polls=attempt+1;
+            if(!status){
+              lastAttempt.outcome='status-invalid';
+              break;
+            }
+            lastAttempt.status=evidence(status);
+            if(status.needsUser){
+              lastAttempt.outcome='needs-user';
+              break;
+            }
+            if(status.failed){
+              lastAttempt.outcome='provider-failed';
+              break;
+            }
+            if(status.ok&&status.complete){
+              refreshed=true;
+              lastAttempt.outcome=Number(started.started)<Number(started.requested)?'partially-refreshed':'refreshed';
+              break;
+            }
+          }
+          if(!refreshed&&lastAttempt.outcome==='requesting')lastAttempt.outcome='timeout';
+        }else if(isMeuPluggyManaged(started)){
+          lastAttempt.outcome='provider-managed';
+        }else{
+          lastAttempt.outcome='rejected';
+        }
+      }else{
+        lastAttempt.request={ok:false,source:'pluggy',mode:'read-only',message:'Refresh bancário explícito indisponível neste APK.'};
+        lastAttempt.outcome='bridge-unavailable';
+      }
+
+      if(button)button.textContent='Aplicando dados disponíveis…';
       const applied=await syncCurrentData();
       if(!applied){
-        lastAttempt.request={ok:false,source:'pluggy',mode:'read-only',message:'Sincronização Open Finance indisponível neste APK.'};
-        lastAttempt.outcome='sync-unavailable';
+        lastAttempt.outcome=lastAttempt.outcome==='requesting'?'sync-unavailable':lastAttempt.outcome;
         message('A leitura da Pluggy está indisponível neste APK. Os dados anteriores foram preservados.','error');
         return;
       }
 
-      lastAttempt.request={
+      lastAttempt.applied={
         ok:applied.ok!==false,
         source:'pluggy',
         mode:'read-only',
@@ -368,25 +412,37 @@
       };
 
       if(applied.ok===false){
-        lastAttempt.outcome='apply-failed';
+        if(lastAttempt.outcome==='requesting'||lastAttempt.outcome==='refreshed')lastAttempt.outcome='apply-failed';
         message(applied.message||'A Pluggy respondeu, mas a leitura não pôde ser aplicada. Os dados anteriores foram preservados.','error');
         return;
       }
 
-      lastAttempt.outcome='completed';
-      if(applied.financialTruthWarning){
-        message(`Dados sincronizados, mas a conciliação de saldo/fatura precisa de atenção: ${safeText(applied.financialTruthWarning)}`,'error');
-      }else if(Number(applied?.card?.unmapped||0)+Number(applied?.bank?.unmapped||0)>0){
-        message('Dados da Pluggy consultados. Há contas ou cartões sem vínculo: cadastre-os no SFP e confira os vínculos para importar.');
+      if(lastAttempt.outcome==='refreshed'){
+        message('A instituição concluiu a atualização e os dados novos foram aplicados ao SFP.','success');
+      }else if(lastAttempt.outcome==='partially-refreshed'){
+        message('Parte das conexões foi atualizada; o SFP também aplicou o snapshot mais recente das demais.','info');
+      }else if(lastAttempt.outcome==='provider-managed'){
+        message('O MeuPluggy não permite refresh forçado pelo SFP. O snapshot mais recente disponível foi relido e aplicado.','info');
+      }else if(lastAttempt.outcome==='needs-user'){
+        message('A conexão precisa de autenticação adicional. O SFP preservou e reaplicou o snapshot disponível.','error');
+      }else if(lastAttempt.outcome==='provider-failed'){
+        message('A atualização da instituição terminou com erro; o SFP preservou e reaplicou o snapshot disponível.','error');
+      }else if(lastAttempt.outcome==='rejected'){
+        message(refreshFailureText(started),'error');
+      }else if(lastAttempt.outcome==='timeout'){
+        message('A instituição ainda está sincronizando. O SFP aplicou por enquanto o snapshot mais recente disponível.','info');
+      }else if(lastAttempt.outcome==='status-invalid'){
+        message('A atualização foi solicitada, mas o status final não pôde ser confirmado. O snapshot disponível foi preservado.','error');
       }else{
+        lastAttempt.outcome='completed-read-only';
         message('Dados mais recentes disponíveis na Pluggy foram aplicados ao SFP.','success');
       }
+
       try{global.renderAll?.();}catch(_){}
     }catch(error){
-      console.error('SFP Open Finance snapshot sync:',error);
+      console.error('SFP Open Finance manual refresh:',error);
       lastAttempt.outcome='request-failed';
-      lastAttempt.request={ok:false,source:'pluggy',mode:'read-only',message:safeText(error?.message)};
-      message('Falha ao consultar os dados disponíveis na Pluggy. Os dados anteriores foram preservados.','error');
+      message('Falha ao atualizar a instituição. Os dados anteriores foram preservados.','error');
     }finally{
       global.SFPOpenFinanceBankTruth?.patchGrid?.();
       global.SFPOpenFinanceBankTruth?.patchInvoiceFocus?.();
@@ -425,7 +481,7 @@
   }
 
   global.SFPOpenFinanceRealRefresh=Object.freeze({
-    version:7,
+    version:8,
     autoIntervalMs:AUTO_INTERVAL_MS,
     diagnostic,
     exportDiagnostic,
