@@ -71,3 +71,28 @@ test('invoice diagnostic v4 is reduced to aggregate metrics only', () => {
   assert.ok(result.anomalies.some(x => x.code === 'CARD_BILL_RECONSTRUCTED'));
   assert.ok(result.anomalies.some(x => x.code === 'OPENFINANCE_REFRESH_REJECTED'));
 });
+
+
+test('refresh diagnostic v2 flags review without raw banking data', () => {
+  const result = analyze({
+    sourceSchema: 'sfp-refresh-diagnostic-v2',
+    refresh: {
+      outcome: 'completed',
+      complete: true
+    },
+    sync: {
+      bankUnmapped: 0,
+      cardUnmapped: 0,
+      snapshots: 0,
+      payments: 0,
+      already: 0,
+      review: 2
+    }
+  });
+
+  assert.equal(result.summary.sourceSchema, 'sfp-refresh-diagnostic-v2');
+  assert.equal(result.summary.review, 2);
+  assert.ok(result.anomalies.some(x => x.code === 'OPENFINANCE_REVIEW_REQUIRED' && x.count === 2));
+  assert.equal(result.anomalies.some(x => x.code === 'OPENFINANCE_BANK_UNMAPPED'), false);
+  assert.equal(result.anomalies.some(x => x.code === 'OPENFINANCE_CARD_UNMAPPED'), false);
+});
