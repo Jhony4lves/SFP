@@ -106,8 +106,9 @@ async function boot(page, value) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await expectBootComplete(page, expect, value.settings.name);
-  await page.waitForFunction(() => window.SFPOpenFinanceUnifiedSync?.version === 1);
-  await page.waitForFunction(() => window.SFPOpenFinanceRecurringReconcile?.version === 3);
+  await page.waitForFunction(() => Number(window.SFPOpenFinanceUnifiedSync?.version) >= 2);
+  await page.waitForFunction(() => Number(window.SFPOpenFinanceRecurringReconcile?.version) >= 3);
+  await page.evaluate(() => setPage('openfinance'));
 }
 
 async function sync(page) {
