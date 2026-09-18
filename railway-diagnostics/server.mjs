@@ -289,13 +289,3 @@ export function createServer() {
   });
 }
 
-if (process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).href) {
-  createServer().listen(PORT, '0.0.0.0', () => {
-    console.log(JSON.stringify({
-      type: 'startup',
-      service: 'sfp-openfinance-diagnostics',
-      port: PORT,
-      version: SERVICE_VERSION
-    }));
-  });
-}
