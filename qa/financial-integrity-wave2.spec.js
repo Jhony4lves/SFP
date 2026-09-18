@@ -117,7 +117,7 @@ test.describe('Financial integrity v2 — #153..#161',()=>{
     expect(result.safeToSpendCents).toBe(10000);
   });
 
-  test('#160 cobertura global sem transferência não vira dinheiro livre; transferência programada libera o excedente',async({page})=>{
+  test('#160 cobertura global não vira falso déficit; conta pagadora continua exigindo transferência',async({page})=>{
     await boot(page);
     const v=base();v.accounts=[
       {id:1,name:'Conta do débito',type:'Conta corrente',initial:0,balanceMode:'snapshot',balanceDate:'2026-09-01'},
@@ -126,8 +126,8 @@ test.describe('Financial integrity v2 — #153..#161',()=>{
     v.transactions=[tx(1,'expense',400,'2026-09-11',1)];
     await useState(page,v);
     const uncovered=await page.evaluate(()=>SFPFinancialIntegrityV2.liquiditySnapshot({reference:new Date(2026,8,10)}));
-    expect(uncovered.safeToSpendCents).toBe(0);
-    expect(uncovered.negativeRisk ?? uncovered.projection.negativeRisk).toBe(true);
+    expect(uncovered.safeToSpendCents).toBe(10000);
+    expect(uncovered.projection.negativeRisk).toBe(false);
     expect(uncovered.accountRisks).toHaveLength(1);
     expect(uncovered.accountRisks[0]).toMatchObject({accountId:1,requiredTransferCents:40000});
 
