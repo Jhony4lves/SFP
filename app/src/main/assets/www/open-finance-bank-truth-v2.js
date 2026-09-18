@@ -583,10 +583,28 @@
     return true;
   }
 
+  function installInvoiceGuard(){
+    const original=global.openInvoiceDetail;
+    if(typeof original!=='function')return false;
+    if(original.__sfpBankTruthV4)return true;
+    const wrapped=function(id){
+      const card=(global.state?.cards||[]).find(item=>sameId(item.id,id));
+      if(card){
+        global.state.ui??={};
+        global.state.ui.invoiceMonthByCard??={};
+        global.state.ui.invoiceMonthByCard[card.id]=activeMonth();
+      }
+      return original.apply(this,arguments);
+    };
+    Object.defineProperty(wrapped,'__sfpBankTruthV4',{value:true});
+    global.openInvoiceDetail=wrapped;try{openInvoiceDetail=wrapped}catch(_){}
+    return true;
+  }
+
   function install(){
     if(global[FLAG])return true;
     if(!global.state||!global.SFPOpenFinanceBills||!global.SFPOpenFinancePersonal)return false;
-    if(!installRenderGuard()||!installDetailGuard())return false;
+    if(!installRenderGuard()||!installDetailGuard()||!installInvoiceGuard())return false;
     patchGrid();patchInvoiceFocus();rememberBankTruth();
     // Other renderers may replace the card HTML after renderCards returns.
     const grid=document.getElementById('cardsGrid');
