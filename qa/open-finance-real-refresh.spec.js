@@ -88,9 +88,9 @@ test('Atualizar dados tenta refresh real antes de reler a Pluggy',async({page})=
   expect(after.status).toBeGreaterThanOrEqual(1);
   expect(after.preview).toBeGreaterThan(before.preview);
   const diagnostic=await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic());
-  expect(diagnostic.outcome).toBe('refreshed');
+  expect(diagnostic.outcome).toBe('completed');
   expect(diagnostic.request).toMatchObject({ok:true,requested:1,started:1});
-  await expect(page.locator('#openFinancePreview')).toContainText('dados novos foram aplicados ao SFP');
+  await expect(page.locator('#openFinancePreview')).toContainText('Dados atualizados na instituição e aplicados ao SFP');
 });
 
 test('MeuPluggy recusando PATCH cai para snapshot sem bloquear sincronização',async({page})=>{
@@ -105,7 +105,7 @@ test('MeuPluggy recusando PATCH cai para snapshot sem bloquear sincronização',
   expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(1);
   expect(await page.evaluate(()=>window.__sfpRefreshCalls.status)).toBe(0);
   expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('provider-managed');
-  await expect(page.locator('#openFinancePreview')).toContainText('MeuPluggy não permite refresh forçado');
+  await expect(page.locator('#openFinancePreview')).toContainText('MeuPluggy recusou refresh forçado');
 });
 
 test('leitura da Pluggy aplica o Bill novo mesmo sem compras novas',async({page})=>{
@@ -167,7 +167,7 @@ test('cartão sem compras locais mostra parcelas bancárias identificadas e não
   await page.evaluate(()=>{setPage('cartoes');renderCards();});
   await expect(page.locator('#cardsGrid')).toContainText('2 meses');
   await expect(page.locator('#cardsGrid')).toContainText('188,72');
-  await page.waitForFunction(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome==='refreshed');
+  await page.waitForFunction(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome==='completed');
   await page.evaluate(()=>{const grid=document.getElementById('cardsGrid');grid.innerHTML=grid.innerHTML.replace('2 meses','0');});
   await expect(page.locator('#cardsGrid')).toContainText('2 meses');
   await page.evaluate(()=>{
