@@ -1,0 +1,48 @@
+name: SFP Open Finance Closure Focus
+
+on:
+  push:
+    branches:
+      - fix/calendar-openfinance-history-242-243
+
+concurrency:
+  group: sfp-openfinance-closure-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Static checks
+        run: npm run test:static
+      - name: Run Open Finance closure gate
+        run: >-
+          npx playwright test
+          qa/open-finance-payment-evidence.spec.js
+          qa/open-finance-personal.spec.js
+          qa/open-finance-financial-truth-242-244.spec.js
+          qa/open-finance-future-installments-246.spec.js
+          qa/payroll-aguas-rule-247.spec.js
+          qa/open-finance-auto-sync-contract.spec.js
+          qa/theme-floating-selects.spec.js
+          qa/ux05-intelligence.spec.js
+          qa/calendar-ux.spec.js
+          qa/recurring-income-plan-guards.spec.js
+          qa/recurring-income-plan.spec.js
+          qa/financial-integrity-wave2.spec.js
+          qa/open-finance-unified-sync.spec.js
+          qa/audit-openfinance-integrity-239.spec.js
+          qa/audit-historical-integrity-repair.spec.js
+          qa/open-finance-item-refs.spec.js
+          qa/open-finance-bills.spec.js
+          qa/open-finance-recurring-reconcile.spec.js
+          qa/open-finance-nubank-credit-truth.spec.js
+          --workers=1
