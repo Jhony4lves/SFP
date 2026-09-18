@@ -117,31 +117,96 @@ jobs:
 
   android-qa-build:
     runs-on: ubuntu-latest
+    env:
+      SFP_KEYSTORE_BASE64: ${{ secrets.SFP_KEYSTORE_BASE64 }}
+      SFP_KEYSTORE_PASSWORD: ${{ secrets.SFP_KEYSTORE_PASSWORD }}
+      SFP_KEY_ALIAS: ${{ secrets.SFP_KEY_ALIAS }}
+      SFP_KEY_PASSWORD: ${{ secrets.SFP_KEY_PASSWORD }}
+      SFP_QA_CERT_SHA256: bf036c1668644f9c5b739e827472c7b29392de54554cdfbf2890d3b764aed2d9
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
+      - name: Test native Pluggy refresh lifecycle
+        run: |
+          mkdir -p build/qa-java
+          javac -d build/qa-java app/src/main/java/com/jhony/sfp/PluggyRefreshState.java qa/java/PluggyRefreshStateTest.java
+          java -cp build/qa-java com.jhony.sfp.PluggyRefreshStateTest
       - uses: android-actions/setup-android@v4
+        with:
+          packages: ''
       - uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: "8.11.1"
       - run: yes | sdkmanager --licenses >/dev/null || true
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      - run: gradle :app:assembleDebug :app:assembleDebugAndroidTest
-      - name: Inspect APK launcher resources
+      - name: Require stable QA signing identity
+        shell: bash
         run: |
-          echo "=== RECURSOS DE LAUNCHER EMPACOTADOS NO APK DEBUG ==="
-          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E "res/mipmap|res/drawable|ic_launcher" || true
+          set -euo pipefail
+          missing=0
+          for var in SFP_KEYSTORE_BASE64 SFP_KEYSTORE_PASSWORD SFP_KEY_ALIAS SFP_KEY_PASSWORD; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::$var não está configurado. O QA não publicará APK com assinatura efêmera, pois isso força reinstalação e apaga o cofre Open Finance."
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - name: Restore persistent QA signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$SFP_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/sfp-qa.jks"
+          test -s "$RUNNER_TEMP/sfp-qa.jks"
+          echo "SFP_KEYSTORE_PATH=$RUNNER_TEMP/sfp-qa.jks" >> "$GITHUB_ENV"
+      - name: Build update-safe QA APKs
+        run: gradle :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease :app:assembleDebugAndroidTest
+      - name: Verify pinned QA signatures, package identities and launcher resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_cert="$(printf '%s' "$SFP_QA_CERT_SHA256" | tr '[:upper:]' '[:lower:]')"
+          verify_apk() {
+            apk="$1"
+            expected_package="$2"
+            label="$3"
+            echo "=== ASSINATURA DO APK $label ==="
+            signature="$($ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs "$apk")"
+            printf '%s\n' "$signature"
+            actual_cert="$(printf '%s\n' "$signature" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr '[:upper:]' '[:lower:]')"
+            if [ -z "$actual_cert" ] || [ "$actual_cert" != "$expected_cert" ]; then
+              echo "::error::Certificado inesperado no APK $label."
+              exit 1
+            fi
+            package_name="$($ANDROID_HOME/build-tools/35.0.0/aapt dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -n1)"
+            if [ "$package_name" != "$expected_package" ]; then
+              echo "::error::Package inesperado no APK $label: $package_name (esperado $expected_package)."
+              exit 1
+            fi
+            echo "$label signing identity pinned: $actual_cert"
+            echo "$label package identity: $package_name"
+          }
+          verify_apk "app/build/outputs/apk/debug/app-debug.apk" "com.jhony.sfp.debug" "DEBUG"
+          verify_apk "app/build/outputs/apk/release/app-release.apk" "com.jhony.sfp" "RELEASE-QA"
+          echo "=== RECURSOS DE LAUNCHER EMPACOTADOS NO APK RELEASE-QA ==="
+          unzip -l app/build/outputs/apk/release/app-release.apk | grep -E "res/mipmap|res/drawable|ic_launcher" || true
       - name: Record APK checksums without publishing app data
         run: |
           mkdir -p build/reports
-          sha256sum app/build/outputs/apk/debug/*.apk app/build/outputs/apk/androidTest/debug/*.apk > build/reports/android-qa-checksums.txt
+          sha256sum app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk app/build/outputs/apk/androidTest/debug/*.apk > build/reports/android-qa-checksums.txt
       - if: always()
         uses: actions/upload-artifact@v6
         with:
           name: android-qa-checksums
           path: build/reports/android-qa-checksums.txt
+          if-no-files-found: error
+          retention-days: 14
+      - if: success()
+        uses: actions/upload-artifact@v6
+        with:
+          name: app-release-qa-apk
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
