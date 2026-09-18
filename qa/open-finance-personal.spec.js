@@ -139,10 +139,11 @@ test('OPEN-FINANCE-01 credenciais passam somente pela bridge nativa e somem do f
   await page.locator('#openFinanceClientSecret').fill(CLIENT_SECRET);
   await page.locator('#openFinanceSaveBtn').click();
 
-  await expect(page.locator('#openFinanceStatus')).toContainText('Meu Pluggy configurado neste aparelho');
+  await expect.poll(() => page.evaluate(() => window.__pluggyMock.saveCalls)).toBe(1);
   await expect(page.locator('#openFinanceClientId')).toHaveValue('');
   await expect(page.locator('#openFinanceClientSecret')).toHaveValue('');
   await expect(page.locator('#openFinanceSyncBtn')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => JSON.parse(window.PluggyBridge.getCredentialStatus()).configured)).toBe(true);
 
   const result = await page.evaluate(secret => ({
     mock: { ...window.__pluggyMock },
