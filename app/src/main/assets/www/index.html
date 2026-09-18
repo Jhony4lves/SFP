@@ -3575,12 +3575,24 @@ function isoDateFromParts(y,m,d){return `${y}-${String(m).padStart(2,'0')}-${Str
 function isBusinessDayISO(date){let d=dateObj(date).getDay();return d>=1&&d<=5}
 function previousBusinessDayISO(date){let d=dateObj(date);d.setDate(d.getDate()-1);let out=localCivilDate(d);while(!isBusinessDayISO(out)){d.setDate(d.getDate()-1);out=localCivilDate(d)}return out}
 function payrollDateForAnchor(monthKey,anchorDay){let[y,mo]=monthKey.split('-').map(Number),day=clampDay(y,mo,+anchorDay||1);return previousBusinessDayISO(isoDateFromParts(y,mo,day))}
+const BRAZIL_PAYROLL_FIXED_HOLIDAYS=new Set(['01-01','04-21','05-01','09-07','10-12','11-02','11-15','11-20','12-25']);
+function isKnownPayrollHolidayISO(date,extra=[]){let value=String(date||'').slice(0,10),monthDay=value.slice(5);return BRAZIL_PAYROLL_FIXED_HOLIDAYS.has(monthDay)||(Array.isArray(extra)&&extra.includes(value))}
+function isPayrollPaymentAllowedISO(date,extra=[]){let d=dateObj(date),weekday=d.getDay();return weekday!==0&&weekday!==1&&weekday!==6&&!isKnownPayrollHolidayISO(date,extra)}
+function previousAllowedPayrollDateISO(date,extra=[]){let d=dateObj(date),out=localCivilDate(d);while(!isPayrollPaymentAllowedISO(out,extra)){d.setDate(d.getDate()-1);out=localCivilDate(d)}return out}
+function payrollCompanyDateForMonth(monthKey,rule={}){
+ let[y,mo]=String(monthKey||'').split('-').map(Number),base;
+ if(!y||!mo)return'';
+ if(rule.payrollBase==='previous-month-end'){let d=new Date(y,mo-1,1);d.setDate(d.getDate()-1);base=localCivilDate(d)}
+ else{let day=clampDay(y,mo,+rule.payrollAnchor||+rule.day||15);base=isoDateFromParts(y,mo,day)}
+ return previousAllowedPayrollDateISO(base,rule.payrollBlockedDates||[])
+}
 function recurringDateForMonth(r,m){
+ if(r.dateRule==='salary-company-advance')return payrollCompanyDateForMonth(m,r)
  if(r.dateRule==='business-day-before-anchor'||r.payrollAnchor){return payrollDateForAnchor(m,r.payrollAnchor||r.day)}
  let[y,mo]=m.split('-').map(Number),day=clampDay(y,mo,+r.day||1);return `${m}-${String(day).padStart(2,'0')}`
 }
-function isPayrollRecurring(r){return r&&(r.dateRule==='business-day-before-anchor'||r.payrollAnchor||((r.type==='income'||r.kind==='income')&&/sal[aá]rio/i.test(r.desc||'')))}
-window.previousBusinessDayISO=previousBusinessDayISO;window.payrollDateForAnchor=payrollDateForAnchor;window.recurringDateForMonth=recurringDateForMonth;
+function isPayrollRecurring(r){return r&&(r.dateRule==='salary-company-advance'||r.dateRule==='business-day-before-anchor'||r.payrollAnchor||((r.type==='income'||r.kind==='income')&&/sal[aá]rio/i.test(r.desc||'')))}
+window.previousBusinessDayISO=previousBusinessDayISO;window.payrollDateForAnchor=payrollDateForAnchor;window.payrollCompanyDateForMonth=payrollCompanyDateForMonth;window.recurringDateForMonth=recurringDateForMonth;
 function accountBalanceDateLabel(value){if(!value)return'data-base não informada';let date=new Date(value+'T12:00');return Number.isNaN(date.getTime())?'data-base inválida':`saldo-base ${date.toLocaleDateString('pt-BR')}`}
 let toastTimer=null;
 function toast(msg,type='info'){
