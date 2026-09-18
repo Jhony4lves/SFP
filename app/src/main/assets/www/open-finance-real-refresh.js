@@ -93,7 +93,7 @@
 
   function baseAutoText(){
     const suffix=lastSnapshotReadAt?` Última leitura desta sessão: ${formatClock(lastSnapshotReadAt)}.`:'';
-    return `Sincronização automática ativa: o SFP relê o snapshot da Pluggy ao abrir, ao voltar para o app e a cada 15 minutos. O botão “Atualizar dados agora” também tenta pedir uma nova sincronização à instituição quando a conexão permite.${suffix}`;
+    return `Sincronização automática ativa: o SFP relê o snapshot do MeuPluggy ao abrir, ao voltar para o app e a cada 15 minutos. O botão “Atualizar dados agora” também tenta pedir uma nova sincronização à instituição quando a conexão permite.${suffix}`;
   }
 
   function message(text,kind='info'){
@@ -350,7 +350,7 @@
     }
     if(busy)return;
     busy=true;
-    lastAttempt={schema:'sfp-refresh-diagnostic-v3',attemptedAt:new Date().toISOString(),request:null,status:null,application:null,polls:0,outcome:'requesting-provider-refresh',privacy:{credentials:false,itemIds:false,accountIds:false}};
+    lastAttempt={schema:'sfp-refresh-diagnostic-v2',attemptedAt:new Date().toISOString(),request:null,status:null,application:null,polls:0,outcome:'requesting-provider-refresh',privacy:{credentials:false,itemIds:false,accountIds:false}};
 
     const originalText=button?.textContent||'Atualizar dados agora';
     if(button){button.disabled=true;button.textContent='Pedindo atualização ao banco…';}
