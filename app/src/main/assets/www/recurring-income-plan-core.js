@@ -1,8 +1,8 @@
 (function installRecurringIncomePlan(global){
   'use strict';
 
-  const VERSION=1;
-  const INSTALL_FLAG='__SFP_RECURRING_INCOME_PLAN_V1';
+  const VERSION=2;
+  const INSTALL_FLAG='__SFP_RECURRING_INCOME_PLAN_V2';
   if(global[INSTALL_FLAG])return;
   global[INSTALL_FLAG]=true;
 
@@ -33,6 +33,11 @@
     return state;
   }
 
+  function parseBlockedDates(value){
+    const raw=Array.isArray(value)?value:String(value||'').split(/[\s,;]+/);
+    return[...new Set(raw.map(clean).filter(item=>/^\d{4}-\d{2}-\d{2}$/.test(item)))].sort();
+  }
+
   function normalizeInput(input={}){
     const desc=clean(input.desc)||'Salário';
     const targetAmount=round2(input.targetAmount);
@@ -41,14 +46,12 @@
     const end=clean(input.end);
     const firstAmount=round2(input.firstAmount);
     const secondAmount=round2(input.secondAmount);
-    const firstDay=Math.trunc(Number(input.firstDay));
-    const secondDay=Math.trunc(Number(input.secondDay));
+    const payrollBlockedDates=parseBlockedDates(input.payrollBlockedDates);
     const errors=[];
 
     if(!(targetAmount>0))errors.push('Informe um salário mensal maior que zero.');
     if(!(firstAmount>0)||!(secondAmount>0))errors.push('As duas entradas precisam ter valor maior que zero.');
     if(Math.abs(round2(firstAmount+secondAmount)-targetAmount)>.01)errors.push('A soma das duas entradas precisa ser igual ao salário mensal planejado.');
-    if(!Number.isInteger(firstDay)||firstDay<1||firstDay>31||!Number.isInteger(secondDay)||secondDay<1||secondDay>31)errors.push('Os dias das entradas precisam ficar entre 1 e 31.');
     if(!accountId)errors.push('Escolha a conta que recebe o salário.');
     if(!validMonth(start))errors.push('Informe o mês inicial do plano.');
     if(end&&(!validMonth(end)||end<start))errors.push('O término do plano não pode ser anterior ao início.');
@@ -56,16 +59,18 @@
     return{
       ok:errors.length===0,
       errors,
-      value:{desc,targetAmount,accountId,start,end,firstAmount,secondAmount,firstDay,secondDay}
+      value:{desc,targetAmount,accountId,start,end,firstAmount,secondAmount,payrollBlockedDates}
     };
   }
 
-  function payrollPatch(day){
-    return{dateRule:'business-day-before-anchor',payrollAnchor:Number(day)||1};
+  function payrollPatch(partKey,blockedDates=[]){
+    return partKey==='first'
+      ?{dateRule:'salary-company-advance',payrollBase:'previous-month-end',payrollAnchor:1,payrollBlockedDates:[...blockedDates]}
+      :{dateRule:'salary-company-advance',payrollBase:'day',payrollAnchor:15,payrollBlockedDates:[...blockedDates]};
   }
 
-  function childRule(old,plan,partKey,label,amount,day,active){
-    const base=old||{};
+  function childRule(old,plan,partKey,label,amount,active){
+    const base=old||{},day=partKey==='first'?1:15;
     return{
       ...base,
       id:base.id||uid(),
@@ -73,13 +78,13 @@
       type:'income',
       desc:`${plan.desc} — ${label}`,
       amount:round2(amount),
-      day:Number(day),
+      day,
       category:'Salário',
       accountId:plan.accountId,
       start:plan.start,
       end:plan.end,
       skips:Array.isArray(base.skips)?base.skips:[],
-      ...payrollPatch(day),
+      ...payrollPatch(partKey,plan.payrollBlockedDates),
       recurringGroupId:plan.id,
       recurringPartKey:partKey,
       recurringGroupTarget:plan.targetAmount
@@ -107,6 +112,8 @@
       start:data.start,
       end:data.end,
       active,
+      payrollRule:'advance-blocked-payday',
+      payrollBlockedDates:[...data.payrollBlockedDates],
       updatedAt:new Date().toISOString(),
       createdAt:existing?.createdAt||new Date().toISOString()
     };
@@ -114,8 +121,8 @@
     const previousIds=Array.isArray(existing?.memberRecurringIds)?existing.memberRecurringIds:[];
     const oldFirst=state.recurring.find(item=>sameId(item?.id,previousIds[0])||sameId(item?.recurringGroupId,groupId)&&item?.recurringPartKey==='first');
     const oldSecond=state.recurring.find(item=>sameId(item?.id,previousIds[1])||sameId(item?.recurringGroupId,groupId)&&item?.recurringPartKey==='second');
-    const first=childRule(oldFirst,plan,'first','1ª quinzena',data.firstAmount,data.firstDay,active);
-    const second=childRule(oldSecond,plan,'second','2ª quinzena',data.secondAmount,data.secondDay,active);
+    const first=childRule(oldFirst,plan,'first','1ª quinzena',data.firstAmount,active);
+    const second=childRule(oldSecond,plan,'second','2ª quinzena',data.secondAmount,active);
     plan.memberRecurringIds=[first.id,second.id];
 
     const childIds=new Set(plan.memberRecurringIds.map(String));
@@ -161,6 +168,7 @@
         partKey:rule.recurringPartKey||'',
         desc:rule.desc,
         day:rule.day,
+        expectedDate:applicable&&typeof global.recurringDateForMonth==='function'?global.recurringDateForMonth(rule,month):null,
         applicable,
         plannedAmount,
         actualAmount,
@@ -253,11 +261,12 @@
         <label>Começa em<input id="salaryPlanStart" type="month" required value="${escapeHtml(plan?.start||currentMonth)}"/></label>
         <label>Termina em<input id="salaryPlanEnd" type="month" value="${escapeHtml(plan?.end||'')}"/></label>
       </div>
-      <div class="note">O total mensal é apenas referência. Somente as duas entradas abaixo entram no caixa e podem ser realizadas pelo Open Finance.</div>
+      <div class="note">Regra da folha: 1ª quinzena no fim do mês anterior (referência dia 1) e 2ª quinzena no dia 15. Se a data cair em sábado, domingo, segunda ou feriado, o SFP antecipa até a data permitida anterior.</div>
       <div class="two">
-        <div><label>1ª quinzena — valor<input id="salaryPlanFirstAmount" type="number" step="0.01" min="0.01" required value="${escapeHtml(first.amount||'')}"/></label><label>Âncora do pagamento<input id="salaryPlanFirstDay" type="number" min="1" max="31" required value="${escapeHtml(first.day||1)}"/></label></div>
-        <div><label>2ª quinzena — valor<input id="salaryPlanSecondAmount" type="number" step="0.01" min="0.01" required value="${escapeHtml(second.amount||'')}"/></label><label>Âncora do pagamento<input id="salaryPlanSecondDay" type="number" min="1" max="31" required value="${escapeHtml(second.day||15)}"/></label></div>
+        <div><label>1ª quinzena — valor<input id="salaryPlanFirstAmount" type="number" step="0.01" min="0.01" required value="${escapeHtml(first.amount||'')}"/></label><small class="field-help">Pagamento-base: último dia do mês anterior.</small></div>
+        <div><label>2ª quinzena — valor<input id="salaryPlanSecondAmount" type="number" step="0.01" min="0.01" required value="${escapeHtml(second.amount||'')}"/></label><small class="field-help">Pagamento-base: dia 15.</small></div>
       </div>
+      <label>Feriados / dias sem pagamento adicionais<input id="salaryPlanBlockedDates" placeholder="2026-11-23, 2026-12-24" value="${escapeHtml((plan?.payrollBlockedDates||[]).join(', '))}"/><small class="field-help">Opcional. Feriados nacionais fixos já são considerados; adicione aqui datas estaduais, municipais ou internas da empresa.</small></label>
       <button class="btn wide" type="submit">${plan?'Salvar plano':'Criar plano'}</button>
     </form>`;
 
@@ -275,9 +284,8 @@
         start:document.getElementById('salaryPlanStart')?.value,
         end:document.getElementById('salaryPlanEnd')?.value,
         firstAmount:document.getElementById('salaryPlanFirstAmount')?.value,
-        firstDay:document.getElementById('salaryPlanFirstDay')?.value,
         secondAmount:document.getElementById('salaryPlanSecondAmount')?.value,
-        secondDay:document.getElementById('salaryPlanSecondDay')?.value
+        payrollBlockedDates:document.getElementById('salaryPlanBlockedDates')?.value
       });
       if(!result.ok){
         if(typeof global.toast==='function')global.toast(result.errors[0]||'Revise o plano salarial.','warning');
@@ -299,7 +307,7 @@
     const month=clean(state.mesAtual)||new Date().toISOString().slice(0,7);
     list.innerHTML=plans.map(plan=>{
       const info=summary(plan,month)||{};
-      const parts=(info.parts||[]).map(part=>`<span>${escapeHtml(part.partKey==='second'?'2ª':'1ª')} • ${money(part.realized?part.actualAmount:part.plannedAmount)} • ${part.realized?`recebido ${escapeHtml(part.actualDate||'')}`:`previsto na âncora ${escapeHtml(part.day)}`}</span>`).join(' · ');
+      const parts=(info.parts||[]).map(part=>`<span>${escapeHtml(part.partKey==='second'?'2ª':'1ª')} • ${money(part.realized?part.actualAmount:part.plannedAmount)} • ${part.realized?`recebido ${escapeHtml(part.actualDate||'')}`:`previsto ${escapeHtml(part.expectedDate||'')}`}</span>`).join(' · ');
       const status=plan.active===false?'pausado':info.complete?'realizado':'em andamento';
       return`<div class="item" data-income-plan-id="${escapeHtml(plan.id)}"><div style="flex:1"><b>${escapeHtml(plan.desc)}</b><small>Alvo ${money(info.targetAmount)} • realizado ${money(info.realizedAmount)} • a receber ${money(info.remainingAmount)} • projeção ${money(info.projectedAmount)} • ${escapeHtml(status)}</small><small>${parts}</small></div><div class="actions"><button class="btn2 tiny" data-plan-action="edit">Editar</button><button class="btn2 tiny" data-plan-action="toggle">${plan.active===false?'Ativar':'Pausar'}</button><button class="btn2 tiny" data-plan-action="skip">Pular ${escapeHtml(month)}</button><button class="danger tiny" data-plan-action="remove">Excluir</button></div></div>`;
     }).join('');
