@@ -189,6 +189,27 @@ test('estado legado com firstMonth deslocado é reancorado pela transação Plug
   }));
   expect(before).toEqual({firstMonth:'2026-08',october:3,shown:211.66});
 
+  const probe=await page.evaluate(()=>{
+    const data=window.__qaPayload,account=data.items[0].accounts[0],item=data.items[0];
+    const suggestion=SFPOpenFinancePersonal.suggestSfpEntity(account,SFPOpenFinancePersonal.itemDisplayName(item));
+    const plan=SFPOpenFinancePersonal.planInvoiceSync(data);
+    return{
+      helper:typeof SFPOpenFinancePersonal.repairLinkedInstallmentProjections,
+      externalId:state.purchases[0].externalId,
+      externalIds:state.purchases[0].openFinanceExternalIds,
+      suggestionId:suggestion?.entity?.id??null,
+      linkCount:plan.link.length,
+      already:plan.already,
+      pending:plan.pending
+    };
+  });
+  expect(probe).toMatchObject({
+    helper:'function',
+    externalId:'pluggy:assb-origin-1of3',
+    suggestionId:1,
+    linkCount:1
+  });
+
   const sync=await page.evaluate(()=>SFPOpenFinanceUnifiedSync.syncAll());
   expect(sync.ok).toBe(true);
 
