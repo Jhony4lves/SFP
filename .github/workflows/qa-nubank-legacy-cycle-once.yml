@@ -1,0 +1,25 @@
+name: Nubank Legacy Cycle Focus
+
+on:
+  push:
+    branches:
+      - fix/nubank-legacy-installment-cycle-212
+
+concurrency:
+  group: nubank-legacy-cycle-focus-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:static
+      - run: npx playwright test qa/open-finance-nubank-missing-installment-reconcile.spec.js --workers=1
