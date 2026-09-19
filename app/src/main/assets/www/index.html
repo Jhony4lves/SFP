@@ -5840,10 +5840,16 @@ function cardHtml(c,mini=false){
 /* SFP_INVOICE_V2 */
 
 function sfpInvoicePurchaseDisplayDesc(i){
-  const raw=String(i?.purchase?.desc||'').trim();
-  if(Number(i?.total)>1){
-    const clean=raw.replace(/\s+\d{1,3}\s*\/\s*\d{1,3}\s*$/,'').trim();
-    return clean||raw;
+  const p=i?.purchase||{};
+  const raw=String(p.desc||'').trim();
+  const tags=Array.isArray(p.tags)?p.tags:[];
+  const providerManaged=Boolean(p.openFinanceProvider||p.externalId||tags.includes('open-finance'));
+  if(providerManaged&&Number(i?.total)>1){
+    const match=raw.match(/\s+(\d{1,3})\s*\/\s*(\d{1,3})\s*$/);
+    if(match&&Number(match[2])===Number(i.total)){
+      const clean=raw.slice(0,match.index).trim();
+      return clean||raw;
+    }
   }
   return raw;
 }
