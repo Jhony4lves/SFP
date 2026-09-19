@@ -41,6 +41,44 @@ function creditPayload({ totalAmount } = {}) {
   };
 }
 
+
+function nubankLegacyFirstMonthPayload() {
+  return {
+    ok:true,
+    provider:'pluggy-personal',
+    readOnly:true,
+    itemCount:1,
+    accountCount:1,
+    transactionPreviewCount:1,
+    items:[{
+      id:'nubank-item',
+      connectorName:'MeuPluggy',
+      institution:'Nubank',
+      status:'UPDATED',
+      accounts:[{
+        id:'nubank-credit',
+        type:'CREDIT',
+        subtype:'CREDIT_CARD',
+        name:'Nubank',
+        presentationName:'Nubank',
+        currencyCode:'BRL',
+        transactionPreviewHasMore:false,
+        transactions:[{
+          id:'assb-original-1of3',
+          date:'2026-08-11T20:52:51.001Z',
+          billForecastDate:'2026-09',
+          description:'Assb Comercio Varejist 1/3',
+          amount:94.36,
+          type:'DEBIT',
+          status:'POSTED',
+          currencyCode:'BRL',
+          installment:{installmentNumber:1,totalInstallments:3}
+        }]
+      }]
+    }]
+  };
+}
+
 async function installBridge(page, payload) {
   await page.addInitScript(initial => {
     window.__qaPluggyPayload = initial;
@@ -203,4 +241,75 @@ test('#246 totalAmount posterior substitui a estimativa sem criar nova compra', 
   expect(result.installments).toBe(9);
   expect(result.estimated).toBe(false);
   expect(result.october).toBeCloseTo(99.99,2);
+});
+
+
+test('#263 re-sync repara firstMonth legado com externalId exato e billForecastDate explícito', async ({ page }) => {
+  const value = stateBase();
+  value.settings.name = 'Nubank firstMonth legado #263';
+  value.mesAtual = '2026-10';
+  value.cards = [{id:1,name:'Nubank',limit:600,closeDay:9,dueDay:16,payAccountId:1,history:[]}];
+  value.purchases = [{
+    id:303,
+    cardId:1,
+    desc:'Assb Comercio Varejist 1/3',
+    total:283.08,
+    installments:3,
+    purchaseDate:'2026-08-11',
+    firstMonth:'2026-08',
+    category:'Outros',
+    status:'active',
+    refunds:[],
+    tags:['open-finance','pluggy'],
+    externalId:'pluggy:assb-original-1of3',
+    openFinanceExternalIds:['pluggy:assb-original-1of3'],
+    openFinanceProvider:'pluggy',
+    openFinanceAccountId:'nubank-credit',
+    openFinanceItemId:'nubank-item',
+    openFinanceStatus:'POSTED',
+    openFinanceInstallment:{installmentNumber:1,totalInstallments:3}
+  }];
+
+  await installBridge(page, nubankLegacyFirstMonthPayload());
+  await page.goto('/index.html');
+  await expectBootComplete(page, expect, 'Fixture QA');
+  await writeIndexedDB(page, value);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expectBootComplete(page, expect, value.settings.name);
+  await page.waitForFunction(() => window.SFPOpenFinanceUnifiedSync?.version === 2);
+  await page.evaluate(() => window.SFPOpenFinanceUnifiedSync.syncAll());
+
+  const repaired = await page.evaluate(() => ({
+    count:state.purchases.length,
+    firstMonth:state.purchases[0].firstMonth,
+    installments:state.purchases[0].installments,
+    estimated:state.purchases[0].openFinanceInstallmentEstimated,
+    observedNumber:state.purchases[0].openFinanceInstallmentObservedNumber,
+    observedMonth:state.purchases[0].openFinanceInstallmentObservedMonth,
+    august:invoiceCalculated(1,'2026-08'),
+    september:invoiceCalculated(1,'2026-09'),
+    october:invoiceCalculated(1,'2026-10'),
+    november:invoiceCalculated(1,'2026-11')
+  }));
+  expect(repaired).toEqual({
+    count:1,
+    firstMonth:'2026-09',
+    installments:3,
+    estimated:true,
+    observedNumber:1,
+    observedMonth:'2026-09',
+    august:0,
+    september:94.36,
+    october:94.36,
+    november:94.36
+  });
+
+  await page.evaluate(() => window.SFPOpenFinanceUnifiedSync.syncAll());
+  const again = await page.evaluate(() => ({
+    count:state.purchases.length,
+    firstMonth:state.purchases[0].firstMonth,
+    externalIds:state.purchases[0].openFinanceExternalIds
+  }));
+  expect(again).toEqual({count:1,firstMonth:'2026-09',externalIds:['pluggy:assb-original-1of3']});
 });
