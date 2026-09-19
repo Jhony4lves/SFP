@@ -519,7 +519,18 @@ function suggestSfpEntity(account,itemName){
     if(!providerManaged)return false;
     const legacySingle=Number(purchase.installments||1)===1&&Math.abs(Math.abs(Number(purchase.total)||0)-evidence.charge)<.02;
     const estimatedProjection=purchase.openFinanceInstallmentEstimated===true;
-    if(!legacySingle&&!estimatedProjection)return false;
+    const key=externalTransactionKey(transaction);
+    const explicitForecast=/^\d{4}-\d{2}$/.test(cleanText(transaction?.billForecastDate));
+    const storedMeta=purchase.openFinanceInstallment||{};
+    const exactProviderSeries=Boolean(
+      explicitForecast
+      &&key
+      &&purchaseHasExternalKey(purchase,key)
+      &&Number(purchase.installments||0)===evidence.totalInstallments
+      &&(!Number(storedMeta.totalInstallments)||Number(storedMeta.totalInstallments)===evidence.totalInstallments)
+      &&(!Number(storedMeta.installmentNumber)||Number(storedMeta.installmentNumber)===evidence.installmentNumber)
+    );
+    if(!legacySingle&&!estimatedProjection&&!exactProviderSeries)return false;
     return Number(purchase.installments)!==evidence.totalInstallments
       ||Math.abs(Math.abs(Number(purchase.total)||0)-evidence.total)>.011
       ||cleanText(purchase.firstMonth)!==evidence.firstMonth
