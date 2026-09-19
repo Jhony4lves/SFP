@@ -149,6 +149,34 @@ test('snapshot sem 2/3 usa a 3/3 adjacente para completar outubro em R$ 306,01',
 
   const card=page.locator('#cardsGrid .management-card--interactive').first();
   await expect(card.locator('.sfp-card-v2-primary')).toContainText('R$ 306,01');
+
+  await page.evaluate(()=>{
+    state.ui??={};
+    state.ui.invoiceCardId=1;
+    state.ui.invoiceMonthByCard??={};
+    state.ui.invoiceMonthByCard[1]='2026-10';
+    const cardSelect=document.getElementById('invoiceCard');
+    const monthInput=document.getElementById('invoiceMonth');
+    if(cardSelect)cardSelect.value='1';
+    if(monthInput)monthInput.value='2026-10';
+    renderCards();
+  });
+
+  await expect(page.locator('#invoiceTotalView')).toHaveText('R$ 306,01');
+
+  const breakdown=page.locator('#invoiceV2Breakdown');
+  await expect(breakdown.locator('.sfp-invoice-v2-head strong').first()).toHaveText('R$ 306,01');
+  await expect(breakdown).toContainText('Reconciliação bancária');
+  await expect(breakdown).toContainText('R$ 211,65');
+  await expect(breakdown).toContainText('estimativa bancária reconciliada de R$ 306,01');
+
+  const item=breakdown.locator('.sfp-invoice-item').first();
+  await expect(item.locator('.sfp-invoice-item-top b')).toHaveText('Assb Comercio Varejist');
+  await expect(item).toContainText('Parcela 2/3');
+  await expect(item.locator('.sfp-invoice-item-top b')).not.toContainText('1/3');
+
+  await expect(page.locator('#invoiceMobile')).toHaveClass(/hidden/);
+  await expect(page.locator('#openFinanceInvoiceTruth')).toContainText('fatura estimada no SFP (não oficial): R$ 306,01');
 });
 
 test('quando 2/3 reaparece no snapshot, não duplica a parcela reconciliada',async({page})=>{
