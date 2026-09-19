@@ -408,9 +408,11 @@
 
       const before=cloneState(global.state);
       try{
+        const projectionRepairs=typeof api?.repairLinkedInstallmentProjections==='function'
+          ?api.repairLinkedInstallmentProjections(result):0;
         const cardApplied=applyCardPlan(card);
         const bankApplied=applyBankPlan(bank);
-        const mutations=cardApplied.created+cardApplied.linked+bankApplied.created+bankApplied.linked+bankApplied.transfers;
+        const mutations=projectionRepairs+cardApplied.created+cardApplied.linked+bankApplied.created+bankApplied.linked+bankApplied.transfers;
         if(mutations){
           if(typeof global.save!=='function')throw new Error('Persistência do SFP indisponível.');
           await global.save('Sincronizar Open Finance');
@@ -422,6 +424,7 @@
           `${bankApplied.transfers} transferência(s) conciliada(s)`,
           `${cardApplied.linked+bankApplied.linked} registro(s) vinculado(s) sem duplicar`
         ];
+        if(projectionRepairs)detail.push(`${projectionRepairs} parcelamento(s) legado(s) reancorado(s)`);
         if(card.pending+bank.pending)detail.push(`${card.pending+bank.pending} pendente(s) aguardando confirmação`);
         if(bank.cardPayments)detail.push(`${bank.cardPayments} pagamento(s) de fatura detectado(s) para conciliação especial`);
         if(card.review+bank.review)detail.push(`${card.review+bank.review} item(ns) mantido(s) em revisão`);
@@ -437,7 +440,7 @@
         else if(cardApplied.linked+bankApplied.linked)notify('Dados conciliados sem criar duplicatas.','success');
         else if(unmapped)notify('Cadastre as contas e cartões no SFP e confira os vínculos antes de sincronizar.','warning');
         else notify(bank.partial?'Nada novo entre as transações recebidas; a cobertura bancária ainda é parcial.':'Tudo já estava sincronizado.',bank.partial?'info':'success');
-        return{ok:true,card,bank,cardApplied,bankApplied};
+        return{ok:true,card,bank,cardApplied,bankApplied,projectionRepairs};
       }catch(error){
         try{global.state=before;if(typeof global.renderAll==='function')global.renderAll()}catch(_){}
         throw error;
