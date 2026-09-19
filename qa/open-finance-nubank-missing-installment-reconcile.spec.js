@@ -212,6 +212,7 @@ test('estado legado com firstMonth deslocado é reancorado pela transação Plug
 
   const sync=await page.evaluate(()=>SFPOpenFinanceUnifiedSync.syncAll());
   expect(sync.ok).toBe(true);
+  expect(sync.projectionRepairs).toBe(1);
 
   const after=await page.evaluate(()=>{
     const purchase=state.purchases[0],card=state.cards[0];
