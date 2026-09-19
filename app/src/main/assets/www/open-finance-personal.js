@@ -519,7 +519,11 @@ function suggestSfpEntity(account,itemName){
     if(!providerManaged)return false;
     const legacySingle=Number(purchase.installments||1)===1&&Math.abs(Math.abs(Number(purchase.total)||0)-evidence.charge)<.02;
     const estimatedProjection=purchase.openFinanceInstallmentEstimated===true;
-    if(!legacySingle&&!estimatedProjection)return false;
+    const key=externalTransactionKey(transaction);
+    const directlyLinked=Boolean(key&&purchaseHasExternalKey(purchase,key));
+    const sameScheduleShape=Number(purchase.installments||0)===evidence.totalInstallments;
+    const linkedScheduleRepair=directlyLinked&&sameScheduleShape&&cleanText(purchase.firstMonth)!==evidence.firstMonth;
+    if(!legacySingle&&!estimatedProjection&&!linkedScheduleRepair)return false;
     return Number(purchase.installments)!==evidence.totalInstallments
       ||Math.abs(Math.abs(Number(purchase.total)||0)-evidence.total)>.011
       ||cleanText(purchase.firstMonth)!==evidence.firstMonth
@@ -529,8 +533,15 @@ function suggestSfpEntity(account,itemName){
   function refineInstallmentProjection(purchase,card,transaction){
     if(!canRefineInstallmentProjection(purchase,card,transaction))return false;
     const evidence=installmentEvidence(card,transaction);if(!evidence)return false;
+    const key=externalTransactionKey(transaction);
+    const directlyLinked=Boolean(key&&purchaseHasExternalKey(purchase,key));
+    const scheduleOnly=directlyLinked
+      &&Number(purchase.installments||0)===evidence.totalInstallments
+      &&cleanText(purchase.firstMonth)!==evidence.firstMonth
+      &&purchase.openFinanceInstallmentEstimated!==true
+      &&evidence.estimated;
     purchase.installments=evidence.totalInstallments;
-    purchase.total=evidence.total;
+    if(!scheduleOnly)purchase.total=evidence.total;
     purchase.firstMonth=evidence.firstMonth;
     purchase.openFinanceInstallment=evidence.meta&&typeof evidence.meta==='object'?{...evidence.meta}:null;
     purchase.openFinanceInstallmentEstimated=evidence.estimated;
