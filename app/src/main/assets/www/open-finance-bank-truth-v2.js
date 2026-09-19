@@ -629,6 +629,58 @@
     return (global.state?.cards||[]).find(card=>sameId(card.id,id))||null;
   }
 
+  function patchInvoiceBreakdown(card,month,truth=bankTruth(card,month)){
+    const root=document.getElementById('invoiceV2Breakdown');
+    if(!root||!truth)return;
+
+    const total=round2(truth.amount),paid=paidAmount(card,month),remaining=Math.max(0,round2(total-paid));
+    const header=root.querySelector('.sfp-invoice-v2-head > div:first-child');
+    const headerTotal=header?.querySelector('strong');
+    if(headerTotal)headerTotal.textContent=money(total);
+
+    const progressInfo=root.querySelector('.sfp-invoice-progress-info');
+    const progressTexts=progressInfo?.querySelectorAll('span')||[];
+    if(progressTexts[0])progressTexts[0].textContent=`Pago: ${money(paid)}`;
+    if(progressTexts[1])progressTexts[1].textContent=`Restante: ${money(remaining)}`;
+    const progress=root.querySelector('.sfp-invoice-progress .progress > div');
+    if(progress)progress.style.width=`${total?Math.min(100,paid/total*100):0}%`;
+
+    const local=localCalculated(card,month),difference=round2(total-local);
+    const composition=root.querySelector('.sfp-invoice-composition');
+    let reconcile=root.querySelector('[data-sfp-bank-reconciliation="1"]');
+
+    if(composition&&Math.abs(difference)>.009){
+      if(!reconcile){
+        reconcile=document.createElement('div');
+        reconcile.className='sfp-invoice-piece';
+        reconcile.dataset.sfpBankReconciliation='1';
+        composition.appendChild(reconcile);
+      }
+      reconcile.innerHTML=`
+        <small>Reconciliação bancária</small>
+        <strong>${money(difference)}</strong>
+        <span>Diferença entre o ciclo bancário e os lançamentos individualizados no SFP</span>
+      `;
+
+      let note=root.querySelector('[data-sfp-bank-truth-note="1"]');
+      if(!note){
+        note=document.createElement('div');
+        note.className='sfp-invoice-explain';
+        note.dataset.sfpBankTruthNote='1';
+        composition.insertAdjacentElement('afterend',note);
+      }
+      note.innerHTML=`
+        <b>Conferência Open Finance:</b>
+        o total da fatura usa a estimativa bancária reconciliada de ${money(total)}.
+        Os itens individualizados no SFP somam ${money(local)} e a diferença de
+        ${money(difference)} é preservada separadamente para a composição fechar sem duplicar compras.
+      `;
+    }else{
+      reconcile?.remove();
+      root.querySelector('[data-sfp-bank-truth-note="1"]')?.remove();
+    }
+  }
+
   function patchInvoiceFocus(){
     const card=selectedCard();
     if(!card)return;
@@ -641,6 +693,7 @@
     if(totalNode)totalNode.textContent=money(total);
     if(remainingNode)remainingNode.textContent=money(remaining);
     if(statusNode)statusNode.textContent=statusText(card,month);
+    patchInvoiceBreakdown(card,month,truth);
   }
 
   function patchDetail(card){
@@ -785,7 +838,8 @@
       cycleTransactions,
       rememberBankTruth,
       patchGrid,
-      patchInvoiceFocus
+      patchInvoiceFocus,
+      patchInvoiceBreakdown
     });
     return true;
   }
