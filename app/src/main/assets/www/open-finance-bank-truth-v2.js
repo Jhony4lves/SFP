@@ -642,7 +642,7 @@
     const progressTexts=progressInfo?.querySelectorAll('span')||[];
     if(progressTexts[0])progressTexts[0].textContent=`Pago: ${money(paid)}`;
     if(progressTexts[1])progressTexts[1].textContent=`Restante: ${money(remaining)}`;
-    const progress=root.querySelector('.sfp-invoice-progress .progress > div');
+    const progress=root.querySelector('.sfp-invoice-progress-info + .progress > div');
     if(progress)progress.style.width=`${total?Math.min(100,paid/total*100):0}%`;
 
     const local=localCalculated(card,month),difference=round2(total-local);
