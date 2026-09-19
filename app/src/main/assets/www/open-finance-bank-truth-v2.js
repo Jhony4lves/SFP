@@ -453,16 +453,24 @@
       if(currentPresent)continue;
 
       // Exigimos uma parcela adjacente explicitamente numerada pela instituição.
+      const localNumber=Number(installment.n);
       const adjacent=transactions
         .map(tx=>({tx,meta:installmentMeta(tx)}))
         .filter(row=>
           !cancelled(row.tx)&&Number(row.tx?.amount)>0&&row.meta.valid
           &&row.meta.total===Number(installment.total)
-          &&Math.abs(row.meta.n-Number(installment.n))===1
+          &&Math.abs(row.meta.n-localNumber)===1
           &&merchantAffinity(purchase?.desc,row.tx?.description)
           &&Math.abs(Math.abs(Number(row.tx.amount))-Math.abs(Number(installment.amount)))<.02
         )
-        .sort((a,b)=>Math.abs(a.meta.n-Number(installment.n))-Math.abs(b.meta.n-Number(installment.n)))[0];
+        // Quando existem as duas vizinhas, prefira n+1. A parcela futura é a evidência
+        // mais próxima do ciclo ativo e preserva o arredondamento real do emissor
+        // (ex.: Nubank 1/3=94,36, 2/3 ausente, 3/3=94,35).
+        .sort((a,b)=>{
+          const aForward=a.meta.n===localNumber+1?0:1;
+          const bForward=b.meta.n===localNumber+1?0:1;
+          return aForward-bForward;
+        })[0];
 
       if(!adjacent)continue;
       const providerAmount=Math.abs(Number(adjacent.tx.amount));
