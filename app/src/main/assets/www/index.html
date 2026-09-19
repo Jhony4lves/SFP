@@ -5843,7 +5843,7 @@ function sfpInvoicePurchaseDisplayDesc(i){
   const p=i?.purchase||{};
   const raw=String(p.desc||'').trim();
   const tags=Array.isArray(p.tags)?p.tags:[];
-  const providerManaged=Boolean(p.openFinanceProvider||p.externalId||tags.includes('open-finance'));
+  const providerManaged=Boolean(p.openFinanceProvider||tags.includes('open-finance')||String(p.externalId||'').startsWith('pluggy:'));
   if(providerManaged&&Number(i?.total)>1){
     const match=raw.match(/\s+(\d{1,3})\s*\/\s*(\d{1,3})\s*$/);
     if(match&&Number(match[2])===Number(i.total)){
