@@ -621,6 +621,35 @@ function suggestSfpEntity(account,itemName){
     return changed;
   }
 
+  function repairLinkedInstallmentProjections(result){
+    if(!global.state||!Array.isArray(global.state.purchases))return 0;
+    let repaired=0;
+    for(const item of Array.isArray(result?.items)?result.items:[]){
+      const name=itemDisplayName(item);
+      for(const account of Array.isArray(item?.accounts)?item.accounts:[]){
+        if(account?.type!=='CREDIT'||account?.transactionsError||account?.transactionPreviewHasMore)continue;
+        const suggestion=suggestSfpEntity(account,name);
+        if(!suggestion?.entity)continue;
+        for(const transaction of Array.isArray(account?.transactions)?account.transactions:[]){
+          const key=externalTransactionKey(transaction);
+          if(!key)continue;
+          const purchase=global.state.purchases.find(p=>
+            String(p?.cardId)===String(suggestion.entity.id)&&purchaseHasExternalKey(p,key)
+          );
+          if(!purchase)continue;
+          if(refineInstallmentProjection(purchase,suggestion.entity,transaction)){
+            purchase.openFinanceProvider='pluggy';
+            purchase.openFinanceAccountId=cleanText(account?.id);
+            purchase.openFinanceItemId=cleanText(item?.id);
+            purchase.openFinanceLastLinkedAt=new Date().toISOString();
+            repaired++;
+          }
+        }
+      }
+    }
+    return repaired;
+  }
+
   function planInvoiceSync(result){
     const plan={create:[],link:[],newCount:0,linkedCount:0,already:0,review:0,pending:0,unmapped:0,partial:0,errors:0,creditAccounts:0};
     for(const item of Array.isArray(result?.items)?result.items:[]){
@@ -666,9 +695,11 @@ function suggestSfpEntity(account,itemName){
     }
     const before=cloneState(global.state);
     try{
+      const repaired=repairLinkedInstallmentProjections(result);
+      plan.repairedCount=repaired;
       for(const link of plan.link)if(linkExistingPurchase(link.purchase,link.account,link.item,link.transaction))plan.linkedCount++;
       for(const purchase of plan.create){global.state.purchases.push(purchase);plan.newCount++;}
-      if(plan.newCount||plan.linkedCount){
+      if(plan.newCount||plan.linkedCount||repaired){
         if(typeof global.save!=='function')throw new Error('Persistência do SFP indisponível.');
         await global.save('Sincronizar faturas Open Finance');
       }else if(typeof global.renderAll==='function')global.renderAll();
@@ -859,7 +890,8 @@ function suggestSfpEntity(account,itemName){
     planInvoiceSync,
     invoiceMonthForCard,
     externalTransactionKey,
-    refineInstallmentProjection
+    refineInstallmentProjection,
+    repairLinkedInstallmentProjections
   });
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
