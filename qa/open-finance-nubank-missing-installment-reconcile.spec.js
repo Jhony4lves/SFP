@@ -31,7 +31,7 @@ function stateBase(){
   return value;
 }
 
-function payload({includeCurrent=false}={}){
+function payload({includeCurrent=false,includeOriginal=false}={}){
   const current=[
     {id:'merc18',date:'2026-09-18T12:00:00.000Z',description:'Mercatalimentacao',amount:16.20,type:'DEBIT',status:'PENDING',billForecastDate:'2026-10'},
     {id:'merc16',date:'2026-09-16T12:00:00.000Z',description:'Mercatalimentacao',amount:9.34,type:'DEBIT',status:'PENDING',billForecastDate:'2026-10'},
@@ -55,6 +55,18 @@ function payload({includeCurrent=false}={}){
       status:'PENDING',
       billForecastDate:'2026-10',
       installment:{installmentNumber:2,totalInstallments:3}
+    });
+  }
+  if(includeOriginal){
+    current.push({
+      id:'assb-original-1of3',
+      date:'2026-08-11T20:52:51.001Z',
+      description:'Assb Comercio Varejist 1/3',
+      amount:94.36,
+      type:'DEBIT',
+      status:'POSTED',
+      billForecastDate:'2026-09',
+      installment:{installmentNumber:1,totalInstallments:3}
     });
   }
   current.push({
@@ -152,4 +164,76 @@ test('quando 2/3 reaparece no snapshot, não duplica a parcela reconciliada',asy
   expect(result.truth.localSupplementCount).toBe(0);
   expect(result.truth.amount).toBe(306.01);
   expect(result.shown).toBe(306.01);
+});
+
+
+test('#263 estado físico legado é reparado antes de reconciliar outubro em R$ 306,01',async({page})=>{
+  const initial=stateBase();
+  initial.settings=initial.settings||{};
+  initial.settings.name='Nubank firstMonth legado físico #263';
+  initial.purchases=[{
+    id:1789578727685,
+    cardId:1,
+    desc:'Assb Comercio Varejist 1/3',
+    total:283.08,
+    installments:3,
+    purchaseDate:'2026-08-11',
+    firstMonth:'2026-08',
+    category:'Outros',
+    status:'active',
+    refunds:[],
+    tags:['open-finance','pluggy'],
+    externalId:'pluggy:assb-original-1of3',
+    openFinanceExternalIds:['pluggy:assb-original-1of3'],
+    openFinanceProvider:'pluggy',
+    openFinanceAccountId:'nubank-credit',
+    openFinanceItemId:'nubank-item',
+    openFinanceStatus:'POSTED',
+    openFinanceInstallment:{installmentNumber:1,totalInstallments:3}
+  }];
+
+  await installBridge(page,payload({includeOriginal:true}));
+  await page.goto('/index.html');
+  await expectBootComplete(page,expect,'Fixture QA');
+  await writeIndexedDB(page,initial);
+  await page.evaluate(()=>localStorage.clear());
+  await page.reload();
+  await expectBootComplete(page,expect,'Nubank firstMonth legado físico #263');
+  await page.waitForFunction(()=>window.SFPOpenFinanceUnifiedSync?.version===2);
+  await page.waitForFunction(()=>Number(window.SFPOpenFinanceBankTruth?.version)>=7);
+  await page.evaluate(()=>window.SFPOpenFinanceUnifiedSync.syncAll());
+
+  const result=await page.evaluate(()=>{
+    const purchase=state.purchases[0];
+    const installment=purchaseInstallment(purchase,'2026-10');
+    const truth=SFPOpenFinanceBankTruth.cycleTransactions(state.cards[0],'2026-10');
+    return{
+      count:state.purchases.length,
+      firstMonth:purchase.firstMonth,
+      estimated:purchase.openFinanceInstallmentEstimated,
+      installment:{n:installment?.n,total:installment?.total,amount:installment?.amount},
+      truth:{
+        bankDebitAmount:truth?.bankDebitAmount,
+        localSupplementAmount:truth?.localSupplementAmount,
+        localSupplementCount:truth?.localSupplementCount,
+        amount:truth?.amount
+      },
+      shown:SFPOpenFinanceBankTruth.displayTotal(state.cards[0],'2026-10')
+    };
+  });
+
+  expect(result.count).toBe(1);
+  expect(result.firstMonth).toBe('2026-09');
+  expect(result.estimated).toBe(true);
+  expect(result.installment).toEqual({n:2,total:3,amount:94.36});
+  expect(result.truth).toEqual({
+    bankDebitAmount:211.66,
+    localSupplementAmount:94.35,
+    localSupplementCount:1,
+    amount:306.01
+  });
+  expect(result.shown).toBe(306.01);
+
+  const card=page.locator('#cardsGrid .management-card--interactive').first();
+  await expect(card.locator('.sfp-card-v2-primary')).toContainText('R$ 306,01');
 });
