@@ -36,14 +36,25 @@
       ||String(purchase.note||'').includes('Importado automaticamente pelo Open Finance (Pluggy).');
   }
 
-  function expectedFirstMonth(purchase){
-    const observedMonth=isoMonth(purchase?.purchaseDate);
-    if(!observedMonth)return'';
+  function firstMonthEvidence(purchase){
+    const providerObserved=String(purchase?.openFinanceInstallmentObservedMonth||'');
+    const observedMonth=validMonth(providerObserved)?providerObserved:isoMonth(purchase?.purchaseDate);
+    if(!observedMonth)return{month:'',rule:''};
     const meta=purchase?.openFinanceInstallment||{};
-    const number=Math.trunc(Number(meta.installmentNumber)||0);
+    const observedNumber=Math.trunc(Number(purchase?.openFinanceInstallmentObservedNumber)||0);
+    const number=observedNumber||Math.trunc(Number(meta.installmentNumber)||0);
     const total=Math.trunc(Number(meta.totalInstallments)||0);
-    if(Number(purchase?.installments)>1&&number>0&&total>1)return monthAdd(observedMonth,-(number-1));
-    return observedMonth;
+    const month=Number(purchase?.installments)>1&&number>0&&total>1
+      ?monthAdd(observedMonth,-(number-1))
+      :observedMonth;
+    return{
+      month,
+      rule:validMonth(providerObserved)?'open-finance-observed-cycle':'transaction-calendar-month'
+    };
+  }
+
+  function expectedFirstMonth(purchase){
+    return firstMonthEvidence(purchase).month;
   }
 
   function normalizeImportedPurchases(){
@@ -51,11 +62,16 @@
     let changed=false;
     for(const purchase of global.state.purchases){
       if(!autoImportedPurchase(purchase))continue;
-      const expected=expectedFirstMonth(purchase);
-      if(!expected||purchase.firstMonth===expected)continue;
-      purchase.firstMonth=expected;
-      purchase.openFinanceMonthRule='transaction-calendar-month';
-      changed=true;
+      const evidence=firstMonthEvidence(purchase);
+      if(!evidence.month)continue;
+      if(purchase.firstMonth!==evidence.month){
+        purchase.firstMonth=evidence.month;
+        changed=true;
+      }
+      if(purchase.openFinanceMonthRule!==evidence.rule){
+        purchase.openFinanceMonthRule=evidence.rule;
+        changed=true;
+      }
     }
     return changed;
   }
