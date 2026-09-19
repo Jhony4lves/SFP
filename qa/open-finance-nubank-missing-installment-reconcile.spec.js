@@ -90,11 +90,11 @@ async function installBridge(page,initial){
   },initial);
 }
 
-async function boot(page,initial){
+async function boot(page,initial,value=stateBase()){
   await installBridge(page,initial);
   await page.goto('/index.html');
   await expectBootComplete(page,expect,'Fixture QA');
-  await writeIndexedDB(page,stateBase());
+  await writeIndexedDB(page,value);
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await expectBootComplete(page,expect,'Nubank missing installment reconciliation');
@@ -152,4 +152,68 @@ test('quando 2/3 reaparece no snapshot, não duplica a parcela reconciliada',asy
   expect(result.truth.localSupplementCount).toBe(0);
   expect(result.truth.amount).toBe(306.01);
   expect(result.shown).toBe(306.01);
+});
+
+
+test('estado legado com firstMonth deslocado é reancorado pela transação Pluggy já vinculada',async({page})=>{
+  const value=stateBase();
+  value.purchases[0]={
+    ...value.purchases[0],
+    desc:'Assb Comercio Varejist 1/3',
+    purchaseDate:'2026-08-11',
+    firstMonth:'2026-08',
+    externalId:'pluggy:assb-origin-1of3',
+    openFinanceExternalIds:['pluggy:assb-origin-1of3'],
+    openFinanceProvider:'pluggy',
+    tags:['open-finance','pluggy']
+  };
+  const data=payload();
+  data.items[0].accounts[0].transactions.push({
+    id:'assb-origin-1of3',
+    date:'2026-08-11T20:52:51.001Z',
+    description:'Assb Comercio Varejist 1/3',
+    amount:94.36,
+    type:'DEBIT',
+    status:'POSTED',
+    billForecastDate:'2026-09',
+    installment:{installmentNumber:1,totalInstallments:3}
+  });
+  data.transactionPreviewCount=data.items[0].accounts[0].transactions.length;
+
+  await boot(page,data,value);
+
+  const before=await page.evaluate(()=>({
+    firstMonth:state.purchases[0].firstMonth,
+    october:purchaseInstallment(state.purchases[0],'2026-10')?.n||null,
+    shown:SFPOpenFinanceBankTruth.displayTotal(state.cards[0],'2026-10')
+  }));
+  expect(before).toEqual({firstMonth:'2026-08',october:3,shown:211.66});
+
+  const sync=await page.evaluate(()=>SFPOpenFinanceUnifiedSync.syncAll());
+  expect(sync.ok).toBe(true);
+
+  const after=await page.evaluate(()=>{
+    const purchase=state.purchases[0],card=state.cards[0];
+    const truth=SFPOpenFinanceBankTruth.cycleTransactions(card,'2026-10');
+    const future=SFPOpenFinanceBankTruth.futureCommitments(card,'2026-10');
+    return{
+      purchaseCount:state.purchases.length,
+      firstMonth:purchase.firstMonth,
+      october:purchaseInstallment(purchase,'2026-10')?.n||null,
+      november:purchaseInstallment(purchase,'2026-11')?.n||null,
+      truth,
+      shown:SFPOpenFinanceBankTruth.displayTotal(card,'2026-10'),
+      future
+    };
+  });
+
+  expect(after.purchaseCount).toBe(1);
+  expect(after.firstMonth).toBe('2026-09');
+  expect(after.october).toBe(2);
+  expect(after.november).toBe(3);
+  expect(after.truth.bankDebitAmount).toBe(211.66);
+  expect(after.truth.localSupplementAmount).toBe(94.35);
+  expect(after.truth.amount).toBe(306.01);
+  expect(after.shown).toBe(306.01);
+  expect(after.future.nextAmount).toBe(94.35);
 });
