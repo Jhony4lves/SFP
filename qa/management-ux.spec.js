@@ -52,7 +52,7 @@ test('MGMT-06/08: ações distintas de dívida e meta continuam disponíveis', a
 });
 
 test('MGMT-11/12: mobile usa fatura V2 responsiva e Back preserva navegação', async ({ page }) => {
-  await boot(page); await page.setViewportSize({ width: 384, height: 854 }); await page.evaluate(()=>{sfpNavigation?.reset('hoje');setPage('cartoes');openInvoiceDetail(1);});
+  await boot(page); await page.setViewportSize({ width: 384, height: 854 }); await page.evaluate(()=>{setPage('hoje',{mode:'replace'});sfpNavigation?.reset('hoje');setPage('cartoes');openInvoiceDetail(1);});
   await expect(page.locator('#invoiceV2Breakdown')).toBeVisible();
   await expect(page.locator('#invoiceMobile')).toBeHidden();
   await expect(page.locator('.invoice-focus .desktop-table-mobile')).toBeHidden();
