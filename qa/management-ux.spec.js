@@ -21,7 +21,7 @@ test('MGMT-01/02/05/07: edições preservam entidades ricas', async ({ page }) =
     ['editAccount', '#accountName', '#accountSubmit', 1, { metadata: { keep: 1 }, reconciled: { balance: 900, date: '2026-01-10' } }],
     ['editCard', '#cardName', '#cardSubmit', 1, { metadata: { keep: 2 } }],
     ['editDebt', '#debtName', '#debtSubmit', 2, { contractTotal: 1200, IOF: 30, metadata: { keep: 3 } }],
-    ['editGoal', '#goalName', '#goalSubmit', 3, { initialAllocated: 300, history: [1], metadata: { keep: 4 } }]
+    ['editGoal', '#goalName', '#goalSubmit', 3, { initialAllocated: 300, history: [1], metadata: { keep: 4 }]
   ]) {
     await page.evaluate(({ fn, id }) => window[fn](id), { fn, id });
     await page.locator(input).fill(`Editado ${fn}`); await page.locator(submit).click();
@@ -52,9 +52,10 @@ test('MGMT-06/08: ações distintas de dívida e meta continuam disponíveis', a
 });
 
 test('MGMT-11/12: mobile usa fatura V2 responsiva e Back preserva navegação', async ({ page }) => {
-  await boot(page); await page.setViewportSize({ width: 384, height: 854 }); await page.evaluate(()=>setPage('cartoes'));
+  await boot(page); await page.setViewportSize({ width: 384, height: 854 }); await page.evaluate(()=>{setPage('cartoes');openInvoiceDetail(1);});
   await expect(page.locator('#invoiceV2Breakdown')).toBeVisible();
   await expect(page.locator('#invoiceMobile')).toBeHidden();
   await expect(page.locator('.invoice-focus .desktop-table-mobile')).toBeHidden();
+  expect(await page.evaluate(()=>handleAndroidBack())).toBe(true); await expect(page.locator('#progressiveSlot')).toBeHidden();
   expect(await page.evaluate(()=>handleAndroidBack())).toBe(true); await expect(page.locator('#hoje')).toHaveClass(/active/);
 });
