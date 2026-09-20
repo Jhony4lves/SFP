@@ -14,7 +14,7 @@ test('MGMT-01/02/05/07: edições preservam entidades ricas', async ({ page }) =
   const value = fixture('UX-04');
   value.accounts[0] = { ...value.accounts[0], reconciled: { balance: 900, date: '2026-01-10' }, metadata: { keep: 1 } };
   value.cards[0] = { ...value.cards[0], history: [{ id: 7, type: 'legacy' }], metadata: { keep: 2 } };
-  value.debts.push({ id: 2, name: 'Banco', balance: 1000, payment: 100, rate: 1, firstDue: '2026-01-10', installments: 10, paidInstallments: 2, contractTotal: 1200, financedAmount: 1000, IOF: 30, CET: 2, paymentMethod: 'pix', history: [1], note: 'rica', metadata: { keep: 3 } });
+  value.debts.push({ id: 2, name: 'Banco', balance: 1000, payment: 100,rate: 1, firstDue: '2026-01-10', installments: 10, paidInstallments: 2, contractTotal: 1200, financedAmount: 1000, IOF: 30, CET: 2, paymentMethod: 'pix', history: [1], note: 'rica', metadata: { keep: 3 } });
   value.goals.push({ id: 3, name: 'Viagem', target: 5000, accountId: 1, plan: 200, targetDate: '2026-12', initialAllocated: 300, history: [1], metadata: { keep: 4 } });
   await boot(page, value);
   for (const [fn, input, submit, id, expected] of [
@@ -52,7 +52,11 @@ test('MGMT-06/08: ações distintas de dívida e meta continuam disponíveis', a
 });
 
 test('MGMT-11/12: mobile usa fatura V2 responsiva e Back preserva navegação', async ({ page }) => {
-  await boot(page); await page.setViewportSize({ width: 384, height: 854 }); await page.evaluate(()=>{setPage('hoje',{mode:'replace'});sfpNavigation?.reset('hoje');setPage('cartoes');openInvoiceDetail(1);});
+  await boot(page);
+  await page.setViewportSize({ width: 384, height: 854 });
+  await page.evaluate(()=>setPage('hoje',{mode:'replace'}));
+  await page.locator('.nav button[data-page="cartoes"]').click();
+  await page.evaluate(()=>openInvoiceDetail(1));
   await expect(page.locator('#invoiceV2Breakdown')).toBeVisible();
   await expect(page.locator('#invoiceMobile')).toBeHidden();
   await expect(page.locator('.invoice-focus .desktop-table-mobile')).toBeHidden();
