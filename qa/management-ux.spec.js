@@ -62,14 +62,15 @@ test('MGMT-11/12: mobile usa fatura V2 responsiva e Back preserva hierarquia fat
   await expect(page.locator('.invoice-focus .desktop-table-mobile')).toBeHidden();
 
   // A fatura é um nível filho do detalhe do cartão. O primeiro Back deve
-  // restaurar esse detalhe, não saltar diretamente para a lista de cartões.
+  // restaurar o diálogo desse cartão, não saltar diretamente para a lista.
   expect(await page.evaluate(()=>handleAndroidBack())).toBe(true);
-  await expect(page.locator('#progressiveSlot')).toBeVisible();
-  await expect(page.locator('#progressiveSlot')).not.toContainText('Detalhamento da fatura');
+  const cardDialog=page.getByRole('dialog',{name:'Cartão QA'});
+  await expect(cardDialog).toBeVisible();
+  await expect(page.locator('#invoiceV2Breakdown')).toBeHidden();
 
   // O segundo Back fecha o detalhe do cartão e restaura a lista da aba.
   expect(await page.evaluate(()=>handleAndroidBack())).toBe(true);
-  await expect(page.locator('#progressiveSlot')).toBeHidden();
+  await expect(cardDialog).toBeHidden();
   await expect(page.locator('#cartoes')).toHaveClass(/active/);
 
   // Só então a navegação da aba retorna para Hoje.
