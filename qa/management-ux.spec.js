@@ -51,7 +51,7 @@ test('MGMT-06/08: ações distintas de dívida e meta continuam disponíveis', a
   await page.evaluate(()=>{closeProgressive();setPage('metas');openGoalDetail(3)}); await expect(page.getByRole('button',{name:'Fazer aporte'})).toBeVisible(); await expect(page.getByRole('button',{name:'Editar plano'})).toBeVisible();
 });
 
-test('MGMT-11/12: mobile usa fatura V2 responsiva e Back preserva navegação', async ({ page }) => {
+test('MGMT-11/12: mobile usa fatura V2 responsiva e Back preserva hierarquia fatura → cartão → lista → Hoje', async ({ page }) => {
   await boot(page);
   await page.setViewportSize({ width: 384, height: 854 });
   await page.evaluate(()=>setPage('hoje',{mode:'replace'}));
@@ -60,6 +60,19 @@ test('MGMT-11/12: mobile usa fatura V2 responsiva e Back preserva navegação', 
   await expect(page.locator('#invoiceV2Breakdown')).toBeVisible();
   await expect(page.locator('#invoiceMobile')).toBeHidden();
   await expect(page.locator('.invoice-focus .desktop-table-mobile')).toBeHidden();
-  expect(await page.evaluate(()=>handleAndroidBack())).toBe(true); await expect(page.locator('#progressiveSlot')).toBeHidden();
-  expect(await page.evaluate(()=>handleAndroidBack())).toBe(true); await expect(page.locator('#hoje')).toHaveClass(/active/);
+
+  // A fatura é um nível filho do detalhe do cartão. O primeiro Back deve
+  // restaurar esse detalhe, não saltar diretamente para a lista de cartões.
+  expect(await page.evaluate(()=>handleAndroidBack())).toBe(true);
+  await expect(page.locator('#progressiveSlot')).toBeVisible();
+  await expect(page.locator('#progressiveSlot')).not.toContainText('Detalhamento da fatura');
+
+  // O segundo Back fecha o detalhe do cartão e restaura a lista da aba.
+  expect(await page.evaluate(()=>handleAndroidBack())).toBe(true);
+  await expect(page.locator('#progressiveSlot')).toBeHidden();
+  await expect(page.locator('#cartoes')).toHaveClass(/active/);
+
+  // Só então a navegação da aba retorna para Hoje.
+  expect(await page.evaluate(()=>handleAndroidBack())).toBe(true);
+  await expect(page.locator('#hoje')).toHaveClass(/active/);
 });
