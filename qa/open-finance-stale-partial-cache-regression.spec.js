@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const { fixture, expectBootComplete, writeIndexedDB } = require('./helpers');
 
-function stateWithStaleEstimate(){
+function stateWithStaleEstimate({withLaterPurchase=true}={}){
   const value=fixture('Open Finance stale partial cache');
   value.mesAtual='2026-10';
   value.baseDate='2026-10-05';
@@ -16,16 +16,16 @@ function stateWithStaleEstimate(){
       }
     }
   }];
-  value.purchases=[{
+  value.purchases=withLaterPurchase?[{
     id:701,cardId:7,desc:'Compra local posterior ao snapshot',total:150,installments:1,
     firstMonth:'2026-10',purchaseDate:'2026-10-04',status:'active',refunds:[]
-  }];
+  }]:[];
   value.invoices=[];
   value.invoiceAdjustments=[];
   return value;
 }
 
-async function boot(page){
+async function boot(page,{withLaterPurchase=true}={}){
   await page.addInitScript(()=>{
     const account={
       id:'nu-credit',type:'CREDIT',subtype:'CREDIT_CARD',name:'Nubank',marketingName:'Nubank',presentationName:'Nubank',
@@ -43,7 +43,7 @@ async function boot(page){
   });
   await page.goto('/index.html');
   await expectBootComplete(page,expect,'Fixture QA');
-  await writeIndexedDB(page,stateWithStaleEstimate());
+  await writeIndexedDB(page,stateWithStaleEstimate({withLaterPurchase}));
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await expectBootComplete(page,expect,'Open Finance stale partial cache');
@@ -67,4 +67,22 @@ test('refresh parcial não deixa estimativa não oficial antiga dominar lançame
   // A leitura corrente é explicitamente parcial. O cache antigo continua sendo evidência histórica,
   // mas não pode substituir silenciosamente o total local mais novo como se ainda fosse a fatura atual.
   expect(result.shown).toBe(150);
+});
+
+test('refresh parcial preserva última estimativa bancária quando não há lançamento local posterior',async({page})=>{
+  await boot(page,{withLaterPurchase:false});
+  const result=await page.evaluate(()=>{
+    const card=state.cards[0];
+    return {
+      local:invoiceCalculated(card.id,'2026-10'),
+      truth:SFPOpenFinanceBankTruth.bankTruth(card,'2026-10'),
+      shown:SFPOpenFinanceBankTruth.displayTotal(card,'2026-10')
+    };
+  });
+
+  expect(result.local).toBe(0);
+  expect(result.truth?.official).not.toBe(true);
+  expect(result.truth?.amount).toBe(100);
+  // Sem evidência local mais nova, o cache continua útil como última leitura offline/parcial.
+  expect(result.shown).toBe(100);
 });
