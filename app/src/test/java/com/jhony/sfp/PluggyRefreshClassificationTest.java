@@ -1,6 +1,7 @@
 package com.jhony.sfp;
 
 import org.junit.Test;
+import org.json.JSONObject;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -13,6 +14,17 @@ public class PluggyRefreshClassificationTest {
         assertEquals("REFRESH_PROVIDER_MANAGED",
                 PluggyRefreshBridge.classifyRefreshFailure(
                         400, "", "MeuPluggy item cant be updated"));
+    }
+
+    @Test public void meuPluggyProxyIsDetectedBeforePatch() throws Exception {
+        JSONObject item = new JSONObject()
+                .put("connector", new JSONObject().put("name", "MeuPluggy"))
+                .put("lastUpdatedAt", "2026-09-22T18:00:00.000Z");
+        assertTrue(PluggyRefreshBridge.isMeuPluggyConnector(item));
+
+        JSONObject direct = new JSONObject()
+                .put("connector", new JSONObject().put("name", "Itaú"));
+        assertFalse(PluggyRefreshBridge.isMeuPluggyConnector(direct));
     }
 
     @Test public void staleItemIsClassifiedForAutomaticCleanup() {
