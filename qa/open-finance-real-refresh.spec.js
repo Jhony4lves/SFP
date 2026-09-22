@@ -93,7 +93,7 @@ test('Atualizar dados tenta refresh real antes de reler a Pluggy',async({page})=
   await expect(page.locator('#openFinancePreview')).toContainText('Dados atualizados na instituição e aplicados ao SFP');
 });
 
-test('MeuPluggy recusando PATCH cai para snapshot sem bloquear sincronização',async({page})=>{
+test('fallback legado 400 do MeuPluggy cai para snapshot provider-managed sem bloquear sincronização',async({page})=>{
   await boot(page);
   await page.evaluate(()=>Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{
     refreshItems:()=>{window.__sfpRefreshCalls.refresh++;return JSON.stringify({ok:false,requested:1,started:0,items:[{accepted:false,status:400,code:'REFRESH_NEEDS_ATTENTION',providerMessage:'MeuPluggy item cant be updated'}]});},
@@ -105,7 +105,8 @@ test('MeuPluggy recusando PATCH cai para snapshot sem bloquear sincronização',
   expect(await page.evaluate(()=>window.__sfpRefreshCalls.refresh)).toBe(1);
   expect(await page.evaluate(()=>window.__sfpRefreshCalls.status)).toBe(0);
   expect(await page.evaluate(()=>SFPOpenFinanceRealRefresh.diagnostic().outcome)).toBe('provider-managed');
-  await expect(page.locator('#openFinancePreview')).toContainText('MeuPluggy recusou refresh forçado');
+  await expect(page.locator('#openFinancePreview')).toContainText('MeuPluggy gerencia a atualização');
+  await expect(page.locator('#openFinancePreview')).toContainText('não envia refresh manual');
 });
 
 test('leitura da Pluggy aplica o Bill novo mesmo sem compras novas',async({page})=>{
