@@ -28,6 +28,11 @@
       complete:result.complete===true,
       needsUser:result.needsUser===true,
       failed:result.failed===true,
+      providerManaged:Number(result.providerManaged)||0,
+      staleReferencesRemoved:Number(result.staleReferencesRemoved)||0,
+      rediscovered:Number(result.rediscovered)||0,
+      referenceCount:Number(result.referenceCount)||0,
+      referencesUpdated:result.referencesUpdated===true,
       status:safeStatus(result.status),
       code:code(result.code),
       message:safeText(result.message),
@@ -128,7 +133,22 @@
 
   function isMeuPluggyManaged(result){
     const rows=Array.isArray(result?.items)?result.items:[];
-    return rows.length>0&&rows.every(row=>Number(row?.status)===400&&/MeuPluggy item cant be updated/i.test(String(row?.providerMessage||'')));
+    const relevant=rows.filter(row=>code(row?.code)!=='REFRESH_ITEM_NOT_FOUND');
+    if(!relevant.length)return false;
+    const managedCount=Number(result?.providerManaged)||0;
+    if(managedCount>0&&managedCount===relevant.length)return true;
+    return relevant.every(row=>
+      code(row?.code)==='REFRESH_PROVIDER_MANAGED'
+      ||(Number(row?.status)===400&&/MeuPluggy item cant be updated/i.test(String(row?.providerMessage||'')))
+    );
+  }
+
+  function refreshNeedsUser(result){
+    if(result?.needsUser===true||code(result?.code)==='REFRESH_NEEDS_USER')return true;
+    return (Array.isArray(result?.items)?result.items:[]).some(row=>
+      code(row?.code)==='REFRESH_NEEDS_USER'
+      ||/MFA|CREDENTIAL|AUTH_REQUIRED|LOGIN_ERROR|WAITING_USER_INPUT/.test(code(row?.providerCode))
+    );
   }
 
   function refreshFailureText(result){
@@ -144,6 +164,8 @@
       text='A conexão precisa de autenticação ou a autenticação da Pluggy falhou. A leitura disponível foi preservada.';
     else if(codes.some(value=>/DNS|NETWORK|TIMEOUT|TLS|IO/.test(value)))
       text='A comunicação com a Pluggy falhou antes de chegar à instituição. A leitura disponível foi preservada.';
+    else if(codes.includes('ITEM_REFERENCES_STALE'))
+      text='Os Item IDs salvos não existem mais na Pluggy. O SFP removeu as referências obsoletas; é necessário salvar ou reconectar os Items atuais.';
     else if(codes.some(value=>/ITEM_DISCOVERY|ITEMS_/.test(value)))
       text='A autenticação respondeu, mas o SFP não conseguiu descobrir as conexões Open Finance para atualizar.';
     else if(isMeuPluggyManaged(result))
@@ -373,9 +395,17 @@
       if(!started.ok||Number(started.started||0)<=0){
         const applied=await syncCurrentData();
         lastAttempt.application=applicationEvidence(applied);
-        if(isMeuPluggyManaged(started)){
+        if(refreshNeedsUser(started)){
+          lastAttempt.outcome='needs-user';
+          message('Uma conexão Open Finance precisa de autenticação ou ação do usuário antes de atualizar. A leitura disponível foi preservada.','error');
+        }else if(isMeuPluggyManaged(started)){
           lastAttempt.outcome='provider-managed';
-          message('O MeuPluggy recusou refresh forçado pelo SFP. O snapshot mais recente disponível foi relido e aplicado; a próxima coleta bancária continua sendo gerenciada pelo provedor.');
+          const cleaned=Number(started.staleReferencesRemoved)||0;
+          const cleanup=cleaned?` ${cleaned} referência(s) obsoleta(s) também foram removidas automaticamente.`:'';
+          message(`O MeuPluggy gerencia a atualização destas conexões e recusou refresh forçado pelo SFP. O snapshot mais recente disponível foi relido e aplicado.${cleanup}`);
+        }else if(code(started.code)==='ITEM_REFERENCES_STALE'){
+          lastAttempt.outcome='stale-references';
+          message(refreshFailureText(started),'error');
         }else{
           lastAttempt.outcome='refresh-rejected';
           message(refreshFailureText(started),'error');
@@ -480,7 +510,7 @@
   }
 
   global.SFPOpenFinanceRealRefresh=Object.freeze({
-    version:8,
+    version:9,
     autoIntervalMs:AUTO_INTERVAL_MS,
     diagnostic,
     exportDiagnostic,
