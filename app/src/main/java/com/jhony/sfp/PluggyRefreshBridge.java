@@ -162,9 +162,36 @@ public final class PluggyRefreshBridge {
         return 503;
     }
 
+    static boolean isMeuPluggyManagedFailure(int status, String providerMessage) {
+        return status == 400
+                && providerMessage != null
+                && providerMessage.matches("(?i).*MeuPluggy\\s+item\\s+cant\\s+be\\s+updated.*");
+    }
+
+    static boolean needsUserAction(String providerCode, String providerMessage) {
+        String evidence = (clean(providerCode) + " " + clean(providerMessage)).toUpperCase();
+        return evidence.contains("WAITING_USER_INPUT")
+                || evidence.contains("MFA")
+                || evidence.contains("LOGIN_ERROR")
+                || evidence.contains("AUTH_REQUIRED")
+                || evidence.contains("INVALID_CREDENTIAL")
+                || evidence.contains("CREDENTIAL");
+    }
+
+    static String classifyRefreshFailure(int status, String providerCode, String providerMessage) {
+        String code = clean(providerCode);
+        if (status == 429 || code.contains("BEFORE_ALLOWED_FREQUENCY")) return "REFRESH_RATE_LIMITED";
+        if (isMeuPluggyManagedFailure(status, providerMessage)) return "REFRESH_PROVIDER_MANAGED";
+        if (needsUserAction(providerCode, providerMessage)) return "REFRESH_NEEDS_USER";
+        if (status == 404) return "REFRESH_ITEM_NOT_FOUND";
+        if (status == 400 || status == 409) return "REFRESH_NEEDS_ATTENTION";
+        return "REFRESH_HTTP_" + status;
+    }
+
     private static boolean allowedPath(String path) {
         return "/auth".equals(path)
                 || "/items".equals(path)
+                || "/v2/items".equals(path)
                 || ITEM_PATH_PATTERN.matcher(path).matches();
     }
 
@@ -257,11 +284,23 @@ public final class PluggyRefreshBridge {
         return values == null ? new JSONArray() : values;
     }
 
-    private Set<String> discoverItemIds(String key) throws Exception {
-        Set<String> ids = savedItemIds();
-        if (!ids.isEmpty()) return ids;
-        HttpResult response = request("GET", "/items", null, key);
-        if (response.status < 200 || response.status >= 300) throw new IllegalStateException("ITEMS_HTTP_" + response.status);
+    private boolean persistItemIds(Set<String> ids) {
+        SharedPreferences.Editor editor = prefs().edit();
+        if (ids == null || ids.isEmpty()) editor.remove(PREF_ITEM_IDS);
+        else editor.putString(PREF_ITEM_IDS, String.join(",", ids));
+        return editor.commit();
+    }
+
+    private Set<String> listItemIds(String key) throws Exception {
+        Set<String> ids = new LinkedHashSet<>();
+        HttpResult response = request("GET", "/v2/items", null, key);
+        if (response.status == 401) throw new SecurityException("API_KEY_REJECTED");
+        // Algumas aplicações pessoais não têm a listagem habilitada. Nesse caso,
+        // as referências explícitas continuam sendo a fonte de verdade local.
+        if (response.status == 403 || response.status == 404) return ids;
+        if (response.status < 200 || response.status >= 300) {
+            throw new IllegalStateException("ITEMS_HTTP_" + response.status);
+        }
         JSONArray items = collection(response.body);
         for (int index = 0; index < items.length(); index++) {
             JSONObject item = items.optJSONObject(index);
@@ -272,19 +311,91 @@ public final class PluggyRefreshBridge {
         return ids;
     }
 
+    private static final class ItemDiscovery {
+        final Set<String> ids;
+        final int staleReferencesRemoved;
+        final int rediscovered;
+        final boolean referencesUpdated;
+
+        ItemDiscovery(Set<String> ids, int staleReferencesRemoved, int rediscovered, boolean referencesUpdated) {
+            this.ids = ids;
+            this.staleReferencesRemoved = staleReferencesRemoved;
+            this.rediscovered = rediscovered;
+            this.referencesUpdated = referencesUpdated;
+        }
+    }
+
+    private ItemDiscovery discoverItemIds(String key) throws Exception {
+        Set<String> saved = savedItemIds();
+        Set<String> active = new LinkedHashSet<>();
+        int stale = 0;
+
+        // Referências salvas são validadas antes do PATCH. Um 404 é definitivo
+        // para aquele Item ID e pode ser removido com segurança. Outros erros
+        // são preservados para não apagar vínculo por indisponibilidade temporária.
+        for (String id : saved) {
+            HttpResult response = request("GET", "/items/" + id, null, key);
+            if (response.status >= 200 && response.status < 300) {
+                active.add(id);
+            } else if (response.status == 404) {
+                stale++;
+            } else if (response.status == 401) {
+                throw new SecurityException("API_KEY_REJECTED");
+            } else {
+                active.add(id);
+            }
+        }
+
+        int rediscovered = 0;
+        if (saved.isEmpty() || stale > 0 || active.isEmpty()) {
+            Set<String> listed = new LinkedHashSet<>();
+            try {
+                listed = listItemIds(key);
+            } catch (IllegalStateException discoveryError) {
+                // Se já existe referência válida, uma falha da listagem não deve
+                // bloquear o refresh. Sem nenhuma referência, o erro continua útil.
+                if (active.isEmpty() && saved.isEmpty()) throw discoveryError;
+            }
+            for (String id : listed) {
+                if (active.add(id) && !saved.contains(id)) rediscovered++;
+            }
+        }
+
+        boolean changed = stale > 0 || rediscovered > 0;
+        boolean updated = !changed || persistItemIds(active);
+        return new ItemDiscovery(active, stale, rediscovered, updated);
+    }
+
     @JavascriptInterface
     public synchronized String refreshItems() {
         String stage = "AUTH";
         try {
             String key = apiKey();
             stage = "ITEM_DISCOVERY";
-            Set<String> ids = discoverItemIds(key);
-            if (ids.isEmpty()) return error("ITEMS_NOT_FOUND", "Nenhuma conexão Open Finance foi encontrada para atualizar.", 404);
+            ItemDiscovery discovery = discoverItemIds(key);
+            Set<String> ids = discovery.ids;
+            if (ids.isEmpty()) {
+                JSONObject empty = envelope(false);
+                empty.put("code", discovery.staleReferencesRemoved > 0 ? "ITEM_REFERENCES_STALE" : "ITEMS_NOT_FOUND");
+                empty.put("message", discovery.staleReferencesRemoved > 0
+                        ? "As referências antigas não existem mais na Pluggy. Salve ou reconecte os Items atuais."
+                        : "Nenhuma conexão Open Finance foi encontrada para atualizar.");
+                empty.put("status", 404);
+                empty.put("requested", 0);
+                empty.put("started", 0);
+                empty.put("staleReferencesRemoved", discovery.staleReferencesRemoved);
+                empty.put("rediscovered", discovery.rediscovered);
+                empty.put("referenceCount", 0);
+                return empty.toString();
+            }
 
             stage = "ITEM_REFRESH";
             JSONArray results = new JSONArray();
             lastRefreshIds.clear();
+            Set<String> staleDuringRefresh = new LinkedHashSet<>();
             int started = 0;
+            int providerManaged = 0;
+            boolean needsUser = false;
             for (String id : ids) {
                 JSONObject row = new JSONObject();
                 row.put("id", id);
@@ -300,12 +411,12 @@ public final class PluggyRefreshBridge {
                     if (accepted) {
                         started++;
                         lastRefreshIds.add(id);
-                    } else if (response.status == 429 || providerCode.contains("BEFORE_ALLOWED_FREQUENCY")) {
-                        row.put("code", "REFRESH_RATE_LIMITED");
-                    } else if (response.status == 400 || response.status == 409) {
-                        row.put("code", "REFRESH_NEEDS_ATTENTION");
                     } else {
-                        row.put("code", "REFRESH_HTTP_" + response.status);
+                        String failureCode = classifyRefreshFailure(response.status, providerCode, providerError.message);
+                        row.put("code", failureCode);
+                        if ("REFRESH_PROVIDER_MANAGED".equals(failureCode)) providerManaged++;
+                        if ("REFRESH_NEEDS_USER".equals(failureCode)) needsUser = true;
+                        if ("REFRESH_ITEM_NOT_FOUND".equals(failureCode)) staleDuringRefresh.add(id);
                     }
                 } catch (Exception itemError) {
                     row.put("accepted", false);
@@ -314,12 +425,38 @@ public final class PluggyRefreshBridge {
                 results.put(row);
             }
 
-            JSONObject output = envelope(started > 0);
+            int staleRemoved = discovery.staleReferencesRemoved;
+            if (!staleDuringRefresh.isEmpty()) {
+                Set<String> remaining = new LinkedHashSet<>(ids);
+                remaining.removeAll(staleDuringRefresh);
+                if (persistItemIds(remaining)) staleRemoved += staleDuringRefresh.size();
+            }
+
+            boolean providerManagedOnly = started == 0
+                    && providerManaged > 0
+                    && providerManaged + staleDuringRefresh.size() == ids.size()
+                    && !needsUser;
+            JSONObject output = envelope(started > 0 || providerManagedOnly);
             output.put("requested", ids.size());
             output.put("started", started);
+            output.put("providerManaged", providerManaged);
+            output.put("needsUser", needsUser);
+            output.put("staleReferencesRemoved", staleRemoved);
+            output.put("rediscovered", discovery.rediscovered);
+            output.put("referenceCount", Math.max(0, ids.size() - staleDuringRefresh.size()));
+            output.put("referencesUpdated", discovery.referencesUpdated && staleDuringRefresh.isEmpty());
             output.put("items", results);
-            if (started > 0) output.put("message", "Sincronização em tempo real solicitada à instituição.");
-            else output.put("message", "A Pluggy não iniciou uma nova sincronização agora.");
+            if (started > 0) {
+                output.put("message", "Sincronização em tempo real solicitada à instituição.");
+            } else if (needsUser) {
+                output.put("code", "REFRESH_NEEDS_USER");
+                output.put("message", "Uma conexão precisa de autenticação ou ação do usuário para atualizar.");
+            } else if (providerManagedOnly) {
+                output.put("code", "REFRESH_PROVIDER_MANAGED");
+                output.put("message", "O MeuPluggy gerencia a atualização destas conexões; o SFP não pode forçar um novo refresh por API.");
+            } else {
+                output.put("message", "A Pluggy não iniciou uma nova sincronização agora.");
+            }
             return output.toString();
         } catch (SecurityException authError) {
             return error("AUTH_REJECTED", "A Pluggy recusou as credenciais do Open Finance.", 401);
