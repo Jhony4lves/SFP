@@ -37,14 +37,13 @@ async function boot(page){
       refreshItems:()=>{
         window.__sfpRefreshCalls.refresh++;
         return JSON.stringify({
-          ok:true,requested:3,started:0,providerManaged:2,needsUser:false,
+          ok:true,requested:2,started:0,providerManaged:2,needsUser:false,
           staleReferencesRemoved:1,rediscovered:0,referenceCount:2,referencesUpdated:true,
           code:'REFRESH_PROVIDER_MANAGED',
           message:'O MeuPluggy gerencia a atualização destas conexões.',
           items:[
-            {id:'11111111-1111-4111-8111-111111111111',accepted:false,status:400,code:'REFRESH_PROVIDER_MANAGED',providerMessage:'MeuPluggy item cant be updated'},
-            {id:'22222222-2222-4222-8222-222222222222',accepted:false,status:404,code:'REFRESH_ITEM_NOT_FOUND',providerMessage:'item not found'},
-            {id:'33333333-3333-4333-8333-333333333333',accepted:false,status:400,code:'REFRESH_PROVIDER_MANAGED',providerMessage:'MeuPluggy item cant be updated'}
+            {id:'11111111-1111-4111-8111-111111111111',accepted:false,code:'REFRESH_PROVIDER_MANAGED',providerMessage:'Atualização automática gerenciada pelo MeuPluggy.',lastUpdatedAt:'2026-09-22T18:00:00.000Z'},
+            {id:'33333333-3333-4333-8333-333333333333',accepted:false,code:'REFRESH_PROVIDER_MANAGED',providerMessage:'Atualização automática gerenciada pelo MeuPluggy.',lastUpdatedAt:'2026-09-22T18:01:00.000Z'}
           ]
         });
       },
@@ -66,7 +65,7 @@ async function boot(page){
   await page.evaluate(()=>setPage('openfinance'));
 }
 
-test('#268 diagnóstico físico 400/404/400 vira provider-managed e limpa referência morta',async({page})=>{
+test('#268 antigo 400/404/400 vira provider-managed sem PATCH nos proxies e limpa referência morta',async({page})=>{
   await boot(page);
   const before=await page.evaluate(()=>window.__sfpRefreshCalls.preview);
 
@@ -84,7 +83,7 @@ test('#268 diagnóstico físico 400/404/400 vira provider-managed e limpa refer�
   expect(result.diagnostic.polls).toBe(0);
   expect(result.diagnostic.request).toMatchObject({
     ok:true,
-    requested:3,
+    requested:2,
     started:0,
     providerManaged:2,
     staleReferencesRemoved:1,
@@ -98,8 +97,13 @@ test('#268 diagnóstico físico 400/404/400 vira provider-managed e limpa refer�
   expect(serialized).not.toContain('11111111-1111-4111-8111-111111111111');
   expect(serialized).not.toContain('22222222-2222-4222-8222-222222222222');
   expect(serialized).not.toContain('33333333-3333-4333-8333-333333333333');
+  expect(result.diagnostic.request.items.map(row=>row.lastUpdatedAt)).toEqual([
+    '2026-09-22T18:00:00.000Z',
+    '2026-09-22T18:01:00.000Z'
+  ]);
 
   await expect(page.locator('#openFinancePreview')).toContainText('MeuPluggy gerencia a atualização');
+  await expect(page.locator('#openFinancePreview')).toContainText('não envia refresh manual');
   await expect(page.locator('#openFinancePreview')).toContainText('1 referência(s) obsoleta(s)');
 });
 
