@@ -838,12 +838,28 @@ public final class PluggyBridge {
     return result;
 }
 
+    private boolean persistItemIdSet(Set<String> ids) {
+        SharedPreferences.Editor editor = prefs().edit();
+        if (ids == null || ids.isEmpty()) editor.remove(PREF_ITEM_IDS);
+        else editor.putString(PREF_ITEM_IDS, String.join(",", ids));
+        return editor.commit();
+    }
+
     private JSONArray itemsFromSavedReferences(String key) throws Exception {
         JSONArray result = new JSONArray();
-        for (String itemId : readItemIdSet()) {
+        Set<String> saved = readItemIdSet();
+        Set<String> active = new LinkedHashSet<>();
+        for (String itemId : saved) {
             JSONObject item = retrieveItemInternal(key, itemId);
-            if (item != null) result.put(item);
+            if (item != null) {
+                result.put(item);
+                active.add(itemId);
+            }
         }
+        // GET /items/{id} devolve null somente para 404. Portanto é seguro
+        // limpar essas referências: elas deixaram de existir e, sem isso, cada
+        // leitura/refresh futuro repetiria para sempre o mesmo Item morto.
+        if (active.size() != saved.size()) persistItemIdSet(active);
         return result;
     }
 
