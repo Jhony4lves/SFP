@@ -402,7 +402,7 @@
           lastAttempt.outcome='provider-managed';
           const cleaned=Number(started.staleReferencesRemoved)||0;
           const cleanup=cleaned?` ${cleaned} referência(s) obsoleta(s) também foram removidas automaticamente.`:'';
-          message(`O MeuPluggy gerencia a atualização destas conexões e recusou refresh forçado pelo SFP. O snapshot mais recente disponível foi relido e aplicado.${cleanup}`);
+          message(`O MeuPluggy gerencia a atualização destas conexões. O SFP não envia refresh manual para esses Items; o snapshot mais recente disponível foi relido e aplicado.${cleanup}`);
         }else if(code(started.code)==='ITEM_REFERENCES_STALE'){
           lastAttempt.outcome='stale-references';
           message(refreshFailureText(started),'error');
