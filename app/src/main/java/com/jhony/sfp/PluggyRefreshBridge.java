@@ -168,6 +168,31 @@ public final class PluggyRefreshBridge {
                 && providerMessage.matches("(?i).*MeuPluggy\\s+item\\s+cant\\s+be\\s+updated.*");
     }
 
+    static boolean isMeuPluggyConnector(JSONObject item) {
+        if (item == null) return false;
+        JSONObject connector = item.optJSONObject("connector");
+        String name = connector == null ? "" : clean(connector.optString("name", ""));
+        if (name.isEmpty()) name = clean(item.optString("connectorName", ""));
+        return "MEUPLUGGY".equalsIgnoreCase(name.replaceAll("[^a-zA-Z0-9]", ""));
+    }
+
+    private static String itemLastUpdatedAt(JSONObject item) {
+        if (item == null) return "";
+        return clean(item.optString("lastUpdatedAt", item.optString("updatedAt", "")));
+    }
+
+    private static void captureItemMetadata(JSONObject item, String id,
+                                            Set<String> providerManagedIds,
+                                            JSONObject lastUpdatedAtById) {
+        if (item == null || id == null || id.isEmpty()) return;
+        if (isMeuPluggyConnector(item)) providerManagedIds.add(id);
+        String updatedAt = itemLastUpdatedAt(item);
+        if (!updatedAt.isEmpty()) {
+            try { lastUpdatedAtById.put(id, updatedAt); }
+            catch (Exception ignored) { }
+        }
+    }
+
     static boolean needsUserAction(String providerCode, String providerMessage) {
         String evidence = (clean(providerCode) + " " + clean(providerMessage)).toUpperCase();
         return evidence.contains("WAITING_USER_INPUT")
@@ -291,7 +316,9 @@ public final class PluggyRefreshBridge {
         return editor.commit();
     }
 
-    private Set<String> listItemIds(String key) throws Exception {
+    private Set<String> listItemIds(String key,
+                                    Set<String> providerManagedIds,
+                                    JSONObject lastUpdatedAtById) throws Exception {
         Set<String> ids = new LinkedHashSet<>();
         HttpResult response = request("GET", "/v2/items", null, key);
         if (response.status == 401) throw new SecurityException("API_KEY_REJECTED");
@@ -306,19 +333,27 @@ public final class PluggyRefreshBridge {
             JSONObject item = items.optJSONObject(index);
             if (item == null) continue;
             String id = clean(item.optString("id", ""));
-            if (UUID_PATTERN.matcher(id).matches()) ids.add(id);
+            if (UUID_PATTERN.matcher(id).matches()) {
+                ids.add(id);
+                captureItemMetadata(item, id, providerManagedIds, lastUpdatedAtById);
+            }
         }
         return ids;
     }
 
     private static final class ItemDiscovery {
         final Set<String> ids;
+        final Set<String> providerManagedIds;
+        final JSONObject lastUpdatedAtById;
         final int staleReferencesRemoved;
         final int rediscovered;
         final boolean referencesUpdated;
 
-        ItemDiscovery(Set<String> ids, int staleReferencesRemoved, int rediscovered, boolean referencesUpdated) {
+        ItemDiscovery(Set<String> ids, Set<String> providerManagedIds, JSONObject lastUpdatedAtById,
+                      int staleReferencesRemoved, int rediscovered, boolean referencesUpdated) {
             this.ids = ids;
+            this.providerManagedIds = providerManagedIds;
+            this.lastUpdatedAtById = lastUpdatedAtById;
             this.staleReferencesRemoved = staleReferencesRemoved;
             this.rediscovered = rediscovered;
             this.referencesUpdated = referencesUpdated;
@@ -328,15 +363,21 @@ public final class PluggyRefreshBridge {
     private ItemDiscovery discoverItemIds(String key) throws Exception {
         Set<String> saved = savedItemIds();
         Set<String> active = new LinkedHashSet<>();
+        Set<String> providerManagedIds = new LinkedHashSet<>();
+        JSONObject lastUpdatedAtById = new JSONObject();
         int stale = 0;
 
         // Referências salvas são validadas antes do PATCH. Um 404 é definitivo
         // para aquele Item ID e pode ser removido com segurança. Outros erros
         // são preservados para não apagar vínculo por indisponibilidade temporária.
+        // A resposta também identifica proxies MeuPluggy, que por contrato do
+        // provedor refletem a conexão original e não devem receber PATCH manual.
         for (String id : saved) {
             HttpResult response = request("GET", "/items/" + id, null, key);
             if (response.status >= 200 && response.status < 300) {
                 active.add(id);
+                try { captureItemMetadata(new JSONObject(response.body), id, providerManagedIds, lastUpdatedAtById); }
+                catch (Exception ignored) { }
             } else if (response.status == 404) {
                 stale++;
             } else if (response.status == 401) {
@@ -350,7 +391,7 @@ public final class PluggyRefreshBridge {
         if (saved.isEmpty() || stale > 0 || active.isEmpty()) {
             Set<String> listed = new LinkedHashSet<>();
             try {
-                listed = listItemIds(key);
+                listed = listItemIds(key, providerManagedIds, lastUpdatedAtById);
             } catch (IllegalStateException discoveryError) {
                 // Se já existe referência válida, uma falha da listagem não deve
                 // bloquear o refresh. Sem nenhuma referência, o erro continua útil.
@@ -363,7 +404,8 @@ public final class PluggyRefreshBridge {
 
         boolean changed = stale > 0 || rediscovered > 0;
         boolean updated = !changed || persistItemIds(active);
-        return new ItemDiscovery(active, stale, rediscovered, updated);
+        return new ItemDiscovery(active, providerManagedIds, lastUpdatedAtById,
+                stale, rediscovered, updated);
     }
 
     @JavascriptInterface
@@ -399,6 +441,22 @@ public final class PluggyRefreshBridge {
             for (String id : ids) {
                 JSONObject row = new JSONObject();
                 row.put("id", id);
+
+                // MeuPluggy usa um Item proxy neste aplicativo. O Item original
+                // é atualizado pelo serviço Meu Pluggy; o proxy apenas reflete
+                // essa leitura. Evitar PATCH aqui elimina uma chamada sabidamente
+                // recusada e mantém o botão como "reler o dado disponível".
+                if (discovery.providerManagedIds.contains(id)) {
+                    row.put("accepted", false);
+                    row.put("code", "REFRESH_PROVIDER_MANAGED");
+                    row.put("providerMessage", "Atualização automática gerenciada pelo MeuPluggy.");
+                    String lastUpdatedAt = clean(discovery.lastUpdatedAtById.optString(id, ""));
+                    if (!lastUpdatedAt.isEmpty()) row.put("lastUpdatedAt", lastUpdatedAt);
+                    providerManaged++;
+                    results.put(row);
+                    continue;
+                }
+
                 try {
                     HttpResult response = request("PATCH", "/items/" + id, new JSONObject(), key);
                     row.put("status", response.status);
