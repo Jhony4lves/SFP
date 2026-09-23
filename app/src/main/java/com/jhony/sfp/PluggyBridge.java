@@ -561,6 +561,14 @@ public final class PluggyBridge {
         summary.put("currencyCode", cleanFirst(cleanString(transaction, "currencyCode"), "BRL"));
         summary.put("status", cleanString(transaction, "status"));
         summary.put("type", cleanString(transaction, "type"));
+        copyOptionalNumber(transaction, summary, "balance");
+        if (transaction.has("order") && !transaction.isNull("order")) {
+            summary.put("order", transaction.optInt("order", 0));
+        }
+        String createdAt = cleanString(transaction, "createdAt");
+        String updatedAt = cleanString(transaction, "updatedAt");
+        if (!createdAt.isEmpty()) summary.put("createdAt", createdAt);
+        if (!updatedAt.isEmpty()) summary.put("updatedAt", updatedAt);
         JSONObject creditMetadata = transaction.optJSONObject("creditCardMetadata");
         // The provider places billId inside creditCardMetadata; keep the legacy root fallback.
         String billId = cleanFirst(creditMetadata == null ? "" : cleanString(creditMetadata, "billId"),
