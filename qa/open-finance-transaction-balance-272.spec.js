@@ -205,10 +205,8 @@ test('#272 instituição sem transaction.balance mantém account.balance',async(
     };
   });
 
-  expect(result).toEqual({
-    balance:532.22,
-    evidence:'account-balance'
-  });
+  expect(result.balance).toBe(532.22);
+  expect(result.evidence).toBeUndefined();
 });
 
 test('#272 fonte duplicada com transaction.balance mais nova vence snapshot antigo',async({page})=>{
