@@ -402,7 +402,7 @@
     }
     if(busy)return;
     busy=true;
-    lastAttempt={schema:'sfp-refresh-diagnostic-v3',attemptedAt:new Date().toISOString(),request:null,status:null,balanceRefresh:null,application:null,polls:0,outcome:'requesting-provider-refresh',privacy:{credentials:false,itemIds:false,accountIds:false}};
+    lastAttempt={schema:'sfp-refresh-diagnostic-v2',attemptedAt:new Date().toISOString(),request:null,status:null,balanceRefresh:null,application:null,polls:0,outcome:'requesting-provider-refresh',privacy:{credentials:false,itemIds:false,accountIds:false}};
 
     const originalText=button?.textContent||'Atualizar dados agora';
     if(button){button.disabled=true;button.textContent='Pedindo atualização ao banco…';}
