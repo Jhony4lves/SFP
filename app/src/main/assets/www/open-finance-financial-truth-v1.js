@@ -166,8 +166,9 @@
     if(!accountEvidence)return transactionEvidence;
 
     const accountDateTimestamp=Date.parse(accountDate+'T00:00:00Z');
-    if(transactionEvidence.dateTimestamp>accountDateTimestamp)return transactionEvidence;
-    if(transactionEvidence.dateTimestamp<accountDateTimestamp)return accountEvidence;
+    const transactionDateTimestamp=Date.parse(transactionEvidence.date+'T00:00:00Z');
+    if(transactionDateTimestamp>accountDateTimestamp)return transactionEvidence;
+    if(transactionDateTimestamp<accountDateTimestamp)return accountEvidence;
     if(transactionEvidence.timestamp>accountEvidence.timestamp)return transactionEvidence;
     return accountEvidence;
   }
