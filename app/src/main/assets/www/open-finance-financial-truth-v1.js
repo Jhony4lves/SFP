@@ -91,7 +91,7 @@
     return rows;
   }
 
-  function sourceTimestamp(row){
+  function sourceFreshness(row){
     const candidates=[
       row?.account?.updatedAt,
       row?.account?.lastUpdatedAt,
@@ -100,28 +100,17 @@
       row?.item?.lastUpdatedAt,
       row?.item?.createdAt
     ];
-    for(const candidate of candidates){
-      const parsed=Date.parse(clean(candidate));
-      if(Number.isFinite(parsed))return parsed;
-    }
-    return Number.NEGATIVE_INFINITY;
-  }
-
-  function sourceUpdatedAt(row){
-    const candidates=[
-      row?.account?.updatedAt,
-      row?.account?.lastUpdatedAt,
-      row?.account?.balanceDate,
-      row?.item?.updatedAt,
-      row?.item?.lastUpdatedAt,
-      row?.item?.createdAt
-    ];
+    let best={timestamp:Number.NEGATIVE_INFINITY,value:''};
     for(const candidate of candidates){
       const value=clean(candidate);
-      if(value&&Number.isFinite(Date.parse(value)))return value;
+      const timestamp=Date.parse(value);
+      if(value&&Number.isFinite(timestamp)&&timestamp>best.timestamp)best={timestamp,value};
     }
-    return'';
+    return best;
   }
+
+  function sourceTimestamp(row){return sourceFreshness(row).timestamp;}
+  function sourceUpdatedAt(row){return sourceFreshness(row).value;}
 
   function freshestBankRows(rows){
     const winners=new Map();
