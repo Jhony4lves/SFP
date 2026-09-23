@@ -91,6 +91,44 @@
     return rows;
   }
 
+  function sourceFreshness(row){
+    const candidates=[
+      row?.account?.updatedAt,
+      row?.account?.lastUpdatedAt,
+      row?.account?.balanceDate,
+      row?.item?.updatedAt,
+      row?.item?.lastUpdatedAt,
+      row?.item?.createdAt
+    ];
+    let best={timestamp:Number.NEGATIVE_INFINITY,value:''};
+    for(const candidate of candidates){
+      const value=clean(candidate);
+      const timestamp=Date.parse(value);
+      if(value&&Number.isFinite(timestamp)&&timestamp>best.timestamp)best={timestamp,value};
+    }
+    return best;
+  }
+
+  function sourceTimestamp(row){return sourceFreshness(row).timestamp;}
+  function sourceUpdatedAt(row){return sourceFreshness(row).value;}
+
+  function freshestBankRows(rows){
+    const winners=new Map();
+    const order=[];
+    for(const row of Array.isArray(rows)?rows:[]){
+      const key=String(row?.entity?.id??'');
+      if(!key)continue;
+      if(!winners.has(key)){
+        winners.set(key,row);
+        order.push(key);
+        continue;
+      }
+      const current=winners.get(key);
+      if(sourceTimestamp(row)>sourceTimestamp(current))winners.set(key,row);
+    }
+    return order.map(key=>winners.get(key)).filter(Boolean);
+  }
+
   function snapshotDateFor(item,account){
     const candidates=[
       account?.balanceDate,
@@ -159,7 +197,8 @@
     const entity=row.entity;
     const date=snapshotDateFor(row.item,row.account);
     const amount=round2(balance);
-    const coreChanged=entity.initial!==amount||entity.balanceDate!==date||entity.balanceMode!=='snapshot'||entity.reconciled?.source!=='open-finance';
+    const providerUpdatedAt=sourceUpdatedAt(row);
+    const coreChanged=entity.initial!==amount||entity.balanceDate!==date||entity.balanceMode!=='snapshot'||entity.reconciled?.source!=='open-finance'||clean(entity.reconciled?.providerUpdatedAt)!==providerUpdatedAt;
     let changed=coreChanged;
 
     if(coreChanged){
@@ -174,6 +213,7 @@
         provider:'pluggy',
         openFinanceAccountId:clean(row.account?.id)||null,
         openFinanceItemId:clean(row.item?.id)||null,
+        providerUpdatedAt:providerUpdatedAt||null,
         at:new Date().toISOString()
       };
     }
@@ -298,7 +338,8 @@
     let changed=false,snapshots=0,payments=0,already=0,review=0;
     try{
       const rows=mappedBankRows(result);
-      for(const row of rows){
+      const snapshotRows=freshestBankRows(rows);
+      for(const row of snapshotRows){
         const applied=applyBankSnapshot(row);
         if(applied.changed){changed=true;snapshots++;}
       }
