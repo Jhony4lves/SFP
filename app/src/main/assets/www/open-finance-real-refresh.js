@@ -455,7 +455,7 @@
           }else if(limited>0){
             message(`O MeuPluggy está atualizado, mas a instituição limitou temporariamente a consulta de saldo em tempo real. O SFP preservou a leitura disponível.${cleanup}`);
           }else{
-            message(`O MeuPluggy gerencia a atualização destas conexões. O saldo em tempo real não ficou disponível pela API; o snapshot mais recente foi relido e aplicado.${cleanup}`);
+            message(`O MeuPluggy gerencia a atualização destas conexões. O SFP não envia refresh manual para esses Items; o saldo em tempo real não ficou disponível pela API, então o snapshot mais recente foi relido e aplicado.${cleanup}`);
           }
         }else if(code(started.code)==='ITEM_REFERENCES_STALE'){
           lastAttempt.outcome='stale-references';
