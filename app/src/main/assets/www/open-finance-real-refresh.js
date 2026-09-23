@@ -50,6 +50,36 @@
     };
   }
 
+  function balanceEvidence(result){
+    if(!result)return null;
+    return{
+      ok:result.ok===true,
+      requested:Number(result.requested)||0,
+      refreshed:Number(result.refreshed)||0,
+      rateLimited:Number(result.rateLimited)||0,
+      unavailable:Number(result.unavailable)||0,
+      failed:Number(result.failed)||0,
+      status:safeStatus(result.status),
+      code:code(result.code),
+      message:safeText(result.message),
+      latestUpdateAt:/^\d{4}-\d{2}-\d{2}T[0-9:.Z+-]+$/.test(result.latestUpdateAt||'')?result.latestUpdateAt:null,
+      accounts:(Array.isArray(result.accounts)?result.accounts:[]).map((row,index)=>({
+        account:index+1,
+        ok:row.ok===true,
+        status:safeStatus(row.status),
+        code:code(row.code),
+        updateDateTime:/^\d{4}-\d{2}-\d{2}T[0-9:.Z+-]+$/.test(row.updateDateTime||'')?row.updateDateTime:null
+      }))
+    };
+  }
+
+  function refreshLiveBankBalances(){
+    const bridge=global.PluggyBridge;
+    if(!bridge||typeof bridge.refreshBankBalances!=='function')return null;
+    try{return parse(bridge.refreshBankBalances());}
+    catch(_){return null;}
+  }
+
   function diagnostic(){return lastAttempt?JSON.parse(JSON.stringify(lastAttempt)):null;}
   function exportDiagnostic(){
     global.download?.(JSON.stringify(diagnostic(),null,2),'sfp-sincronizacao-diagnostico.json','application/json');
@@ -372,7 +402,7 @@
     }
     if(busy)return;
     busy=true;
-    lastAttempt={schema:'sfp-refresh-diagnostic-v2',attemptedAt:new Date().toISOString(),request:null,status:null,application:null,polls:0,outcome:'requesting-provider-refresh',privacy:{credentials:false,itemIds:false,accountIds:false}};
+    lastAttempt={schema:'sfp-refresh-diagnostic-v3',attemptedAt:new Date().toISOString(),request:null,status:null,balanceRefresh:null,application:null,polls:0,outcome:'requesting-provider-refresh',privacy:{credentials:false,itemIds:false,accountIds:false}};
 
     const originalText=button?.textContent||'Atualizar dados agora';
     if(button){button.disabled=true;button.textContent='Pedindo atualização ao banco…';}
@@ -380,11 +410,20 @@
     try{
       const bridge=global.PluggyRefreshBridge;
       if(!bridge||typeof bridge.refreshItems!=='function'){
+        if(button)button.textContent='Consultando saldo atual…';
+        const liveBalance=refreshLiveBankBalances();
+        lastAttempt.balanceRefresh=balanceEvidence(liveBalance);
         const applied=await syncCurrentData();
         lastAttempt.request={ok:false,source:'pluggy',mode:'read-only-fallback',code:'REFRESH_BRIDGE_UNAVAILABLE',message:'Ponte de atualização em tempo real indisponível.'};
         lastAttempt.application=applicationEvidence(applied);
         lastAttempt.outcome=applied?.ok===false?'apply-failed':'snapshot-only';
-        message(applied?.ok===false?'A leitura da Pluggy não pôde ser aplicada. Os dados anteriores foram preservados.':'Este APK não conseguiu pedir atualização à instituição. O SFP releu o snapshot disponível na Pluggy.',applied?.ok===false?'error':'info');
+        const liveCount=Number(liveBalance?.refreshed)||0;
+        message(applied?.ok===false
+          ?'A leitura da Pluggy não pôde ser aplicada. Os dados anteriores foram preservados.'
+          :liveCount>0
+            ?`Saldo em tempo real consultado em ${liveCount} conta(s) e aplicado ao SFP.`
+            :'Este APK não conseguiu pedir atualização à instituição. O SFP releu o snapshot disponível na Pluggy.',
+          applied?.ok===false?'error':liveCount>0?'success':'info');
         return;
       }
 
@@ -393,16 +432,31 @@
       lastAttempt.request={...evidence(started),source:'pluggy',mode:'provider-refresh'};
 
       if(!started.ok||Number(started.started||0)<=0){
+        const managed=isMeuPluggyManaged(started);
+        let liveBalance=null;
+        if(managed&&!refreshNeedsUser(started)){
+          if(button)button.textContent='Consultando saldo atual…';
+          liveBalance=refreshLiveBankBalances();
+          lastAttempt.balanceRefresh=balanceEvidence(liveBalance);
+        }
         const applied=await syncCurrentData();
         lastAttempt.application=applicationEvidence(applied);
         if(refreshNeedsUser(started)){
           lastAttempt.outcome='needs-user';
           message('Uma conexão Open Finance precisa de autenticação ou ação do usuário antes de atualizar. A leitura disponível foi preservada.','error');
-        }else if(isMeuPluggyManaged(started)){
+        }else if(managed){
           lastAttempt.outcome='provider-managed';
           const cleaned=Number(started.staleReferencesRemoved)||0;
           const cleanup=cleaned?` ${cleaned} referência(s) obsoleta(s) também foram removidas automaticamente.`:'';
-          message(`O MeuPluggy gerencia a atualização destas conexões. O SFP não envia refresh manual para esses Items; o snapshot mais recente disponível foi relido e aplicado.${cleanup}`);
+          const refreshed=Number(liveBalance?.refreshed)||0;
+          const limited=Number(liveBalance?.rateLimited)||0;
+          if(refreshed>0){
+            message(`Saldo em tempo real consultado em ${refreshed} conta(s) e aplicado ao SFP.${cleanup}`,'success');
+          }else if(limited>0){
+            message(`O MeuPluggy está atualizado, mas a instituição limitou temporariamente a consulta de saldo em tempo real. O SFP preservou a leitura disponível.${cleanup}`);
+          }else{
+            message(`O MeuPluggy gerencia a atualização destas conexões. O saldo em tempo real não ficou disponível pela API; o snapshot mais recente foi relido e aplicado.${cleanup}`);
+          }
         }else if(code(started.code)==='ITEM_REFERENCES_STALE'){
           lastAttempt.outcome='stale-references';
           message(refreshFailureText(started),'error');
@@ -510,7 +564,7 @@
   }
 
   global.SFPOpenFinanceRealRefresh=Object.freeze({
-    version:9,
+    version:10,
     autoIntervalMs:AUTO_INTERVAL_MS,
     diagnostic,
     exportDiagnostic,
