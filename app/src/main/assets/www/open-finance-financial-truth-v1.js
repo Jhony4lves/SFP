@@ -91,7 +91,7 @@
     return rows;
   }
 
-  function sourceFreshness(row){
+  function accountSourceFreshness(row){
     const candidates=[
       row?.account?.updatedAt,
       row?.account?.lastUpdatedAt,
@@ -109,8 +109,71 @@
     return best;
   }
 
-  function sourceTimestamp(row){return sourceFreshness(row).timestamp;}
-  function sourceUpdatedAt(row){return sourceFreshness(row).value;}
+  function transactionFreshness(transaction){
+    const candidates=[transaction?.updatedAt,transaction?.createdAt,transaction?.date];
+    let best={timestamp:Number.NEGATIVE_INFINITY,value:''};
+    for(const candidate of candidates){
+      const value=clean(candidate);
+      const timestamp=Date.parse(value);
+      if(value&&Number.isFinite(timestamp)&&timestamp>best.timestamp)best={timestamp,value};
+    }
+    return best;
+  }
+
+  function latestTransactionBalanceEvidence(row){
+    let best=null;
+    for(const transaction of Array.isArray(row?.account?.transactions)?row.account.transactions:[]){
+      if(!confirmed(transaction))continue;
+      const balance=Number(transaction?.balance);
+      if(!Number.isFinite(balance))continue;
+      const dateValue=clean(transaction?.date);
+      const dateTimestamp=Date.parse(dateValue);
+      if(!Number.isFinite(dateTimestamp))continue;
+      const order=Number.isFinite(Number(transaction?.order))?Number(transaction.order):0;
+      const freshness=transactionFreshness(transaction);
+      const candidate={
+        balance:round2(balance),
+        date:dateOnly(dateValue),
+        dateTimestamp,
+        order,
+        timestamp:freshness.timestamp,
+        updatedAt:freshness.value||dateValue,
+        source:'transaction'
+      };
+      if(!best
+        ||candidate.dateTimestamp>best.dateTimestamp
+        ||(candidate.dateTimestamp===best.dateTimestamp&&candidate.order>best.order)
+        ||(candidate.dateTimestamp===best.dateTimestamp&&candidate.order===best.order&&candidate.timestamp>best.timestamp)){
+        best=candidate;
+      }
+    }
+    return best;
+  }
+
+  function bankBalanceEvidence(row){
+    const accountBalance=Number(row?.account?.balance);
+    const accountFreshness=accountSourceFreshness(row);
+    const accountDate=snapshotDateFor(row?.item,row?.account);
+    const accountEvidence=Number.isFinite(accountBalance)?{
+      balance:round2(accountBalance),
+      date:accountDate,
+      timestamp:accountFreshness.timestamp,
+      updatedAt:accountFreshness.value,
+      source:'account'
+    }:null;
+    const transactionEvidence=latestTransactionBalanceEvidence(row);
+    if(!transactionEvidence)return accountEvidence;
+    if(!accountEvidence)return transactionEvidence;
+
+    const accountDateTimestamp=Date.parse(accountDate+'T00:00:00Z');
+    const transactionDateTimestamp=Date.parse(transactionEvidence.date+'T00:00:00Z');
+    if(transactionDateTimestamp>accountDateTimestamp)return transactionEvidence;
+    if(transactionDateTimestamp<accountDateTimestamp)return accountEvidence;
+    if(transactionEvidence.timestamp>accountEvidence.timestamp)return transactionEvidence;
+    return accountEvidence;
+  }
+
+  function sourceTimestamp(row){return bankBalanceEvidence(row)?.timestamp??Number.NEGATIVE_INFINITY;}
 
   function freshestBankRows(rows){
     const winners=new Map();
@@ -192,13 +255,18 @@
   }
 
   function applyBankSnapshot(row){
-    const balance=Number(row?.account?.balance);
-    if(!Number.isFinite(balance)||!row?.entity)return{changed:false};
+    const evidence=bankBalanceEvidence(row);
+    if(!evidence||!Number.isFinite(Number(evidence.balance))||!row?.entity)return{changed:false};
     const entity=row.entity;
-    const date=snapshotDateFor(row.item,row.account);
-    const amount=round2(balance);
-    const providerUpdatedAt=sourceUpdatedAt(row);
-    const coreChanged=entity.initial!==amount||entity.balanceDate!==date||entity.balanceMode!=='snapshot'||entity.reconciled?.source!=='open-finance'||clean(entity.reconciled?.providerUpdatedAt)!==providerUpdatedAt;
+    const date=validDate(evidence.date)?evidence.date:snapshotDateFor(row.item,row.account);
+    const amount=round2(evidence.balance);
+    const providerUpdatedAt=clean(evidence.updatedAt);
+    const balanceEvidence=evidence.source==='transaction'?'transaction-balance':'account-balance';
+    const coreChanged=entity.initial!==amount
+      ||entity.balanceDate!==date
+      ||entity.balanceMode!=='snapshot'
+      ||entity.reconciled?.source!=='open-finance'
+      ||clean(entity.reconciled?.providerUpdatedAt)!==providerUpdatedAt;
     let changed=coreChanged;
 
     if(coreChanged){
@@ -211,6 +279,7 @@
         difference:0,
         source:'open-finance',
         provider:'pluggy',
+        balanceEvidence,
         openFinanceAccountId:clean(row.account?.id)||null,
         openFinanceItemId:clean(row.item?.id)||null,
         providerUpdatedAt:providerUpdatedAt||null,
@@ -218,7 +287,7 @@
       };
     }
     if(reanchorAccountImpact(entity,date))changed=true;
-    return{changed,balance:amount,date,accountId:entity.id};
+    return{changed,balance:amount,date,accountId:entity.id,balanceEvidence};
   }
 
   function invoiceRecord(cardId,month){
