@@ -266,8 +266,7 @@
       ||entity.balanceDate!==date
       ||entity.balanceMode!=='snapshot'
       ||entity.reconciled?.source!=='open-finance'
-      ||clean(entity.reconciled?.providerUpdatedAt)!==providerUpdatedAt
-      ||clean(entity.reconciled?.balanceEvidence)!==balanceEvidence;
+      ||clean(entity.reconciled?.providerUpdatedAt)!==providerUpdatedAt;
     let changed=coreChanged;
 
     if(coreChanged){
