@@ -57,6 +57,8 @@ public final class PluggyBridge {
             "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$");
     private static final Pattern ITEM_PATH_PATTERN = Pattern.compile(
             "^/items/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$");
+    private static final Pattern ACCOUNT_BALANCE_PATH_PATTERN = Pattern.compile(
+            "^/accounts/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}/balance$");
 
     // API key: 2h documentadas; renova com 10 min de margem.
     private static final long API_KEY_CACHE_MS = 110L * 60L * 1000L;
@@ -351,7 +353,8 @@ public final class PluggyBridge {
                 || "/bills".equals(path)
                 || "/v2/items".equals(path)
                 || "/v2/transactions".equals(path)
-                || ITEM_PATH_PATTERN.matcher(path).matches();
+                || ITEM_PATH_PATTERN.matcher(path).matches()
+                || ACCOUNT_BALANCE_PATH_PATTERN.matcher(path).matches();
     }
 
     private HttpResult request(String method, String path, String query, JSONObject body, String key) throws Exception {
@@ -510,6 +513,10 @@ public final class PluggyBridge {
         summary.put("number", number);
         summary.put("lastFour", digits);
         summary.put("currencyCode", cleanFirst(cleanString(account, "currencyCode"), "BRL"));
+        String createdAt = cleanString(account, "createdAt");
+        String updatedAt = cleanFirst(cleanString(account, "updatedAt"), cleanString(account, "lastUpdatedAt"));
+        if (!createdAt.isEmpty()) summary.put("createdAt", createdAt);
+        if (!updatedAt.isEmpty()) summary.put("updatedAt", updatedAt);
         if (account.has("balance") && !account.isNull("balance")) {
             copyOptionalNumber(account, summary, "balance");
         }
@@ -688,6 +695,134 @@ public final class PluggyBridge {
             if (account != null) result.put(summarizeAccount(account));
         }
         return result;
+    }
+
+    private JSONObject realTimeBalanceInternal(String key, String accountId) throws Exception {
+        if (!UUID_PATTERN.matcher(accountId).matches()) throw new IllegalArgumentException("INVALID_ACCOUNT_ID");
+        HttpResult response = request("GET", "/accounts/" + accountId + "/balance", null, null, key);
+        if (response.status == 401) {
+            apiKey = null;
+            apiKeyExpiresAtMs = 0L;
+            throw new SecurityException("API_KEY_REJECTED");
+        }
+
+        JSONObject result = new JSONObject();
+        result.put("status", response.status);
+        if (response.status >= 200 && response.status < 300) {
+            JSONObject source = new JSONObject(response.body);
+            result.put("ok", true);
+            copyOptionalNumber(source, result, "balance");
+            copyOptionalNumber(source, result, "blockedBalance");
+            copyOptionalNumber(source, result, "automaticallyInvestedBalance");
+            String currency = cleanString(source, "currencyCode");
+            String updatedAt = cleanString(source, "updateDateTime");
+            if (!currency.isEmpty()) result.put("currencyCode", currency);
+            if (!updatedAt.isEmpty()) result.put("updateDateTime", updatedAt);
+            return result;
+        }
+
+        result.put("ok", false);
+        if (response.status == 429) result.put("code", "BALANCE_RATE_LIMITED");
+        else if (response.status == 400 || response.status == 403 || response.status == 404) result.put("code", "BALANCE_UNAVAILABLE");
+        else result.put("code", "BALANCE_HTTP_" + response.status);
+        return result;
+    }
+
+    @JavascriptInterface
+    public String refreshBankBalances() {
+        try {
+            String key = requireApiKey();
+            JSONArray items = discoverItemsInternal(key);
+            if (items == null || items.length() == 0) items = itemsFromSavedReferences(key);
+            if (items == null) items = new JSONArray();
+
+            Set<String> seenAccounts = new LinkedHashSet<>();
+            JSONArray rows = new JSONArray();
+            int requested = 0;
+            int refreshed = 0;
+            int rateLimited = 0;
+            int unavailable = 0;
+            int failed = 0;
+            String latestUpdateAt = "";
+
+            for (int itemIndex = 0; itemIndex < items.length(); itemIndex++) {
+                JSONObject item = items.optJSONObject(itemIndex);
+                if (item == null) continue;
+                String itemId = cleanString(item, "id");
+                JSONArray accounts;
+                try {
+                    accounts = listAccountsInternal(key, itemId);
+                } catch (Exception error) {
+                    failed++;
+                    continue;
+                }
+
+                for (int accountIndex = 0; accountIndex < accounts.length(); accountIndex++) {
+                    JSONObject account = accounts.optJSONObject(accountIndex);
+                    if (account == null || "CREDIT".equalsIgnoreCase(cleanString(account, "type"))) continue;
+                    String accountId = cleanString(account, "id");
+                    if (!UUID_PATTERN.matcher(accountId).matches() || !seenAccounts.add(accountId)) continue;
+
+                    requested++;
+                    JSONObject safe = new JSONObject();
+                    safe.put("account", requested);
+                    try {
+                        JSONObject current = realTimeBalanceInternal(key, accountId);
+                        int status = current.optInt("status", 0);
+                        String code = cleanString(current, "code");
+                        safe.put("status", status);
+                        safe.put("ok", current.optBoolean("ok", false));
+                        if (!code.isEmpty()) safe.put("code", code);
+
+                        if (current.optBoolean("ok", false)) {
+                            refreshed++;
+                            String updatedAt = cleanString(current, "updateDateTime");
+                            if (!updatedAt.isEmpty()) {
+                                safe.put("updateDateTime", updatedAt);
+                                if (latestUpdateAt.isEmpty() || updatedAt.compareTo(latestUpdateAt) > 0) latestUpdateAt = updatedAt;
+                            }
+                        } else if ("BALANCE_RATE_LIMITED".equals(code)) {
+                            rateLimited++;
+                        } else if ("BALANCE_UNAVAILABLE".equals(code)) {
+                            unavailable++;
+                        } else {
+                            failed++;
+                        }
+                    } catch (Exception error) {
+                        failed++;
+                        safe.put("ok", false);
+                        safe.put("code", "BALANCE_REQUEST_FAILED");
+                    }
+                    rows.put(safe);
+                }
+            }
+
+            JSONObject result = envelope(true);
+            result.put("requested", requested);
+            result.put("refreshed", refreshed);
+            result.put("rateLimited", rateLimited);
+            result.put("unavailable", unavailable);
+            result.put("failed", failed);
+            result.put("accounts", rows);
+            if (!latestUpdateAt.isEmpty()) result.put("latestUpdateAt", latestUpdateAt);
+            if (refreshed > 0) {
+                result.put("message", "Saldo em tempo real consultado diretamente no conector financeiro.");
+            } else if (rateLimited > 0) {
+                result.put("message", "A instituição limitou temporariamente a consulta de saldo em tempo real.");
+            } else {
+                result.put("message", "O saldo em tempo real não está disponível para estas contas; o snapshot existente foi preservado.");
+            }
+            return result.toString();
+        } catch (SecurityException error) {
+            return safeError("BALANCE_AUTH_FAILED", "A API Key foi rejeitada ao consultar o saldo em tempo real.", 401);
+        } catch (IllegalStateException error) {
+            if ("AUTH_REQUIRED".equals(error.getMessage())) {
+                return safeError("AUTH_REQUIRED", "Configure Client ID e Client Secret neste aparelho.", 401);
+            }
+            return safeError("BALANCE_PROVIDER_UNAVAILABLE", "Não foi possível consultar o saldo em tempo real agora.", 503);
+        } catch (Exception error) {
+            return safeError("BALANCE_NETWORK_FAILED", "Falha de rede ao consultar o saldo em tempo real.", 503);
+        }
     }
 
     private JSONArray listBillsInternal(String key, String accountId) throws Exception {
