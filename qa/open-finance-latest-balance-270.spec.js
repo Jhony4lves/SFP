@@ -29,8 +29,7 @@ async function boot(page,value=baseState()){
 
 test('#270 MeuPluggy atualizado: botão consulta saldo em tempo real e troca 532,22 por 274,82',async({page})=>{
   await page.addInitScript(()=>{
-    window.__sfp270={balance:532.22,updatedAt:'2026-09-22T18:00:00.000Z',refreshCalls:0,previewCalls:0,toasts:[]};
-    window.toast=(text,kind='')=>window.__sfp270.toasts.push({text:String(text||''),kind:String(kind||'')});
+    window.__sfp270={balance:532.22,updatedAt:'2026-09-22T18:00:00.000Z',refreshCalls:0,previewCalls:0,feedbackSeen:false};
     const payload=()=>({ok:true,provider:'pluggy-personal',readOnly:true,itemCount:1,accountCount:1,transactionPreviewCount:0,billCount:0,items:[{id:'11111111-1111-4111-8111-111111111111',connectorName:'MeuPluggy',institution:'Itaú',status:'UPDATED',updatedAt:window.__sfp270.updatedAt,accounts:[{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',itemId:'11111111-1111-4111-8111-111111111111',type:'BANK',subtype:'CHECKING_ACCOUNT',name:'Itaú',marketingName:'Itaú',presentationName:'Itaú',balance:window.__sfp270.balance,updatedAt:window.__sfp270.updatedAt,currencyCode:'BRL',transactionPreviewHasMore:false,transactions:[]}]}]});
     Object.defineProperty(window,'PluggyBridge',{configurable:true,value:{getCredentialStatus:()=>JSON.stringify({ok:true,configured:true,clientIdMasked:'qa',itemReferenceCount:1}),saveCredentials:()=>JSON.stringify({ok:true,configured:true}),previewData:()=>{window.__sfp270.previewCalls++;return JSON.stringify(payload());},refreshBankBalances:()=>{window.__sfp270.refreshCalls++;window.__sfp270.balance=274.82;window.__sfp270.updatedAt='2026-09-23T12:20:00.000Z';return JSON.stringify({ok:true,requested:1,refreshed:1,rateLimited:0,unavailable:0,failed:0,latestUpdateAt:'2026-09-23T12:20:00.000Z',accounts:[{account:1,ok:true,status:200,updateDateTime:'2026-09-23T12:20:00.000Z'}]});},clearCredentials:()=>true,saveItemIds:()=>JSON.stringify({ok:true,itemReferenceCount:1})}});
     Object.defineProperty(window,'PluggyRefreshBridge',{configurable:true,value:{refreshItems:()=>JSON.stringify({ok:true,requested:1,started:0,providerManaged:1,needsUser:false,code:'REFRESH_PROVIDER_MANAGED',items:[{accepted:false,code:'REFRESH_PROVIDER_MANAGED',providerMessage:'Atualização automática gerenciada pelo MeuPluggy.'}]}),refreshStatus:()=>JSON.stringify({ok:true,complete:true,items:[]})}});
@@ -38,6 +37,13 @@ test('#270 MeuPluggy atualizado: botão consulta saldo em tempo real e troca 532
   await boot(page);
   await expect.poll(()=>page.evaluate(()=>accountBalance(1))).toBe(532.22);
   await page.evaluate(()=>setPage('openfinance'));
+  await page.evaluate(()=>{
+    const preview=document.querySelector('#openFinancePreview');
+    const expected='Saldo em tempo real consultado em 1 conta(s) e aplicado ao SFP';
+    const inspect=()=>{if(preview?.textContent?.includes(expected))window.__sfp270.feedbackSeen=true;};
+    inspect();
+    if(preview)new MutationObserver(inspect).observe(preview,{subtree:true,childList:true,characterData:true});
+  });
   await page.locator('#openFinanceSyncBtn').click();
   await expect.poll(()=>page.evaluate(()=>accountBalance(1))).toBe(274.82);
   const result=await page.evaluate(()=>({calls:{...window.__sfp270},diagnostic:SFPOpenFinanceRealRefresh.diagnostic(),account:state.accounts.find(row=>row.id===1)}));
@@ -50,7 +56,7 @@ test('#270 MeuPluggy atualizado: botão consulta saldo em tempo real e troca 532
   const serialized=JSON.stringify(result.diagnostic);
   expect(serialized).not.toContain('11111111-1111-4111-8111-111111111111');
   expect(serialized).not.toContain('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
-  expect(result.calls.toasts.some(row=>row.text.includes('Saldo em tempo real consultado em 1 conta(s) e aplicado ao SFP'))).toBe(true);
+  expect(result.calls.feedbackSeen).toBe(true);
 });
 
 test('#270 snapshot antigo não sobrescreve snapshot mais recente da mesma conta',async({page})=>{
