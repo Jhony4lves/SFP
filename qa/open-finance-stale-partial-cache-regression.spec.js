@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const { fixture, expectBootComplete, writeIndexedDB } = require('./helpers');
 
-function stateWithStaleEstimate({withLaterPurchase=true}={}){
+function stateWithStaleEstimate({withLaterPurchase=true,official=false}={}){
   const value=fixture('Open Finance stale partial cache');
   value.mesAtual='2026-10';
   value.baseDate='2026-10-05';
@@ -9,8 +9,8 @@ function stateWithStaleEstimate({withLaterPurchase=true}={}){
     id:7,name:'Nubank',limit:5000,closeDay:3,dueDay:10,payAccountId:null,history:[],
     openFinanceBankBills:{
       '2026-10':{
-        schema:4,amount:100,official:false,billId:null,
-        source:'open-finance-posted-cycle',periodStart:'2026-09-04',periodEnd:'2026-10-03',
+        schema:4,amount:100,official,billId:official?'bill-official':null,
+        source:official?'open-finance-bill':'open-finance-posted-cycle',periodStart:'2026-09-04',periodEnd:'2026-10-03',
         transactionCount:1,pendingCount:0,debitAmount:100,creditAmount:0,paymentsExcluded:0,
         updatedAt:'2026-10-03T12:00:00.000Z'
       }
@@ -25,7 +25,7 @@ function stateWithStaleEstimate({withLaterPurchase=true}={}){
   return value;
 }
 
-async function boot(page,{withLaterPurchase=true}={}){
+async function boot(page,{withLaterPurchase=true,official=false}={}){
   await page.addInitScript(()=>{
     const account={
       id:'nu-credit',type:'CREDIT',subtype:'CREDIT_CARD',name:'Nubank',marketingName:'Nubank',presentationName:'Nubank',
@@ -43,7 +43,7 @@ async function boot(page,{withLaterPurchase=true}={}){
   });
   await page.goto('/index.html');
   await expectBootComplete(page,expect,'Fixture QA');
-  await writeIndexedDB(page,stateWithStaleEstimate({withLaterPurchase}));
+  await writeIndexedDB(page,stateWithStaleEstimate({withLaterPurchase,official}));
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await expectBootComplete(page,expect,'Open Finance stale partial cache');
@@ -80,6 +80,24 @@ test('refresh parcial preserva última estimativa bancária quando não há lan�
 
   expect(result.local).toBe(0);
   expect(result.truth?.official).not.toBe(true);
+  expect(result.truth?.amount).toBe(100);
+  expect(result.shown).toBe(100);
+});
+
+test('Bill oficial continua soberano mesmo quando há lançamento local posterior',async({page})=>{
+  await boot(page,{official:true});
+  const result=await page.evaluate(()=>{
+    const card=state.cards[0];
+    return {
+      local:invoiceCalculated(card.id,'2026-10'),
+      truth:SFPOpenFinanceBankTruth.bankTruth(card,'2026-10'),
+      shown:SFPOpenFinanceBankTruth.displayTotal(card,'2026-10')
+    };
+  });
+
+  expect(result.local).toBe(150);
+  expect(result.truth?.official).toBe(true);
+  expect(result.truth?.source).toBe('open-finance-bill');
   expect(result.truth?.amount).toBe(100);
   expect(result.shown).toBe(100);
 });
