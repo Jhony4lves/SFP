@@ -246,7 +246,8 @@
         snapshots:Number(applied.financialTruth.snapshots)||0,
         payments:Number(applied.financialTruth.payments)||0,
         already:Number(applied.financialTruth.already)||0,
-        review:Number(applied.financialTruth.review)||0
+        review:Number(applied.financialTruth.review)||0,
+        accounts:Array.isArray(applied.financialTruth.diagnostic)?applied.financialTruth.diagnostic:[]
       }:null,
       warning:safeText(applied.financialTruthWarning)
     };
@@ -499,6 +500,9 @@
           return;
         }
         if(status.ok&&status.complete){
+          if(button)button.textContent='Consultando saldo atual…';
+          const liveBalance=refreshLiveBankBalances();
+          lastAttempt.balanceRefresh=balanceEvidence(liveBalance);
           if(button)button.textContent='Aplicando dados novos…';
           const applied=await syncCurrentData();
           lastAttempt.application=applicationEvidence(applied);
