@@ -91,4 +91,36 @@ assert.equal(plan(['some-new-root-file.txt']).mode, 'full');
   assert.equal(p.mode, 'none');
 }
 
+// Shared coverage must not be mistaken for missing coverage.
+for (const [files, expected] of [
+  [['app/src/main/assets/www/open-finance-bills.js', 'app/src/main/assets/www/open-finance-personal.js'],
+    ['qa/open-finance-bills.spec.js', 'qa/open-finance-sync.spec.js']],
+  [['app/src/main/assets/www/invoice-pdf-engine.js', 'app/src/main/assets/www/invoice-image-engine.js'],
+    ['qa/invoice-future-installments.spec.js', 'qa/manual-invoice-reconciliation.spec.js']],
+  [['app/src/main/assets/www/ui-hardening.css', 'app/src/main/assets/www/ui-hardening.js'],
+    ['qa/a11y-controls-matrix.spec.js', 'qa/contrast-aa-final.spec.js', 'qa/transaction-form-ux.spec.js', 'qa/ui-hardening.spec.js', 'qa/visual-bug-sweep.spec.js']]
+]) {
+  const p = plan(files);
+  assert.equal(p.mode, 'impacted', `Shared coverage: ${files.join(', ')}`);
+  assert.deepEqual(p.tests, expected);
+  assert.equal(p.staticCheck, true);
+  assert.equal(p.browserRequired, true);
+}
+
+{
+  const p = plan(['app/src/main/assets/www/invoice-pdf-engine.js', 'app/src/main/assets/www/invoice-image-engine.js']);
+  assert.equal(p.invoicePdf, true);
+  assert.equal(p.invoiceImage, true);
+}
+
+// Unrelated selected tests cannot hide a module with no available coverage.
+{
+  const p = selectWebQa([
+    'app/src/main/assets/www/open-finance-bills.js',
+    'app/src/main/assets/www/sophy-proactive-brief.js'
+  ], ['qa/open-finance-bills.spec.js']);
+  assert.equal(p.mode, 'full');
+  assert.equal(p.browserRequired, true);
+}
+
 console.log('QA impact selector: all scenarios passed.');

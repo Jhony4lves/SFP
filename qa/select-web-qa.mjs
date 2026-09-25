@@ -12,11 +12,15 @@ function matchesAny(path, patterns) {
 }
 
 function addMatching(set, specs, patterns) {
-  const before = set.size;
+  let matched = 0;
   for (const spec of specs) {
-    if (matchesAny(spec, patterns)) set.add(spec);
+    if (matchesAny(spec, patterns)) {
+      set.add(spec);
+      matched++;
+    }
   }
-  return set.size - before;
+  // A test already selected by another file still provides coverage.
+  return matched;
 }
 
 export function selectWebQa(changedFiles, availableSpecs = qaSpecsFromDisk()) {
