@@ -21,6 +21,8 @@ import java.security.KeyStore;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -67,10 +69,18 @@ public final class PluggyBridge {
     // somente guardas de segurança locais; não truncam silenciosamente a primeira página.
     private static final int MAX_TRANSACTION_PAGES_PER_ACCOUNT = 12;
     private static final int MAX_TRANSACTIONS_PER_ACCOUNT = 5000;
+    private static final long LIVE_BALANCE_CACHE_MS = 10L * 60L * 1000L;
 
     private final Context context;
     private volatile String apiKey;
     private volatile long apiKeyExpiresAtMs;
+    /**
+     * A leitura de /accounts/{id}/balance acontece imediatamente antes da prévia no
+     * refresh manual. Ela precisa atravessar a fronteira nativa: anteriormente o
+     * valor era descartado e previewData() voltava a publicar o balance stale de
+     * GET /accounts.
+     */
+    private final Map<String, JSONObject> liveBalanceCache = new LinkedHashMap<>();
 
     PluggyBridge(Context context) {
         this.context = context.getApplicationContext();
@@ -341,6 +351,9 @@ public final class PluggyBridge {
     public boolean clearCredentials() {
         apiKey = null;
         apiKeyExpiresAtMs = 0L;
+        synchronized (this) {
+            liveBalanceCache.clear();
+        }
         boolean cleared = prefs().edit().clear().commit();
         deleteKeyAlias();
         return cleared;
@@ -545,6 +558,48 @@ public final class PluggyBridge {
             summary.put("balanceMeaning", "available-balance");
         }
         return summary;
+    }
+
+    static JSONObject mergeLiveBalance(JSONObject account, JSONObject live) throws Exception {
+        JSONObject enriched = new JSONObject(account.toString());
+        if (live == null || !live.optBoolean("ok", false) || !live.has("balance") || live.isNull("balance")) {
+            return enriched;
+        }
+        double balance = live.optDouble("balance", Double.NaN);
+        if (Double.isNaN(balance) || Double.isInfinite(balance)) return enriched;
+
+        if (enriched.has("balance") && !enriched.isNull("balance")) {
+            enriched.put("accountBalance", enriched.optDouble("balance"));
+        }
+        enriched.put("balance", balance);
+        enriched.put("liveBalance", balance);
+        enriched.put("balanceEvidence", "live-balance");
+        String providerUpdatedAt = cleanString(live, "updateDateTime");
+        String readAt = cleanString(live, "readAt");
+        if (!providerUpdatedAt.isEmpty()) enriched.put("liveBalanceUpdatedAt", providerUpdatedAt);
+        if (!readAt.isEmpty()) enriched.put("liveBalanceReadAt", readAt);
+        copyOptionalNumber(live, enriched, "blockedBalance");
+        copyOptionalNumber(live, enriched, "automaticallyInvestedBalance");
+        return enriched;
+    }
+
+    private synchronized void cacheLiveBalance(String accountId, JSONObject balance) throws Exception {
+        if (accountId == null || accountId.isEmpty() || balance == null || !balance.optBoolean("ok", false)) return;
+        JSONObject copy = new JSONObject(balance.toString());
+        copy.put("cachedAtMs", System.currentTimeMillis());
+        copy.put("readAt", java.time.Instant.now().toString());
+        liveBalanceCache.put(accountId, copy);
+    }
+
+    private synchronized JSONObject cachedLiveBalance(String accountId) {
+        JSONObject cached = liveBalanceCache.get(accountId);
+        if (cached == null) return null;
+        long age = System.currentTimeMillis() - cached.optLong("cachedAtMs", 0L);
+        if (age < 0L || age > LIVE_BALANCE_CACHE_MS) {
+            liveBalanceCache.remove(accountId);
+            return null;
+        }
+        return cached;
     }
 
     private static JSONObject summarizeTransaction(JSONObject transaction) throws Exception {
@@ -784,6 +839,7 @@ public final class PluggyBridge {
 
                         if (current.optBoolean("ok", false)) {
                             refreshed++;
+                            cacheLiveBalance(accountId, current);
                             String updatedAt = cleanString(current, "updateDateTime");
                             if (!updatedAt.isEmpty()) {
                                 safe.put("updateDateTime", updatedAt);
@@ -1051,9 +1107,11 @@ public final class PluggyBridge {
                 JSONArray enrichedAccounts = new JSONArray();
                 for (int accountIndex = 0; accountIndex < accounts.length(); accountIndex++) {
                     JSONObject account = accounts.getJSONObject(accountIndex);
-                    JSONObject enriched = new JSONObject(account.toString());
-                    accountCount++;
                     String accountId = cleanString(account, "id");
+                    JSONObject enriched = "CREDIT".equalsIgnoreCase(cleanString(account, "type"))
+                            ? new JSONObject(account.toString())
+                            : mergeLiveBalance(account, cachedLiveBalance(accountId));
+                    accountCount++;
                     try {
                         JSONObject transactionPage = listRecentTransactionsInternal(key, accountId, cleanString(account, "type"));
                         JSONArray transactions = transactionPage.optJSONArray("transactions");

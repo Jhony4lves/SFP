@@ -78,21 +78,56 @@
     const api=global.SFPOpenFinancePersonal;
     const rows=[];
     if(!api||!global.state)return rows;
-    for(const item of Array.isArray(result?.items)?result.items:[]){
+    const items=Array.isArray(result?.items)?result.items:[];
+    for(let itemIndex=0;itemIndex<items.length;itemIndex++){
+      const item=items[itemIndex];
       const name=itemName(item);
-      for(const account of Array.isArray(item?.accounts)?item.accounts:[]){
+      const accounts=Array.isArray(item?.accounts)?item.accounts:[];
+      for(let accountIndex=0;accountIndex<accounts.length;accountIndex++){
+        const account=accounts[accountIndex];
         if(account?.type==='CREDIT')continue;
         let suggestion=null;
         try{suggestion=api.suggestSfpEntity?.(account,name)||null;}catch(_){}
         if(!suggestion?.entity)continue;
-        rows.push({item,account,entity:suggestion.entity});
+        rows.push({item,account,entity:suggestion.entity,institution:clean(account?.marketingName)||clean(account?.name)||name,connection:itemIndex+1,accountOrdinal:accountIndex+1,mappingReason:suggestion.reason||'unique-name-match'});
       }
     }
     return rows;
   }
 
+  function unmappedBankDiagnostics(result,rows){
+    const mapped=new Set(rows.map(row=>row.account));
+    const output=[];
+    const items=Array.isArray(result?.items)?result.items:[];
+    for(let itemIndex=0;itemIndex<items.length;itemIndex++){
+      const item=items[itemIndex],accounts=Array.isArray(item?.accounts)?item.accounts:[];
+      for(let accountIndex=0;accountIndex<accounts.length;accountIndex++){
+        const account=accounts[accountIndex];
+        if(account?.type==='CREDIT'||mapped.has(account))continue;
+        output.push({
+          institution:clean(account?.marketingName)||clean(account?.name)||itemName(item)||'Instituição não informada',
+          accountType:clean(account?.subtype)||clean(account?.type)||'BANK',
+          connection:itemIndex+1,
+          account:accountIndex+1,
+          accountBalance:Number.isFinite(Number(account?.accountBalance))?round2(account.accountBalance):round2(account?.balance),
+          liveBalance:Number.isFinite(Number(account?.liveBalance))?round2(account.liveBalance):null,
+          itemUpdatedAt:clean(item?.updatedAt)||null,
+          accountUpdatedAt:clean(account?.updatedAt)||null,
+          chosenTimestamp:null,chosenBalance:null,winner:null,
+          reason:'unmapped-no-safe-local-entity',stateBalance:null,accountBalanceResult:null,persistedBalance:null,
+          mapping:'none'
+        });
+      }
+    }
+    return output;
+  }
+
   function accountSourceFreshness(row){
-    const candidates=[
+    const live=row?.account?.balanceEvidence==='live-balance';
+    const candidates=live?[
+      row?.account?.liveBalanceUpdatedAt,
+      row?.account?.liveBalanceReadAt
+    ]:[
       row?.account?.updatedAt,
       row?.account?.lastUpdatedAt,
       row?.account?.balanceDate,
@@ -159,9 +194,13 @@
       date:accountDate,
       timestamp:accountFreshness.timestamp,
       updatedAt:accountFreshness.value,
-      source:'account'
+      source:row?.account?.balanceEvidence==='live-balance'?'live':'account'
     }:null;
     const transactionEvidence=latestTransactionBalanceEvidence(row);
+    // /accounts/{id}/balance é uma leitura pontual feita nesta sincronização. Uma
+    // transação (ou o snapshot de /accounts) não pode substituir esse valor apenas
+    // porque carrega metadados com semântica/data diferentes.
+    if(accountEvidence?.source==='live')return accountEvidence;
     if(!transactionEvidence)return accountEvidence;
     if(!accountEvidence)return transactionEvidence;
 
@@ -194,6 +233,8 @@
 
   function snapshotDateFor(item,account){
     const candidates=[
+      account?.liveBalanceUpdatedAt,
+      account?.liveBalanceReadAt,
       account?.balanceDate,
       account?.lastUpdatedAt,
       account?.updatedAt,
@@ -261,7 +302,15 @@
     const date=validDate(evidence.date)?evidence.date:snapshotDateFor(row.item,row.account);
     const amount=round2(evidence.balance);
     const providerUpdatedAt=clean(evidence.updatedAt);
-    const balanceEvidence=evidence.source==='transaction'?'transaction-balance':'account-balance';
+    const balanceEvidence=evidence.source==='transaction'?'transaction-balance':evidence.source==='live'?'live-balance':'account-balance';
+    const incomingTimestamp=Date.parse(providerUpdatedAt);
+    const currentProviderUpdatedAt=clean(entity.reconciled?.providerUpdatedAt);
+    const currentTimestamp=Date.parse(currentProviderUpdatedAt);
+    if(entity.reconciled?.source==='open-finance'
+      &&Number.isFinite(currentTimestamp)
+      &&(!Number.isFinite(incomingTimestamp)||incomingTimestamp<currentTimestamp)){
+      return{changed:false,ignored:true,reason:'older-than-persisted-open-finance',balance:amount,date,accountId:entity.id,balanceEvidence};
+    }
     const coreChanged=entity.initial!==amount
       ||entity.balanceDate!==date
       ||entity.balanceMode!=='snapshot'
@@ -405,12 +454,33 @@
     if(!result?.ok||!global.state)return{ok:false,changed:false,snapshots:0,payments:0,already:0,review:0};
     const before=cloneState(global.state);
     let changed=false,snapshots=0,payments=0,already=0,review=0;
+    const diagnostic=[];
     try{
       const rows=mappedBankRows(result);
+      diagnostic.push(...unmappedBankDiagnostics(result,rows));
       const snapshotRows=freshestBankRows(rows);
       for(const row of snapshotRows){
         const applied=applyBankSnapshot(row);
         if(applied.changed){changed=true;snapshots++;}
+        const tx=latestTransactionBalanceEvidence(row);
+        diagnostic.push({
+          institution:row.institution||'Instituição não informada',
+          accountType:clean(row.account?.subtype)||clean(row.account?.type)||'BANK',
+          connection:row.connection,
+          account:row.accountOrdinal,
+          accountBalance:Number.isFinite(Number(row.account?.accountBalance))?round2(row.account.accountBalance):round2(row.account?.balance),
+          liveBalance:Number.isFinite(Number(row.account?.liveBalance))?round2(row.account.liveBalance):null,
+          lastConfirmedTransaction:tx?{date:tx.date,balance:tx.balance,updatedAt:tx.updatedAt}:null,
+          itemUpdatedAt:clean(row.item?.updatedAt)||null,
+          accountUpdatedAt:clean(row.account?.updatedAt)||null,
+          chosenTimestamp:clean(bankBalanceEvidence(row)?.updatedAt)||null,
+          chosenBalance:applied.balance,
+          winner:applied.balanceEvidence,
+          reason:applied.reason||(applied.changed?'newest-temporal-evidence':'already-current'),
+          stateBalance:round2(row.entity?.initial),
+          accountBalanceResult:typeof global.accountBalance==='function'?round2(global.accountBalance(row.entity.id)):round2(row.entity?.initial),
+          mapping:row.mappingReason
+        });
       }
 
       for(const row of rows){
@@ -430,7 +500,19 @@
       }else{
         try{global.renderAll?.();}catch(_){}
       }
-      return{ok:true,changed,snapshots,payments,already,review};
+      if(changed&&typeof global.dbGet==='function'){
+        try{
+          const stored=await global.dbGet();
+          const persisted=stored?.value?.accounts||[];
+          for(const entry of diagnostic){
+            const local=(global.state?.accounts||[]).find(a=>a.name===entry.institution)
+              ||(global.state?.accounts||[]).find(a=>round2(a.initial)===entry.stateBalance);
+            const saved=local&&persisted.find(a=>sameId(a?.id,local.id));
+            entry.persistedBalance=saved?round2(saved.initial):null;
+          }
+        }catch(_){}
+      }
+      return{ok:true,changed,snapshots,payments,already,review,diagnostic};
     }catch(error){
       try{global.state=before;global.renderAll?.();}catch(_){}
       return{ok:false,changed:false,snapshots:0,payments:0,already:0,review:0,message:error?.message||'Falha ao conciliar verdade bancária.'};

@@ -3594,6 +3594,12 @@ function recurringDateForMonth(r,m){
 function isPayrollRecurring(r){return r&&(r.dateRule==='salary-company-advance'||r.dateRule==='business-day-before-anchor'||r.payrollAnchor||((r.type==='income'||r.kind==='income')&&/sal[aá]rio/i.test(r.desc||'')))}
 window.previousBusinessDayISO=previousBusinessDayISO;window.payrollDateForAnchor=payrollDateForAnchor;window.payrollCompanyDateForMonth=payrollCompanyDateForMonth;window.recurringDateForMonth=recurringDateForMonth;
 function accountBalanceDateLabel(value){if(!value)return'data-base não informada';let date=new Date(value+'T12:00');return Number.isNaN(date.getTime())?'data-base inválida':`saldo-base ${date.toLocaleDateString('pt-BR')}`}
+function bankReadingLabel(account){
+ if(account?.reconciled?.source!=='open-finance')return'';
+ let raw=account.reconciled.providerUpdatedAt||account.reconciled.at,date=new Date(raw);
+ if(!raw||Number.isNaN(date.getTime()))return'Última leitura bancária: horário indisponível';
+ return`Última leitura bancária: ${date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}`
+}
 let toastTimer=null;
 function toast(msg,type='info'){
   let el=$('toast');if(!el)return;
@@ -5636,7 +5642,7 @@ function renderBudgetModelSummary(){
  let row=(label,item)=>`<div class="item"><div><b>${label}</b><small>${item.pct}% da renda realizada no mês</small></div><strong>${brl(item.spent)} / ${brl(item.target)}</strong></div>`;
  root.innerHTML=`<div class="note">Metas do modelo calculadas sobre ${brl(b.income)} de receitas realizadas em ${monthName(state.mesAtual)}.</div>${row('Necessidades',b.needs)}${row('Desejos',b.wants)}${row('Poupança',b.save)}`
 }
-function renderAccounts(){let total=state.accounts.reduce((sum,a)=>sum+accountBalance(a.id),0);$('accountsTotal').textContent=brl(total);$('accountsCount').textContent=state.accounts.length;$('accountsGrid').innerHTML=state.accounts.length?state.accounts.map(a=>`<article class="management-card management-card--interactive" role="button" tabindex="0" aria-label="Abrir detalhes de ${sfpEsc(a.name)}" onclick="openAccountDetail(${a.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAccountDetail(${a.id})}"><div class="management-card__head"><div><h3>${sfpEsc(a.name)}</h3><small>${sfpEsc(a.type)}</small></div>${reconciliationBadge(a)}</div><div class="management-value"><small>Saldo atual</small><strong>${brl(accountBalance(a.id))}</strong></div><span class="management-card__hint">Ver movimentações e ações →</span></article>`).join(''):'<div class="empty-state"><b>Você ainda não cadastrou nenhuma conta.</b>Adicione uma conta para acompanhar seu saldo e movimentações.<br><button class="btn tiny" onclick="openManagementAction(\'contas\')">Criar primeira conta</button></div>'}
+function renderAccounts(){let total=state.accounts.reduce((sum,a)=>sum+accountBalance(a.id),0);$('accountsTotal').textContent=brl(total);$('accountsCount').textContent=state.accounts.length;$('accountsGrid').innerHTML=state.accounts.length?state.accounts.map(a=>`<article class="management-card management-card--interactive" role="button" tabindex="0" aria-label="Abrir detalhes de ${sfpEsc(a.name)}" onclick="openAccountDetail(${a.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAccountDetail(${a.id})}"><div class="management-card__head"><div><h3>${sfpEsc(a.name)}</h3><small>${sfpEsc(a.type)}</small></div>${reconciliationBadge(a)}</div><div class="management-value"><small>Saldo atual</small><strong>${brl(accountBalance(a.id))}</strong></div>${bankReadingLabel(a)?`<small>${sfpEsc(bankReadingLabel(a))}</small>`:''}<span class="management-card__hint">Ver movimentações e ações →</span></article>`).join(''):'<div class="empty-state"><b>Você ainda não cadastrou nenhuma conta.</b>Adicione uma conta para acompanhar seu saldo e movimentações.<br><button class="btn tiny" onclick="openManagementAction(\'contas\')">Criar primeira conta</button></div>'}
 
 /* SFP_CARDS_V2 */
 

@@ -131,6 +131,13 @@ function priorCardByOpenFinanceAccount(account,list){
   return matches.length===1?matches[0]:null;
 }
 
+function priorBankByOpenFinanceAccount(account,list){
+  const accountId=cleanText(account?.id);if(!accountId)return null;
+  const matches=list.filter(entity=>cleanText(entity?.reconciled?.openFinanceAccountId)===accountId
+    ||cleanText(entity?.openFinanceAccountId)===accountId);
+  return matches.length===1?matches[0]:null;
+}
+
 function paymentAccountInstitutionScore(entity,itemName){
   const accounts=Array.isArray(global.state?.accounts)?global.state.accounts:[];
   const payAccount=accounts.find(account=>sameEntityId(account?.id,entity?.payAccountId));
@@ -156,9 +163,17 @@ function suggestSfpEntity(account,itemName){
   if(credit){
     const prior=priorCardByOpenFinanceAccount(account,list);
     if(prior)return{entity:prior,score:100,reason:'prior-open-finance-account'};
+  }else{
+    const prior=priorBankByOpenFinanceAccount(account,list);
+    if(prior)return{entity:prior,score:100,reason:'prior-open-finance-account'};
   }
 
-  const fields=[account?.marketingName,account?.name,account?.presentationName,itemName].map(cleanText).filter(Boolean);
+  // Um Item proxy do MeuPluggy pode conter contas de várias instituições. O
+  // nome inferido do Item costuma ser o da primeira conta e, quando misturado
+  // aos campos da conta atual, criava empate (ex.: “Mercado Pago” + “Itaú”) e
+  // fazia contas válidas — inclusive saldo zero — desaparecerem do vínculo.
+  const fields=[account?.marketingName,account?.name,account?.presentationName].map(cleanText).filter(Boolean);
+  if(!fields.length&&cleanText(itemName))fields.push(cleanText(itemName));
   const combined=fields.join(' ');
   let best=null,tied=false;
   for(const entity of list){
